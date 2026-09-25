@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#070811" />
+  <title>Anime Card RNG</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <p class="eyebrow">LOCAL • SINGLE PLAYER</p>
+        <h1>ANIME CARD <span>RNG</span></h1>
+      </div>
+
+      <nav class="top-actions" aria-label="Game navigation">
+        <div class="currency-box" aria-live="polite">
+          <span class="currency-icon">₫</span>
+          <div>
+            <small>VNĐ</small>
+            <strong id="currencyValue">0 VNĐ</strong>
+          </div>
+        </div>
+
+        <div class="game-clock-box" aria-live="polite">
+          <span class="game-clock-icon" aria-hidden="true">◷</span>
+          <div class="game-clock-copy">
+            <small>GAME TIME</small>
+            <strong id="gameClock">00:00:00</strong>
+            <span id="gameClockStatus">1:1 REAL TIME</span>
+          </div>
+        </div>
+
+        <button id="collectionButton" class="nav-button" type="button">
+          <span class="nav-icon">▦</span>
+          <span>
+            <small>COLLECTION</small>
+            <strong id="collectionSummary">Cards: 0/0</strong>
+          </span>
+        </button>
+
+        <button id="upgradesButton" class="nav-button accent-button" type="button">
+          <span class="nav-icon">↑</span>
+          <span>
+            <small>UPGRADES</small>
+            <strong>Shop</strong>
+          </span>
+        </button>
+
+        <button id="battleButton" class="nav-button battle-button" type="button" aria-haspopup="dialog">
+          <span class="nav-icon">⚔</span>
+          <span>
+            <small>BATTLE</small>
+            <strong>Solo</strong>
+          </span>
+        </button>
+
+        <button id="resetButton" class="ghost-button" type="button">Reset</button>
+      </nav>
+    </header>
+
+    <main class="main-stage">
+      <section class="game-layout">
+        <aside id="available-cards-panel" class="available-panel" aria-label="Available rolls">
+          <div class="available-panel__header">
+            <div>
+              <p class="eyebrow">ROLL POOL</p>
+              <h2>Available Cards <span id="availableCardsCount">0</span></h2>
+            </div>
+            <span id="availableCardsMode" class="available-panel__mode">NORMAL</span>
+          </div>
+          <div id="availableCardsList" class="available-cards-list"></div>
+        </aside>
+
+        <div class="game-panel">
+          <section class="weather-hud" aria-label="Active weather">
+            <div class="active-weather">
+              <div class="active-weather__heading">
+                <span class="weather-label">ACTIVE WEATHER</span>
+                <span id="weatherHudEmpty" class="weather-empty">Normal</span>
+              </div>
+              <div id="activeWeatherList" class="active-weather__list"></div>
+            </div>
+          </section>
+
+          <div class="stats-bar">
+            <div class="stat">
+              <span class="stat-label">TOTAL ROLLS</span>
+              <strong id="totalRolls">0</strong>
+            </div>
+            <div class="stat">
+              <span class="stat-label">LUCK</span>
+              <strong id="luckValue">1.00x</strong>
+            </div>
+            <div class="stat">
+              <span class="stat-label">COOLDOWN</span>
+              <strong id="cooldownValue">1.50s</strong>
+            </div>
+          </div>
+
+          <!-- Reserved flex area: the roll slot absorbs all remaining height. -->
+          <div id="resultStage" class="result-stage">
+            <div id="resultSlot" class="result-slot">
+              <div id="emptyState" class="empty-state">
+                <div class="empty-icon">✦</div>
+                <h2>Ready to Roll</h2>
+                <p>Hit the button below and test your luck.</p>
+              </div>
+
+              <article id="resultCard" class="tcg-card hidden" aria-live="polite">
+                <div class="tcg-card__foil" aria-hidden="true"></div>
+                <div id="resultCardBorder" class="tcg-card__mutation-border" aria-hidden="true"></div>
+
+                <header class="tcg-card__header">
+                  <div class="tcg-card__title-wrap">
+                    <h2 id="resultName">—</h2>
+                    <span id="resultRarity" class="rarity-badge">—</span>
+                  </div>
+                  <div class="drop-rate">
+                    <span>DROP CHANCE</span>
+                    <strong>1 in <em id="resultChance">—</em></strong>
+                  </div>
+                </header>
+
+                <div id="resultMutationBadges" class="result-mutation-badges" aria-label="Acquired mutations"></div>
+
+                <div class="tcg-art-frame">
+                  <div class="art-backdrop" aria-hidden="true"></div>
+                  <img id="resultImage" class="tcg-art" src="assets/cards/default.png" alt="Card artwork" />
+                  <div class="image-fallback" aria-hidden="true">
+                    <span>✦</span>
+                    <small>IMAGE PLACEHOLDER</small>
+                  </div>
+                </div>
+
+                <section class="tcg-card__bottom">
+                  <div class="stat-row">
+                    <div class="stat-box hp-stat">
+                      <span class="stat-icon">♥</span>
+                      <div>
+                        <small>HP</small>
+                        <strong id="resultHp">0</strong>
+                      </div>
+                    </div>
+                    <div class="stat-box atk-stat">
+                      <span class="stat-icon">⚔</span>
+                      <div>
+                        <small>ATK</small>
+                        <strong id="resultAtk">0</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="passive-box">
+                    <div class="passive-heading">
+                      <span class="passive-kicker">PASSIVE SKILL</span>
+                      <strong id="resultPassiveName">—</strong>
+                    </div>
+                    <p id="resultPassiveDescription">—</p>
+                  </div>
+                </section>
+              </article>
+
+              <div id="missState" class="empty-state miss-state hidden">
+                <div class="empty-icon">◇</div>
+                <h2>No Drop</h2>
+                <p>The roll did not hit a card threshold. Try again.</p>
+                <div class="roll-score">Roll score: <strong id="missScore">0</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button id="rollButton" class="roll-button" type="button" aria-disabled="false">
+              <span class="roll-main">ROLL</span>
+              <span id="cooldownLabel" aria-live="polite">READY</span>
+            </button>
+
+            <label class="auto-toggle">
+              <input id="autoRollToggle" type="checkbox" />
+              <span class="switch"></span>
+              <span>AUTO ROLL</span>
+            </label>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress-track">
+              <div id="cooldownProgress" class="progress-fill"></div>
+            </div>
+            <span id="cooldownHint">Cooldown: 1.50 seconds</span>
+          </div>
+
+          <div id="rewardToast" class="reward-toast" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Pure HTML5 • CSS3 • Vanilla JS</span>
+      <span>Game Time runs 1:1 with real elapsed time.</span>
+    </footer>
+  </div>
+
+  <!-- COLLECTION -->
+  <div id="collectionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="collectionModalTitle">
+    <section class="modal-panel collection-modal">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">YOUR CARDS</p>
+          <h2 id="collectionModalTitle">Collection <span id="collectionModalCount">0/0</span></h2>
+        </div>
+        <button class="modal-close" data-close-modal="collectionModal" type="button" aria-label="Close collection">×</button>
+      </header>
+
+      <div class="collection-toolbar">
+        <input id="searchInput" class="search-input" type="search" placeholder="Search card, passive, or mutation..." />
+        <select id="mutationFilter" class="select-input" aria-label="Filter by mutation tier">
+          <option value="all">All Mutation Tiers</option>
+          <option value="normal">Normal</option>
+          <option value="wet">Wet</option>
+          <option value="solar">Solar</option>
+          <option value="frost">Frost</option>
+          <option value="eclipsed">Eclipsed</option>
+          <option value="sweat">Sweat</option>
+          <option value="monarch">Monarch</option>
+          <option value="angelic">Angelic</option>
+          <option value="mangekyo">Mangekyo</option>
+          <option value="hollow">Hollow</option>
+          <option value="cursed">Cursed</option>
+          <option value="multi">Multi-Mutations</option>
+          <option value="active">Active Mutation</option>
+        </select>
+        <select id="sortSelect" class="select-input" aria-label="Sort collection">
+          <option value="rarity">Sort by Rarity (Hardest First)</option>
+          <option value="name">Sort: Name</option>
+          <option value="atk">Sort: ATK</option>
+          <option value="collected">Sort: Collected</option>
+        </select>
+      </div>
+
+      <div id="collectionGrid" class="collection-grid"></div>
+    </section>
+  </div>
+
+  <!-- DEDICATED CARD PREVIEW -->
+  <div id="cardPreviewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cardPreviewTitle">
+    <section class="modal-panel card-preview-modal">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">CARD PREVIEW</p>
+          <h2 id="cardPreviewTitle">Variant Preview</h2>
+        </div>
+        <button class="modal-close" data-close-modal="cardPreviewModal" type="button" aria-label="Close card preview">×</button>
+      </header>
+
+      <div class="preview-layout">
+        <div id="previewCardFrame" class="preview-card-frame">
+          <article id="previewCard" class="tcg-card preview-tcg-card" aria-live="polite">
+            <div class="tcg-card__foil" aria-hidden="true"></div>
+            <div class="tcg-card__mutation-border" aria-hidden="true"></div>
+            <header class="tcg-card__header">
+              <div class="tcg-card__title-wrap">
+                <h2 id="previewName">—</h2>
+                <span id="previewRarity" class="rarity-badge">—</span>
+              </div>
+              <div class="drop-rate">
+                <span>VARIANT</span>
+                <strong id="previewVariantCount">1×</strong>
+              </div>
+            </header>
+            <div id="previewMutationBadges" class="result-mutation-badges" aria-label="Preview mutations"></div>
+            <div class="tcg-art-frame">
+              <div class="art-backdrop" aria-hidden="true"></div>
+              <img id="previewImage" class="tcg-art" src="assets/cards/default.png" alt="Preview artwork" />
+              <div class="image-fallback" aria-hidden="true">
+                <span>✦</span>
+                <small>IMAGE PLACEHOLDER</small>
+              </div>
+            </div>
+            <section class="tcg-card__bottom">
+              <div class="stat-row">
+                <div class="stat-box hp-stat">
+                  <span class="stat-icon">♥</span>
+                  <div><small>HP</small><strong id="previewHp">0</strong></div>
+                </div>
+                <div class="stat-box atk-stat">
+                  <span class="stat-icon">⚔</span>
+                  <div><small>ATK</small><strong id="previewAtk">0</strong></div>
+                </div>
+              </div>
+              <div class="passive-box">
+                <div class="passive-heading">
+                  <span class="passive-kicker">PASSIVE SKILL</span>
+                  <strong id="previewPassiveName">—</strong>
+                </div>
+                <p id="previewPassiveDescription">—</p>
+              </div>
+            </section>
+          </article>
+        </div>
+
+        <aside class="preview-details">
+          <div class="preview-picker-head">
+            <div>
+              <span class="eyebrow">UNLOCKED VARIANTS</span>
+              <strong id="previewVariantLabel">Normal Variant</strong>
+            </div>
+            <div class="variant-menu-wrap">
+              <button id="variantMenuButton" class="variant-menu-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Choose card variant">⋮</button>
+              <div id="variantMenu" class="variant-menu hidden" role="menu" aria-label="Unlocked card variants"></div>
+            </div>
+          </div>
+
+          <div class="preview-info-card">
+            <span class="preview-info-label">COLLECTED</span>
+            <strong id="previewCollectedCount">0×</strong>
+            <span id="previewRequirement" class="preview-requirement"></span>
+          </div>
+
+          <div class="preview-note">
+            The preview is isolated from the roll slot. Switching variants never changes the main game screen.
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <!-- SOLO BATTLE -->
+  <div id="battleModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="battleModalTitle">
+    <section class="modal-panel battle-modal">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">SOLO COMBAT</p>
+          <h2 id="battleModalTitle">⚔ Battle Arena</h2>
+        </div>
+        <button class="modal-close" data-close-modal="battleModal" type="button" aria-label="Close battle">×</button>
+      </header>
+
+      <div class="battle-setup" id="battleSetup">
+        <div class="battle-setup-card">
+          <div class="battle-setup-head">
+            <div>
+              <span class="battle-field-label">CHOOSE YOUR FIGHTER</span>
+              <p>Select a card and bring any owned Mutation variant into the arena.</p>
+            </div>
+            <span class="battle-setup-hint">YOUR COLLECTION</span>
+          </div>
+
+          <div id="battleFighterGrid" class="battle-fighter-grid" aria-label="Unlocked battle fighters"></div>
+
+          <div class="battle-variant-section">
+            <div class="battle-variant-section__head">
+              <span class="battle-field-label">MUTATION VARIANT</span>
+              <span class="battle-variant-section__note">Stats use the selected multiplier.</span>
+            </div>
+            <div id="battleVariantGrid" class="battle-variant-grid" aria-label="Owned mutation variants"></div>
+          </div>
+
+          <div id="battleFighterPreview" class="battle-selection-preview">
+            <span>Select an unlocked card to begin.</span>
+          </div>
+
+          <button id="battleStartButton" class="battle-primary-button" type="button">Start Battle</button>
+        </div>
+      </div>
+
+      <div class="battle-arena hidden" id="battleArena">
+        <div class="battle-arena__header">
+          <div>
+            <span class="eyebrow">ANIME CARD CLASH</span>
+            <h3>Standoff</h3>
+          </div>
+          <div id="battleStatus" class="battle-status" aria-live="polite">PLAYER STRIKE IN 3s</div>
+        </div>
+
+        <div class="battle-combatants">
+          <article id="battlePlayerCard" class="battle-visual-card battle-player" aria-label="Player fighter">
+            <div class="battle-visual-card__glow"></div>
+            <div class="battle-side-label">PLAYER</div>
+            <div class="battle-art-frame">
+              <div id="battlePlayerBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
+              <img id="battlePlayerImage" class="battle-art" src="assets/cards/default.png" alt="Player fighter artwork" />
+              <div id="battlePlayerFallback" class="battle-fallback" aria-hidden="true">✦</div>
+            </div>
+            <div class="battle-card-info">
+              <h3 id="battlePlayerName">—</h3>
+              <div id="battlePlayerMutationBadges" class="battle-mutation-badges"></div>
+              <div class="battle-hp-meta"><span>HP</span><strong id="battlePlayerHp">0 / 0</strong></div>
+              <div class="battle-hp-track"><div id="battlePlayerHpBar" class="battle-hp-fill"></div></div>
+              <div class="battle-stats-row"><span>ATK</span><strong id="battlePlayerAtk">0</strong></div>
+            </div>
+          </article>
+
+          <div class="battle-vs" aria-hidden="true">
+            <span>VS</span>
+            <i></i>
+          </div>
+
+          <article id="battleEnemyCard" class="battle-visual-card battle-enemy" aria-label="Enemy fighter">
+            <div class="battle-visual-card__glow"></div>
+            <div class="battle-side-label">ENEMY</div>
+            <div class="battle-art-frame">
+              <div id="battleEnemyBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
+              <img id="battleEnemyImage" class="battle-art" src="assets/cards/default.png" alt="Enemy fighter artwork" />
+              <div id="battleEnemyFallback" class="battle-fallback" aria-hidden="true">✦</div>
+            </div>
+            <div class="battle-card-info">
+              <h3 id="battleEnemyName">—</h3>
+              <div id="battleEnemyMutationBadges" class="battle-mutation-badges"></div>
+              <div class="battle-hp-meta"><span>HP</span><strong id="battleEnemyHp">0 / 0</strong></div>
+              <div class="battle-hp-track"><div id="battleEnemyHpBar" class="battle-hp-fill"></div></div>
+              <div class="battle-stats-row"><span>ATK</span><strong id="battleEnemyAtk">0</strong></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="battle-auto-note">Auto combat • Every 3 seconds • Player and Enemy alternate turns</div>
+        <div id="battleLog" class="battle-log" aria-live="polite"></div>
+      </div>
+
+      <div id="battleVictory" class="battle-result hidden" aria-live="polite">
+        <div class="battle-result__icon">✦</div>
+        <span class="eyebrow">MATCH COMPLETE</span>
+        <h3 id="battleResultTitle">Victory!</h3>
+        <p id="battleResultText">You defeated the enemy.</p>
+        <div class="battle-result__actions">
+          <button id="battleAutoAgainButton" class="battle-primary-button" type="button">Auto Battle Again</button>
+          <button id="battleChangeFighterButton" class="ghost-button" type="button">Change Fighter</button>
+          <button class="ghost-button" data-close-modal="battleModal" type="button">Close</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- UPGRADES -->
+  <div id="upgradesModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="upgradesModalTitle">
+    <section class="modal-panel upgrades-modal">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">UPGRADE SHOP</p>
+          <h2 id="upgradesModalTitle">Power Up</h2>
+        </div>
+        <button class="modal-close" data-close-modal="upgradesModal" type="button" aria-label="Close upgrades">×</button>
+      </header>
+
+      <div class="shop-balance">
+        <span>Available balance</span>
+        <strong id="shopCurrency">0 VNĐ</strong>
+      </div>
+
+      <div class="upgrade-list">
+        <article class="upgrade-card">
+          <div class="upgrade-icon speed-icon">⚡</div>
+          <div class="upgrade-content">
+            <div class="upgrade-topline">
+              <div>
+                <h3>Roll Speed</h3>
+                <p>Reduce manual and Auto-Roll cooldown.</p>
+              </div>
+              <span id="speedLevel" class="level-badge">Lv. 0/20</span>
+            </div>
+            <div class="upgrade-stat-line">
+              <span>Current cooldown</span>
+              <strong id="speedCurrent">1.50s</strong>
+            </div>
+            <button id="buySpeedButton" class="buy-button" type="button"></button>
+          </div>
+        </article>
+
+        <article class="upgrade-card">
+          <div class="upgrade-icon luck-icon">✦</div>
+          <div class="upgrade-content">
+            <div class="upgrade-topline">
+              <div>
+                <h3>Luck Multiplier</h3>
+                <p>Improves rare-drop thresholds.</p>
+              </div>
+              <span id="luckLevel" class="level-badge">Lv. 0/500</span>
+            </div>
+            <div class="upgrade-stat-line">
+              <span>Total luck</span>
+              <strong id="luckCurrent">1.00x</strong>
+            </div>
+            <button id="buyLuckButton" class="buy-button" type="button"></button>
+          </div>
+        </article>
+      </div>
+
+      <p class="shop-note">
+        Costs use exponential scaling: <code>BaseCost × 1.65^Level</code>. All upgrade progress is saved locally.
+      </p>
+    </section>
+  </div>
+
+  <script src="weathers.js"></script>
+  <script src="cards.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
