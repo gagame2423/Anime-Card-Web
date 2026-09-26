@@ -13,7 +13,7 @@ const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
   "animeCardRngSave_v1"
 ]);
-const SAVE_SCHEMA_VERSION = 3;
+const SAVE_SCHEMA_VERSION = 4;
 const GLOBAL_TICK_MS = 1000;
 const BASE_COOLDOWN_MS = 1500;
 const SPEED_BASE_COST = 100;
@@ -32,6 +32,8 @@ const defaultState = {
   schemaVersion: SAVE_SCHEMA_VERSION,
   totalRolls: 0,
   currency: 0,
+  experience: 0,
+  battleDropRateBonus: 0,
   unlocked: {},
   mutations: {},
   equipment: [],
@@ -151,6 +153,8 @@ const els = {
   battleTeamSlots: document.getElementById("battleTeamSlots"),
   battleTeamCount: document.getElementById("battleTeamCount"),
   battleFighterPreview: document.getElementById("battleFighterPreview"),
+  battleModePicker: document.getElementById("battleModePicker"),
+  battleModeLabel: document.getElementById("battleModeLabel"),
   battleStartButton: document.getElementById("battleStartButton"),
   battleArena: document.getElementById("battleArena"),
   battlePlayerCard: document.getElementById("battlePlayerCard"),
@@ -181,6 +185,9 @@ const els = {
   battleResultTitle: document.getElementById("battleResultTitle"),
   battleResultText: document.getElementById("battleResultText"),
   battleResultPower: document.getElementById("battleResultPower"),
+  battleResultCash: document.getElementById("battleResultCash"),
+  battleResultExp: document.getElementById("battleResultExp"),
+  battleResultDropRate: document.getElementById("battleResultDropRate"),
   battleAutoAgainButton: document.getElementById("battle-again-btn"),
   battleCloseResultButton: document.getElementById("close-battle-result-btn"),
   battleChangeFighterButton: document.getElementById("battleChangeFighterButton")
@@ -195,6 +202,8 @@ function cloneDefaultState() {
     schemaVersion: SAVE_SCHEMA_VERSION,
     totalRolls: 0,
     currency: 0,
+    experience: 0,
+    battleDropRateBonus: 0,
     unlocked: {},
     mutations: {},
     inventory: {},
@@ -559,6 +568,14 @@ function normalizeState(parsed = {}) {
     ? Math.max(0, Math.floor(Number(parsed.currency)))
     : defaults.currency;
 
+  normalized.experience = Number.isFinite(Number(parsed.experience))
+    ? Math.max(0, Math.floor(Number(parsed.experience)))
+    : 0;
+
+  normalized.battleDropRateBonus = Number.isFinite(Number(parsed.battleDropRateBonus))
+    ? Math.max(0, Math.min(100, Number(parsed.battleDropRateBonus)))
+    : 0;
+
   const rawUnlockedSource = (
     parsed.unlocked &&
     typeof parsed.unlocked === "object"
@@ -718,6 +735,8 @@ function parseStoredSave(raw) {
     const hasKnownField = [
       "totalRolls",
       "currency",
+      "experience",
+      "battleDropRateBonus",
       "unlocked",
       "unlockedCards",
       "mutations",
@@ -2113,11 +2132,34 @@ function purchaseUpgrade(type) {
 // 4v4 BATTLE ARENA - VISUAL + AUTOMATED, ISOLATED FROM RNG/TICKER
 // ============================================================
 
-const BATTLE_BASE_REWARD_VND = 500;
+const BATTLE_BASE_REWARD_VND = 1000;
+const BATTLE_1V1_BASE_REWARD_VND = 320;
+const BATTLE_BASE_XP_4V4 = 480;
+const BATTLE_BASE_XP_1V1 = 140;
 const BATTLE_TURN_MS = 3000;
 const BATTLE_TEAM_SIZE = 4;
 const BATTLE_ENEMY_MUTATION_CHANCE = 0.70;
 const BATTLE_DEFEAT_LOSS_CHANCE = 0.25;
+const BATTLE_1V1_ADAPTIVE_EXPONENT = 0.58;
+const BATTLE_1V1_MIN_SCALE = 0.78;
+const BATTLE_1V1_MAX_SCALE = 1.32;
+const BATTLE_1V1_TARGET_RATIO = 1.03;
+
+function getBattleMode() {
+  return battleState?.mode === '1v1' ? '1v1' : '4v4';
+}
+
+function getBattleTeamSize() {
+  return getBattleMode() === '1v1' ? 1 : BATTLE_TEAM_SIZE;
+}
+
+function isOneVsOneBattle() {
+  return getBattleMode() === '1v1';
+}
+
+function getBattleModeLabel() {
+  return isOneVsOneBattle() ? '1V1 • 3s TURNS' : '4V4 • 3s TURNS';
+}
 
 let battleState = null;
 let battleTurnTimer = null;
@@ -2175,7 +2217,7 @@ function chooseFirstAvailableBattleVariant(cardId, excludeIndex = -1) {
 }
 
 function isBattleSetupValid(team = getBattleSetupTeam()) {
-  if (team.length !== BATTLE_TEAM_SIZE) return false;
+  if (team.length !== getBattleTeamSize()) return false;
   const usage = new Map();
   for (const slot of team) {
     const card = getCardById(slot.cardId);
@@ -2197,7 +2239,7 @@ function renderBattleTeamSlots() {
   const team = getBattleSetupTeam();
   const activeIndex = Number(battleState?.setup?.activeIndex || 0);
 
-  for (let index = 0; index < BATTLE_TEAM_SIZE; index += 1) {
+  for (let index = 0; index < getBattleTeamSize(); index += 1) {
     const slot = team[index];
     const button = document.createElement('button');
     button.type = 'button';
@@ -2244,7 +2286,7 @@ function renderBattleTeamSlots() {
     container.appendChild(button);
   }
 
-  if (els.battleTeamCount) els.battleTeamCount.textContent = `${team.length}/${BATTLE_TEAM_SIZE}`;
+  if (els.battleTeamCount) els.battleTeamCount.textContent = `${team.length}/${getBattleTeamSize()}`;
 }
 
 function populateBattleFighterSelect() {
@@ -2254,12 +2296,14 @@ function populateBattleFighterSelect() {
   const unlocked = getUnlockedBattleCards();
   const previousTeam = Array.isArray(battleState?.setup?.team) ? battleState.setup.team.map(slot => ({ ...slot })) : [];
   const previousActive = Number(battleState?.setup?.activeIndex || 0);
+  const previousMode = battleState?.mode === '1v1' ? '1v1' : '4v4';
   grid.innerHTML = '';
 
   clearBattleTurnTimer();
-  battleState = battleState?.setup
-    ? { setup: { team: previousTeam, activeIndex: previousActive } }
-    : { setup: { team: [], activeIndex: 0 } };
+  battleState = {
+    mode: previousMode,
+    setup: { team: previousTeam, activeIndex: previousActive }
+  };
 
   if (!unlocked.length) {
     grid.innerHTML = '<div class="battle-empty-selection">Roll at least one card to enter the arena.</div>';
@@ -2312,13 +2356,13 @@ function populateBattleFighterSelect() {
       let targetIndex = existingIndex;
 
       if (targetIndex < 0) {
-        if (getBattleSetupTeam().length < BATTLE_TEAM_SIZE) {
+        if (getBattleSetupTeam().length < getBattleTeamSize()) {
           targetIndex = getBattleSetupTeam().length;
           const entry = chooseFirstAvailableBattleVariant(card.id, -1);
           if (!entry) return;
           getBattleSetupTeam().push({ cardId: card.id, variantKey: entry.key });
         } else {
-          targetIndex = Math.min(Number(battleState.setup.activeIndex || 0), BATTLE_TEAM_SIZE - 1);
+          targetIndex = Math.min(Number(battleState.setup.activeIndex || 0), getBattleTeamSize() - 1);
           const entry = chooseFirstAvailableBattleVariant(card.id, targetIndex);
           if (!entry) return;
           getBattleSetupTeam()[targetIndex] = { cardId: card.id, variantKey: entry.key };
@@ -2430,21 +2474,44 @@ function renderBattleSelectionPreview() {
   if (els.battleStartButton) els.battleStartButton.disabled = !isBattleSetupValid();
 }
 
-function resetBattleView() {
+function renderBattleModePicker() {
+  const activeMode = getBattleMode();
+  if (els.battleModePicker) {
+    els.battleModePicker.querySelectorAll('[data-battle-mode]').forEach(button => {
+      const selected = button.dataset.battleMode === activeMode;
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+  }
+  if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
+  if (els.battleStartButton) {
+    els.battleStartButton.textContent = isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+  }
+}
+
+function setBattleMode(mode) {
+  const nextMode = mode === '1v1' ? '1v1' : '4v4';
   clearBattleTurnTimer();
-  battleState = { setup: { team: [], activeIndex: 0 } };
+  battleState = { mode: nextMode, setup: { team: [], activeIndex: 0 } };
+  renderBattleModePicker();
+  populateBattleFighterSelect();
+}
+
+function resetBattleView(mode = '4v4') {
+  clearBattleTurnTimer();
+  battleState = { mode: mode === '1v1' ? '1v1' : '4v4', setup: { team: [], activeIndex: 0 } };
   els.battleSetup?.classList.remove('hidden');
   els.battleArena?.classList.add('hidden');
   els.battleVictory?.classList.add('hidden');
   els.battleVictory?.setAttribute('aria-hidden', 'true');
   if (els.battleLog) els.battleLog.innerHTML = '';
   if (els.battleStatus) els.battleStatus.textContent = 'PREPARING';
+  renderBattleModePicker();
   if (els.battleStartButton) els.battleStartButton.disabled = true;
   populateBattleFighterSelect();
 }
 
 function openBattleModal() {
-  resetBattleView();
   openModal('battleModal');
 }
 
@@ -2470,15 +2537,67 @@ function rollEnemyMutations() {
   return primary ? [primary] : [];
 }
 
+function chooseAdaptive1v1Enemy(playerUnit, candidatePool) {
+  const playerPower = Math.max(1, calculateBattleUnitPower(playerUnit));
+  const rankedCandidates = candidatePool
+    .map(card => ({ card, display: getDisplayCard(card, []) }))
+    .map(entry => ({
+      ...entry,
+      power: Math.max(1, Math.round(Number(entry.display?.hp) || 0) + 2 * Math.max(0, Math.round(Number(entry.display?.atk) || 0)))
+    }))
+    .sort((a, b) => {
+      const distanceA = Math.abs(Math.log((a.power + 1) / (playerPower + 1)));
+      const distanceB = Math.abs(Math.log((b.power + 1) / (playerPower + 1)));
+      return distanceA - distanceB;
+    });
+
+  const chosen = rankedCandidates[0] || { card: candidatePool[0], display: getDisplayCard(candidatePool[0], []) };
+  const mutations = rollEnemyMutations();
+  const rawDisplay = getDisplayCard(chosen.card, mutations);
+  const rawPower = Math.max(1, Math.round(Number(rawDisplay?.hp) || 0) + 2 * Math.max(0, Math.round(Number(rawDisplay?.atk) || 0)));
+  const targetPower = Math.max(1, Math.round(playerPower * BATTLE_1V1_TARGET_RATIO));
+  const rawRatio = targetPower / rawPower;
+
+  // Diminishing-return scaling: enemy stats track player strength on a sub-linear
+  // curve and remain within a bounded multiplier band. This prevents an inflated
+  // player card from generating an exponentially inflated opponent/reward pool.
+  const adaptiveScale = Math.max(
+    BATTLE_1V1_MIN_SCALE,
+    Math.min(BATTLE_1V1_MAX_SCALE, Math.exp(Math.log(Math.max(0.01, rawRatio)) * BATTLE_1V1_ADAPTIVE_EXPONENT))
+  );
+
+  const hp = Math.max(1, Math.round((Number(rawDisplay?.hp) || 1) * adaptiveScale));
+  const atk = Math.max(1, Math.round((Number(rawDisplay?.atk) || 1) * adaptiveScale));
+  const display = { ...rawDisplay, hp, atk };
+
+  return {
+    card: chosen.card,
+    mutations,
+    variantKey: getVariantKey(chosen.card.id, mutations),
+    display,
+    hp,
+    maxHp: hp,
+    atk,
+    defeated: false,
+    adaptiveScale,
+    adaptiveSourcePower: rawPower
+  };
+}
+
 function chooseBattleEnemyTeam(playerTeam) {
+  const mode = getBattleMode();
   const playerIds = new Set(playerTeam.map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean));
   let pool = getAvailableRollPool().filter(card => !playerIds.has(normalizeCardId(card?.id)));
   if (!pool.length) pool = ALL_CARDS.filter(card => !playerIds.has(normalizeCardId(card?.id)));
   if (!pool.length) pool = [...ALL_CARDS];
 
+  if (mode === '1v1') {
+    return [chooseAdaptive1v1Enemy(playerTeam[0], pool)];
+  }
+
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const team = [];
-  for (let index = 0; index < BATTLE_TEAM_SIZE; index += 1) {
+  for (let index = 0; index < getBattleTeamSize(); index += 1) {
     const card = shuffled[index % shuffled.length];
     const mutations = rollEnemyMutations();
     const display = getDisplayCard(card, mutations);
@@ -2505,24 +2624,37 @@ function calculateBattleTeamPower(team) {
 }
 
 function getBattleRewardProfile(playerPower, enemyPower) {
-  const ratio = enemyPower / Math.max(1, playerPower);
-  let multiplier = 1;
-  let label = 'Balanced Match';
+  const mode = getBattleMode();
+  const safePlayerPower = Math.max(1, Number(playerPower) || 0);
+  const safeEnemyPower = Math.max(0, Number(enemyPower) || 0);
+  const rawRatio = safeEnemyPower / safePlayerPower;
 
-  if (ratio < 0.8) {
-    multiplier = 0.35;
-    label = 'Weak Match Penalty';
-  } else if (ratio <= 1.25) {
-    multiplier = 1;
-    label = 'Balanced Match';
+  if (mode === '1v1') {
+    const ratio = Math.max(0.90, Math.min(1.15, rawRatio));
+    const multiplier = Math.max(0.90, Math.min(1.25, 1 + (ratio - 1) * 1.25));
+    const reward = Math.max(0, Math.floor(BATTLE_1V1_BASE_REWARD_VND * multiplier));
+    const experience = Math.max(0, Math.floor(BATTLE_BASE_XP_1V1 * multiplier));
+    const dropRateBonus = Number((0.35 + Math.max(0, multiplier - 0.90) * 1.25).toFixed(2));
+    return { mode, ratio, multiplier, reward, experience, dropRateBonus, label: 'Adaptive 1v1' };
+  }
+
+  let multiplier = 1.20;
+  let label = 'Balanced 4v4';
+  if (rawRatio < 0.80) {
+    multiplier = 0.75;
+    label = 'Weak Match';
+  } else if (rawRatio <= 1.25) {
+    multiplier = 1.20;
+    label = 'Balanced 4v4';
   } else {
-    // 1.50x at 1.25 ratio, scaling linearly to 2.50x at 2.00+.
-    multiplier = Math.min(2.5, 1.5 + ((ratio - 1.25) / 0.75));
-    label = 'Hard Match Bonus';
+    multiplier = Math.min(3.00, 1.65 + ((rawRatio - 1.25) / 0.75) * 1.35);
+    label = 'Hard 4v4 Bonus';
   }
 
   const reward = Math.max(0, Math.floor(BATTLE_BASE_REWARD_VND * multiplier));
-  return { ratio, multiplier, reward, label };
+  const experience = Math.max(0, Math.floor(BATTLE_BASE_XP_4V4 * multiplier));
+  const dropRateBonus = Number(Math.min(5, 2 + Math.max(0, multiplier - 0.75) * 2.2).toFixed(2));
+  return { mode, ratio: rawRatio, multiplier, reward, experience, dropRateBonus, label };
 }
 
 function renderBattleCombatant(side, unit) {
@@ -2596,6 +2728,7 @@ function renderBattleStats() {
 
   if (els.battlePlayerTeamPower) els.battlePlayerTeamPower.textContent = `PLAYER POWER ${battleState.playerPower.toLocaleString('en-US')}`;
   if (els.battleEnemyTeamPower) els.battleEnemyTeamPower.textContent = `ENEMY POWER ${battleState.enemyPower.toLocaleString('en-US')}`;
+  if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
 }
 
 function animateBattleAttack(side) {
@@ -2663,7 +2796,7 @@ function deductBattleVariantCopy(unit) {
 }
 
 function canReplayBattleTeam() {
-  if (!battleState?.setup?.team || battleState.setup.team.length !== BATTLE_TEAM_SIZE) return false;
+  if (!battleState?.setup?.team || battleState.setup.team.length !== getBattleTeamSize()) return false;
   const usage = new Map();
   for (const slot of battleState.setup.team) {
     usage.set(slot.variantKey, (usage.get(slot.variantKey) || 0) + 1);
@@ -2703,21 +2836,28 @@ function finishBattle(playerWon) {
     if (playerWon) {
       const rewardProfile = getBattleRewardProfile(safePlayerPower, safeEnemyPower);
       const reward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward)) : 0;
+      const experience = Number.isFinite(Number(rewardProfile.experience)) ? Math.max(0, Math.floor(rewardProfile.experience)) : 0;
+      const dropRateBonus = Number.isFinite(Number(rewardProfile.dropRateBonus)) ? Math.max(0, Number(rewardProfile.dropRateBonus)) : 0;
       state.currency = Math.max(0, Number(state.currency) || 0) + reward;
+      state.experience = Math.max(0, Number(state.experience) || 0) + experience;
+      state.battleDropRateBonus = Math.max(0, Math.min(100, Number(state.battleDropRateBonus) || 0) + dropRateBonus);
       saveState();
       updateStats();
       renderUpgradeShop();
 
       const bonusPercent = Math.round((rewardProfile.multiplier - 1) * 100);
       const rewardNote = bonusPercent >= 0 ? `+${bonusPercent}% reward` : `${bonusPercent}% reward`;
+      const modeLabel = rewardProfile.mode.toUpperCase();
 
-      appendBattleLog(`Victory! +${formatCurrency(reward)} • ${rewardProfile.label}.`, 'victory');
+      appendBattleLog(`Victory! +${formatCurrency(reward)} • +${experience} EXP • +${dropRateBonus.toFixed(2)}% Drop Rate Bonus • ${rewardProfile.label}.`, 'victory');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
-      if (els.battleResultText) els.battleResultText.textContent = `4v4 cleared. +${formatCurrency(reward)} earned (${rewardNote}).`;
+      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. +${formatCurrency(reward)} earned (${rewardNote}).`;
       if (els.battleResultPower) {
         els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${rewardProfile.label} • ×${Number(rewardProfile.multiplier || 1).toFixed(2)}`;
       }
       if (els.battleResultCash) els.battleResultCash.textContent = `+${formatCurrency(reward)}`;
+      if (els.battleResultExp) els.battleResultExp.textContent = `+${experience.toLocaleString('en-US')} EXP`;
+      if (els.battleResultDropRate) els.battleResultDropRate.textContent = `+${dropRateBonus.toFixed(2)}%`;
       if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = 'N/A — Victory';
     } else {
       const penalty = applyBattleDefeatPenalty();
@@ -2738,6 +2878,8 @@ function finishBattle(playerWon) {
     if (els.battleResultCash) els.battleResultCash.textContent = '+0 VNĐ';
     if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = playerWon ? 'N/A — Victory' : 'CHECK LOG';
       if (els.battleResultCash) els.battleResultCash.textContent = '+0 VNĐ';
+      if (els.battleResultExp) els.battleResultExp.textContent = '+0 EXP';
+      if (els.battleResultDropRate) els.battleResultDropRate.textContent = '+0.00%';
       if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = penalty?.lost ? 'LOST 1 CARD' : 'SAVED';
     }
   } catch (error) {
@@ -2776,7 +2918,7 @@ function endBattle(playerWon) {
 
 function startBattle(useExistingSetup = true) {
   const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
-  if (!Array.isArray(setupTeam) || setupTeam.length !== BATTLE_TEAM_SIZE || !isBattleSetupValid(setupTeam)) return;
+  if (!Array.isArray(setupTeam) || setupTeam.length !== getBattleTeamSize() || !isBattleSetupValid(setupTeam)) return;
 
   const playerTeam = setupTeam.map(slot => {
     const card = getCardById(slot.cardId);
@@ -2798,7 +2940,11 @@ function startBattle(useExistingSetup = true) {
   const playerPower = calculateBattleTeamPower(playerTeam);
   const enemyPower = calculateBattleTeamPower(enemyTeam);
 
+  const mode = getBattleMode();
+  const teamSize = getBattleTeamSize();
+
   battleState = {
+    mode,
     setup: { team: setupTeam.map(slot => ({ ...slot })), activeIndex: 0 },
     turn: 'player',
     finished: false,
@@ -2819,9 +2965,9 @@ function startBattle(useExistingSetup = true) {
   els.battleArena?.classList.remove('hidden');
   if (els.battleLog) els.battleLog.innerHTML = '';
 
-  appendBattleLog(`4v4 battle begins: ${playerTeam[0].display.name} leads the line.`);
+  appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
   appendBattleLog(`Enemy mutations are active-weather boosted (70% roll chance).`);
-  appendBattleLog('First strike begins in 3 seconds.', 'player');
+  appendBattleLog(`First strike begins in 3 seconds. ${teamSize} fighter${teamSize === 1 ? '' : 's'} per side.`, 'player');
   renderBattleStats();
   scheduleNextBattleTurn();
 }
@@ -2848,7 +2994,7 @@ function executeBattleTurn() {
 
     if (battleState.turn === 'player') {
       battleState.enemyIndex += 1;
-      if (battleState.enemyIndex >= BATTLE_TEAM_SIZE) {
+      if (battleState.enemyIndex >= getBattleTeamSize()) {
         renderBattleStats();
         finishBattle(true);
         return;
@@ -2859,7 +3005,7 @@ function executeBattleTurn() {
       battleState.turn = 'enemy';
     } else {
       battleState.playerIndex += 1;
-      if (battleState.playerIndex >= BATTLE_TEAM_SIZE) {
+      if (battleState.playerIndex >= getBattleTeamSize()) {
         renderBattleStats();
         finishBattle(false);
         return;
@@ -3019,14 +3165,17 @@ els.upgradesButton?.addEventListener("click", () => openModal("upgradesModal"));
 els.battleButton?.addEventListener("click", openBattleModal);
 els.resetButton?.addEventListener("click", resetGame);
 els.battleStartButton?.addEventListener("click", () => startBattle(true));
+els.battleModePicker?.querySelectorAll("[data-battle-mode]").forEach(button => {
+  button.addEventListener("click", () => setBattleMode(button.dataset.battleMode));
+});
 els.battleAutoAgainButton?.addEventListener("click", () => {
   if (!canReplayBattleTeam()) return;
   startBattle(true);
 });
 els.battleChangeFighterButton?.addEventListener("click", () => {
   clearBattleTurnTimer();
-  battleState = { setup: { team: [], activeIndex: 0 } };
-  resetBattleView();
+  battleState = { mode: getBattleMode(), setup: { team: [], activeIndex: 0 } };
+  resetBattleView(getBattleMode());
 });
 els.rollButton?.addEventListener("click", () => rollCard("manual"));
 els.searchInput?.addEventListener("input", () => {

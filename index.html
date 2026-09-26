@@ -53,7 +53,7 @@
           <span class="nav-icon">⚔</span>
           <span>
             <small>BATTLE</small>
-            <strong>Solo</strong>
+            <strong>Arena</strong>
           </span>
         </button>
 
@@ -342,10 +342,21 @@
         <div class="battle-setup-card">
           <div class="battle-setup-head">
             <div>
-              <span class="battle-field-label">BUILD YOUR 4V4 TEAM</span>
-              <p>Select four fighters from your unlocked Collection, then assign an owned Mutation variant to each slot.</p>
+              <span class="battle-field-label">CHOOSE BATTLE MODE</span>
+              <p>Pick 1v1 for adaptive solo combat or 4v4 for the full team battle.</p>
             </div>
             <span class="battle-setup-hint">TEAM <b id="battleTeamCount">0/4</b></span>
+          </div>
+
+          <div id="battleModePicker" class="battle-mode-picker" role="group" aria-label="Battle mode">
+            <button type="button" class="battle-mode-option is-selected" data-battle-mode="4v4" aria-pressed="true">
+              <strong>4v4</strong>
+              <span>Full team combat • boosted rewards</span>
+            </button>
+            <button type="button" class="battle-mode-option" data-battle-mode="1v1" aria-pressed="false">
+              <strong>1v1</strong>
+              <span>Adaptive enemy • anti-inflation scaling</span>
+            </button>
           </div>
 
           <div class="battle-team-builder">
@@ -430,7 +441,7 @@
 
         <div class="battle-team-power-strip">
           <span id="battlePlayerTeamPower">PLAYER POWER 0</span>
-          <span>4V4 • 3s TURNS</span>
+          <span id="battleModeLabel">4V4 • 3s TURNS</span>
           <span id="battleEnemyTeamPower">ENEMY POWER 0</span>
         </div>
 
@@ -459,6 +470,14 @@
           <div class="battle-result__metric">
             <span>Cash Earned</span>
             <strong id="battleResultCash">+0 VNĐ</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Battle EXP</span>
+            <strong id="battleResultExp">+0 EXP</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Drop Rate Bonus</span>
+            <strong id="battleResultDropRate">+0.00%</strong>
           </div>
           <div class="battle-result__metric">
             <span>25% Card Loss</span>
