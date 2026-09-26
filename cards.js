@@ -51,7 +51,7 @@ const CARDS = [
   },
   {
     id: "starter-legendary",
-    name: "Crimson Emperor",
+    name: "Son Goku",
     rarity: "Legendary",
     chance: 1000,
     requiredWeather: null,
@@ -60,11 +60,11 @@ const CARDS = [
       name: "Royal Pressure",
       description: "Deals bonus damage to enemies with more HP than this card."
     },
-    image: "assets/cards/default.png"
+    image: "assets/cards/songoku.png"
   },
   {
     id: "starter-secret",
-    name: "Void Genesis",
+    name: "The Truth",
     rarity: "Secret",
     chance: 100000,
     requiredWeather: null,
@@ -73,13 +73,13 @@ const CARDS = [
       name: "Genesis Break",
       description: "A cosmic passive that massively amplifies the next critical hit."
     },
-    image: "assets/cards/default.png"
+    image: "assets/cards/thetruth.png"
   },
 
   // Existing weather-exclusive cards.
   {
     id: "weather-solar-deity",
-    name: "Solar Deity",
+    name: "Escanor",
     rarity: "Legendary",
     chance: 2500,
     requiredWeather: "Sunny",
@@ -88,7 +88,7 @@ const CARDS = [
       name: "Daybreak",
       description: "Amplifies the next attack after every successful roll during Sunny weather."
     },
-    image: "assets/cards/default.png"
+    image: "assets/cards/escanor.png"
   },
   {
     id: "weather-eclipse-harvester",
@@ -105,7 +105,7 @@ const CARDS = [
   },
   {
     id: "weather-frost-sovereign",
-    name: "Frost Sovereign",
+    name: "Esdeath",
     rarity: "Mythic",
     chance: 12000,
     requiredWeather: "Snowing",
@@ -114,7 +114,7 @@ const CARDS = [
       name: "Absolute Zero",
       description: "Has a chance to freeze an enemy after landing a critical hit."
     },
-    image: "assets/cards/default.png"
+    image: "assets/cards/esdeath.png"
   },
 
   // New weather-exclusive cards. Add more entries below using the same schema.
