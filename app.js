@@ -13,7 +13,7 @@ const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
   "animeCardRngSave_v1"
 ]);
-const SAVE_SCHEMA_VERSION = 4;
+const SAVE_SCHEMA_VERSION = 5;
 const GLOBAL_TICK_MS = 1000;
 const BASE_COOLDOWN_MS = 1500;
 const SPEED_BASE_COST = 100;
@@ -22,6 +22,21 @@ const SPEED_FACTOR = 0.15;
 const LUCK_BASE_COST = 250;
 const LUCK_MAX_LEVEL = 500;
 const LUCK_FACTOR = 0.25;
+
+const CARD_RARITY_EXP_MULTIPLIERS = Object.freeze({
+  Common: 1,
+  Rare: 1.6,
+  Epic: 2.4,
+  Legendary: 3.6,
+  Mythic: 5.2,
+  Secret: 8
+});
+const CARD_LEVEL_BASE_EXP = 100;
+const CARD_LEVEL_STAT_GROWTH = 0.0075;
+const CARD_LEVEL_MAX = 999;
+const AUTO_SALVAGE_RARITY_VALUES = Object.freeze(["off", "Common", "Rare", "Epic", "Legendary", "Mythic", "Secret"]);
+
+const FALLBACK_ART_DATA_URL = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Cdefs%3E%3ClinearGradient id%3D%22g%22 x1%3D%220%22 y1%3D%220%22 x2%3D%221%22 y2%3D%221%22%3E%3Cstop stop-color%3D%22%23141a2a%22%2F%3E%3Cstop offset%3D%221%22 stop-color%3D%22%23080b14%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22url(%23g)%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%2Csans-serif%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E";
 
 const MUTATION_ID_ALIASES = Object.freeze({
   blizzard: "frost",
@@ -34,6 +49,8 @@ const defaultState = {
   currency: 0,
   experience: 0,
   battleDropRateBonus: 0,
+  cardProgress: {},
+  autoSalvage: { enabled: false, mutations: { normal: false }, rarityThreshold: "off" },
   unlocked: {},
   mutations: {},
   equipment: [],
@@ -135,6 +152,17 @@ const els = {
   previewVariantMenu: document.getElementById("variantMenu"),
   previewCollectedCount: document.getElementById("previewCollectedCount"),
   previewRequirement: document.getElementById("previewRequirement"),
+  previewLevel: document.getElementById("previewLevel"),
+  previewExpText: document.getElementById("previewExpText"),
+  previewExpBar: document.getElementById("previewExpBar"),
+  previewSalvageButton: document.getElementById("previewSalvageButton"),
+  previewSalvageExtrasButton: document.getElementById("previewSalvageExtrasButton"),
+  previewAutoDeleteButton: document.getElementById("previewAutoDeleteButton"),
+
+  autoSalvageModal: document.getElementById("autoSalvageModal"),
+  autoSalvageEnabled: document.getElementById("autoSalvageEnabled"),
+  autoSalvageRarity: document.getElementById("autoSalvageRarity"),
+  autoSalvageMutationOptions: document.getElementById("autoSalvageMutationOptions"),
 
   upgradesModal: document.getElementById("upgradesModal"),
   shopCurrency: document.getElementById("shopCurrency"),
@@ -163,6 +191,9 @@ const els = {
   battlePlayerBackdrop: document.getElementById("battlePlayerBackdrop"),
   battlePlayerMutationBadges: document.getElementById("battlePlayerMutationBadges"),
   battlePlayerName: document.getElementById("battlePlayerName"),
+  battlePlayerLevel: document.getElementById("battlePlayerLevel"),
+  battlePlayerExpText: document.getElementById("battlePlayerExpText"),
+  battlePlayerExpBar: document.getElementById("battlePlayerExpBar"),
   battlePlayerHp: document.getElementById("battlePlayerHp"),
   battlePlayerHpBar: document.getElementById("battlePlayerHpBar"),
   battlePlayerAtk: document.getElementById("battlePlayerAtk"),
@@ -172,6 +203,9 @@ const els = {
   battleEnemyBackdrop: document.getElementById("battleEnemyBackdrop"),
   battleEnemyMutationBadges: document.getElementById("battleEnemyMutationBadges"),
   battleEnemyName: document.getElementById("battleEnemyName"),
+  battleEnemyLevel: document.getElementById("battleEnemyLevel"),
+  battleEnemyExpText: document.getElementById("battleEnemyExpText"),
+  battleEnemyExpBar: document.getElementById("battleEnemyExpBar"),
   battleEnemyHp: document.getElementById("battleEnemyHp"),
   battleEnemyHpBar: document.getElementById("battleEnemyHpBar"),
   battleEnemyAtk: document.getElementById("battleEnemyAtk"),
@@ -204,6 +238,8 @@ function cloneDefaultState() {
     currency: 0,
     experience: 0,
     battleDropRateBonus: 0,
+    cardProgress: {},
+    autoSalvage: { enabled: false, mutations: { normal: false }, rarityThreshold: "off" },
     unlocked: {},
     mutations: {},
     inventory: {},
@@ -221,6 +257,133 @@ function cloneDefaultState() {
 
 function normalizeCardId(id) {
   return String(id ?? "").trim();
+}
+
+function getCardLevelRarityMultiplier(cardOrId) {
+  const card = typeof cardOrId === "object" ? cardOrId : getCardById(cardOrId);
+  return Number(CARD_RARITY_EXP_MULTIPLIERS[String(card?.rarity || "Common")]) || 1;
+}
+
+function getCardLevelExpRequired(cardOrId, level = 1) {
+  const safeLevel = Math.max(1, Math.floor(Number(level) || 1));
+  return Math.max(1, Math.floor(CARD_LEVEL_BASE_EXP * getCardLevelRarityMultiplier(cardOrId) * safeLevel));
+}
+
+function normalizeCardProgressRecords(rawProgress) {
+  const output = {};
+  if (!rawProgress || typeof rawProgress !== "object" || Array.isArray(rawProgress)) return output;
+
+  for (const [rawId, rawRecord] of Object.entries(rawProgress)) {
+    const cardId = normalizeCardId(rawId);
+    if (!cardId || !getCardById(cardId)) continue;
+    const source = rawRecord && typeof rawRecord === "object" ? rawRecord : {};
+    const level = Math.min(CARD_LEVEL_MAX, Math.max(1, Math.floor(Number(source.level) || 1)));
+    const exp = Math.max(0, Math.floor(Number(source.exp) || 0));
+    output[cardId] = { level, exp };
+  }
+  return output;
+}
+
+function normalizeAutoSalvageSettings(rawSettings) {
+  const raw = rawSettings && typeof rawSettings === "object" ? rawSettings : {};
+  const mutationSource = raw.mutations && typeof raw.mutations === "object" ? raw.mutations : {};
+  const mutations = { normal: Boolean(mutationSource.normal) };
+
+  if (Array.isArray(MUTATIONS)) {
+    for (const mutation of MUTATIONS) {
+      const id = normalizeMutationId(mutation?.id);
+      if (!id) continue;
+      mutations[id] = Boolean(mutationSource[id]);
+    }
+  }
+
+  const rarityRaw = String(raw.rarityThreshold || raw.rarity || "off");
+  const rarityThreshold = AUTO_SALVAGE_RARITY_VALUES.find(value => value.toLowerCase() === rarityRaw.toLowerCase()) || "off";
+  return { enabled: Boolean(raw.enabled), mutations, rarityThreshold };
+}
+
+function getCardLevelInfo(cardOrId) {
+  const card = typeof cardOrId === "object" ? cardOrId : getCardById(cardOrId);
+  const cardId = normalizeCardId(card?.id ?? cardOrId);
+  const source = state?.cardProgress?.[cardId];
+  const level = Math.min(CARD_LEVEL_MAX, Math.max(1, Math.floor(Number(source?.level) || 1)));
+  const exp = Math.max(0, Math.floor(Number(source?.exp) || 0));
+  const required = getCardLevelExpRequired(card || cardId, level);
+  return { cardId, level, exp, required, progress: Math.min(1, required > 0 ? exp / required : 0) };
+}
+
+function getCardLevelStatMultiplier(cardOrId) {
+  const info = getCardLevelInfo(cardOrId);
+  return 1 + Math.max(0, info.level - 1) * CARD_LEVEL_STAT_GROWTH;
+}
+
+function ensureCardProgress(cardId) {
+  const normalizedId = normalizeCardId(cardId);
+  if (!normalizedId || !getCardById(normalizedId)) return null;
+  if (!state.cardProgress || typeof state.cardProgress !== "object") state.cardProgress = {};
+  if (!state.cardProgress[normalizedId]) state.cardProgress[normalizedId] = { level: 1, exp: 0 };
+  return state.cardProgress[normalizedId];
+}
+
+function grantCardExperience(cardId, amount) {
+  const normalizedId = normalizeCardId(cardId);
+  const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!normalizedId || safeAmount <= 0 || !getCardById(normalizedId)) return { gained: 0, level: getCardLevelInfo(normalizedId).level, levelUps: 0 };
+
+  const progress = ensureCardProgress(normalizedId);
+  if (!progress) return { gained: 0, level: 1, levelUps: 0 };
+
+  let remaining = safeAmount;
+  let levelUps = 0;
+  while (remaining > 0 && progress.level < CARD_LEVEL_MAX) {
+    const required = getCardLevelExpRequired(normalizedId, progress.level);
+    const needed = Math.max(1, required - progress.exp);
+    if (remaining < needed) {
+      progress.exp += remaining;
+      remaining = 0;
+      break;
+    }
+    remaining -= needed;
+    progress.exp = 0;
+    progress.level += 1;
+    levelUps += 1;
+  }
+
+  if (progress.level >= CARD_LEVEL_MAX) {
+    progress.level = CARD_LEVEL_MAX;
+    progress.exp = 0;
+  }
+  return { gained: safeAmount, level: progress.level, levelUps };
+}
+
+function calculateCardRollExperience(card, mutations = []) {
+  const rarityMultiplier = getCardLevelRarityMultiplier(card);
+  const mutationMultiplier = getMutationMultiplier(mutations);
+  return Math.max(1, Math.floor(8 * rarityMultiplier * mutationMultiplier));
+}
+
+function getAutoSalvageMutationMatch(card, mutations = []) {
+  const selected = state?.autoSalvage?.mutations || {};
+  const safeMutations = normalizeMutationObjects(mutations);
+  if (!safeMutations.length) return Boolean(selected.normal);
+  return safeMutations.some(mutation => selected[normalizeMutationId(mutation?.id)] === true);
+}
+
+function shouldAutoSalvageCard(card, mutations = []) {
+  const config = state?.autoSalvage;
+  if (!config?.enabled) return false;
+
+  const mutationMatch = getAutoSalvageMutationMatch(card, mutations);
+  const threshold = String(config.rarityThreshold || "off");
+  const thresholdIndex = AUTO_SALVAGE_RARITY_VALUES.indexOf(threshold);
+  const rarityIndex = AUTO_SALVAGE_RARITY_VALUES.indexOf(String(card?.rarity || ""));
+  const rarityMatch = threshold !== "off" && thresholdIndex >= 1 && rarityIndex >= 1 && rarityIndex <= thresholdIndex;
+  return mutationMatch || rarityMatch;
+}
+
+function getSalvageValue(card, mutations = []) {
+  const display = getDisplayCard(card, mutations);
+  return Math.max(0, Math.floor(Number(display?.reward) || 0));
 }
 
 function hasOwn(object, key) {
@@ -576,6 +739,9 @@ function normalizeState(parsed = {}) {
     ? Math.max(0, Math.min(100, Number(parsed.battleDropRateBonus)))
     : 0;
 
+  normalized.cardProgress = normalizeCardProgressRecords(parsed.cardProgress || parsed.cardLevels || parsed.levels);
+  normalized.autoSalvage = normalizeAutoSalvageSettings(parsed.autoSalvage || parsed.autoDelete || parsed.autoSalvageSettings);
+
   const rawUnlockedSource = (
     parsed.unlocked &&
     typeof parsed.unlocked === "object"
@@ -737,6 +903,10 @@ function parseStoredSave(raw) {
       "currency",
       "experience",
       "battleDropRateBonus",
+      "cardProgress",
+      "cardLevels",
+      "autoSalvage",
+      "autoDelete",
       "unlocked",
       "unlockedCards",
       "mutations",
@@ -1218,7 +1388,9 @@ function getMutationMultiplier(mutations) {
 
 function getDisplayCard(card, mutations = []) {
   const safeMutations = normalizeMutationObjects(mutations);
-  const multiplier = getMutationMultiplier(safeMutations);
+  const mutationMultiplier = getMutationMultiplier(safeMutations);
+  const levelInfo = getCardLevelInfo(card);
+  const levelMultiplier = getCardLevelStatMultiplier(card);
   const prefix = safeMutations
     .map(mutation => String(mutation?.name || ""))
     .filter(Boolean)
@@ -1226,9 +1398,13 @@ function getDisplayCard(card, mutations = []) {
     .join(" ");
   return {
     name: prefix ? `${prefix} ${String(card?.name || "Unknown Card")}` : String(card?.name || "Unknown Card"),
-    hp: Math.max(0, Math.round((Number(card?.stats?.hp) || 0) * multiplier)),
-    atk: Math.max(0, Math.round((Number(card?.stats?.atk) || 0) * multiplier)),
-    reward: Math.max(0, Math.floor(calculateCardReward(Number(card?.chance) || 0) * multiplier))
+    hp: Math.max(0, Math.round((Number(card?.stats?.hp) || 0) * mutationMultiplier * levelMultiplier)),
+    atk: Math.max(0, Math.round((Number(card?.stats?.atk) || 0) * mutationMultiplier * levelMultiplier)),
+    reward: Math.max(0, Math.floor(calculateCardReward(Number(card?.chance) || 0) * mutationMultiplier)),
+    level: levelInfo.level,
+    exp: levelInfo.exp,
+    expRequired: levelInfo.required,
+    expProgress: levelInfo.progress
   };
 }
 
@@ -1351,28 +1527,44 @@ function rollCard(source = "manual") {
       const mutations = rollMutations();
       const display = getDisplayCard(result.card, mutations);
       const variantKey = getVariantKey(result.card.id, mutations);
-
       const cardId = normalizeCardId(result.card.id);
-      state.unlocked[cardId] = getUnlockedCountById(cardId) + 1;
-      state.mutations[variantKey] = (state.mutations[variantKey] || 0) + 1;
-      const inventoryEntry = state.inventory[variantKey];
-      if (inventoryEntry) {
-        inventoryEntry.count = Math.max(0, Math.floor(Number(inventoryEntry.count) || 0)) + 1;
-      } else {
-        const mutationIds = mutations.map(mutation => normalizeMutationId(mutation.id));
-        state.inventory[variantKey] = {
-          id: cardId,
-          cardId,
-          mutation: mutationIds.join("+"),
-          mutationIds,
-          count: 1
-        };
-      }
-      state.lastResultId = normalizeCardId(result.card.id);
-      state.currency += display.reward;
+      const rollExp = calculateCardRollExperience(result.card, mutations);
+      const levelResult = grantCardExperience(cardId, rollExp);
+      const autoSalvaged = shouldAutoSalvageCard(result.card, mutations);
 
-      showResult(result.card, result.effectiveChance, mutations);
-      showRewardToast(display.reward, mutations);
+      state.lastResultId = cardId;
+
+      if (autoSalvaged) {
+        const salvageValue = getSalvageValue(result.card, mutations);
+        state.currency = Math.max(0, Number(state.currency) || 0) + salvageValue;
+        showResult(result.card, result.effectiveChance, mutations);
+        showRewardToast(salvageValue, mutations);
+        if (els.rewardToast) {
+          els.rewardToast.textContent = `🗑 AUTO-SALVAGED • +${formatCurrency(salvageValue)} • +${levelResult.gained} EXP`;
+        }
+      } else {
+        state.unlocked[cardId] = getUnlockedCountById(cardId) + 1;
+        state.mutations[variantKey] = (state.mutations[variantKey] || 0) + 1;
+        const inventoryEntry = state.inventory[variantKey];
+        if (inventoryEntry) {
+          inventoryEntry.count = Math.max(0, Math.floor(Number(inventoryEntry.count) || 0)) + 1;
+        } else {
+          const mutationIds = mutations.map(mutation => normalizeMutationId(mutation.id));
+          state.inventory[variantKey] = {
+            id: cardId,
+            cardId,
+            mutation: mutationIds.join("+"),
+            mutationIds,
+            count: 1
+          };
+        }
+        showResult(result.card, result.effectiveChance, mutations);
+        showRewardToast(0, mutations);
+        if (els.rewardToast) {
+          const mutationText = normalizeMutationObjects(mutations).map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ");
+          els.rewardToast.textContent = `${mutationText ? `✦ ${mutationText} • ` : ""}CARD ACQUIRED • +${levelResult.gained} EXP`;
+        }
+      }
     } else {
       state.lastResultId = null;
       showMiss(result.score);
@@ -1452,7 +1644,7 @@ function showRewardToast(reward, mutations = []) {
 }
 
 function setArtwork(img, fallback, backdrop, src, alt) {
-  const safeSrc = src || "assets/cards/default.png";
+  const safeSrc = src || FALLBACK_ART_DATA_URL;
   if (backdrop) backdrop.style.setProperty("--art-bg-image", `url("${escapeCssUrl(safeSrc)}")`);
   if (!img) return;
   if (fallback) fallback.style.display = "none";
@@ -1816,7 +2008,7 @@ function renderCollection() {
       const count = getOwnedCardCount(cardId);
       const safeName = String(card?.name || "Unknown Card");
       const chance = Number.isFinite(Number(card?.chance)) ? Number(card.chance) : 0;
-      const image = String(card?.image || "assets/cards/default.png");
+      const image = String(card?.image || FALLBACK_ART_DATA_URL);
       const visuals = getCardMutationVisuals(cardId);
       const profile = visuals.profile;
 
@@ -1928,7 +2120,24 @@ function renderCollection() {
         badgeList.appendChild(badge);
       }
 
-      body.append(titleRow, meta, badgeList);
+      const levelInfo = owned ? getCardLevelInfo(cardId) : { level: 0, exp: 0, required: 1, progress: 0 };
+      const levelWrap = document.createElement("div");
+      levelWrap.className = "card-level-mini";
+      const levelLabel = document.createElement("span");
+      levelLabel.className = "card-level-mini__label";
+      levelLabel.textContent = owned ? `Lv. ${levelInfo.level}` : "Lv. —";
+      const expText = document.createElement("span");
+      expText.className = "card-level-mini__exp";
+      expText.textContent = owned ? `${levelInfo.exp}/${levelInfo.required} EXP` : "";
+      const expTrack = document.createElement("div");
+      expTrack.className = "card-level-mini__track";
+      const expFill = document.createElement("div");
+      expFill.className = "card-level-mini__fill";
+      expFill.style.width = `${Math.round((levelInfo.progress || 0) * 100)}%`;
+      expTrack.appendChild(expFill);
+      levelWrap.append(levelLabel, expText, expTrack);
+
+      body.append(titleRow, meta, badgeList, levelWrap);
       art.append(img, fallback, lock);
       item.append(art, body);
 
@@ -1961,6 +2170,150 @@ function renderCollection() {
 // ============================================================
 // DEDICATED CARD PREVIEW
 // ============================================================
+
+function decrementOwnershipVariant(cardId, variantKey, copies = 1) {
+  const normalizedId = normalizeCardId(cardId);
+  const safeCopies = Math.max(0, Math.floor(Number(copies) || 0));
+  if (!normalizedId || !variantKey || safeCopies <= 0) return 0;
+
+  const canonicalKey = (() => {
+    const parsed = parseVariantKey(variantKey);
+    return parsed ? canonicalVariantKey(normalizedId, parsed.mutations.map(mutation => mutation?.id)) : variantKey;
+  })();
+  const current = Math.max(0, Math.floor(Number(state.mutations?.[canonicalKey]) || 0));
+  const inventoryCount = Math.max(0, Math.floor(Number(state.inventory?.[canonicalKey]?.count) || 0));
+  const available = Math.max(current, inventoryCount);
+  const removed = Math.min(safeCopies, available);
+  if (removed <= 0) return 0;
+
+  if (current <= removed) delete state.mutations[canonicalKey];
+  else state.mutations[canonicalKey] = current - removed;
+
+  const inventoryEntry = state.inventory?.[canonicalKey];
+  if (inventoryEntry) {
+    if (inventoryCount <= removed) delete state.inventory[canonicalKey];
+    else inventoryEntry.count = inventoryCount - removed;
+  }
+
+  const currentCardCount = getUnlockedCountById(normalizedId);
+  const nextCardCount = Math.max(0, currentCardCount - removed);
+  if (nextCardCount > 0) state.unlocked[normalizedId] = nextCardCount;
+  else delete state.unlocked[normalizedId];
+
+  return removed;
+}
+
+function salvageVariantCopies(cardId, variantKey, copies = 1) {
+  const card = getCardById(cardId);
+  if (!card) return { removed: 0, cash: 0 };
+  const parsed = parseVariantKey(variantKey);
+  if (!parsed) return { removed: 0, cash: 0 };
+  const variants = getVariantEntries(card.id);
+  const entry = variants.find(candidate => candidate.key === parsed.key);
+  if (!entry) return { removed: 0, cash: 0 };
+
+  const requested = Math.max(1, Math.floor(Number(copies) || 1));
+  const removed = Math.min(requested, entry.count);
+  const cashPerCopy = getSalvageValue(card, entry.mutations);
+  const actualRemoved = decrementOwnershipVariant(card.id, entry.key, removed);
+  const cash = Math.max(0, cashPerCopy * actualRemoved);
+  state.currency = Math.max(0, Number(state.currency) || 0) + cash;
+  return { removed: actualRemoved, cash };
+}
+
+function salvageExtraDuplicates(cardId) {
+  const card = getCardById(cardId);
+  if (!card) return { removed: 0, cash: 0 };
+  let removed = 0;
+  let cash = 0;
+
+  // Keep one copy of every distinct variant so unique mutations remain playable.
+  for (const entry of getVariantEntries(card.id)) {
+    const extras = Math.max(0, entry.count - 1);
+    if (!extras) continue;
+    const result = salvageVariantCopies(card.id, entry.key, extras);
+    removed += result.removed;
+    cash += result.cash;
+  }
+  return { removed, cash };
+}
+
+function renderAutoSalvageSettings() {
+  if (els.autoSalvageEnabled) els.autoSalvageEnabled.checked = Boolean(state.autoSalvage?.enabled);
+  if (els.autoSalvageRarity) els.autoSalvageRarity.value = String(state.autoSalvage?.rarityThreshold || "off");
+  if (!els.autoSalvageMutationOptions) return;
+
+  els.autoSalvageMutationOptions.innerHTML = "";
+  const options = [{ id: "normal", name: "Normal / No Mutation" }];
+  if (Array.isArray(MUTATIONS)) {
+    MUTATIONS.forEach(mutation => {
+      const id = normalizeMutationId(mutation?.id);
+      if (id && !options.some(option => option.id === id)) options.push({ id, name: String(mutation?.name || id) });
+    });
+  }
+
+  options.forEach(option => {
+    const label = document.createElement("label");
+    label.className = "auto-salvage-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = Boolean(state.autoSalvage?.mutations?.[option.id]);
+    input.dataset.autoSalvageMutation = option.id;
+    input.addEventListener("change", () => {
+      state.autoSalvage.mutations[option.id] = input.checked;
+      saveState();
+    });
+    const text = document.createElement("span");
+    text.textContent = option.name;
+    label.append(input, text);
+    els.autoSalvageMutationOptions.appendChild(label);
+  });
+}
+
+function openAutoSalvageSettings() {
+  renderAutoSalvageSettings();
+  openModal("autoSalvageModal");
+}
+
+function getPreviewVariant() {
+  if (!previewSelection) return null;
+  return getPreviewVariants(previewSelection.cardId).find(entry => entry.key === previewSelection.variantKey) || null;
+}
+
+function handlePreviewSalvage() {
+  const variant = getPreviewVariant();
+  if (!variant || !previewSelection) return;
+  const result = salvageVariantCopies(previewSelection.cardId, variant.key, 1);
+  if (!result.removed) return;
+  saveState();
+  updateStats();
+  renderCollection();
+  showRewardToast(result.cash);
+  const remaining = getPreviewVariants(previewSelection.cardId);
+  if (!remaining.length) {
+    closeModal("cardPreviewModal");
+    return;
+  }
+  if (!remaining.some(entry => entry.key === previewSelection.variantKey)) previewSelection.variantKey = remaining[0].key;
+  renderPreview();
+}
+
+function handlePreviewSalvageExtras() {
+  if (!previewSelection) return;
+  const result = salvageExtraDuplicates(previewSelection.cardId);
+  if (!result.removed) return;
+  saveState();
+  updateStats();
+  renderCollection();
+  showRewardToast(result.cash);
+  const remaining = getPreviewVariants(previewSelection.cardId);
+  if (!remaining.length) {
+    closeModal("cardPreviewModal");
+    return;
+  }
+  if (!remaining.some(entry => entry.key === previewSelection.variantKey)) previewSelection.variantKey = remaining[0].key;
+  renderPreview();
+}
 
 function getPreviewVariants(cardId) {
   const variants = getVariantEntries(cardId);
@@ -2009,6 +2362,12 @@ function renderPreview() {
   previewSelection.variantKey = variant.key;
 
   const display = getDisplayCard(card, variant.mutations);
+  const levelInfo = getCardLevelInfo(card);
+  if (els.previewLevel) els.previewLevel.textContent = `Lv. ${levelInfo.level}`;
+  if (els.previewExpText) els.previewExpText.textContent = `${levelInfo.exp}/${levelInfo.required} EXP`;
+  if (els.previewExpBar) els.previewExpBar.style.width = `${Math.round(levelInfo.progress * 100)}%`;
+  if (els.previewSalvageButton) els.previewSalvageButton.disabled = variant.count <= 0;
+  if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = !getPreviewVariants(card.id).some(entry => entry.count > 1);
   els.previewName.textContent = display.name;
   els.previewRarity.textContent = card.rarity;
   els.previewVariantCount.textContent = `${variant.count}×`;
@@ -2132,18 +2491,51 @@ function purchaseUpgrade(type) {
 // 4v4 BATTLE ARENA - VISUAL + AUTOMATED, ISOLATED FROM RNG/TICKER
 // ============================================================
 
-const BATTLE_BASE_REWARD_VND = 1000;
-const BATTLE_1V1_BASE_REWARD_VND = 320;
 const BATTLE_BASE_XP_4V4 = 480;
 const BATTLE_BASE_XP_1V1 = 140;
 const BATTLE_TURN_MS = 3000;
 const BATTLE_TEAM_SIZE = 4;
 const BATTLE_ENEMY_MUTATION_CHANCE = 0.70;
 const BATTLE_DEFEAT_LOSS_CHANCE = 0.25;
-const BATTLE_1V1_ADAPTIVE_EXPONENT = 0.58;
 const BATTLE_1V1_MIN_SCALE = 0.78;
 const BATTLE_1V1_MAX_SCALE = 1.32;
-const BATTLE_1V1_TARGET_RATIO = 1.03;
+const BATTLE_1V1_TARGET_RATIO_MIN = 0.92;
+const BATTLE_1V1_TARGET_RATIO_MAX = 1.22;
+const BATTLE_4V4_TARGET_RATIO_MIN = 0.85;
+const BATTLE_4V4_TARGET_RATIO_MAX = 1.30;
+
+function clampBattleEnemyLevel(level) {
+  return Math.max(1, Math.min(CARD_LEVEL_MAX, Math.round(Number(level) || 1)));
+}
+
+function getAdaptiveEnemyLevel(playerLevel, targetRatio) {
+  const safePlayerLevel = Math.max(1, Number(playerLevel) || 1);
+  const safeRatio = Math.max(0.70, Math.min(1.35, Number(targetRatio) || 1));
+  const jitter = 0.92 + Math.random() * 0.16;
+  return clampBattleEnemyLevel(safePlayerLevel * safeRatio * jitter);
+}
+
+function getEnemyDisplayCard(card, mutations = [], enemyLevel = 1) {
+  const safeMutations = normalizeMutationObjects(mutations);
+  const mutationMultiplier = getMutationMultiplier(safeMutations);
+  const safeLevel = clampBattleEnemyLevel(enemyLevel);
+  const levelMultiplier = 1 + Math.max(0, safeLevel - 1) * CARD_LEVEL_STAT_GROWTH;
+  const prefix = safeMutations
+    .map(mutation => String(mutation?.name || ""))
+    .filter(Boolean)
+    .map(name => `[${name}]`)
+    .join(" + ");
+  return {
+    name: prefix ? `${prefix} ${String(card?.name || "Unknown Card")}` : String(card?.name || "Unknown Card"),
+    hp: Math.max(1, Math.round((Number(card?.stats?.hp) || 0) * mutationMultiplier * levelMultiplier)),
+    atk: Math.max(1, Math.round((Number(card?.stats?.atk) || 0) * mutationMultiplier * levelMultiplier)),
+    reward: Math.max(0, Math.floor(calculateCardReward(Number(card?.chance) || 0) * mutationMultiplier)),
+    level: safeLevel,
+    exp: 0,
+    expRequired: getCardLevelExpRequired(card, safeLevel),
+    expProgress: 0
+  };
+}
 
 function getBattleMode() {
   return battleState?.mode === '1v1' ? '1v1' : '4v4';
@@ -2539,8 +2931,12 @@ function rollEnemyMutations() {
 
 function chooseAdaptive1v1Enemy(playerUnit, candidatePool) {
   const playerPower = Math.max(1, calculateBattleUnitPower(playerUnit));
+  const targetRatio = BATTLE_1V1_TARGET_RATIO_MIN + Math.random() * (BATTLE_1V1_TARGET_RATIO_MAX - BATTLE_1V1_TARGET_RATIO_MIN);
+  const playerLevel = getCardLevelInfo(playerUnit?.card).level;
+  const enemyLevel = getAdaptiveEnemyLevel(playerLevel, targetRatio);
+
   const rankedCandidates = candidatePool
-    .map(card => ({ card, display: getDisplayCard(card, []) }))
+    .map(card => ({ card, display: getEnemyDisplayCard(card, [], enemyLevel) }))
     .map(entry => ({
       ...entry,
       power: Math.max(1, Math.round(Number(entry.display?.hp) || 0) + 2 * Math.max(0, Math.round(Number(entry.display?.atk) || 0)))
@@ -2551,20 +2947,12 @@ function chooseAdaptive1v1Enemy(playerUnit, candidatePool) {
       return distanceA - distanceB;
     });
 
-  const chosen = rankedCandidates[0] || { card: candidatePool[0], display: getDisplayCard(candidatePool[0], []) };
+  const chosen = rankedCandidates[0] || { card: candidatePool[0], display: getEnemyDisplayCard(candidatePool[0], [], enemyLevel) };
   const mutations = rollEnemyMutations();
-  const rawDisplay = getDisplayCard(chosen.card, mutations);
+  const rawDisplay = getEnemyDisplayCard(chosen.card, mutations, enemyLevel);
   const rawPower = Math.max(1, Math.round(Number(rawDisplay?.hp) || 0) + 2 * Math.max(0, Math.round(Number(rawDisplay?.atk) || 0)));
-  const targetPower = Math.max(1, Math.round(playerPower * BATTLE_1V1_TARGET_RATIO));
-  const rawRatio = targetPower / rawPower;
-
-  // Diminishing-return scaling: enemy stats track player strength on a sub-linear
-  // curve and remain within a bounded multiplier band. This prevents an inflated
-  // player card from generating an exponentially inflated opponent/reward pool.
-  const adaptiveScale = Math.max(
-    BATTLE_1V1_MIN_SCALE,
-    Math.min(BATTLE_1V1_MAX_SCALE, Math.exp(Math.log(Math.max(0.01, rawRatio)) * BATTLE_1V1_ADAPTIVE_EXPONENT))
-  );
+  const targetPower = Math.max(1, Math.round(playerPower * targetRatio));
+  const adaptiveScale = Math.max(0.05, Math.min(4.00, targetPower / rawPower));
 
   const hp = Math.max(1, Math.round((Number(rawDisplay?.hp) || 1) * adaptiveScale));
   const atk = Math.max(1, Math.round((Number(rawDisplay?.atk) || 1) * adaptiveScale));
@@ -2575,6 +2963,8 @@ function chooseAdaptive1v1Enemy(playerUnit, candidatePool) {
     mutations,
     variantKey: getVariantKey(chosen.card.id, mutations),
     display,
+    level: enemyLevel,
+    exp: 0,
     hp,
     maxHp: hp,
     atk,
@@ -2595,23 +2985,39 @@ function chooseBattleEnemyTeam(playerTeam) {
     return [chooseAdaptive1v1Enemy(playerTeam[0], pool)];
   }
 
+  const targetRatio = BATTLE_4V4_TARGET_RATIO_MIN + Math.random() * (BATTLE_4V4_TARGET_RATIO_MAX - BATTLE_4V4_TARGET_RATIO_MIN);
+  const averagePlayerLevel = playerTeam.reduce((sum, unit) => sum + getCardLevelInfo(unit?.card).level, 0) / Math.max(1, playerTeam.length);
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const team = [];
+
   for (let index = 0; index < getBattleTeamSize(); index += 1) {
     const card = shuffled[index % shuffled.length];
+    const enemyLevel = getAdaptiveEnemyLevel(averagePlayerLevel, targetRatio);
     const mutations = rollEnemyMutations();
-    const display = getDisplayCard(card, mutations);
+    const display = getEnemyDisplayCard(card, mutations, enemyLevel);
     team.push({
       card,
       mutations,
       variantKey: getVariantKey(card.id, mutations),
       display,
+      level: enemyLevel,
+      exp: 0,
       hp: display.hp,
       maxHp: display.hp,
       atk: display.atk,
       defeated: false
     });
   }
+
+  const basePower = Math.max(1, calculateBattleTeamPower(team));
+  const playerPower = Math.max(1, calculateBattleTeamPower(playerTeam));
+  const teamScale = Math.max(0.05, Math.min(4.00, (playerPower * targetRatio) / basePower));
+  team.forEach(unit => {
+    unit.hp = Math.max(1, Math.round(unit.hp * teamScale));
+    unit.maxHp = unit.hp;
+    unit.atk = Math.max(1, Math.round(unit.atk * teamScale));
+    unit.display = { ...unit.display, hp: unit.hp, atk: unit.atk };
+  });
   return team;
 }
 
@@ -2632,7 +3038,7 @@ function getBattleRewardProfile(playerPower, enemyPower) {
   if (mode === '1v1') {
     const ratio = Math.max(0.90, Math.min(1.15, rawRatio));
     const multiplier = Math.max(0.90, Math.min(1.25, 1 + (ratio - 1) * 1.25));
-    const reward = Math.max(0, Math.floor(BATTLE_1V1_BASE_REWARD_VND * multiplier));
+    const reward = 0;
     const experience = Math.max(0, Math.floor(BATTLE_BASE_XP_1V1 * multiplier));
     const dropRateBonus = Number((0.35 + Math.max(0, multiplier - 0.90) * 1.25).toFixed(2));
     return { mode, ratio, multiplier, reward, experience, dropRateBonus, label: 'Adaptive 1v1' };
@@ -2651,7 +3057,7 @@ function getBattleRewardProfile(playerPower, enemyPower) {
     label = 'Hard 4v4 Bonus';
   }
 
-  const reward = Math.max(0, Math.floor(BATTLE_BASE_REWARD_VND * multiplier));
+  const reward = 0;
   const experience = Math.max(0, Math.floor(BATTLE_BASE_XP_4V4 * multiplier));
   const dropRateBonus = Number(Math.min(5, 2 + Math.max(0, multiplier - 0.75) * 2.2).toFixed(2));
   return { mode, ratio: rawRatio, multiplier, reward, experience, dropRateBonus, label };
@@ -2670,11 +3076,22 @@ function renderBattleCombatant(side, unit) {
   const hpEl = els[prefix + 'Hp'];
   const hpBar = els[prefix + 'HpBar'];
   const atkEl = els[prefix + 'Atk'];
+  const levelEl = els[prefix + 'Level'];
+  const expTextEl = els[prefix + 'ExpText'];
+  const expBarEl = els[prefix + 'ExpBar'];
+  const playerLevelInfo = getCardLevelInfo(unit.card);
+  const displayLevel = side === 'enemy' ? clampBattleEnemyLevel(unit.level) : playerLevelInfo.level;
+  const displayExp = side === 'enemy' ? 0 : playerLevelInfo.exp;
+  const displayRequired = side === 'enemy' ? getCardLevelExpRequired(unit.card, displayLevel) : playerLevelInfo.required;
+  const displayProgress = side === 'enemy' ? 0 : playerLevelInfo.progress;
 
-  if (nameEl) nameEl.textContent = unit.display.name;
+  if (nameEl) nameEl.textContent = side === 'enemy' ? `[Lv. ${displayLevel}] ${unit.display.name}` : unit.display.name;
   if (hpEl) hpEl.textContent = `${Math.max(0, unit.hp).toLocaleString('en-US')} / ${unit.maxHp.toLocaleString('en-US')}`;
   if (hpBar) hpBar.style.width = `${ratio * 100}%`;
   if (atkEl) atkEl.textContent = unit.atk.toLocaleString('en-US');
+  if (levelEl) levelEl.textContent = `Lv. ${displayLevel}`;
+  if (expTextEl) expTextEl.textContent = side === 'enemy' ? `NPC • ${displayRequired.toLocaleString('en-US')} EXP base` : `${displayExp}/${displayRequired} EXP`;
+  if (expBarEl) expBarEl.style.width = `${Math.round(displayProgress * 100)}%`;
   renderMutationBadges(mutationBadges, unit.mutations);
   applyCardMutationVisual(cardEl, unit.mutations);
   setArtwork(image, fallback, backdrop, unit.card.image, `${unit.display.name} artwork`);
@@ -2704,7 +3121,7 @@ function renderBattleLineup(side, team, activeIndex) {
     const info = document.createElement('div');
     info.className = 'battle-lineup-card__info';
     const name = document.createElement('strong');
-    name.textContent = unit.display.name;
+    name.textContent = side === 'enemy' ? `[Lv. ${clampBattleEnemyLevel(unit.level)}] ${unit.display.name}` : unit.display.name;
     const hp = document.createElement('span');
     hp.textContent = unit.defeated ? 'DEFEATED' : `${Math.max(0, unit.hp).toLocaleString('en-US')} HP`;
     info.append(name, hp);
@@ -2835,23 +3252,33 @@ function finishBattle(playerWon) {
   try {
     if (playerWon) {
       const rewardProfile = getBattleRewardProfile(safePlayerPower, safeEnemyPower);
-      const reward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward)) : 0;
+      const reward = 0;
       const experience = Number.isFinite(Number(rewardProfile.experience)) ? Math.max(0, Math.floor(rewardProfile.experience)) : 0;
       const dropRateBonus = Number.isFinite(Number(rewardProfile.dropRateBonus)) ? Math.max(0, Number(rewardProfile.dropRateBonus)) : 0;
-      state.currency = Math.max(0, Number(state.currency) || 0) + reward;
       state.experience = Math.max(0, Number(state.experience) || 0) + experience;
       state.battleDropRateBonus = Math.max(0, Math.min(100, Number(state.battleDropRateBonus) || 0) + dropRateBonus);
+
+      const participatingIds = [...new Set((battleState.playerTeam || []).map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean))];
+      const expPerCard = participatingIds.length ? Math.max(1, Math.floor(experience / participatingIds.length)) : 0;
+      const levelUps = [];
+      for (const cardId of participatingIds) {
+        const result = grantCardExperience(cardId, expPerCard);
+        if (result.levelUps > 0) levelUps.push(`${getCardById(cardId)?.name || cardId} Lv.${result.level}`);
+      }
       saveState();
       updateStats();
       renderUpgradeShop();
+      collectionNeedsRefresh = false;
+      renderCollection();
 
       const bonusPercent = Math.round((rewardProfile.multiplier - 1) * 100);
-      const rewardNote = bonusPercent >= 0 ? `+${bonusPercent}% reward` : `${bonusPercent}% reward`;
+      const rewardNote = bonusPercent >= 0 ? `+${bonusPercent}% battle reward value` : `${bonusPercent}% battle reward value`;
       const modeLabel = rewardProfile.mode.toUpperCase();
+      const levelNote = levelUps.length ? ` • Level Up: ${levelUps.join(', ')}` : '';
 
-      appendBattleLog(`Victory! +${formatCurrency(reward)} • +${experience} EXP • +${dropRateBonus.toFixed(2)}% Drop Rate Bonus • ${rewardProfile.label}.`, 'victory');
+      appendBattleLog(`Victory! Cash is earned only by salvaging cards • +${experience} EXP • +${dropRateBonus.toFixed(2)}% Drop Rate Bonus • ${rewardProfile.label}.${levelNote}`, 'victory');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
-      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. +${formatCurrency(reward)} earned (${rewardNote}).`;
+      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. No instant cash reward (${rewardNote}); battle rewards are EXP + Drop Rate.`;
       if (els.battleResultPower) {
         els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${rewardProfile.label} • ×${Number(rewardProfile.multiplier || 1).toFixed(2)}`;
       }
@@ -2966,6 +3393,7 @@ function startBattle(useExistingSetup = true) {
   if (els.battleLog) els.battleLog.innerHTML = '';
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
+  appendBattleLog(`Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
   appendBattleLog(`Enemy mutations are active-weather boosted (70% roll chance).`);
   appendBattleLog(`First strike begins in 3 seconds. ${teamSize} fighter${teamSize === 1 ? '' : 's'} per side.`, 'player');
   renderBattleStats();
@@ -3095,6 +3523,7 @@ function openModal(id) {
   if (id === "upgradesModal") renderUpgradeShop();
   if (id === "cardPreviewModal") renderPreview();
   if (id === "battleModal") resetBattleView();
+  if (id === "autoSalvageModal") renderAutoSalvageSettings();
 }
 
 function closeModal(id) {
@@ -3194,6 +3623,18 @@ els.sortSelect?.addEventListener("change", () => {
 els.autoRollToggle?.addEventListener("change", () => {
   isAutoRolling = Boolean(els.autoRollToggle.checked);
   if (isAutoRolling) attemptAutoRoll();
+});
+
+els.previewSalvageButton?.addEventListener("click", handlePreviewSalvage);
+els.previewSalvageExtrasButton?.addEventListener("click", handlePreviewSalvageExtras);
+els.previewAutoDeleteButton?.addEventListener("click", openAutoSalvageSettings);
+els.autoSalvageEnabled?.addEventListener("change", () => {
+  state.autoSalvage.enabled = Boolean(els.autoSalvageEnabled.checked);
+  saveState();
+});
+els.autoSalvageRarity?.addEventListener("change", () => {
+  state.autoSalvage.rarityThreshold = AUTO_SALVAGE_RARITY_VALUES.includes(els.autoSalvageRarity.value) ? els.autoSalvageRarity.value : "off";
+  saveState();
 });
 
 els.previewVariantMenuButton?.addEventListener("click", event => {

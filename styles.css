@@ -2986,3 +2986,225 @@ body {
     white-space: nowrap;
   }
 }
+
+/* ============================================================
+   CARD SALVAGE + LEVELING + MOBILE BATTLE OVERHAUL
+   ============================================================ */
+.card-level-mini {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 3px 6px;
+  min-width: 0;
+  margin-top: 1px;
+}
+.card-level-mini__label {
+  color: #a8f6ff;
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+.card-level-mini__exp {
+  min-width: 0;
+  color: #74819b;
+  font-size: 6px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-level-mini__track,
+.preview-exp-track,
+.battle-exp-track {
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.055);
+}
+.card-level-mini__track { grid-column: 1 / -1; }
+.card-level-mini__fill,
+.preview-exp-fill,
+.battle-exp-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7d5cff, #28dcff);
+  box-shadow: 0 0 10px rgba(40,220,255,.28);
+  transition: width .2s ease;
+}
+
+.preview-level-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: end;
+  gap: 6px;
+}
+.preview-level-row strong { font-size: 18px !important; }
+.preview-exp-text { color: #8c98af; font-size: 7px; font-weight: 850; text-align: right; }
+.preview-exp-track { height: 7px; margin: 2px 0 6px; }
+.preview-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 46px;
+  gap: 7px;
+  align-items: stretch;
+}
+.preview-action-button,
+.preview-action-icon {
+  min-height: 42px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  cursor: pointer;
+  color: #eff6ff;
+  background: rgba(255,255,255,.035);
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .04em;
+}
+.preview-action-button:hover:not(:disabled),
+.preview-action-icon:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.18);
+}
+.preview-action-button:disabled,
+.preview-action-icon:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.preview-action-button--salvage { color: #bfffe0; border-color: rgba(112,242,189,.18); background: rgba(112,242,189,.045); }
+.preview-action-button--extra { color: #c9d5ff; }
+.preview-action-icon { font-size: 17px; }
+
+.auto-salvage-modal {
+  width: min(680px, 94vw);
+  max-height: min(760px, 90dvh);
+  display: flex;
+  flex-direction: column;
+}
+.auto-salvage-body {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 16px 18px;
+}
+.auto-salvage-master {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 9px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(125,92,255,.18);
+  border-radius: 12px;
+  background: rgba(125,92,255,.06);
+  cursor: pointer;
+}
+.auto-salvage-master input { width: 18px; height: 18px; accent-color: #7d5cff; }
+.auto-salvage-master > span { color: #f4f7ff; font-size: 12px; font-weight: 950; }
+.auto-salvage-master small {
+  grid-column: 2;
+  color: #8691a8;
+  font-size: 8px;
+  line-height: 1.45;
+}
+.auto-salvage-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,.025);
+}
+.auto-salvage-section__head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.auto-salvage-section__head > span { color: #f0f5ff; font-size: 10px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+.auto-salvage-section__head small { color: #7f8aa1; font-size: 7px; }
+.auto-salvage-options {
+  margin-top: 9px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.auto-salvage-option {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 9px;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 9px;
+  background: rgba(255,255,255,.02);
+  color: #c9d1e3;
+  font-size: 8px;
+  cursor: pointer;
+}
+.auto-salvage-option input { width: 15px; height: 15px; accent-color: #7d5cff; flex: 0 0 auto; }
+.auto-salvage-note { margin: 12px 0 0; color: #748097; font-size: 8px; line-height: 1.5; }
+
+.battle-level-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+}
+.battle-level-row strong { color: #9befff; font-size: 9px; font-weight: 950; letter-spacing: .06em; }
+.battle-level-row span { color: #7c879d; font-size: 6px; font-weight: 850; }
+.battle-exp-track { height: 5px; margin-top: 4px; }
+.battle-exp-fill { background: linear-gradient(90deg, #7d5cff, #72f2bd); }
+
+/* Battle content is allowed to scroll on touch screens; the fixed header remains usable. */
+@media (max-width: 760px) {
+  html, body { overscroll-behavior-y: contain; }
+  .modal-backdrop {
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-items: flex-start;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    -webkit-overflow-scrolling: touch;
+  }
+  .battle-modal {
+    min-height: 0;
+    max-height: none;
+    height: auto;
+    margin: 0 auto;
+  }
+  .battle-arena {
+    height: auto;
+    max-height: calc(94dvh - 62px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  }
+  .battle-visual-card { overflow: visible; }
+  .battle-log { min-height: 140px; max-height: 40dvh; }
+  .battle-lineups { padding-bottom: 4px; }
+  .battle-level-row span { font-size: 7px; }
+
+  .collection-card { height: 270px; min-height: 270px; max-height: 270px; }
+  .preview-layout { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .preview-details { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .preview-actions { grid-template-columns: 1fr; }
+  .preview-action-icon { min-height: 46px; }
+  .auto-salvage-options { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .battle-setup {
+    height: auto;
+    max-height: calc(94dvh - 62px);
+  }
+  .battle-result {
+    height: auto;
+    min-height: calc(94dvh - 62px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+}

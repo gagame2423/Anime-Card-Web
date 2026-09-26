@@ -1,0 +1,9 @@
+# Startup ReferenceError + Opponent Level Fix
+
+- Moved card-level and auto-salvage configuration constants above loadState()/normalizeState() execution.
+- Hardened persisted save parsing and retained existing migration logic.
+- Added a real assets/cards/default.png placeholder plus a data-URL fallback in app.js.
+- Added dynamic enemy level generation for 1v1 and 4v4.
+- Enemy HP/ATK use enemy level growth, then bounded power normalization relative to the player's team.
+- Battle UI displays enemy levels as [Lv. X] Name.
+- RNG, Weather, Auto-Roll, salvage economy, mutation rendering, and LocalStorage schema were otherwise preserved.

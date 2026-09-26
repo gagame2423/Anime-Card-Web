@@ -1,0 +1,42 @@
+Anime Card RNG — Game System Overhaul
+
+Implemented modules
+
+1. Dynamic battle matchmaking
+- 1v1 enemy final power targets 0.92x–1.22x of player power.
+- 4v4 enemy final team power targets 0.85x–1.30x of player team power.
+- Scaling is applied to final combat stats so high-level cards do not create runaway opponent inflation.
+- Existing turn order, mutations, weather effects, 25% defeat loss chance, and Battle Again flow are preserved.
+
+2. Salvage-only cash economy
+- Normal rolls no longer award instant cash.
+- Manual Salvage 1 Copy removes exactly one selected card+mutation copy and pays its salvage value.
+- Salvage Extra Duplicates keeps one copy of each distinct mutation variant and salvages extras.
+- Auto-Salvage can match Normal/No Mutation, individual mutations, or a rarity threshold. Matching new rolls convert directly to cash instead of entering storage.
+- Existing currency is preserved during save/load migration.
+
+3. Shared card level and EXP
+- Progress is stored by base card ID in `cardProgress`, shared by every mutation variant of that card.
+- Level growth is +0.75% base HP/ATK per level.
+- EXP requirement is 100 × rarity multiplier × current level.
+- Collection and active Battle Arena cards show level and EXP progress.
+
+4. Mobile battle UI
+- Battle setup, active arena, and result views support vertical touch scrolling on narrow screens.
+- Safe-area padding and WebKit momentum scrolling are included.
+- Battle logs and fighter status remain accessible on small viewports.
+
+Persistence
+- Save schema advanced to v5. Existing LocalStorage is migrated in place.
+- Legacy `cardLevels`/`levels` migrate to `cardProgress`.
+- Legacy `autoDelete`/`autoSalvageSettings` migrate to `autoSalvage`.
+- Card inventory/mutation normalization remains active.
+
+Modified files
+- app.js
+- index.html
+- styles.css
+
+Inspected without changes
+- cards.js
+- weathers.js

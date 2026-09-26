@@ -128,7 +128,7 @@
 
                 <div class="tcg-art-frame">
                   <div class="art-backdrop" aria-hidden="true"></div>
-                  <img id="resultImage" class="tcg-art" src="assets/cards/default.png" alt="Card artwork" />
+                  <img id="resultImage" class="tcg-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Card artwork" />
                   <div class="image-fallback" aria-hidden="true">
                     <span>✦</span>
                     <small>IMAGE PLACEHOLDER</small>
@@ -273,7 +273,7 @@
             <div id="previewMutationBadges" class="result-mutation-badges" aria-label="Preview mutations"></div>
             <div class="tcg-art-frame">
               <div class="art-backdrop" aria-hidden="true"></div>
-              <img id="previewImage" class="tcg-art" src="assets/cards/default.png" alt="Preview artwork" />
+              <img id="previewImage" class="tcg-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Preview artwork" />
               <div class="image-fallback" aria-hidden="true">
                 <span>✦</span>
                 <small>IMAGE PLACEHOLDER</small>
@@ -314,9 +314,21 @@
           </div>
 
           <div class="preview-info-card">
+            <div class="preview-level-row">
+              <span class="preview-info-label">CARD LEVEL</span>
+              <strong id="previewLevel">Lv. 1</strong>
+              <span id="previewExpText" class="preview-exp-text">0/100 EXP</span>
+            </div>
+            <div class="preview-exp-track"><div id="previewExpBar" class="preview-exp-fill"></div></div>
             <span class="preview-info-label">COLLECTED</span>
             <strong id="previewCollectedCount">0×</strong>
             <span id="previewRequirement" class="preview-requirement"></span>
+          </div>
+
+          <div class="preview-actions" aria-label="Card salvage actions">
+            <button id="previewSalvageButton" class="preview-action-button preview-action-button--salvage" type="button">♻ Salvage 1 Copy</button>
+            <button id="previewSalvageExtrasButton" class="preview-action-button preview-action-button--extra" type="button">♻ Salvage Extra Duplicates</button>
+            <button id="previewAutoDeleteButton" class="preview-action-icon" type="button" aria-label="Open Auto-Delete Settings" title="Auto-Delete Settings">🗑</button>
           </div>
 
           <div class="preview-note">
@@ -404,11 +416,13 @@
             <div class="battle-side-label">PLAYER</div>
             <div class="battle-art-frame">
               <div id="battlePlayerBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
-              <img id="battlePlayerImage" class="battle-art" src="assets/cards/default.png" alt="Player fighter artwork" />
+              <img id="battlePlayerImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Player fighter artwork" />
               <div id="battlePlayerFallback" class="battle-fallback" aria-hidden="true">✦</div>
             </div>
             <div class="battle-card-info">
               <h3 id="battlePlayerName">—</h3>
+              <div class="battle-level-row"><strong id="battlePlayerLevel">Lv. 1</strong><span id="battlePlayerExpText">0/100 EXP</span></div>
+              <div class="battle-exp-track"><div id="battlePlayerExpBar" class="battle-exp-fill"></div></div>
               <div id="battlePlayerMutationBadges" class="battle-mutation-badges"></div>
               <div class="battle-hp-meta"><span>HP</span><strong id="battlePlayerHp">0 / 0</strong></div>
               <div class="battle-hp-track"><div id="battlePlayerHpBar" class="battle-hp-fill"></div></div>
@@ -426,11 +440,13 @@
             <div class="battle-side-label">ENEMY</div>
             <div class="battle-art-frame">
               <div id="battleEnemyBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
-              <img id="battleEnemyImage" class="battle-art" src="assets/cards/default.png" alt="Enemy fighter artwork" />
+              <img id="battleEnemyImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Enemy fighter artwork" />
               <div id="battleEnemyFallback" class="battle-fallback" aria-hidden="true">✦</div>
             </div>
             <div class="battle-card-info">
               <h3 id="battleEnemyName">—</h3>
+              <div class="battle-level-row"><strong id="battleEnemyLevel">Lv. 1</strong><span id="battleEnemyExpText">0/100 EXP</span></div>
+              <div class="battle-exp-track"><div id="battleEnemyExpBar" class="battle-exp-fill"></div></div>
               <div id="battleEnemyMutationBadges" class="battle-mutation-badges"></div>
               <div class="battle-hp-meta"><span>HP</span><strong id="battleEnemyHp">0 / 0</strong></div>
               <div class="battle-hp-track"><div id="battleEnemyHpBar" class="battle-hp-fill"></div></div>
@@ -489,6 +505,53 @@
           <button id="battleChangeFighterButton" class="ghost-button" type="button">Change Fighter</button>
           <button id="close-battle-result-btn" class="ghost-button" data-close-modal="battleModal" type="button">❌ Close Arena</button>
         </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- AUTO-SALVAGE SETTINGS -->
+  <div id="autoSalvageModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="autoSalvageTitle">
+    <section class="modal-panel auto-salvage-modal">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">CARD ECONOMY</p>
+          <h2 id="autoSalvageTitle">Auto-Delete Settings</h2>
+        </div>
+        <button class="modal-close" data-close-modal="autoSalvageModal" type="button" aria-label="Close Auto-Delete Settings">×</button>
+      </header>
+
+      <div class="auto-salvage-body">
+        <label class="auto-salvage-master">
+          <input id="autoSalvageEnabled" type="checkbox" />
+          <span>Enable Auto-Salvage</span>
+          <small>New rolls matching any rule below are converted directly into VNĐ instead of being stored.</small>
+        </label>
+
+        <div class="auto-salvage-section">
+          <div class="auto-salvage-section__head">
+            <span>Mutation Rules</span>
+            <small>Any selected mutation is auto-salvaged.</small>
+          </div>
+          <div id="autoSalvageMutationOptions" class="auto-salvage-options"></div>
+        </div>
+
+        <div class="auto-salvage-section">
+          <div class="auto-salvage-section__head">
+            <span>Rarity Threshold</span>
+            <small>When enabled, cards at or below the chosen rarity are auto-salvaged.</small>
+          </div>
+          <select id="autoSalvageRarity" class="select-input" aria-label="Auto-salvage rarity threshold">
+            <option value="off">Off</option>
+            <option value="Common">Common and below</option>
+            <option value="Rare">Rare and below</option>
+            <option value="Epic">Epic and below</option>
+            <option value="Legendary">Legendary and below</option>
+            <option value="Mythic">Mythic and below</option>
+            <option value="Secret">All rarities</option>
+          </select>
+        </div>
+
+        <p class="auto-salvage-note">Manual Salvage always removes exactly one selected copy. “Salvage Extra Duplicates” keeps one copy of every distinct mutation variant.</p>
       </div>
     </section>
   </div>
