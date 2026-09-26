@@ -1157,7 +1157,13 @@ function rollMutations() {
     if (secondWeather) selected.push(secondWeather.mutation);
   }
 
-  return selected.sort((a, b) => a.tier.rank - b.tier.rank);
+  return selected
+    .filter(mutation => mutation && MUTATION_BY_ID?.[normalizeMutationId(mutation?.id)])
+    .sort((a, b) => {
+      const rankA = MUTATION_BY_ID?.[normalizeMutationId(a?.id)]?.tier?.rank ?? 0;
+      const rankB = MUTATION_BY_ID?.[normalizeMutationId(b?.id)]?.tier?.rank ?? 0;
+      return rankA - rankB;
+    });
 }
 
 function getVariantKey(cardId, mutations) {
@@ -1552,15 +1558,20 @@ function getCardMutationVisuals(cardId) {
   const normalizedId = normalizeCardId(cardId);
   const profile = getCardMutationProfile(normalizedId);
   const mutations = profile.mutationIds
-    .map(id => MUTATION_BY_ID[id])
-    .filter(Boolean)
-    .sort((a, b) => a.tier.rank - b.tier.rank);
+    .map(id => MUTATION_BY_ID?.[normalizeMutationId(id)])
+    .filter(mutation => Boolean(mutation?.id))
+    .sort((a, b) => {
+      const rankA = Number(a?.tier?.rank) || 0;
+      const rankB = Number(b?.tier?.rank) || 0;
+      return rankA - rankB;
+    });
 
   return {
     profile,
     gradient: getMutationGradient(mutations),
     glow: getMutationGlow(mutations),
-    classes: [...new Set(mutations.map(mutation => mutation.className))].concat(profile.hasMulti ? ["mutation-multi"] : [])
+    classes: [...new Set(mutations.map(mutation => String(mutation?.className || "")).filter(Boolean))]
+      .concat(profile.hasMulti ? ["mutation-multi"] : [])
   };
 }
 
