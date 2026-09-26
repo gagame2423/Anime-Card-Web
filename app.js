@@ -2493,6 +2493,8 @@ function purchaseUpgrade(type) {
 
 const BATTLE_BASE_XP_4V4 = 480;
 const BATTLE_BASE_XP_1V1 = 140;
+const BATTLE_BASE_CASH_4V4 = 1000;
+const BATTLE_BASE_CASH_1V1 = 300;
 const BATTLE_TURN_MS = 3000;
 const BATTLE_TEAM_SIZE = 4;
 const BATTLE_ENEMY_MUTATION_CHANCE = 0.70;
@@ -2555,6 +2557,10 @@ function getBattleModeLabel() {
 
 let battleState = null;
 let battleTurnTimer = null;
+// Do not persist this encounter hint: it only prevents immediate same-opponent
+// repetition while preserving fresh random selection every new battle.
+let lastBattleOpponentCardId = null;
+let lastBattleOpponentTeamSignature = '';
 
 function clearBattleTurnTimer() {
   if (battleTurnTimer !== null) {
@@ -2930,16 +2936,26 @@ function rollEnemyMutations() {
 }
 
 function chooseAdaptive1v1Enemy(playerUnit, candidatePool) {
+  const safePool = Array.isArray(candidatePool) ? candidatePool.filter(Boolean) : [];
+  if (!safePool.length) return null;
+
   const playerPower = Math.max(1, calculateBattleUnitPower(playerUnit));
   const targetRatio = BATTLE_1V1_TARGET_RATIO_MIN + Math.random() * (BATTLE_1V1_TARGET_RATIO_MAX - BATTLE_1V1_TARGET_RATIO_MIN);
   const playerLevel = getCardLevelInfo(playerUnit?.card).level;
   const enemyLevel = getAdaptiveEnemyLevel(playerLevel, targetRatio);
 
-  const rankedCandidates = candidatePool
-    .map(card => ({ card, display: getEnemyDisplayCard(card, [], enemyLevel) }))
+  const rankedCandidates = safePool
+    .map(card => ({
+      card,
+      display: getEnemyDisplayCard(card, [], enemyLevel)
+    }))
     .map(entry => ({
       ...entry,
-      power: Math.max(1, Math.round(Number(entry.display?.hp) || 0) + 2 * Math.max(0, Math.round(Number(entry.display?.atk) || 0)))
+      power: Math.max(
+        1,
+        Math.round(Number(entry.display?.hp) || 0) +
+        2 * Math.max(0, Math.round(Number(entry.display?.atk) || 0))
+      )
     }))
     .sort((a, b) => {
       const distanceA = Math.abs(Math.log((a.power + 1) / (playerPower + 1)));
@@ -2947,16 +2963,37 @@ function chooseAdaptive1v1Enemy(playerUnit, candidatePool) {
       return distanceA - distanceB;
     });
 
-  const chosen = rankedCandidates[0] || { card: candidatePool[0], display: getEnemyDisplayCard(candidatePool[0], [], enemyLevel) };
+  // The old implementation always chose rankedCandidates[0], which made the
+  // battle feel like it had a single fixed opponent. Keep matchmaking near
+  // the player's power, but randomly choose from a local power neighborhood.
+  const nearestBandSize = Math.max(1, Math.min(5, Math.ceil(rankedCandidates.length * 0.35)));
+  let neighborhood = rankedCandidates.slice(0, nearestBandSize);
+
+  // Avoid the immediately previous opponent whenever another legal candidate
+  // exists. This is intentionally transient runtime state, not save data.
+  if (neighborhood.length > 1 && lastBattleOpponentCardId) {
+    const filtered = neighborhood.filter(
+      entry => normalizeCardId(entry.card?.id) !== normalizeCardId(lastBattleOpponentCardId)
+    );
+    if (filtered.length) neighborhood = filtered;
+  }
+
+  const chosen = neighborhood[Math.floor(Math.random() * neighborhood.length)] || rankedCandidates[0];
   const mutations = rollEnemyMutations();
   const rawDisplay = getEnemyDisplayCard(chosen.card, mutations, enemyLevel);
-  const rawPower = Math.max(1, Math.round(Number(rawDisplay?.hp) || 0) + 2 * Math.max(0, Math.round(Number(rawDisplay?.atk) || 0)));
+  const rawPower = Math.max(
+    1,
+    Math.round(Number(rawDisplay?.hp) || 0) +
+    2 * Math.max(0, Math.round(Number(rawDisplay?.atk) || 0))
+  );
   const targetPower = Math.max(1, Math.round(playerPower * targetRatio));
   const adaptiveScale = Math.max(0.05, Math.min(4.00, targetPower / rawPower));
 
   const hp = Math.max(1, Math.round((Number(rawDisplay?.hp) || 1) * adaptiveScale));
   const atk = Math.max(1, Math.round((Number(rawDisplay?.atk) || 1) * adaptiveScale));
   const display = { ...rawDisplay, hp, atk };
+
+  lastBattleOpponentCardId = normalizeCardId(chosen.card?.id) || null;
 
   return {
     card: chosen.card,
@@ -2970,24 +3007,25 @@ function chooseAdaptive1v1Enemy(playerUnit, candidatePool) {
     atk,
     defeated: false,
     adaptiveScale,
-    adaptiveSourcePower: rawPower
+    adaptiveSourcePower: rawPower,
+    targetRatio
   };
 }
-
-function chooseBattleEnemyTeam(playerTeam) {
-  const mode = getBattleMode();
-  const playerIds = new Set(playerTeam.map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean));
-  let pool = getAvailableRollPool().filter(card => !playerIds.has(normalizeCardId(card?.id)));
-  if (!pool.length) pool = ALL_CARDS.filter(card => !playerIds.has(normalizeCardId(card?.id)));
-  if (!pool.length) pool = [...ALL_CARDS];
-
-  if (mode === '1v1') {
-    return [chooseAdaptive1v1Enemy(playerTeam[0], pool)];
+function shuffleBattlePool(pool) {
+  const shuffled = [...pool];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
   }
+  return shuffled;
+}
 
-  const targetRatio = BATTLE_4V4_TARGET_RATIO_MIN + Math.random() * (BATTLE_4V4_TARGET_RATIO_MAX - BATTLE_4V4_TARGET_RATIO_MIN);
-  const averagePlayerLevel = playerTeam.reduce((sum, unit) => sum + getCardLevelInfo(unit?.card).level, 0) / Math.max(1, playerTeam.length);
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+function buildRandomBattleTeam(pool, playerTeam, targetRatio) {
+  const averagePlayerLevel = playerTeam.reduce(
+    (sum, unit) => sum + getCardLevelInfo(unit?.card).level,
+    0
+  ) / Math.max(1, playerTeam.length);
+  const shuffled = shuffleBattlePool(pool);
   const team = [];
 
   for (let index = 0; index < getBattleTeamSize(); index += 1) {
@@ -3018,9 +3056,47 @@ function chooseBattleEnemyTeam(playerTeam) {
     unit.atk = Math.max(1, Math.round(unit.atk * teamScale));
     unit.display = { ...unit.display, hp: unit.hp, atk: unit.atk };
   });
+
   return team;
 }
 
+function getBattleTeamSignature(team) {
+  return (team || [])
+    .map(unit => `${normalizeCardId(unit?.card?.id)}:${String(unit?.variantKey || '')}`)
+    .join('|');
+}
+
+function chooseBattleEnemyTeam(playerTeam) {
+  const mode = getBattleMode();
+  const playerIds = new Set(playerTeam.map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean));
+  let pool = getAvailableRollPool().filter(card => !playerIds.has(normalizeCardId(card?.id)));
+  if (!pool.length) pool = ALL_CARDS.filter(card => !playerIds.has(normalizeCardId(card?.id)));
+  if (!pool.length) pool = [...ALL_CARDS];
+
+  if (mode === '1v1') {
+    return [chooseAdaptive1v1Enemy(playerTeam[0], pool)];
+  }
+
+  const targetRatio = BATTLE_4V4_TARGET_RATIO_MIN + Math.random() * (BATTLE_4V4_TARGET_RATIO_MAX - BATTLE_4V4_TARGET_RATIO_MIN);
+  let team = buildRandomBattleTeam(pool, playerTeam, targetRatio);
+
+  // Fresh 4v4 encounters should not immediately recycle the same lineup when
+  // another combination is available. Keep this transient and session-only.
+  if (getBattleTeamSize() > 1 && lastBattleOpponentTeamSignature) {
+    let attempts = 0;
+    while (
+      attempts < 4 &&
+      pool.length >= getBattleTeamSize() &&
+      getBattleTeamSignature(team) === lastBattleOpponentTeamSignature
+    ) {
+      team = buildRandomBattleTeam(pool, playerTeam, targetRatio);
+      attempts += 1;
+    }
+  }
+
+  lastBattleOpponentTeamSignature = getBattleTeamSignature(team);
+  return team;
+}
 function calculateBattleUnitPower(unit) {
   return Math.max(0, Math.round(unit.maxHp + unit.atk * 2));
 }
@@ -3038,7 +3114,7 @@ function getBattleRewardProfile(playerPower, enemyPower) {
   if (mode === '1v1') {
     const ratio = Math.max(0.90, Math.min(1.15, rawRatio));
     const multiplier = Math.max(0.90, Math.min(1.25, 1 + (ratio - 1) * 1.25));
-    const reward = 0;
+    const reward = Math.max(0, Math.floor(BATTLE_BASE_CASH_1V1 * multiplier));
     const experience = Math.max(0, Math.floor(BATTLE_BASE_XP_1V1 * multiplier));
     const dropRateBonus = Number((0.35 + Math.max(0, multiplier - 0.90) * 1.25).toFixed(2));
     return { mode, ratio, multiplier, reward, experience, dropRateBonus, label: 'Adaptive 1v1' };
@@ -3057,12 +3133,11 @@ function getBattleRewardProfile(playerPower, enemyPower) {
     label = 'Hard 4v4 Bonus';
   }
 
-  const reward = 0;
+  const reward = Math.max(0, Math.floor(BATTLE_BASE_CASH_4V4 * multiplier));
   const experience = Math.max(0, Math.floor(BATTLE_BASE_XP_4V4 * multiplier));
   const dropRateBonus = Number(Math.min(5, 2 + Math.max(0, multiplier - 0.75) * 2.2).toFixed(2));
   return { mode, ratio: rawRatio, multiplier, reward, experience, dropRateBonus, label };
 }
-
 function renderBattleCombatant(side, unit) {
   const prefix = side === 'player' ? 'battlePlayer' : 'battleEnemy';
   const cardEl = side === 'player' ? els.battlePlayerCard : els.battleEnemyCard;
@@ -3252,11 +3327,17 @@ function finishBattle(playerWon) {
   try {
     if (playerWon) {
       const rewardProfile = getBattleRewardProfile(safePlayerPower, safeEnemyPower);
-      const reward = 0;
+      const reward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward)) : 0;
       const experience = Number.isFinite(Number(rewardProfile.experience)) ? Math.max(0, Math.floor(rewardProfile.experience)) : 0;
+      state.currency = Math.max(0, Number(state.currency) || 0) + reward;
       const dropRateBonus = Number.isFinite(Number(rewardProfile.dropRateBonus)) ? Math.max(0, Number(rewardProfile.dropRateBonus)) : 0;
       state.experience = Math.max(0, Number(state.experience) || 0) + experience;
       state.battleDropRateBonus = Math.max(0, Math.min(100, Number(state.battleDropRateBonus) || 0) + dropRateBonus);
+
+      // Persist the monetary reward before any card/level-up/rendering work.
+      // A malformed legacy record must never erase a legitimate victory payout.
+      saveState();
+      updateStats();
 
       const participatingIds = [...new Set((battleState.playerTeam || []).map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean))];
       const expPerCard = participatingIds.length ? Math.max(1, Math.floor(experience / participatingIds.length)) : 0;
@@ -3272,13 +3353,12 @@ function finishBattle(playerWon) {
       renderCollection();
 
       const bonusPercent = Math.round((rewardProfile.multiplier - 1) * 100);
-      const rewardNote = bonusPercent >= 0 ? `+${bonusPercent}% battle reward value` : `${bonusPercent}% battle reward value`;
       const modeLabel = rewardProfile.mode.toUpperCase();
       const levelNote = levelUps.length ? ` • Level Up: ${levelUps.join(', ')}` : '';
 
-      appendBattleLog(`Victory! Cash is earned only by salvaging cards • +${experience} EXP • +${dropRateBonus.toFixed(2)}% Drop Rate Bonus • ${rewardProfile.label}.${levelNote}`, 'victory');
+      appendBattleLog(`Victory! +${formatCurrency(reward)} battle cash • +${experience} EXP • +${dropRateBonus.toFixed(2)}% Drop Rate Bonus • ${rewardProfile.label}.${levelNote}`, 'victory');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
-      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. No instant cash reward (${rewardNote}); battle rewards are EXP + Drop Rate.`;
+      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. Battle reward: ${formatCurrency(reward)} + ${experience} EXP + ${dropRateBonus.toFixed(2)}% Drop Rate.`;
       if (els.battleResultPower) {
         els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${rewardProfile.label} • ×${Number(rewardProfile.multiplier || 1).toFixed(2)}`;
       }
@@ -3302,8 +3382,6 @@ function finishBattle(playerWon) {
       if (els.battleResultTitle) els.battleResultTitle.textContent = '💀 DEFEAT!';
       if (els.battleResultText) els.battleResultText.textContent = notice;
       if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')}`;
-    if (els.battleResultCash) els.battleResultCash.textContent = '+0 VNĐ';
-    if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = playerWon ? 'N/A — Victory' : 'CHECK LOG';
       if (els.battleResultCash) els.battleResultCash.textContent = '+0 VNĐ';
       if (els.battleResultExp) els.battleResultExp.textContent = '+0 EXP';
       if (els.battleResultDropRate) els.battleResultDropRate.textContent = '+0.00%';
@@ -3347,6 +3425,14 @@ function startBattle(useExistingSetup = true) {
   const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
   if (!Array.isArray(setupTeam) || setupTeam.length !== getBattleTeamSize() || !isBattleSetupValid(setupTeam)) return;
 
+  // A new encounter must never reuse a prior opponent object. Clear the
+  // transient battle encounter before generating a fresh opponent/team.
+  battleState = {
+    ...(battleState || {}),
+    currentOpponent: null,
+    finished: false
+  };
+
   const playerTeam = setupTeam.map(slot => {
     const card = getCardById(slot.cardId);
     const entry = getBattleVariantEntries(card.id).find(candidate => candidate.key === slot.variantKey);
@@ -3372,6 +3458,7 @@ function startBattle(useExistingSetup = true) {
 
   battleState = {
     mode,
+    currentOpponent: enemyTeam[0] || null,
     setup: { team: setupTeam.map(slot => ({ ...slot })), activeIndex: 0 },
     turn: 'player',
     finished: false,

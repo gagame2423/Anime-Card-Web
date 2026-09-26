@@ -1,0 +1,35 @@
+ANIME CARD RNG — BATTLE AUDIT + ROOT FIX
+
+Modified:
+- app.js
+
+Audited / unchanged:
+- cards.js (13 unique, structurally valid base cards)
+- styles.css
+- state normalization/save/load logic outside the battle reward/encounter touchpoints
+
+Fixes:
+1. 1v1 opponent selection no longer always chooses rankedCandidates[0]. It now chooses randomly from a nearby power neighborhood and avoids the immediately previous opponent when alternatives exist.
+2. 4v4 opponent teams now use Fisher-Yates randomization and avoid immediately repeating the same lineup when another composition exists.
+3. startBattle clears the transient currentOpponent and regenerates a fresh encounter every start.
+4. Victory reward profiles now return positive cash rewards:
+   - 1v1 base cash: 300 VNĐ, scaled by adaptive difficulty multiplier.
+   - 4v4 base cash: 1,000 VNĐ, scaled by battle difficulty multiplier (up to 3x on hard matches).
+5. finishBattle increments state.currency, saves immediately after the payout, updates the visible currency UI, then continues EXP/level processing.
+6. Battle result screen displays the actual cash reward instead of +0 VNĐ.
+7. finishBattle remains idempotent via battleState.finished, preventing duplicate payouts.
+8. Full combat smoke path (executeBattleTurn -> finishBattle) verified to award and persist currency.
+
+Regression checks:
+- node --check app.js: PASS
+- cards.js audit: 13 cards, 13 unique IDs, valid HP/ATK/name/rarity: PASS
+- 20x 1v1 opponent selection: multiple unique opponents: PASS
+- 6x 1v1 start/finish cycles: multiple encounter identities: PASS
+- 8x 4v4 enemy team generations: multiple team signatures: PASS
+- 1v1 reward profile: +337 VNĐ at 1.10 enemy/player power ratio: PASS
+- 4v4 reward profile: +1,200 VNĐ at 1.20 enemy/player power ratio: PASS
+- Victory persistence: in-memory currency == LocalStorage currency after payout: PASS
+- Battle reward idempotence: second finishBattle call did not pay twice: PASS
+- executeBattleTurn -> victory -> reward UI: PASS
+
+No changes were required in cards.js or styles.css.
