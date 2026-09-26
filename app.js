@@ -46,6 +46,7 @@ const defaultState = {
 };
 
 let state = loadState();
+syncOwnershipRecords();
 
 // ============================================================
 // RUNTIME TIMERS - NEVER DEPEND ON ROLL CLICKS
@@ -59,6 +60,7 @@ let cooldownUntil = 0;
 let cooldownDurationMs = 0;
 let isAutoRolling = false;
 let previewSelection = null;
+let collectionNeedsRefresh = true;
 let weatherHudSignature = "";
 let lastClockSecondRendered = -1;
 
@@ -207,13 +209,192 @@ function cloneDefaultState() {
   };
 }
 
+function normalizeCardId(id) {
+  return String(id ?? "").trim();
+}
+
+function hasOwn(object, key) {
+  return Boolean(object && Object.prototype.hasOwnProperty.call(object, key));
+}
+
+function getUnlockedCountById(cardId) {
+  const normalizedId = normalizeCardId(cardId);
+  if (!normalizedId) return 0;
+  const direct = hasOwn(state?.unlocked, normalizedId) ? state.unlocked[normalizedId] : 0;
+  return Math.max(0, Math.floor(Number(direct) || 0));
+}
+
+function normalizeMutationIdList(rawMutationIds) {
+  if (!Array.isArray(rawMutationIds)) return [];
+  return [...new Set(rawMutationIds
+    .map(value => normalizeMutationId(value && typeof value === "object" ? value.id : value))
+    .filter(Boolean))];
+}
+
+function inventoryVariantKey(cardId, mutationIds = []) {
+  return canonicalVariantKey(normalizeCardId(cardId), Array.isArray(mutationIds) ? mutationIds : []);
+}
+
+function normalizeInventoryRecords(rawInventory) {
+  const output = {};
+  const add = (rawCardId, rawMutationIds, rawCount, rawVariantKey = "") => {
+    let cardId = normalizeCardId(rawCardId);
+    let mutationIds = normalizeMutationIdList(rawMutationIds);
+
+    const parsed = typeof rawVariantKey === "string" ? parseVariantKey(rawVariantKey) : null;
+    if ((!cardId || !mutationIds.length) && parsed) {
+      cardId = normalizeCardId(parsed.cardId);
+      if (!mutationIds.length) mutationIds = normalizeMutationIdList(parsed.mutations);
+    }
+    if (!cardId) return;
+
+    const count = Math.max(0, Math.floor(Number(rawCount) || 0));
+    if (!count) return;
+
+    const key = inventoryVariantKey(cardId, mutationIds);
+    const previous = output[key]?.count || 0;
+    output[key] = {
+      id: cardId,
+      cardId,
+      mutation: mutationIds.join("+"),
+      mutationIds: [...new Set(mutationIds)],
+      count: previous + count
+    };
+  };
+
+  if (Array.isArray(rawInventory)) {
+    for (const entry of rawInventory) {
+      if (!entry || typeof entry !== "object") continue;
+      const variantKey = entry.variantKey || entry.key || "";
+      let mutationIds = entry.mutationIds ?? entry.mutations ?? entry.mutation ?? [];
+      if (typeof mutationIds === "string") mutationIds = mutationIds === "base" ? [] : mutationIds.split("+");
+      if (!Array.isArray(mutationIds)) mutationIds = [];
+      add(entry.cardId ?? entry.id, normalizeMutationIdList(mutationIds), entry.count, variantKey);
+    }
+    return output;
+  }
+
+  if (!rawInventory || typeof rawInventory !== "object") return output;
+
+  for (const [rawKey, rawEntry] of Object.entries(rawInventory)) {
+    if (rawEntry && typeof rawEntry === "object" && !Array.isArray(rawEntry)) {
+      let mutationIds = rawEntry.mutationIds ?? rawEntry.mutations ?? rawEntry.mutation ?? [];
+      if (typeof mutationIds === "string") mutationIds = mutationIds === "base" ? [] : mutationIds.split("+");
+      if (!Array.isArray(mutationIds)) mutationIds = [];
+      add(rawEntry.cardId ?? rawEntry.id ?? rawKey, normalizeMutationIdList(mutationIds), rawEntry.count, rawEntry.variantKey || rawEntry.key || rawKey);
+    } else {
+      add(rawKey, [], rawEntry, rawKey);
+    }
+  }
+
+  return output;
+}
+
+function getInventoryEntries() {
+  const inventory = state?.inventory;
+  if (!inventory || typeof inventory !== "object") return [];
+  if (Array.isArray(inventory)) return inventory;
+  return Object.values(inventory);
+}
+
+function getInventoryCountById(cardId) {
+  const target = normalizeCardId(cardId);
+  if (!target) return 0;
+  return getInventoryEntries().reduce((sum, entry) => {
+    if (!entry || typeof entry !== "object") return sum;
+    const entryId = normalizeCardId(entry.cardId ?? entry.id);
+    return sum + (entryId === target ? Math.max(0, Math.floor(Number(entry.count) || 0)) : 0);
+  }, 0);
+}
+
+function isCardOwned(cardId) {
+  const target = normalizeCardId(cardId);
+  if (!target) return false;
+  return hasOwn(state?.unlocked, target) && getUnlockedCountById(target) > 0
+    || getInventoryCountById(target) > 0
+    || getVariantEntries(target).some(entry => entry.count > 0);
+}
+
+function syncOwnershipRecords() {
+  const normalizedUnlocked = {};
+  for (const [rawId, rawCount] of Object.entries(state?.unlocked || {})) {
+    const cardId = normalizeCardId(rawId);
+    const count = Math.max(0, Math.floor(Number(rawCount) || 0));
+    if (!cardId || count <= 0) continue;
+    normalizedUnlocked[cardId] = Math.max(normalizedUnlocked[cardId] || 0, count);
+  }
+
+  const normalizedInventory = normalizeInventoryRecords(state?.inventory);
+  const mutationCounts = {};
+
+  for (const [rawKey, rawCount] of Object.entries(state?.mutations || {})) {
+    const parsed = parseVariantKey(String(rawKey));
+    const count = Math.max(0, Math.floor(Number(rawCount) || 0));
+    if (!parsed || count <= 0) continue;
+    const key = inventoryVariantKey(parsed.cardId, parsed.mutations.map(mutation => mutation.id));
+    mutationCounts[key] = Math.max(mutationCounts[key] || 0, count);
+  }
+
+  for (const [key, entry] of Object.entries(normalizedInventory)) {
+    mutationCounts[key] = Math.max(mutationCounts[key] || 0, entry.count);
+  }
+
+  const mergedMutations = {};
+  for (const [key, count] of Object.entries(mutationCounts)) {
+    if (count > 0) mergedMutations[key] = count;
+    const parsed = parseVariantKey(key);
+    if (parsed) normalizedUnlocked[normalizeCardId(parsed.cardId)] = Math.max(
+      normalizedUnlocked[normalizeCardId(parsed.cardId)] || 0,
+      count
+    );
+  }
+
+  // Rebuild one canonical inventory entry per card + mutation combination.
+  const canonicalInventory = {};
+  for (const [key, count] of Object.entries(mergedMutations)) {
+    const parsed = parseVariantKey(key);
+    if (!parsed || count <= 0) continue;
+    const cardId = normalizeCardId(parsed.cardId);
+    canonicalInventory[key] = {
+      id: cardId,
+      cardId,
+      mutation: parsed.mutations.map(mutation => normalizeMutationId(mutation.id)).join("+"),
+      mutationIds: parsed.mutations.map(mutation => normalizeMutationId(mutation.id)),
+      count
+    };
+  }
+
+  // Keep any legacy inventory-only card copies even if their variant key could
+  // not be interpreted, without allowing duplicate array/object records.
+  for (const entry of Object.values(normalizedInventory)) {
+    const cardId = normalizeCardId(entry?.cardId ?? entry?.id);
+    if (!cardId || !(Number(entry?.count) > 0)) continue;
+    const ids = Array.isArray(entry.mutationIds) ? entry.mutationIds : [];
+    const key = inventoryVariantKey(cardId, ids);
+    if (!canonicalInventory[key]) {
+      canonicalInventory[key] = {
+        id: cardId,
+        cardId,
+        mutation: ids.join("+"),
+        mutationIds: [...new Set(ids)],
+        count: Math.max(0, Math.floor(Number(entry.count) || 0))
+      };
+    }
+  }
+
+  state.unlocked = normalizedUnlocked;
+  state.mutations = mergedMutations;
+  state.inventory = canonicalInventory;
+}
+
 function normalizeMutationId(id) {
   const safe = String(id || "").trim().toLowerCase();
   return MUTATION_ID_ALIASES[safe] || safe;
 }
 
 function canonicalVariantKey(cardId, mutationIds) {
-  const ids = mutationIds
+  const normalizedCardId = normalizeCardId(cardId);
+  const ids = normalizeMutationIdList(mutationIds)
     .map(normalizeMutationId)
     .filter(Boolean)
     .filter((id, index, list) => list.indexOf(id) === index)
@@ -222,7 +403,7 @@ function canonicalVariantKey(cardId, mutationIds) {
       const rankB = MUTATION_BY_ID[b]?.tier?.rank ?? 0;
       return rankA - rankB || a.localeCompare(b);
     });
-  return `${cardId}|${ids.join("+") || "base"}`;
+  return `${normalizedCardId}|${ids.join("+") || "base"}`;
 }
 
 function migrateMutationRecords(rawMutations, unlocked) {
@@ -231,22 +412,31 @@ function migrateMutationRecords(rawMutations, unlocked) {
     for (const [rawKey, rawCount] of Object.entries(rawMutations)) {
       const count = Math.max(0, Math.floor(Number(rawCount) || 0));
       if (!count) continue;
-      const separator = rawKey.indexOf("|");
-      if (separator < 0) continue;
-      const cardId = rawKey.slice(0, separator);
-      const rawIds = rawKey.slice(separator + 1);
-      const ids = rawIds === "base" ? [] : rawIds.split("+").map(normalizeMutationId);
-      const key = canonicalVariantKey(cardId, ids);
+      const parsed = parseVariantKey(String(rawKey));
+      if (!parsed) continue;
+      const key = canonicalVariantKey(normalizeCardId(parsed.cardId), parsed.mutations.map(mutation => mutation.id));
       output[key] = (output[key] || 0) + count;
     }
   }
 
-  // Older saves only had unlocked card counts. Preserve those as the base variant.
-  for (const [cardId, rawCount] of Object.entries(unlocked || {})) {
+  // Older saves only had total unlocked counts. When variant records exist,
+  // the base count is the remaining total after non-base variants; never add
+  // the full unlocked total again or every mutation roll gets duplicated.
+  const nonBaseTotals = {};
+  for (const [key, count] of Object.entries(output)) {
+    const parsed = parseVariantKey(key);
+    if (!parsed || !parsed.mutations.length) continue;
+    const cardId = normalizeCardId(parsed.cardId);
+    nonBaseTotals[cardId] = (nonBaseTotals[cardId] || 0) + count;
+  }
+
+  for (const [rawCardId, rawCount] of Object.entries(unlocked || {})) {
+    const cardId = normalizeCardId(rawCardId);
     const count = Math.max(0, Math.floor(Number(rawCount) || 0));
-    if (!count) continue;
-    const key = canonicalVariantKey(cardId, []);
-    if (!output[key]) output[key] = count;
+    if (!cardId || !count) continue;
+    const baseKey = canonicalVariantKey(cardId, []);
+    const remainingBase = Math.max(0, count - (nonBaseTotals[cardId] || 0));
+    if (remainingBase > 0) output[baseKey] = Math.max(output[baseKey] || 0, remainingBase);
   }
 
   return output;
@@ -291,54 +481,82 @@ function normalizeState(parsed = {}) {
     ? Math.max(0, Math.floor(Number(parsed.currency)))
     : defaults.currency;
 
-  const rawUnlocked = (
+  const rawUnlockedSource = (
     parsed.unlocked &&
     typeof parsed.unlocked === "object" &&
     !Array.isArray(parsed.unlocked)
-  ) ? parsed.unlocked : {};
+  ) ? parsed.unlocked : parsed.unlockedCards;
+  const rawUnlocked = (
+    rawUnlockedSource &&
+    typeof rawUnlockedSource === "object" &&
+    !Array.isArray(rawUnlockedSource)
+  ) ? rawUnlockedSource : {};
 
-  // Sanitize ownership without destructively rebuilding the collection.
-  // Older saves may contain booleans, strings, or malformed counts; all are
-  // normalized to positive integer copy counts where possible.
   normalized.unlocked = {};
-  for (const [cardId, rawCount] of Object.entries(rawUnlocked)) {
+  for (const [rawId, rawCount] of Object.entries(rawUnlocked)) {
+    const cardId = normalizeCardId(rawId);
     const count = rawCount === true ? 1 : Math.max(0, Math.floor(Number(rawCount) || 0));
-    if (count > 0) normalized.unlocked[cardId] = count;
+    if (cardId && count > 0) normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, count);
   }
 
-  // Some forward/legacy builds stored ownership under inventory. Preserve
-  // those counts and merge by maximum so existing progress is never doubled.
-  const rawInventory = (
-    parsed.inventory &&
-    typeof parsed.inventory === "object" &&
-    !Array.isArray(parsed.inventory)
-  ) ? parsed.inventory : {};
-  for (const [cardId, rawEntry] of Object.entries(rawInventory)) {
-    const inventoryCount = typeof rawEntry === "object" && rawEntry !== null
-      ? Math.max(0, Math.floor(Number(rawEntry.count) || 0))
-      : Math.max(0, Math.floor(Number(rawEntry) || 0));
-    if (inventoryCount > 0) {
-      normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, inventoryCount);
-    }
+  delete normalized.unlockedCards;
+
+  // Normalize all legacy inventory layouts (array or object) into one stable
+  // cardId + mutation keyed object. This is deliberately type-safe so number
+  // IDs and string IDs converge to the same persistent key.
+  normalized.inventory = normalizeInventoryRecords(parsed.inventory);
+
+  // Inventory entries are ownership records too. Merge exact variants by
+  // maximum, not addition, so legacy saves are repaired without duplicating
+  // the same physical copies.
+  const inventoryMutationRecords = {};
+  for (const entry of Object.values(normalized.inventory)) {
+    const cardId = normalizeCardId(entry?.cardId ?? entry?.id);
+    if (!cardId) continue;
+    const mutationIds = Array.isArray(entry?.mutationIds) ? entry.mutationIds : [];
+    const key = inventoryVariantKey(cardId, mutationIds);
+    const count = Math.max(0, Math.floor(Number(entry?.count) || 0));
+    if (count > 0) inventoryMutationRecords[key] = Math.max(inventoryMutationRecords[key] || 0, count);
   }
 
-  normalized.mutations = migrateMutationRecords(parsed.mutations, normalized.unlocked);
+  const mergedRawMutations = {};
+  for (const [key, count] of Object.entries(parsed.mutations || {})) {
+    const parsedVariant = parseVariantKey(String(key));
+    const safeCount = Math.max(0, Math.floor(Number(count) || 0));
+    if (!parsedVariant || safeCount <= 0) continue;
+    const canonicalKey = inventoryVariantKey(parsedVariant.cardId, parsedVariant.mutations.map(mutation => mutation.id));
+    mergedRawMutations[canonicalKey] = Math.max(mergedRawMutations[canonicalKey] || 0, safeCount);
+  }
+  for (const [key, count] of Object.entries(inventoryMutationRecords)) {
+    mergedRawMutations[key] = Math.max(mergedRawMutations[key] || 0, count);
+  }
 
-  // Mutation records are ownership records too. If a long-running save ever
-  // lost its parent unlocked count, reconstruct that count from the variants
-  // instead of letting the Collection mark the card as locked/disappeared.
+  normalized.mutations = migrateMutationRecords(mergedRawMutations, normalized.unlocked);
+
+  // Mutation variants can outlive a parent unlocked count in old saves.
+  // Reconstruct the parent count from the canonical variants before saving.
   const mutationTotalsByCard = {};
   for (const [variantKey, rawCount] of Object.entries(normalized.mutations)) {
-    const parsedVariant = parseVariantKey(variantKey);
+    const parsedVariant = parseVariantKey(String(variantKey));
     const count = Math.max(0, Math.floor(Number(rawCount) || 0));
     if (!parsedVariant || count <= 0) continue;
-    mutationTotalsByCard[parsedVariant.cardId] = (mutationTotalsByCard[parsedVariant.cardId] || 0) + count;
+    const cardId = normalizeCardId(parsedVariant.cardId);
+    mutationTotalsByCard[cardId] = (mutationTotalsByCard[cardId] || 0) + count;
   }
   for (const [cardId, variantCount] of Object.entries(mutationTotalsByCard)) {
     normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, variantCount);
   }
 
-  normalized.inventory = rawInventory;
+  // Inventory totals are another ownership proof. Never let an inventory-only
+  // copy render as locked after a save/load cycle.
+  for (const entry of Object.values(normalized.inventory)) {
+    const cardId = normalizeCardId(entry?.cardId ?? entry?.id);
+    const count = Math.max(0, Math.floor(Number(entry?.count) || 0));
+    if (cardId && count > 0) {
+      normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, count);
+    }
+  }
+
   normalized.equipment = Array.isArray(parsed.equipment) ? [...parsed.equipment] : [];
 
   normalized.upgrades.rollSpeed = Math.min(
@@ -350,8 +568,8 @@ function normalizeState(parsed = {}) {
     Math.max(0, Math.floor(Number(parsed.upgrades?.luck) || 0))
   );
 
-  normalized.lastResultId = typeof parsed.lastResultId === "string"
-    ? parsed.lastResultId
+  normalized.lastResultId = parsed.lastResultId != null
+    ? normalizeCardId(parsed.lastResultId) || null
     : null;
 
   const weather = parsed.weather && typeof parsed.weather === "object" ? parsed.weather : {};
@@ -407,6 +625,7 @@ function parseStoredSave(raw) {
       "totalRolls",
       "currency",
       "unlocked",
+      "unlockedCards",
       "mutations",
       "inventory",
       "upgrades",
@@ -424,7 +643,10 @@ function loadState() {
   try {
     // Primary key is authoritative once it exists and parses successfully.
     const primary = parseStoredSave(localStorage.getItem(STORAGE_KEY));
-    if (primary) return normalizeState(primary);
+    if (primary) {
+      const loaded = normalizeState(primary);
+      return loaded;
+    }
 
     // One-way migration from the previous deployed key prevents progress wipes
     // when this new static storage namespace is introduced.
@@ -450,10 +672,24 @@ function loadState() {
 
 function saveState() {
   try {
+    syncOwnershipRecords();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
     console.warn("Save failed:", error);
   }
+}
+
+// Stable public persistence aliases. Both paths use the same canonical ID
+// sanitizer so future UI code cannot bypass the repaired save/load flow.
+function saveGame() {
+  saveState();
+}
+
+function loadGame() {
+  state = loadState();
+  syncOwnershipRecords();
+  saveState();
+  return state;
 }
 
 // ============================================================
@@ -831,7 +1067,7 @@ function rollMutations() {
 }
 
 function getVariantKey(cardId, mutations) {
-  return canonicalVariantKey(cardId, mutations.map(mutation => mutation.id));
+  return canonicalVariantKey(normalizeCardId(cardId), mutations.map(mutation => mutation.id));
 }
 
 function parseVariantKey(key) {
@@ -977,9 +1213,23 @@ function rollCard(source = "manual") {
       const display = getDisplayCard(result.card, mutations);
       const variantKey = getVariantKey(result.card.id, mutations);
 
-      state.unlocked[result.card.id] = (state.unlocked[result.card.id] || 0) + 1;
+      const cardId = normalizeCardId(result.card.id);
+      state.unlocked[cardId] = getUnlockedCountById(cardId) + 1;
       state.mutations[variantKey] = (state.mutations[variantKey] || 0) + 1;
-      state.lastResultId = result.card.id;
+      const inventoryEntry = state.inventory[variantKey];
+      if (inventoryEntry) {
+        inventoryEntry.count = Math.max(0, Math.floor(Number(inventoryEntry.count) || 0)) + 1;
+      } else {
+        const mutationIds = mutations.map(mutation => normalizeMutationId(mutation.id));
+        state.inventory[variantKey] = {
+          id: cardId,
+          cardId,
+          mutation: mutationIds.join("+"),
+          mutationIds,
+          count: 1
+        };
+      }
+      state.lastResultId = normalizeCardId(result.card.id);
       state.currency += display.reward;
 
       showResult(result.card, result.effectiveChance, mutations);
@@ -991,7 +1241,14 @@ function rollCard(source = "manual") {
 
     saveState();
     updateStats();
-    renderCollection();
+    if (source === "auto") {
+      // Auto-Roll can fire while the player is typing/searching Collection.
+      // Defer the DOM rebuild so the active grid/search state is untouched.
+      collectionNeedsRefresh = true;
+    } else {
+      collectionNeedsRefresh = false;
+      renderCollection();
+    }
     renderUpgradeShop();
     return true;
   } finally {
@@ -1083,7 +1340,7 @@ function getVariantEntries(cardId) {
   return Object.entries(state.mutations)
     .map(([key, count]) => {
       const parsed = parseVariantKey(key);
-      if (!parsed || parsed.cardId !== cardId || Number(count) <= 0) return null;
+      if (!parsed || normalizeCardId(parsed.cardId) !== normalizeCardId(cardId) || Number(count) <= 0) return null;
       return {
         key: parsed.key,
         count: Math.floor(Number(count)),
@@ -1102,7 +1359,7 @@ function getVariantRank(entry) {
 }
 
 function getCardMutationProfile(cardId) {
-  const variants = getVariantEntries(cardId);
+  const variants = getVariantEntries(normalizeCardId(cardId));
   const ids = new Set();
   let hasMulti = false;
   let rank = MUTATION_TIERS.normal.rank;
@@ -1125,7 +1382,8 @@ function getCardMutationProfile(cardId) {
 }
 
 function getCardMutationVisuals(cardId) {
-  const profile = getCardMutationProfile(cardId);
+  const normalizedId = normalizeCardId(cardId);
+  const profile = getCardMutationProfile(normalizedId);
   const mutations = profile.mutationIds
     .map(id => MUTATION_BY_ID[id])
     .filter(Boolean)
@@ -1154,52 +1412,55 @@ function cardMatchesMutationFilter(card, filterValue) {
 function getFilteredCards() {
   const query = String(els.searchInput?.value || "").trim().toLowerCase();
   const filter = String(els.mutationFilter?.value || "all").toLowerCase();
-  const sort = String(els.sortSelect?.value || "rarity").toLowerCase();
+  const sort = String(els.sortSelect?.value || "dropchance").toLowerCase();
 
   const list = CARDS.filter(card => {
-    // Collection data can outlive the current card schema. Never assume
-    // optional legacy fields such as rarity/passive.name exist.
-    const safeName = String(card?.name || "Unknown Card");
-    const safePassive = String(card?.passive?.name || "");
-    const profile = getCardMutationProfile(card?.id);
-    const mutationText = profile.variants
-      .flatMap(entry => entry.mutations.map(mutation => String(mutation?.name || "")))
-      .join(" ")
-      .toLowerCase();
-
-    const searchMatch = !query
-      || safeName.toLowerCase().includes(query)
-      || safePassive.toLowerCase().includes(query)
-      || mutationText.includes(query);
-
     try {
-      return searchMatch && cardMatchesMutationFilter(card, filter);
+      const normalizedId = normalizeCardId(card?.id);
+      const safeName = String(card?.name || "Unknown Card");
+      const safePassive = String(card?.passive?.name || "");
+      const safeMutation = String(card?.mutation || "");
+      const profile = getCardMutationProfile(normalizedId);
+      const mutationText = profile.variants
+        .flatMap(entry => entry.mutations.map(mutation => String(mutation?.name || "")))
+        .join(" ")
+        .toLowerCase();
+
+      const searchText = `${safeName} ${safePassive} ${safeMutation}`.toLowerCase();
+      const searchMatch = !query
+        || searchText.includes(query)
+        || mutationText.includes(query);
+
+      return searchMatch && cardMatchesMutationFilter({ ...card, id: normalizedId }, filter);
     } catch (error) {
-      // A malformed legacy mutation record must never abort the whole
-      // Collection render. The card remains searchable/renderable.
+      // A malformed card/mutation record must not abort the remaining filter pass.
       console.warn("Collection filter skipped malformed card metadata:", card?.id, error);
-      return searchMatch;
+      const fallbackText = `${String(card?.name || "")} ${String(card?.passive?.name || "")} ${String(card?.mutation || "")}`.toLowerCase();
+      return !query || fallbackText.includes(query);
     }
   });
 
   list.sort((a, b) => {
-    const chanceA = Number.isFinite(Number(a?.chance)) ? Number(a.chance) : 0;
-    const chanceB = Number.isFinite(Number(b?.chance)) ? Number(b.chance) : 0;
-    const nameA = String(a?.name || "Unknown Card");
-    const nameB = String(b?.name || "Unknown Card");
-    const profileA = getCardMutationProfile(a?.id);
-    const profileB = getCardMutationProfile(b?.id);
+    try {
+      const chanceA = Number.isFinite(Number(a?.chance)) ? Number(a.chance) : 0;
+      const chanceB = Number.isFinite(Number(b?.chance)) ? Number(b.chance) : 0;
+      const nameA = String(a?.name || "Unknown Card");
+      const nameB = String(b?.name || "Unknown Card");
 
-    if (sort === "name") return nameA.localeCompare(nameB);
-    if (sort === "atk") return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0) || profileB.rank - profileA.rank;
-    if (sort === "collected") {
-      return getOwnedCardCount(b?.id) - getOwnedCardCount(a?.id) || profileB.rank - profileA.rank;
+      if (sort === "name") return nameA.localeCompare(nameB);
+      if (sort === "atk") {
+        return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0);
+      }
+      if (sort === "collected") {
+        return getOwnedCardCount(b?.id) - getOwnedCardCount(a?.id) || nameA.localeCompare(nameB);
+      }
+
+      // Numeric 1-in-X ordering only. Largest denominator = hardest card first.
+      return chanceB - chanceA || nameA.localeCompare(nameB);
+    } catch (error) {
+      console.warn("Collection sort skipped malformed card metadata:", a?.id, b?.id, error);
+      return 0;
     }
-
-    // Rarity sorting is intentionally numeric only: the largest 1-in-X
-    // denominator (lowest probability) appears first. No legacy rarity
-    // string/order is used here.
-    return chanceB - chanceA || nameA.localeCompare(nameB);
   });
 
   return list;
@@ -1300,23 +1561,32 @@ function renderAvailableCards() {
 }
 
 function getOwnedCardCount(cardId) {
-  const directCount = Math.max(0, Math.floor(Number(state.unlocked?.[cardId]) || 0));
-  const variantCount = getVariantEntries(cardId).reduce((sum, entry) => sum + entry.count, 0);
-  return Math.max(directCount, variantCount);
+  const targetId = normalizeCardId(cardId);
+  if (!targetId) return 0;
+  const directCount = getUnlockedCountById(targetId);
+  const inventoryCount = getInventoryCountById(targetId);
+  const variantCount = getVariantEntries(targetId).reduce((sum, entry) => sum + entry.count, 0);
+  return Math.max(directCount, inventoryCount, variantCount);
 }
 
 function renderCollection() {
   if (!els.collectionGrid) return;
   els.collectionGrid.innerHTML = "";
 
-  const cards = getFilteredCards();
+  let cards = [];
+  try {
+    cards = getFilteredCards();
+  } catch (error) {
+    console.warn("Collection filter failed safely:", error);
+  }
+
   for (const card of cards) {
     try {
-      const cardId = String(card?.id || "");
+      const cardId = normalizeCardId(card?.id);
       if (!cardId) continue;
 
+      const owned = isCardOwned(cardId);
       const count = getOwnedCardCount(cardId);
-      const owned = count > 0;
       const safeName = String(card?.name || "Unknown Card");
       const chance = Number.isFinite(Number(card?.chance)) ? Number(card.chance) : 0;
       const image = String(card?.image || "assets/cards/default.png");
@@ -1359,10 +1629,17 @@ function renderCollection() {
       const title = document.createElement("h3");
       title.className = "collection-mini__name";
       title.textContent = owned ? safeName : "Undiscovered Card";
+
       const tier = document.createElement("span");
       tier.className = "collection-tier-label";
       tier.textContent = profile.tier?.name || "Normal";
-      titleRow.append(title, tier);
+
+      const countBadge = document.createElement("span");
+      countBadge.className = "collection-mini__count";
+      countBadge.textContent = owned ? `x${count.toLocaleString("en-US")}` : "";
+      countBadge.setAttribute("aria-label", owned ? `${count} copies owned` : "");
+
+      titleRow.append(title, countBadge, tier);
 
       const meta = document.createElement("div");
       meta.className = "collection-mini__meta";
@@ -1415,6 +1692,8 @@ function renderCollection() {
         item.disabled = true;
       }
 
+      // Ownership is decided before the title/art lock is assigned, so an
+      // inventory-only or legacy-keyed copy can never be downgraded to locked.
       els.collectionGrid.appendChild(item);
     } catch (error) {
       // One corrupt/legacy card record must never abort Collection rendering.
@@ -1436,10 +1715,10 @@ function renderCollection() {
 
 function getPreviewVariants(cardId) {
   const variants = getVariantEntries(cardId);
-  if (!variants.length && state.unlocked[cardId]) {
+  if (!variants.length && getOwnedCardCount(cardId) > 0) {
     variants.push({
-      key: canonicalVariantKey(cardId, []),
-      count: Number(state.unlocked[cardId] || 0),
+      key: canonicalVariantKey(normalizeCardId(cardId), []),
+      count: getOwnedCardCount(cardId),
       mutations: [],
       isMulti: false
     });
@@ -1452,12 +1731,14 @@ function getBestPreviewVariant(cardId) {
 }
 
 function getCardById(cardId) {
-  return CARDS.find(card => card.id === cardId) || null;
+  const targetId = normalizeCardId(cardId);
+  if (!targetId) return null;
+  return CARDS.find(card => normalizeCardId(card?.id) === targetId) || null;
 }
 
 function openCardPreview(cardId, preferredKey = null) {
   const card = getCardById(cardId);
-  if (!card || !state.unlocked[cardId]) return;
+  if (!card || !isCardOwned(cardId)) return;
 
   const variants = getPreviewVariants(cardId);
   const selected = variants.find(entry => entry.key === preferredKey) || getBestPreviewVariant(cardId);
@@ -1489,7 +1770,7 @@ function renderPreview() {
   els.previewVariantLabel.textContent = variant.mutations.length
     ? variant.mutations.map(mutation => mutation.name).join(" + ")
     : "Normal Variant";
-  els.previewCollectedCount.textContent = `${Number(state.unlocked[card.id] || 0).toLocaleString("en-US")}× total`;
+  els.previewCollectedCount.textContent = `${getOwnedCardCount(card.id).toLocaleString("en-US")}× total`;
   els.previewRequirement.textContent = card.requiredWeather
     ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}`
     : "Available in the standard pool";
@@ -1759,7 +2040,7 @@ function populateBattleFighterSelect() {
 
   unlocked.forEach(card => {
     const selectedIndexes = getBattleSetupTeam()
-      .map((slot, index) => slot?.cardId === card.id ? index : -1)
+      .map((slot, index) => normalizeCardId(slot?.cardId) === normalizeCardId(card.id) ? index : -1)
       .filter(index => index >= 0);
     const activeIndex = Number(battleState.setup.activeIndex || 0);
     const canSelect = selectedIndexes.length > 0 || Boolean(chooseFirstAvailableBattleVariant(card.id, activeIndex));
@@ -1796,7 +2077,7 @@ function populateBattleFighterSelect() {
 
     button.append(media, body);
     button.addEventListener('click', () => {
-      const existingIndex = getBattleSetupTeam().findIndex(slot => slot.cardId === card.id);
+      const existingIndex = getBattleSetupTeam().findIndex(slot => normalizeCardId(slot?.cardId) === normalizeCardId(card.id));
       let targetIndex = existingIndex;
 
       if (targetIndex < 0) {
@@ -1830,7 +2111,7 @@ function renderBattleSelection() {
   if (els.battleFighterGrid) {
     els.battleFighterGrid.querySelectorAll('.battle-fighter-option').forEach(button => {
       const cardId = button.dataset.cardId;
-      const selected = getBattleSetupTeam().some(slot => slot.cardId === cardId);
+      const selected = getBattleSetupTeam().some(slot => normalizeCardId(slot?.cardId) === normalizeCardId(cardId));
       button.classList.toggle('is-selected', selected);
     });
   }
@@ -2129,15 +2410,23 @@ function deductBattleVariantCopy(unit) {
   if (!unit) return false;
   const cardId = unit.card.id;
   const variantKey = unit.variantKey;
-  const currentVariantCount = Number(state.mutations?.[variantKey] || 0);
-  if (currentVariantCount <= 0) return false;
+  const currentVariantCount = Math.max(0, Math.floor(Number(state.mutations?.[variantKey] || 0)));
+  const inventoryEntry = state.inventory?.[variantKey];
+  const inventoryCount = Math.max(0, Math.floor(Number(inventoryEntry?.count) || 0));
+  if (currentVariantCount <= 0 && inventoryCount <= 0) return false;
 
-  if (currentVariantCount === 1) delete state.mutations[variantKey];
+  if (currentVariantCount <= 1) delete state.mutations[variantKey];
   else state.mutations[variantKey] = currentVariantCount - 1;
 
-  const currentCardCount = Number(state.unlocked?.[cardId] || 0);
-  if (currentCardCount <= 1) delete state.unlocked[cardId];
-  else state.unlocked[cardId] = currentCardCount - 1;
+  if (inventoryEntry) {
+    if (inventoryCount <= 1) delete state.inventory[variantKey];
+    else inventoryEntry.count = inventoryCount - 1;
+  }
+
+  const normalizedCardId = normalizeCardId(cardId);
+  const currentCardCount = getUnlockedCountById(normalizedCardId);
+  if (currentCardCount <= 1) delete state.unlocked[normalizedCardId];
+  else state.unlocked[normalizedCardId] = currentCardCount - 1;
   return true;
 }
 
@@ -2201,6 +2490,7 @@ function finishBattle(playerWon) {
       const targetName = penalty?.target?.display?.name || penalty?.target?.card?.name || 'your defeated fighter';
       saveState();
       updateStats();
+      collectionNeedsRefresh = false;
       renderCollection();
       renderUpgradeShop();
 
@@ -2366,7 +2656,9 @@ function globalTick() {
   renderAvailableCards();
 
   if (weatherChanged) {
-    renderCollection();
+    // Weather changes affect the roll pool, not collection ownership. Do not
+    // rebuild the Collection DOM from the background ticker: that would replace
+    // the player's active search/filter DOM state while they are browsing.
     saveState();
   } else {
     // Persist elapsed real-time clock so reload recovery is deterministic.
@@ -2404,7 +2696,10 @@ function openModal(id) {
   if (!modal) return;
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
-  if (id === "collectionModal") renderCollection();
+  if (id === "collectionModal") {
+    collectionNeedsRefresh = false;
+    renderCollection();
+  }
   if (id === "upgradesModal") renderUpgradeShop();
   if (id === "cardPreviewModal") renderPreview();
   if (id === "battleModal") resetBattleView();
@@ -2488,9 +2783,18 @@ els.battleChangeFighterButton?.addEventListener("click", () => {
   resetBattleView();
 });
 els.rollButton?.addEventListener("click", () => rollCard("manual"));
-els.searchInput?.addEventListener("input", renderCollection);
-els.mutationFilter?.addEventListener("change", renderCollection);
-els.sortSelect?.addEventListener("change", renderCollection);
+els.searchInput?.addEventListener("input", () => {
+  collectionNeedsRefresh = false;
+  renderCollection();
+});
+els.mutationFilter?.addEventListener("change", () => {
+  collectionNeedsRefresh = false;
+  renderCollection();
+});
+els.sortSelect?.addEventListener("change", () => {
+  collectionNeedsRefresh = false;
+  renderCollection();
+});
 
 els.autoRollToggle?.addEventListener("change", () => {
   isAutoRolling = Boolean(els.autoRollToggle.checked);

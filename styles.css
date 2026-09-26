@@ -2798,3 +2798,26 @@ body {
   .battle-team-power-strip span:nth-child(3) { text-align: center; }
   .battle-arena .battle-combatants { grid-template-columns: 1fr; }
 }
+
+
+/* Collection ownership count: always visible on unlocked cards. */
+.collection-mini__count {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 17px;
+  padding: 0 6px;
+  border: 1px solid rgba(119, 226, 255, .28);
+  border-radius: 999px;
+  color: #dff9ff;
+  background: rgba(30, 62, 84, .72);
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+.collection-card.locked .collection-mini__count {
+  display: none;
+}
