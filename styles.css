@@ -1178,6 +1178,54 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .weather-requirement { max-width:100%; overflow:hidden; text-overflow:ellipsis; }
 .weather-requirement.active { color:#8af2ff; }
 
+/* CRITICAL COLLECTION STABILITY LAYER.
+   Rendering errors in one card must never become a layout cascade. */
+.collection-card {
+  box-sizing: border-box;
+  contain: layout paint;
+}
+.collection-card:not(.locked) .collection-mini__lock {
+  display: none;
+}
+.collection-card:not(.locked) .collection-mini__art {
+  opacity: 1;
+  filter: none;
+}
+.collection-mini__art img {
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+  object-position: center;
+  background: transparent;
+}
+.collection-mini__fallback {
+  pointer-events: none;
+}
+.collection-mutation-badge {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+}
+
+.collection-mutation-badge.mutation-multi {
+  display: inline-flex;
+  max-width: 100%;
+  opacity: 1;
+  visibility: visible;
+}
+
+.mutation-badge.mutation-multi,
+.collection-mutation-badge.mutation-multi {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
 /* CRITICAL COLLECTION BUG FIX: mutation badges own a bounded scroll rail. */
 .mutation-badge-list {
   flex:1 1 auto;
@@ -2501,6 +2549,38 @@ body {
   font-size: 12px;
   line-height: 1.55;
 }
+
+.battle-result__metrics {
+  width: min(520px, 100%);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.battle-result__metric {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,.025);
+}
+.battle-result__metric span {
+  display: block;
+  color: #8f98aa;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.battle-result__metric strong {
+  display: block;
+  margin-top: 4px;
+  color: #f3f6ff;
+  font-size: 12px;
+  font-weight: 950;
+}
+.battle-result--victory .battle-result__metric:first-child strong { color: #7dffbe; }
+.battle-result--defeat .battle-result__metric:last-child strong { color: #ff8ca1; }
 
 .battle-result__actions {
   display: flex;

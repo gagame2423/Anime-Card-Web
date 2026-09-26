@@ -13,7 +13,7 @@ const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
   "animeCardRngSave_v1"
 ]);
-const SAVE_SCHEMA_VERSION = 2;
+const SAVE_SCHEMA_VERSION = 3;
 const GLOBAL_TICK_MS = 1000;
 const BASE_COOLDOWN_MS = 1500;
 const SPEED_BASE_COST = 100;
@@ -47,6 +47,7 @@ const defaultState = {
 
 let state = loadState();
 syncOwnershipRecords();
+saveState();
 
 // ============================================================
 // RUNTIME TIMERS - NEVER DEPEND ON ROLL CLICKS
@@ -224,11 +225,60 @@ function getUnlockedCountById(cardId) {
   return Math.max(0, Math.floor(Number(direct) || 0));
 }
 
+function normalizeCardMutations(rawCardOrMutation) {
+  // Canonical mutation normalizer used by card definitions, legacy inventory,
+  // mutation filters, previews, and UI badges. It always returns string IDs.
+  let rawValue = rawCardOrMutation;
+
+  if (
+    rawCardOrMutation &&
+    typeof rawCardOrMutation === "object" &&
+    !Array.isArray(rawCardOrMutation)
+  ) {
+    if (Object.prototype.hasOwnProperty.call(rawCardOrMutation, "mutation")) {
+      rawValue = rawCardOrMutation.mutation;
+    } else if (Object.prototype.hasOwnProperty.call(rawCardOrMutation, "mutationIds")) {
+      rawValue = rawCardOrMutation.mutationIds;
+    } else if (Object.prototype.hasOwnProperty.call(rawCardOrMutation, "mutations")) {
+      rawValue = rawCardOrMutation.mutations;
+    } else {
+      rawValue = [];
+    }
+  }
+
+  const values = Array.isArray(rawValue)
+    ? rawValue
+    : rawValue == null
+      ? []
+      : [rawValue];
+
+  const normalized = [];
+
+  for (const value of values) {
+    let token = value;
+
+    if (token && typeof token === "object") {
+      token = token.id ?? token.name ?? token.mutation ?? "";
+    }
+
+    const parts = String(token ?? "")
+      .split(/[,+]/g)
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    for (const part of parts) {
+      const normalizedId = normalizeMutationId(part);
+      if (normalizedId && !normalized.includes(normalizedId)) {
+        normalized.push(normalizedId);
+      }
+    }
+  }
+
+  return normalized;
+}
+
 function normalizeMutationIdList(rawMutationIds) {
-  if (!Array.isArray(rawMutationIds)) return [];
-  return [...new Set(rawMutationIds
-    .map(value => normalizeMutationId(value && typeof value === "object" ? value.id : value))
-    .filter(Boolean))];
+  return normalizeCardMutations(rawMutationIds);
 }
 
 function inventoryVariantKey(cardId, mutationIds = []) {
@@ -266,10 +316,12 @@ function normalizeInventoryRecords(rawInventory) {
     for (const entry of rawInventory) {
       if (!entry || typeof entry !== "object") continue;
       const variantKey = entry.variantKey || entry.key || "";
-      let mutationIds = entry.mutationIds ?? entry.mutations ?? entry.mutation ?? [];
-      if (typeof mutationIds === "string") mutationIds = mutationIds === "base" ? [] : mutationIds.split("+");
-      if (!Array.isArray(mutationIds)) mutationIds = [];
-      add(entry.cardId ?? entry.id, normalizeMutationIdList(mutationIds), entry.count, variantKey);
+      const mutationIds = normalizeCardMutations({
+        mutationIds: entry.mutationIds ?? undefined,
+        mutations: entry.mutations ?? undefined,
+        mutation: entry.mutation ?? undefined
+      });
+      add(entry.cardId ?? entry.id, mutationIds, entry.count, variantKey);
     }
     return output;
   }
@@ -278,10 +330,17 @@ function normalizeInventoryRecords(rawInventory) {
 
   for (const [rawKey, rawEntry] of Object.entries(rawInventory)) {
     if (rawEntry && typeof rawEntry === "object" && !Array.isArray(rawEntry)) {
-      let mutationIds = rawEntry.mutationIds ?? rawEntry.mutations ?? rawEntry.mutation ?? [];
-      if (typeof mutationIds === "string") mutationIds = mutationIds === "base" ? [] : mutationIds.split("+");
-      if (!Array.isArray(mutationIds)) mutationIds = [];
-      add(rawEntry.cardId ?? rawEntry.id ?? rawKey, normalizeMutationIdList(mutationIds), rawEntry.count, rawEntry.variantKey || rawEntry.key || rawKey);
+      const mutationIds = normalizeCardMutations({
+        mutationIds: rawEntry.mutationIds ?? undefined,
+        mutations: rawEntry.mutations ?? undefined,
+        mutation: rawEntry.mutation ?? undefined
+      });
+      add(
+        rawEntry.cardId ?? rawEntry.id ?? rawKey,
+        mutationIds,
+        rawEntry.count,
+        rawEntry.variantKey || rawEntry.key || rawKey
+      );
     } else {
       add(rawKey, [], rawEntry, rawKey);
     }
@@ -388,19 +447,38 @@ function syncOwnershipRecords() {
 }
 
 function normalizeMutationId(id) {
-  const safe = String(id || "").trim().toLowerCase();
-  return MUTATION_ID_ALIASES[safe] || safe;
+  const safe = String(id ?? "").trim().toLowerCase();
+  if (!safe || safe === "base" || safe === "normal") return "";
+
+  const alias = MUTATION_ID_ALIASES[safe];
+  if (alias) return alias;
+
+  const direct = MUTATION_BY_ID?.[safe];
+  if (direct?.id) return String(direct.id).trim().toLowerCase();
+
+  const matched = Array.isArray(MUTATIONS)
+    ? MUTATIONS.find(mutation => {
+        const mutationId = String(mutation?.id ?? "").trim().toLowerCase();
+        const mutationName = String(mutation?.name ?? "").trim().toLowerCase();
+        const className = String(mutation?.className ?? "").trim().toLowerCase();
+        return safe === mutationId || safe === mutationName || safe === className;
+      })
+    : null;
+
+  return matched?.id
+    ? String(matched.id).trim().toLowerCase()
+    : safe;
 }
 
 function canonicalVariantKey(cardId, mutationIds) {
   const normalizedCardId = normalizeCardId(cardId);
-  const ids = normalizeMutationIdList(mutationIds)
+  const ids = normalizeCardMutations(mutationIds)
     .map(normalizeMutationId)
     .filter(Boolean)
     .filter((id, index, list) => list.indexOf(id) === index)
     .sort((a, b) => {
-      const rankA = MUTATION_BY_ID[a]?.tier?.rank ?? 0;
-      const rankB = MUTATION_BY_ID[b]?.tier?.rank ?? 0;
+      const rankA = MUTATION_BY_ID?.[a]?.tier?.rank ?? 0;
+      const rankB = MUTATION_BY_ID?.[b]?.tier?.rank ?? 0;
       return rankA - rankB || a.localeCompare(b);
     });
   return `${normalizedCardId}|${ids.join("+") || "base"}`;
@@ -483,20 +561,26 @@ function normalizeState(parsed = {}) {
 
   const rawUnlockedSource = (
     parsed.unlocked &&
-    typeof parsed.unlocked === "object" &&
-    !Array.isArray(parsed.unlocked)
+    typeof parsed.unlocked === "object"
   ) ? parsed.unlocked : parsed.unlockedCards;
-  const rawUnlocked = (
-    rawUnlockedSource &&
-    typeof rawUnlockedSource === "object" &&
-    !Array.isArray(rawUnlockedSource)
-  ) ? rawUnlockedSource : {};
 
   normalized.unlocked = {};
-  for (const [rawId, rawCount] of Object.entries(rawUnlocked)) {
-    const cardId = normalizeCardId(rawId);
-    const count = rawCount === true ? 1 : Math.max(0, Math.floor(Number(rawCount) || 0));
-    if (cardId && count > 0) normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, count);
+
+  // Support both canonical object saves and older array-style unlockedCards.
+  if (Array.isArray(rawUnlockedSource)) {
+    for (const rawId of rawUnlockedSource) {
+      const cardId = normalizeCardId(rawId);
+      if (!cardId) continue;
+      normalized.unlocked[cardId] = (normalized.unlocked[cardId] || 0) + 1;
+    }
+  } else if (rawUnlockedSource && typeof rawUnlockedSource === "object") {
+    for (const [rawId, rawCount] of Object.entries(rawUnlockedSource)) {
+      const cardId = normalizeCardId(rawId);
+      const count = rawCount === true ? 1 : Math.max(0, Math.floor(Number(rawCount) || 0));
+      if (cardId && count > 0) {
+        normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, count);
+      }
+    }
   }
 
   delete normalized.unlockedCards;
@@ -505,6 +589,16 @@ function normalizeState(parsed = {}) {
   // cardId + mutation keyed object. This is deliberately type-safe so number
   // IDs and string IDs converge to the same persistent key.
   normalized.inventory = normalizeInventoryRecords(parsed.inventory);
+
+  // Inventory is a first-class ownership source. Any positive-count entry
+  // must immediately repair the parent unlocked record using a normalized ID.
+  // This is the critical guard against old numeric/string ID desyncs.
+  for (const entry of Object.values(normalized.inventory)) {
+    const cardId = normalizeCardId(entry?.cardId ?? entry?.id);
+    const count = Math.max(0, Math.floor(Number(entry?.count) || 0));
+    if (!cardId || count <= 0) continue;
+    normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, count);
+  }
 
   // Inventory entries are ownership records too. Merge exact variants by
   // maximum, not addition, so legacy saves are repaired without duplicating
@@ -1023,7 +1117,7 @@ function startCooldown() {
 // ============================================================
 
 function getSortedCardsForRolling() {
-  return [...CARDS]
+  return [...ALL_CARDS]
     .filter(card => card.requiredWeather == null || isWeatherActive(card.requiredWeather))
     .sort((a, b) => b.chance - a.chance);
 }
@@ -1067,34 +1161,49 @@ function rollMutations() {
 }
 
 function getVariantKey(cardId, mutations) {
-  return canonicalVariantKey(normalizeCardId(cardId), mutations.map(mutation => mutation.id));
+  return canonicalVariantKey(normalizeCardId(cardId), normalizeCardMutations(mutations));
 }
 
 function parseVariantKey(key) {
-  const separator = key.indexOf("|");
+  const safeKey = String(key ?? "");
+  const separator = safeKey.indexOf("|");
   if (separator < 0) return null;
-  const cardId = key.slice(0, separator);
-  const raw = key.slice(separator + 1);
-  const ids = raw === "base" ? [] : raw.split("+").map(normalizeMutationId);
+
+  const cardId = normalizeCardId(safeKey.slice(0, separator));
+  const raw = safeKey.slice(separator + 1);
+  const ids = normalizeCardMutations(raw === "base" ? [] : raw);
+
   return {
     key: canonicalVariantKey(cardId, ids),
     cardId,
-    mutations: ids.map(id => MUTATION_BY_ID[id]).filter(Boolean)
+    mutationIds: ids,
+    mutations: ids.map(id => MUTATION_BY_ID?.[id]).filter(Boolean)
   };
 }
 
+function normalizeMutationObjects(rawMutations) {
+  const ids = normalizeCardMutations(rawMutations);
+  return ids.map(id => MUTATION_BY_ID?.[id]).filter(Boolean);
+}
+
 function getMutationMultiplier(mutations) {
-  return mutations.reduce((multiplier, mutation) => multiplier * mutation.multiplier, 1);
+  return normalizeMutationObjects(mutations)
+    .reduce((multiplier, mutation) => multiplier * (Number(mutation?.multiplier) || 1), 1);
 }
 
 function getDisplayCard(card, mutations = []) {
-  const multiplier = getMutationMultiplier(mutations);
-  const prefix = mutations.map(mutation => `[${mutation.name}]`).join(" ");
+  const safeMutations = normalizeMutationObjects(mutations);
+  const multiplier = getMutationMultiplier(safeMutations);
+  const prefix = safeMutations
+    .map(mutation => String(mutation?.name || ""))
+    .filter(Boolean)
+    .map(name => `[${name}]`)
+    .join(" ");
   return {
-    name: prefix ? `${prefix} ${card.name}` : card.name,
-    hp: Math.round(card.stats.hp * multiplier),
-    atk: Math.round(card.stats.atk * multiplier),
-    reward: Math.floor(calculateCardReward(card.chance) * multiplier)
+    name: prefix ? `${prefix} ${String(card?.name || "Unknown Card")}` : String(card?.name || "Unknown Card"),
+    hp: Math.max(0, Math.round((Number(card?.stats?.hp) || 0) * multiplier)),
+    atk: Math.max(0, Math.round((Number(card?.stats?.atk) || 0) * multiplier)),
+    reward: Math.max(0, Math.floor(calculateCardReward(Number(card?.chance) || 0) * multiplier))
   };
 }
 
@@ -1120,27 +1229,30 @@ function getMutationAccent(mutation, index = 0) {
 }
 
 function getMutationColorStops(mutations) {
+  const safeMutations = normalizeMutationObjects(mutations);
   const stops = [];
-  mutations.forEach((mutation, index) => {
+  safeMutations.forEach((mutation, index) => {
     const primary = getMutationAccent(mutation, index);
     const secondary = mutation?.secondaryColor;
     stops.push(primary);
-    if (secondary && mutations.length === 1) stops.push(secondary);
+    if (secondary && safeMutations.length === 1) stops.push(secondary);
   });
   return stops.length ? stops : ["#ffffff"];
 }
 
 function getMutationGradient(mutations) {
-  if (!mutations.length) return "";
-  const colors = getMutationColorStops(mutations);
+  const safeMutations = normalizeMutationObjects(mutations);
+  if (!safeMutations.length) return "";
+  const colors = getMutationColorStops(safeMutations);
   if (colors.length === 1) return colors[0];
   const step = 100 / (colors.length - 1);
   return `linear-gradient(135deg, ${colors.map((color, index) => `${color} ${Math.round(index * step)}%`).join(", ")})`;
 }
 
 function getMutationGlow(mutations) {
-  if (!mutations.length) return "#7d5cff";
-  const accents = mutations.map((mutation, index) => getMutationAccent(mutation, index));
+  const safeMutations = normalizeMutationObjects(mutations);
+  if (!safeMutations.length) return "#7d5cff";
+  const accents = safeMutations.map((mutation, index) => getMutationAccent(mutation, index));
   return accents[0] || "#7d5cff";
 }
 
@@ -1153,26 +1265,28 @@ function applyMutationStyleTokens(element, mutations) {
 
 function applyCardMutationVisual(cardElement, mutations) {
   if (!cardElement) return;
+  const safeMutations = normalizeMutationObjects(mutations);
 
-  const mutationClasses = MUTATIONS.map(mutation => mutation.className).filter(Boolean);
+  const mutationClasses = MUTATIONS.map(mutation => mutation?.className).filter(Boolean);
   cardElement.classList.remove(...mutationClasses, "has-mutation", "mutation-multi");
 
-  if (mutations.length) {
+  if (safeMutations.length) {
     cardElement.classList.add("has-mutation");
-    mutations.forEach(mutation => {
-      if (mutation?.className) cardElement.classList.add(mutation.className);
+    safeMutations.forEach(mutation => {
+      if (mutation?.className) cardElement.classList.add(String(mutation.className));
     });
-    if (mutations.length >= 2) cardElement.classList.add("mutation-multi");
+    if (safeMutations.length >= 2) cardElement.classList.add("mutation-multi");
   }
 
-  applyMutationStyleTokens(cardElement, mutations);
+  applyMutationStyleTokens(cardElement, safeMutations);
 }
 
 function renderMutationBadges(container, mutations) {
   if (!container) return;
+  const safeMutations = normalizeMutationObjects(mutations);
   container.innerHTML = "";
 
-  if (!mutations.length) {
+  if (!safeMutations.length) {
     const normal = document.createElement("span");
     normal.className = "mutation-badge mutation-normal";
     normal.textContent = "NORMAL";
@@ -1181,10 +1295,10 @@ function renderMutationBadges(container, mutations) {
   }
 
   const badge = document.createElement("span");
-  const isMulti = mutations.length > 1;
-  badge.className = `mutation-badge ${isMulti ? "mutation-multi" : (mutations[0]?.className || "")}`;
-  badge.textContent = mutations.map(mutation => mutation.name).join(" + ").toUpperCase();
-  applyMutationStyleTokens(badge, mutations);
+  const isMulti = safeMutations.length > 1;
+  badge.className = `mutation-badge ${isMulti ? "mutation-multi" : (safeMutations[0]?.className || "")}`;
+  badge.textContent = safeMutations.map(mutation => String(mutation?.name || "UNKNOWN")).join(" + ").toUpperCase();
+  applyMutationStyleTokens(badge, safeMutations);
   container.appendChild(badge);
 }
 
@@ -1301,7 +1415,10 @@ function showMiss(score = 0) {
 function showRewardToast(reward, mutations = []) {
   if (!els.rewardToast) return;
   clearTimeout(toastTimer);
-  const prefix = mutations.length ? `✦ ${mutations.map(mutation => mutation.name).join(" + ")} • ` : "";
+  const safeMutations = normalizeMutationObjects(mutations);
+  const prefix = safeMutations.length
+    ? `✦ ${safeMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")} • `
+    : "";
   els.rewardToast.textContent = `${prefix}+${formatCurrency(reward)}`;
   els.rewardToast.classList.remove("show");
   void els.rewardToast.offsetWidth;
@@ -1333,36 +1450,86 @@ function escapeCssUrl(src) {
 // ============================================================
 
 function getUniqueCount() {
-  return CARDS.filter(card => getOwnedCardCount(card.id) > 0).length;
+  return ALL_CARDS.filter(card => getOwnedCardCount(card.id) > 0).length;
 }
 
 function getVariantEntries(cardId) {
-  return Object.entries(state.mutations)
-    .map(([key, count]) => {
-      const parsed = parseVariantKey(key);
-      if (!parsed || normalizeCardId(parsed.cardId) !== normalizeCardId(cardId) || Number(count) <= 0) return null;
-      return {
-        key: parsed.key,
-        count: Math.floor(Number(count)),
-        mutations: parsed.mutations,
-        isMulti: parsed.mutations.length >= 2
-      };
-    })
-    .filter(Boolean)
+  const targetId = normalizeCardId(cardId);
+  if (!targetId) return [];
+
+  // Merge both canonical variant stores by maximum count. They represent the
+  // same physical ownership records, so summing them would double the cards.
+  const merged = new Map();
+
+  for (const [rawKey, rawCount] of Object.entries(state?.mutations || {})) {
+    const count = Math.max(0, Math.floor(Number(rawCount) || 0));
+    if (count <= 0) continue;
+    const parsed = parseVariantKey(String(rawKey));
+    if (!parsed || normalizeCardId(parsed.cardId) !== targetId) continue;
+    const key = canonicalVariantKey(targetId, parsed.mutations.map(mutation => mutation?.id));
+    merged.set(key, {
+      count: Math.max(merged.get(key)?.count || 0, count),
+      mutations: parsed.mutations
+    });
+  }
+
+  for (const entry of getInventoryEntries()) {
+    const entryId = normalizeCardId(entry?.cardId ?? entry?.id);
+    const count = Math.max(0, Math.floor(Number(entry?.count) || 0));
+    if (!entryId || entryId !== targetId || count <= 0) continue;
+
+    const mutationIds = normalizeCardMutations(
+      entry?.mutationIds ?? entry?.mutations ?? entry?.mutation
+    );
+    const key = canonicalVariantKey(targetId, mutationIds);
+    const mutations = mutationIds.map(id => MUTATION_BY_ID[id]).filter(Boolean);
+    const existing = merged.get(key);
+    merged.set(key, {
+      count: Math.max(existing?.count || 0, count),
+      mutations: existing?.mutations?.length ? existing.mutations : mutations
+    });
+  }
+
+  return [...merged.entries()]
+    .map(([key, entry]) => ({
+      key,
+      count: Math.max(0, Math.floor(Number(entry.count) || 0)),
+      mutations: Array.isArray(entry.mutations) ? entry.mutations.filter(Boolean) : [],
+      isMulti: Array.isArray(entry.mutations) && entry.mutations.length >= 2
+    }))
+    .filter(entry => entry.count > 0)
     .sort((a, b) => getVariantRank(a) - getVariantRank(b) || a.key.localeCompare(b.key));
 }
 
 function getVariantRank(entry) {
-  return entry.isMulti
+  const safeMutations = Array.isArray(entry?.mutations) ? entry.mutations.filter(Boolean) : [];
+  return entry?.isMulti || safeMutations.length >= 2
     ? MUTATION_TIERS.multi.rank
-    : entry.mutations[0]?.tier?.rank ?? MUTATION_TIERS.normal.rank;
+    : safeMutations[0]?.tier?.rank ?? MUTATION_TIERS.normal.rank;
 }
 
 function getCardMutationProfile(cardId) {
-  const variants = getVariantEntries(normalizeCardId(cardId));
+  const normalizedId = normalizeCardId(cardId);
+  const card = getCardById(normalizedId);
+  const variants = getVariantEntries(normalizedId);
   const ids = new Set();
   let hasMulti = false;
   let rank = MUTATION_TIERS.normal.rank;
+
+  // Base card metadata is optional legacy/future data. Normalize it without
+  // allowing malformed mutation values to break Collection rendering.
+  const baseMutationIds = normalizeCardMutations(card?.mutation);
+  for (const mutationId of baseMutationIds) {
+    const mutation = MUTATION_BY_ID?.[mutationId];
+    if (mutation?.id) {
+      ids.add(mutation.id);
+      rank = Math.max(rank, mutation?.tier?.rank ?? MUTATION_TIERS.normal.rank);
+    }
+  }
+  if (baseMutationIds.length >= 2) {
+    hasMulti = true;
+    rank = MUTATION_TIERS.multi.rank;
+  }
 
   variants.forEach(entry => {
     entry.mutations.forEach(mutation => ids.add(mutation.id));
@@ -1398,49 +1565,83 @@ function getCardMutationVisuals(cardId) {
 }
 
 function cardMatchesMutationFilter(card, filterValue) {
-  if (filterValue === "all") return true;
-  const profile = getCardMutationProfile(card.id);
-  if (filterValue === "normal") return profile.variants.some(entry => !entry.mutations.length);
-  if (filterValue === "multi") return profile.hasMulti;
-  if (filterValue === "active") {
-    const activeMutationIds = new Set(getActiveWeatherDefinitions().map(weather => weather.mutation.id));
-    return profile.mutationIds.some(id => activeMutationIds.has(id));
+  const normalizedFilter = String(filterValue || "all").trim().toLowerCase();
+  if (normalizedFilter === "all") return true;
+
+  try {
+    const cardId = normalizeCardId(card?.id);
+    if (!cardId || !isCardOwned(cardId)) return false;
+
+    // IMPORTANT: ALL_CARDS contains base definitions; mutation ownership lives in
+    // the canonical inventory/mutation variant records. Always filter from the
+    // owned variants rather than base card metadata.
+    const variants = getVariantEntries(cardId);
+
+    if (normalizedFilter === "normal") {
+      return variants.some(entry => entry?.count > 0 && !entry.mutations?.length);
+    }
+
+    if (normalizedFilter === "multi") {
+      return variants.some(entry => entry?.count > 0 && entry.isMulti);
+    }
+
+    if (normalizedFilter === "active") {
+      const activeMutationIds = new Set(
+        getActiveWeatherDefinitions()
+          .map(weather => normalizeMutationId(weather?.mutation?.id))
+          .filter(Boolean)
+      );
+      return variants.some(entry =>
+        entry?.count > 0 &&
+        entry.mutations?.some(mutation => activeMutationIds.has(normalizeMutationId(mutation?.id)))
+      );
+    }
+
+    const targetMutationId = normalizeMutationId(normalizedFilter);
+    if (!targetMutationId) return false;
+
+    return variants.some(entry =>
+      entry?.count > 0 &&
+      entry.mutations?.some(mutation => normalizeMutationId(mutation?.id) === targetMutationId)
+    );
+  } catch (error) {
+    console.warn("Collection mutation filter skipped malformed ownership data:", card?.id, error);
+    return false;
   }
-  return profile.mutationIds.includes(filterValue);
 }
 
 function getFilteredCards() {
   const query = String(els.searchInput?.value || "").trim().toLowerCase();
   const filter = String(els.mutationFilter?.value || "all").toLowerCase();
-  const sort = String(els.sortSelect?.value || "dropchance").toLowerCase();
+  const sort = String(els.sortSelect?.value || "dropChance").toLowerCase();
 
-  const list = CARDS.filter(card => {
+  const filteredCards = ALL_CARDS.filter(card => {
     try {
       const normalizedId = normalizeCardId(card?.id);
       const safeName = String(card?.name || "Unknown Card");
       const safePassive = String(card?.passive?.name || "");
-      const safeMutation = String(card?.mutation || "");
       const profile = getCardMutationProfile(normalizedId);
-      const mutationText = profile.variants
-        .flatMap(entry => entry.mutations.map(mutation => String(mutation?.name || "")))
-        .join(" ")
-        .toLowerCase();
+      const ownedMutationText = profile.variants
+        .flatMap(entry => (entry?.mutations || []).map(mutation => String(mutation?.name || "")));
+      const baseMutationText = normalizeCardMutations(card)
+        .map(id => String(MUTATION_BY_ID?.[id]?.name || id));
+      const mutationText = [...ownedMutationText, ...baseMutationText].join(" ").toLowerCase();
 
-      const searchText = `${safeName} ${safePassive} ${safeMutation}`.toLowerCase();
-      const searchMatch = !query
-        || searchText.includes(query)
-        || mutationText.includes(query);
+      const searchText = `${safeName} ${safePassive} ${mutationText}`.toLowerCase();
+      const searchMatch = !query || searchText.includes(query);
 
       return searchMatch && cardMatchesMutationFilter({ ...card, id: normalizedId }, filter);
     } catch (error) {
-      // A malformed card/mutation record must not abort the remaining filter pass.
+      // Filtering one malformed card must never abort the full collection.
       console.warn("Collection filter skipped malformed card metadata:", card?.id, error);
-      const fallbackText = `${String(card?.name || "")} ${String(card?.passive?.name || "")} ${String(card?.mutation || "")}`.toLowerCase();
-      return !query || fallbackText.includes(query);
+      const fallbackText = `${String(card?.name || "")} ${String(card?.passive?.name || "")}`.toLowerCase();
+      if (!query && filter === "all") return true;
+      return filter === "all" && fallbackText.includes(query);
     }
   });
 
-  list.sort((a, b) => {
+  // NEVER sort the base ALL_CARDS array. Always sort a fresh shallow copy.
+  const sortedCards = [...filteredCards].sort((a, b) => {
     try {
       const chanceA = Number.isFinite(Number(a?.chance)) ? Number(a.chance) : 0;
       const chanceB = Number.isFinite(Number(b?.chance)) ? Number(b.chance) : 0;
@@ -1448,14 +1649,10 @@ function getFilteredCards() {
       const nameB = String(b?.name || "Unknown Card");
 
       if (sort === "name") return nameA.localeCompare(nameB);
-      if (sort === "atk") {
-        return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0);
-      }
-      if (sort === "collected") {
-        return getOwnedCardCount(b?.id) - getOwnedCardCount(a?.id) || nameA.localeCompare(nameB);
-      }
+      if (sort === "atk") return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0);
+      if (sort === "collected") return getOwnedCardCount(b?.id) - getOwnedCardCount(a?.id) || nameA.localeCompare(nameB);
 
-      // Numeric 1-in-X ordering only. Largest denominator = hardest card first.
+      // Default + dropChance: numeric hardest-first ordering.
       return chanceB - chanceA || nameA.localeCompare(nameB);
     } catch (error) {
       console.warn("Collection sort skipped malformed card metadata:", a?.id, b?.id, error);
@@ -1463,11 +1660,11 @@ function getFilteredCards() {
     }
   });
 
-  return list;
+  return sortedCards;
 }
 
 function getAvailableRollPool() {
-  return [...CARDS]
+  return [...ALL_CARDS]
     .filter(card => card.requiredWeather == null || isWeatherActive(card.requiredWeather))
     .sort((a, b) => b.chance - a.chance);
 }
@@ -1659,23 +1856,45 @@ function renderCollection() {
       badgeList.className = "mutation-badge-list";
       badgeList.setAttribute("aria-label", "Unlocked mutation variants");
 
+      const normalizedCardMutations = normalizeCardMutations(card?.mutation);
       const variants = owned ? profile.variants : [];
       if (variants.length) {
         variants.forEach(entry => {
           const badge = document.createElement("span");
+          const safeMutations = Array.isArray(entry?.mutations) ? entry.mutations.filter(Boolean) : [];
+          const safeMutationClasses = safeMutations.map(mutation => String(mutation?.className || "")).filter(Boolean);
           badge.className = [
             "collection-mutation-badge",
-            entry.isMulti ? "mutation-multi" : "",
-            ...entry.mutations.map(mutation => mutation.className)
+            entry?.isMulti ? "mutation-multi" : "",
+            ...safeMutationClasses
           ].filter(Boolean).join(" ");
-          badge.textContent = `${entry.mutations.length ? entry.mutations.map(mutation => mutation.name).join(" + ") : "Normal"} ×${entry.count}`;
-          applyMutationStyleTokens(badge, entry.mutations);
+          const safeMutationNames = safeMutations.map(mutation => String(mutation?.name || "")).filter(Boolean);
+          badge.textContent = `${safeMutationNames.length ? safeMutationNames.join(" + ") : "Normal"} ×${Math.max(0, Number(entry?.count) || 0).toLocaleString("en-US")}`;
+          applyMutationStyleTokens(badge, safeMutations);
           badgeList.appendChild(badge);
         });
       } else {
         const badge = document.createElement("span");
-        badge.className = "collection-mutation-badge mutation-normal";
-        badge.textContent = owned ? "Normal ×0" : "LOCKED";
+        const fallbackMutationNames = normalizedCardMutations
+          .map(id => String(MUTATION_BY_ID?.[id]?.name || id))
+          .filter(Boolean);
+
+        badge.className = [
+          "collection-mutation-badge",
+          fallbackMutationNames.length >= 2 ? "mutation-multi" : "",
+          fallbackMutationNames.length === 1
+            ? String(MUTATION_BY_ID?.[normalizedCardMutations[0]]?.className || "")
+            : ""
+        ].filter(Boolean).join(" ");
+
+        badge.textContent = owned
+          ? `${fallbackMutationNames.length ? fallbackMutationNames.join(" + ") : "Normal"} ×${Math.max(0, Number(count) || 0).toLocaleString("en-US")}`
+          : "LOCKED";
+
+        applyMutationStyleTokens(
+          badge,
+          normalizedCardMutations.map(id => MUTATION_BY_ID?.[id]).filter(Boolean)
+        );
         badgeList.appendChild(badge);
       }
 
@@ -1733,7 +1952,7 @@ function getBestPreviewVariant(cardId) {
 function getCardById(cardId) {
   const targetId = normalizeCardId(cardId);
   if (!targetId) return null;
-  return CARDS.find(card => normalizeCardId(card?.id) === targetId) || null;
+  return ALL_CARDS.find(card => normalizeCardId(card?.id) === targetId) || null;
 }
 
 function openCardPreview(cardId, preferredKey = null) {
@@ -1767,8 +1986,9 @@ function renderPreview() {
   els.previewAtk.textContent = display.atk.toLocaleString("en-US");
   els.previewPassiveName.textContent = card.passive.name;
   els.previewPassiveDescription.textContent = card.passive.description;
-  els.previewVariantLabel.textContent = variant.mutations.length
-    ? variant.mutations.map(mutation => mutation.name).join(" + ")
+  const previewMutations = normalizeMutationObjects(variant.mutations);
+  els.previewVariantLabel.textContent = previewMutations.length
+    ? previewMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")
     : "Normal Variant";
   els.previewCollectedCount.textContent = `${getOwnedCardCount(card.id).toLocaleString("en-US")}× total`;
   els.previewRequirement.textContent = card.requiredWeather
@@ -1823,9 +2043,9 @@ function updateStats() {
   const unique = getUniqueCount();
   if (els.totalRolls) els.totalRolls.textContent = state.totalRolls.toLocaleString("en-US");
   if (els.currencyValue) els.currencyValue.textContent = formatCurrency(state.currency);
-  if (els.collectionSummary) els.collectionSummary.textContent = `Cards: ${unique}/${CARDS.length}`;
+  if (els.collectionSummary) els.collectionSummary.textContent = `Cards: ${unique}/${ALL_CARDS.length}`;
   if (els.luckValue) els.luckValue.textContent = `${getLuckMultiplier().toFixed(2)}x`;
-  if (els.collectionModalCount) els.collectionModalCount.textContent = `${unique}/${CARDS.length}`;
+  if (els.collectionModalCount) els.collectionModalCount.textContent = `${unique}/${ALL_CARDS.length}`;
   renderCooldownUI(Date.now());
 }
 
@@ -1899,7 +2119,7 @@ function clearBattleTurnTimer() {
 }
 
 function getUnlockedBattleCards() {
-  return CARDS.filter(card => getOwnedCardCount(card.id) > 0);
+  return ALL_CARDS.filter(card => getOwnedCardCount(card.id) > 0);
 }
 
 function getBattleVariantEntries(cardId) {
@@ -2205,6 +2425,7 @@ function resetBattleView() {
   els.battleSetup?.classList.remove('hidden');
   els.battleArena?.classList.add('hidden');
   els.battleVictory?.classList.add('hidden');
+  els.battleVictory?.setAttribute('aria-hidden', 'true');
   if (els.battleLog) els.battleLog.innerHTML = '';
   if (els.battleStatus) els.battleStatus.textContent = 'PREPARING';
   if (els.battleStartButton) els.battleStartButton.disabled = true;
@@ -2239,10 +2460,10 @@ function rollEnemyMutations() {
 }
 
 function chooseBattleEnemyTeam(playerTeam) {
-  const playerIds = new Set(playerTeam.map(unit => unit.card.id));
-  let pool = getAvailableRollPool().filter(card => !playerIds.has(card.id));
-  if (!pool.length) pool = CARDS.filter(card => !playerIds.has(card.id));
-  if (!pool.length) pool = [...CARDS];
+  const playerIds = new Set(playerTeam.map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean));
+  let pool = getAvailableRollPool().filter(card => !playerIds.has(normalizeCardId(card?.id)));
+  if (!pool.length) pool = ALL_CARDS.filter(card => !playerIds.has(normalizeCardId(card?.id)));
+  if (!pool.length) pool = [...ALL_CARDS];
 
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const team = [];
@@ -2435,7 +2656,7 @@ function canReplayBattleTeam() {
   const usage = new Map();
   for (const slot of battleState.setup.team) {
     usage.set(slot.variantKey, (usage.get(slot.variantKey) || 0) + 1);
-    if (Number(state.unlocked?.[slot.cardId] || 0) <= 0) return false;
+    if (getUnlockedCountById(slot?.cardId) <= 0) return false;
   }
   for (const [variantKey, used] of usage) {
     if (Number(state.mutations?.[variantKey] || 0) < used) return false;
@@ -2485,6 +2706,8 @@ function finishBattle(playerWon) {
       if (els.battleResultPower) {
         els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${rewardProfile.label} • ×${Number(rewardProfile.multiplier || 1).toFixed(2)}`;
       }
+      if (els.battleResultCash) els.battleResultCash.textContent = `+${formatCurrency(reward)}`;
+      if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = 'N/A — Victory';
     } else {
       const penalty = applyBattleDefeatPenalty();
       const targetName = penalty?.target?.display?.name || penalty?.target?.card?.name || 'your defeated fighter';
@@ -2501,6 +2724,10 @@ function finishBattle(playerWon) {
       if (els.battleResultTitle) els.battleResultTitle.textContent = '💀 DEFEAT!';
       if (els.battleResultText) els.battleResultText.textContent = notice;
       if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')}`;
+    if (els.battleResultCash) els.battleResultCash.textContent = '+0 VNĐ';
+    if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = playerWon ? 'N/A — Victory' : 'CHECK LOG';
+      if (els.battleResultCash) els.battleResultCash.textContent = '+0 VNĐ';
+      if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = penalty?.lost ? 'LOST 1 CARD' : 'SAVED';
     }
   } catch (error) {
     // Battle resolution must always reach the end-game screen even if a
@@ -2519,13 +2746,20 @@ function finishBattle(playerWon) {
   }
 
   els.battleArena?.classList.add('hidden');
-  els.battleVictory?.classList.remove('hidden');
-  els.battleVictory?.classList.remove('battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
-  els.battleVictory?.classList.add(playerWon ? 'battle-result--victory' : 'battle-result--defeat');
+  const battleResultView = document.getElementById('battle-result-modal') || els.battleVictory;
+  if (battleResultView) {
+    battleResultView.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
+    battleResultView.classList.add(playerWon ? 'battle-result--victory' : 'battle-result--defeat');
+    battleResultView.setAttribute('aria-hidden', 'false');
+  } else {
+    console.warn('Battle result view is missing; result data was still processed.');
+  }
 }
 
 // Explicit alias for integrations that expect an endBattle() API.
 function endBattle(playerWon) {
+  if (!battleState || battleState.finished) return;
+  clearBattleTurnTimer();
   finishBattle(Boolean(playerWon));
 }
 
@@ -2570,6 +2804,7 @@ function startBattle(useExistingSetup = true) {
 
   els.battleSetup?.classList.add('hidden');
   els.battleVictory?.classList.add('hidden');
+  els.battleVictory?.setAttribute('aria-hidden', 'true');
   els.battleArena?.classList.remove('hidden');
   if (els.battleLog) els.battleLog.innerHTML = '';
 
@@ -2774,7 +3009,7 @@ els.battleButton?.addEventListener("click", openBattleModal);
 els.resetButton?.addEventListener("click", resetGame);
 els.battleStartButton?.addEventListener("click", () => startBattle(true));
 els.battleAutoAgainButton?.addEventListener("click", () => {
-  if (!canReplayBattleFighter()) return;
+  if (!canReplayBattleTeam()) return;
   startBattle(true);
 });
 els.battleChangeFighterButton?.addEventListener("click", () => {

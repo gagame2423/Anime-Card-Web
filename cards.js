@@ -289,6 +289,13 @@ const CARDS = [
   }
 ];
 
+// The base card database is immutable at the array level. Gameplay code must
+// always sort/filter a fresh copy so Collection/Battle rendering can never
+// mutate the canonical order.
+Object.freeze(CARDS);
+const ALL_CARDS = CARDS;
+
 if (typeof window !== "undefined") {
   window.CARDS = CARDS;
+  window.ALL_CARDS = ALL_CARDS;
 }
