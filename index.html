@@ -342,27 +342,39 @@
         <div class="battle-setup-card">
           <div class="battle-setup-head">
             <div>
-              <span class="battle-field-label">CHOOSE YOUR FIGHTER</span>
-              <p>Select a card and bring any owned Mutation variant into the arena.</p>
+              <span class="battle-field-label">BUILD YOUR 4V4 TEAM</span>
+              <p>Select four fighters from your unlocked Collection, then assign an owned Mutation variant to each slot.</p>
             </div>
-            <span class="battle-setup-hint">YOUR COLLECTION</span>
+            <span class="battle-setup-hint">TEAM <b id="battleTeamCount">0/4</b></span>
           </div>
 
+          <div class="battle-team-builder">
+            <div class="battle-team-builder__head">
+              <span class="battle-field-label">TEAM LINEUP</span>
+              <span class="battle-variant-section__note">Click a slot to edit it.</span>
+            </div>
+            <div id="battleTeamSlots" class="battle-team-slots" aria-label="Battle team slots"></div>
+          </div>
+
+          <div class="battle-card-picker-head">
+            <span class="battle-field-label">YOUR UNLOCKED CARDS</span>
+            <span class="battle-setup-hint">SELECT / REPLACE</span>
+          </div>
           <div id="battleFighterGrid" class="battle-fighter-grid" aria-label="Unlocked battle fighters"></div>
 
           <div class="battle-variant-section">
             <div class="battle-variant-section__head">
-              <span class="battle-field-label">MUTATION VARIANT</span>
-              <span class="battle-variant-section__note">Stats use the selected multiplier.</span>
+              <span class="battle-field-label">MUTATION VARIANT FOR ACTIVE SLOT</span>
+              <span class="battle-variant-section__note">Mutation multipliers apply to battle stats.</span>
             </div>
             <div id="battleVariantGrid" class="battle-variant-grid" aria-label="Owned mutation variants"></div>
           </div>
 
           <div id="battleFighterPreview" class="battle-selection-preview">
-            <span>Select an unlocked card to begin.</span>
+            <span>Select a team slot to begin.</span>
           </div>
 
-          <button id="battleStartButton" class="battle-primary-button" type="button">Start Battle</button>
+          <button id="battleStartButton" class="battle-primary-button" type="button">Start 4v4 Battle</button>
         </div>
       </div>
 
@@ -416,7 +428,24 @@
           </article>
         </div>
 
-        <div class="battle-auto-note">Auto combat • Every 3 seconds • Player and Enemy alternate turns</div>
+        <div class="battle-team-power-strip">
+          <span id="battlePlayerTeamPower">PLAYER POWER 0</span>
+          <span>4V4 • 3s TURNS</span>
+          <span id="battleEnemyTeamPower">ENEMY POWER 0</span>
+        </div>
+
+        <div class="battle-lineups">
+          <div>
+            <span class="battle-side-label">PLAYER LINEUP</span>
+            <div id="battlePlayerLineup" class="battle-lineup" aria-label="Player team lineup"></div>
+          </div>
+          <div>
+            <span class="battle-side-label battle-side-label--enemy">ENEMY LINEUP</span>
+            <div id="battleEnemyLineup" class="battle-lineup" aria-label="Enemy team lineup"></div>
+          </div>
+        </div>
+
+        <div class="battle-auto-note">Auto combat • Every 3 seconds • Front cards alternate attacks • Weather-mutated enemies are possible</div>
         <div id="battleLog" class="battle-log" aria-live="polite"></div>
       </div>
 
@@ -425,6 +454,7 @@
         <span class="eyebrow">MATCH COMPLETE</span>
         <h3 id="battleResultTitle">Victory!</h3>
         <p id="battleResultText">You defeated the enemy.</p>
+        <div id="battleResultPower" class="battle-result__power">Player Power: 0 vs Enemy Power: 0</div>
         <div class="battle-result__actions">
           <button id="battleAutoAgainButton" class="battle-primary-button" type="button">Auto Battle Again</button>
           <button id="battleChangeFighterButton" class="ghost-button" type="button">Change Fighter</button>

@@ -19,9 +19,22 @@ const CARDS = [
     stats: { hp: 100, atk: 25 },
     passive: {
       name: "First Strike",
-      description: "The first attack after each roll gains a small damage boost."
+      description: "Every attack gain 10% attack boost ( stack to 100% )."
     },
     image: "assets/cards/narutokid.png"
+  },
+  {
+    id: "deku-mc",
+    name: "Powerless Guy",
+    rarity: "Common",
+    chance: 5,
+    requiredWeather: null,
+    stats: { hp: 500, atk: 10 },
+    passive: {
+      name: "What can i get you sir",
+      description: "Every attack has 20% chance to heal 20% HP."
+    },
+    image: "assets/cards/dekumcdonald.png"
   },
   {
     id: "starter-rare",
@@ -32,9 +45,35 @@ const CARDS = [
     stats: { hp: 240, atk: 75 },
     passive: {
       name: "Afterimage",
-      description: "Has a chance to evade the next incoming hit."
+      description: "Has 5% chance to evade the next incoming hit."
     },
     image: "assets/cards/ichigobase.png"
+  },
+  {
+    id: "gon-kid",
+    name: "Gon Kid",
+    rarity: "Rare",
+    chance: 25,
+    requiredWeather: null,
+    stats: { hp: 500, atk: 50 },
+    passive: {
+      name: "Rock",
+      description: "First attack has 33% to strike double damage."
+    },
+    image: "assets/cards/gonkid.png"
+  },
+  {
+    id: "tanjiro",
+    name: "tanjiro",
+    rarity: "Rare",
+    chance: 40,
+    requiredWeather: null,
+    stats: { hp: 400, atk: 100 },
+    passive: {
+      name: "Rock",
+      description: "At the start of the match , gain 25% hp bonus"
+    },
+    image: "assets/cards/tanjiro.png"
   },
   {
     id: "starter-epic",
@@ -50,15 +89,54 @@ const CARDS = [
     image: "assets/cards/luffykid.png"
   },
   {
+    id: "kaneki-ghoul",
+    name: "Kaneki",
+    rarity: "Epic",
+    chance: 80,
+    requiredWeather: null,
+    stats: { hp: 600, atk: 100 },
+    passive: {
+      name: "Starfall",
+      description: "Every third attack suck enemy blood and selfheal equal to 25% enemy current hp"
+    },
+    image: "assets/cards/kaneki.png"
+  },
+  {
+    id: "the-trapper",
+    name: "The Trapper",
+    rarity: "Epic",
+    chance: 100,
+    requiredWeather: null,
+    stats: { hp: 500, atk: 100 },
+    passive: {
+      name: "Trap",
+      description: "When the match start have 50% chance to strike x10 attack damage."
+    },
+    image: "assets/cards/thetrapper.png"
+  },
+  {
+    id: "jotaro-kujo",
+    name: "Jotaro Kujo",
+    rarity: "Epic",
+    chance: 500,
+    requiredWeather: null,
+    stats: { hp: 750, atk: 300 },
+    passive: {
+      name: "Ora Ora",
+      description: "Every attack has 50% chance to follow up a next attack , and 25% chance to follow up the follow up , the follow up attack have 40% attack damage."
+    },
+    image: "assets/cards/jotarokujo.png"
+  },
+  {
     id: "starter-legendary",
     name: "Son Goku",
     rarity: "Legendary",
     chance: 1000,
     requiredWeather: null,
-    stats: { hp: 1250, atk: 620 },
+    stats: { hp: 1250, atk: 400 },
     passive: {
-      name: "Royal Pressure",
-      description: "Deals bonus damage to enemies with more HP than this card."
+      name: "Kamehameha",
+      description: "Every fifth attack , do 10% attack damage to enemy constantly for 10 times."
     },
     image: "assets/cards/songoku.png"
   },
@@ -68,7 +146,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 100000,
     requiredWeather: null,
-    stats: { hp: 5000, atk: 2500 },
+    stats: { hp: 10000, atk: 2000 },
     passive: {
       name: "Genesis Break",
       description: "A cosmic passive that massively amplifies the next critical hit."
@@ -83,10 +161,10 @@ const CARDS = [
     rarity: "Legendary",
     chance: 2500,
     requiredWeather: "Sunny",
-    stats: { hp: 2200, atk: 980 },
+    stats: { hp: 2770, atk: 690 },
     passive: {
-      name: "Daybreak",
-      description: "Amplifies the next attack after every successful roll during Sunny weather."
+      name: "SUNNY",
+      description: "If weather is sunny double the attack damage stats."
     },
     image: "assets/cards/escanor.png"
   },
@@ -96,12 +174,25 @@ const CARDS = [
     rarity: "Mythic",
     chance: 8000,
     requiredWeather: "Eclipse",
-    stats: { hp: 3800, atk: 1750 },
+    stats: { hp: 9999, atk: 666 },
     passive: {
       name: "Blood Moon",
       description: "The darker the battlefield, the more dangerous the next critical hit becomes."
     },
     image: "assets/cards/griffith.png"
+  },
+  {
+    id: "ice-admiral",
+    name: "Ice Admiral",
+    rarity: "Mythic",
+    chance: 5000,
+    requiredWeather: "Snowing",
+    stats: { hp: 3000, atk: 1000 },
+    passive: {
+      name: "Ice Age",
+      description: "Has 33% chance to freeze an enemy after landing a critical hit."
+    },
+    image: "assets/cards/iceadmiral.png"
   },
   {
     id: "weather-frost-sovereign",
@@ -112,7 +203,7 @@ const CARDS = [
     stats: { hp: 4600, atk: 2050 },
     passive: {
       name: "Absolute Zero",
-      description: "Has a chance to freeze an enemy after landing a critical hit."
+      description: "Has 67% chance to freeze an enemy after landing a critical hit."
     },
     image: "assets/cards/esdeath.png"
   },
@@ -131,6 +222,19 @@ const CARDS = [
     },
     image: "assets/cards/igris.png"
   },
+  {
+    id: "cid-shadow",
+    name: "Cid Atomic",
+    rarity: "Mythic",
+    chance: 30000,
+    requiredWeather: "Shadow",
+    stats: { hp: 6400, atk: 3200 },
+    passive: {
+      name: "I AM ATMOIC !!!",
+      description: "Every 10th attack strike x100 damage attack to all enemy"
+    },
+    image: "assets/cards/cidatomic.png"
+  },  
   {
     id: "weather-heavenly-seraph",
     name: "The First Human",

@@ -145,6 +145,8 @@ const els = {
   battleSetup: document.getElementById("battleSetup"),
   battleFighterGrid: document.getElementById("battleFighterGrid"),
   battleVariantGrid: document.getElementById("battleVariantGrid"),
+  battleTeamSlots: document.getElementById("battleTeamSlots"),
+  battleTeamCount: document.getElementById("battleTeamCount"),
   battleFighterPreview: document.getElementById("battleFighterPreview"),
   battleStartButton: document.getElementById("battleStartButton"),
   battleArena: document.getElementById("battleArena"),
@@ -166,11 +168,16 @@ const els = {
   battleEnemyHp: document.getElementById("battleEnemyHp"),
   battleEnemyHpBar: document.getElementById("battleEnemyHpBar"),
   battleEnemyAtk: document.getElementById("battleEnemyAtk"),
+  battlePlayerLineup: document.getElementById("battlePlayerLineup"),
+  battleEnemyLineup: document.getElementById("battleEnemyLineup"),
+  battlePlayerTeamPower: document.getElementById("battlePlayerTeamPower"),
+  battleEnemyTeamPower: document.getElementById("battleEnemyTeamPower"),
   battleStatus: document.getElementById("battleStatus"),
   battleLog: document.getElementById("battleLog"),
   battleVictory: document.getElementById("battleVictory"),
   battleResultTitle: document.getElementById("battleResultTitle"),
   battleResultText: document.getElementById("battleResultText"),
+  battleResultPower: document.getElementById("battleResultPower"),
   battleAutoAgainButton: document.getElementById("battleAutoAgainButton"),
   battleChangeFighterButton: document.getElementById("battleChangeFighterButton")
 };
@@ -186,6 +193,7 @@ function cloneDefaultState() {
     currency: 0,
     unlocked: {},
     mutations: {},
+    inventory: {},
     equipment: [],
     upgrades: { rollSpeed: 0, luck: 0 },
     lastResultId: null,
@@ -282,18 +290,54 @@ function normalizeState(parsed = {}) {
     ? Math.max(0, Math.floor(Number(parsed.currency)))
     : defaults.currency;
 
-  normalized.unlocked = (
+  const rawUnlocked = (
     parsed.unlocked &&
     typeof parsed.unlocked === "object" &&
     !Array.isArray(parsed.unlocked)
-  ) ? { ...parsed.unlocked } : {};
+  ) ? parsed.unlocked : {};
 
-  // New cards require no destructive migration: cards.js is authoritative for
-  // the current catalog, while existing unlocked counts remain untouched.
-  // We intentionally do NOT inject zero-count entries because collection
-  // progress is derived from positive unlocked counts.
+  // Sanitize ownership without destructively rebuilding the collection.
+  // Older saves may contain booleans, strings, or malformed counts; all are
+  // normalized to positive integer copy counts where possible.
+  normalized.unlocked = {};
+  for (const [cardId, rawCount] of Object.entries(rawUnlocked)) {
+    const count = rawCount === true ? 1 : Math.max(0, Math.floor(Number(rawCount) || 0));
+    if (count > 0) normalized.unlocked[cardId] = count;
+  }
+
+  // Some forward/legacy builds stored ownership under inventory. Preserve
+  // those counts and merge by maximum so existing progress is never doubled.
+  const rawInventory = (
+    parsed.inventory &&
+    typeof parsed.inventory === "object" &&
+    !Array.isArray(parsed.inventory)
+  ) ? parsed.inventory : {};
+  for (const [cardId, rawEntry] of Object.entries(rawInventory)) {
+    const inventoryCount = typeof rawEntry === "object" && rawEntry !== null
+      ? Math.max(0, Math.floor(Number(rawEntry.count) || 0))
+      : Math.max(0, Math.floor(Number(rawEntry) || 0));
+    if (inventoryCount > 0) {
+      normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, inventoryCount);
+    }
+  }
 
   normalized.mutations = migrateMutationRecords(parsed.mutations, normalized.unlocked);
+
+  // Mutation records are ownership records too. If a long-running save ever
+  // lost its parent unlocked count, reconstruct that count from the variants
+  // instead of letting the Collection mark the card as locked/disappeared.
+  const mutationTotalsByCard = {};
+  for (const [variantKey, rawCount] of Object.entries(normalized.mutations)) {
+    const parsedVariant = parseVariantKey(variantKey);
+    const count = Math.max(0, Math.floor(Number(rawCount) || 0));
+    if (!parsedVariant || count <= 0) continue;
+    mutationTotalsByCard[parsedVariant.cardId] = (mutationTotalsByCard[parsedVariant.cardId] || 0) + count;
+  }
+  for (const [cardId, variantCount] of Object.entries(mutationTotalsByCard)) {
+    normalized.unlocked[cardId] = Math.max(normalized.unlocked[cardId] || 0, variantCount);
+  }
+
+  normalized.inventory = rawInventory;
   normalized.equipment = Array.isArray(parsed.equipment) ? [...parsed.equipment] : [];
 
   normalized.upgrades.rollSpeed = Math.min(
@@ -363,6 +407,7 @@ function parseStoredSave(raw) {
       "currency",
       "unlocked",
       "mutations",
+      "inventory",
       "upgrades",
       "weather"
     ].some(key => Object.prototype.hasOwnProperty.call(parsed, key));
@@ -1030,7 +1075,7 @@ function escapeCssUrl(src) {
 // ============================================================
 
 function getUniqueCount() {
-  return Object.keys(state.unlocked).filter(id => CARDS.some(card => card.id === id)).length;
+  return CARDS.filter(card => getOwnedCardCount(card.id) > 0).length;
 }
 
 function getVariantEntries(cardId) {
@@ -1141,12 +1186,43 @@ function getAvailableRollPool() {
     .sort((a, b) => b.chance - a.chance);
 }
 
+function getWeatherPoolBadgeTokens(activeWeathers) {
+  const colors = activeWeathers
+    .map(weather => weather?.color || weather?.mutation?.color)
+    .filter(Boolean);
+
+  if (!colors.length) {
+    return {
+      color: "#8fefff",
+      gradient: "#8fefff",
+      glow: "#26dcff"
+    };
+  }
+
+  const stops = colors.length === 1
+    ? colors
+    : colors.map((color, index) => `${color} ${Math.round((index / (colors.length - 1)) * 100)}%`);
+
+  return {
+    color: colors[0],
+    gradient: colors.length === 1 ? colors[0] : `linear-gradient(135deg, ${stops.join(", ")})`,
+    glow: colors.join(", ")
+  };
+}
+
 function renderAvailableCards() {
   if (!els.availableCardsList) return;
 
   const pool = getAvailableRollPool();
   const activeWeathers = getActiveWeatherDefinitions();
   const uniqueWeatherNames = activeWeathers.map(weather => weather.name);
+  const weatherTokens = getWeatherPoolBadgeTokens(activeWeathers);
+
+  if (els.availableCardsMode) {
+    els.availableCardsMode.style.setProperty("--weather-color", weatherTokens.color);
+    els.availableCardsMode.style.setProperty("--weather-gradient", weatherTokens.gradient);
+    els.availableCardsMode.style.setProperty("--weather-glow", weatherTokens.glow);
+  }
 
   if (els.availableCardsCount) els.availableCardsCount.textContent = String(pool.length);
   if (els.availableCardsMode) {
@@ -1198,13 +1274,19 @@ function renderAvailableCards() {
   }
 }
 
+function getOwnedCardCount(cardId) {
+  const directCount = Math.max(0, Math.floor(Number(state.unlocked?.[cardId]) || 0));
+  const variantCount = getVariantEntries(cardId).reduce((sum, entry) => sum + entry.count, 0);
+  return Math.max(directCount, variantCount);
+}
+
 function renderCollection() {
   if (!els.collectionGrid) return;
   els.collectionGrid.innerHTML = "";
 
   for (const card of getFilteredCards()) {
-    const owned = Boolean(state.unlocked[card.id]);
-    const count = Number(state.unlocked[card.id] || 0);
+    const count = getOwnedCardCount(card.id);
+    const owned = count > 0;
     const visuals = getCardMutationVisuals(card.id);
     const profile = visuals.profile;
 
@@ -1480,11 +1562,15 @@ function purchaseUpgrade(type) {
 }
 
 // ============================================================
-// SOLO BATTLE ARENA - VISUAL + AUTOMATED, ISOLATED FROM RNG/TICKER
+// 4v4 BATTLE ARENA - VISUAL + AUTOMATED, ISOLATED FROM RNG/TICKER
 // ============================================================
 
-const BATTLE_REWARD_VND = 500;
+const BATTLE_BASE_REWARD_VND = 500;
 const BATTLE_TURN_MS = 3000;
+const BATTLE_TEAM_SIZE = 4;
+const BATTLE_ENEMY_MUTATION_CHANCE = 0.70;
+const BATTLE_DEFEAT_LOSS_CHANCE = 0.25;
+
 let battleState = null;
 let battleTurnTimer = null;
 
@@ -1496,9 +1582,7 @@ function clearBattleTurnTimer() {
 }
 
 function getUnlockedBattleCards() {
-  // Battle-only helper: derive eligible fighters from the existing
-  // persistent collection without mutating or resetting game state.
-  return CARDS.filter(card => Number(state.unlocked?.[card.id] || 0) > 0);
+  return CARDS.filter(card => getOwnedCardCount(card.id) > 0);
 }
 
 function getBattleVariantEntries(cardId) {
@@ -1517,35 +1601,142 @@ function getBattleVariantDisplay(card, entry) {
   return getDisplayCard(card, entry.mutations);
 }
 
+function getBattleSetupTeam() {
+  return Array.isArray(battleState?.setup?.team) ? battleState.setup.team : [];
+}
+
+function getBattleVariantUsage(excludeIndex = -1) {
+  const usage = new Map();
+  for (let index = 0; index < getBattleSetupTeam().length; index += 1) {
+    if (index === excludeIndex) continue;
+    const key = getBattleSetupTeam()[index]?.variantKey;
+    if (!key) continue;
+    usage.set(key, (usage.get(key) || 0) + 1);
+  }
+  return usage;
+}
+
+function getAvailableBattleVariantCount(variantKey, excludeIndex = -1) {
+  const owned = Number(state.mutations?.[variantKey] || 0);
+  const usedElsewhere = getBattleVariantUsage(excludeIndex).get(variantKey) || 0;
+  return owned - usedElsewhere;
+}
+
+function chooseFirstAvailableBattleVariant(cardId, excludeIndex = -1) {
+  return getBattleVariantEntries(cardId).find(entry => getAvailableBattleVariantCount(entry.key, excludeIndex) > 0) || null;
+}
+
+function isBattleSetupValid(team = getBattleSetupTeam()) {
+  if (team.length !== BATTLE_TEAM_SIZE) return false;
+  const usage = new Map();
+  for (const slot of team) {
+    const card = getCardById(slot.cardId);
+    const variant = card ? getBattleVariantEntries(card.id).find(entry => entry.key === slot.variantKey) : null;
+    if (!card || !variant) return false;
+    usage.set(slot.variantKey, (usage.get(slot.variantKey) || 0) + 1);
+  }
+  for (const [variantKey, used] of usage) {
+    if (Number(state.mutations?.[variantKey] || 0) < used) return false;
+  }
+  return true;
+}
+
+function renderBattleTeamSlots() {
+  const container = els.battleTeamSlots;
+  if (!container) return;
+  container.innerHTML = '';
+
+  const team = getBattleSetupTeam();
+  const activeIndex = Number(battleState?.setup?.activeIndex || 0);
+
+  for (let index = 0; index < BATTLE_TEAM_SIZE; index += 1) {
+    const slot = team[index];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `battle-team-slot ${index === activeIndex ? 'is-active' : ''} ${slot ? 'is-filled' : 'is-empty'}`;
+    button.addEventListener('click', () => {
+      if (!battleState?.setup) return;
+      battleState.setup.activeIndex = index;
+      renderBattleSelection();
+    });
+
+    const label = document.createElement('span');
+    label.className = 'battle-team-slot__index';
+    label.textContent = `#${index + 1}`;
+    button.appendChild(label);
+
+    if (!slot) {
+      const empty = document.createElement('strong');
+      empty.textContent = 'EMPTY';
+      button.appendChild(empty);
+    } else {
+      const card = getCardById(slot.cardId);
+      const variant = card ? getBattleVariantEntries(card.id).find(entry => entry.key === slot.variantKey) : null;
+      const media = document.createElement('div');
+      media.className = 'battle-team-slot__art';
+      const img = document.createElement('img');
+      img.alt = card?.name || 'Team fighter';
+      const fallback = document.createElement('div');
+      fallback.className = 'battle-fighter-option__fallback';
+      fallback.textContent = '✦';
+      media.append(img, fallback);
+      if (card) setArtwork(img, fallback, null, card.image, `${card.name} artwork`);
+
+      const info = document.createElement('div');
+      info.className = 'battle-team-slot__info';
+      const name = document.createElement('strong');
+      name.textContent = card?.name || 'Unknown';
+      const variantLabel = document.createElement('span');
+      variantLabel.textContent = variant ? getBattleVariantLabel(variant) : 'Normal';
+      info.append(name, variantLabel);
+      button.append(media, info);
+      if (variant) applyMutationStyleTokens(button, variant.mutations);
+    }
+
+    container.appendChild(button);
+  }
+
+  if (els.battleTeamCount) els.battleTeamCount.textContent = `${team.length}/${BATTLE_TEAM_SIZE}`;
+}
+
 function populateBattleFighterSelect() {
   const grid = els.battleFighterGrid;
   if (!grid) return;
 
   const unlocked = getUnlockedBattleCards();
-  const previousSetup = battleState?.setup ? { ...battleState.setup } : null;
+  const previousTeam = Array.isArray(battleState?.setup?.team) ? battleState.setup.team.map(slot => ({ ...slot })) : [];
+  const previousActive = Number(battleState?.setup?.activeIndex || 0);
   grid.innerHTML = '';
+
   clearBattleTurnTimer();
-  battleState = previousSetup ? { setup: previousSetup } : null;
+  battleState = battleState?.setup
+    ? { setup: { team: previousTeam, activeIndex: previousActive } }
+    : { setup: { team: [], activeIndex: 0 } };
 
   if (!unlocked.length) {
     grid.innerHTML = '<div class="battle-empty-selection">Roll at least one card to enter the arena.</div>';
     if (els.battleStartButton) els.battleStartButton.disabled = true;
     if (els.battleVariantGrid) els.battleVariantGrid.innerHTML = '';
-    renderBattleSelectionPreview();
+    renderBattleSelection();
     return;
   }
 
-  if (!battleState?.setup || !unlocked.some(card => card.id === battleState.setup.cardId)) {
-    battleState = { setup: { cardId: unlocked[0].id, variantKey: null } };
-  }
-
   unlocked.forEach(card => {
-    const variants = getBattleVariantEntries(card.id);
-    const selectedForCard = card.id === battleState.setup.cardId;
+    const selectedIndexes = getBattleSetupTeam()
+      .map((slot, index) => slot?.cardId === card.id ? index : -1)
+      .filter(index => index >= 0);
+    const activeIndex = Number(battleState.setup.activeIndex || 0);
+    const canSelect = selectedIndexes.length > 0 || Boolean(chooseFirstAvailableBattleVariant(card.id, activeIndex));
+
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `battle-fighter-option ${selectedForCard ? 'is-selected' : ''}`;
+    button.className = `battle-fighter-option ${selectedIndexes.length ? 'is-selected' : ''}`;
+    button.disabled = !canSelect;
     button.dataset.cardId = card.id;
+
+    const variants = getBattleVariantEntries(card.id);
+    const firstEntry = variants[0];
+    const display = firstEntry ? getBattleVariantDisplay(card, firstEntry) : getDisplayCard(card, []);
 
     const media = document.createElement('div');
     media.className = 'battle-fighter-option__art';
@@ -1555,116 +1746,145 @@ function populateBattleFighterSelect() {
     fallback.className = 'battle-fighter-option__fallback';
     fallback.textContent = '✦';
     media.append(img, fallback);
+    setArtwork(img, fallback, null, card.image, `${card.name} artwork`);
 
     const body = document.createElement('div');
     body.className = 'battle-fighter-option__body';
     const title = document.createElement('strong');
     title.textContent = card.name;
     const stats = document.createElement('span');
-    const firstEntry = variants[0];
-    const display = firstEntry ? getBattleVariantDisplay(card, firstEntry) : getDisplayCard(card, []);
     stats.textContent = `HP ${display.hp.toLocaleString('en-US')} • ATK ${display.atk.toLocaleString('en-US')}`;
     const variantCount = document.createElement('small');
-    variantCount.textContent = `${variants.length} variant${variants.length === 1 ? '' : 's'} unlocked`;
+    variantCount.textContent = `${selectedIndexes.length ? `${selectedIndexes.length} slot${selectedIndexes.length > 1 ? 's' : ''} ` : ''}${variants.length} variant${variants.length === 1 ? '' : 's'} unlocked`;
     body.append(title, stats, variantCount);
 
     button.append(media, body);
-    setArtwork(img, fallback, null, card.image, `${card.name} artwork`);
     button.addEventListener('click', () => {
-      if (!battleState?.setup) battleState = { setup: { cardId: card.id, variantKey: null } };
-      battleState.setup.cardId = card.id;
-      battleState.setup.variantKey = null;
-      populateBattleFighterSelect();
-      renderBattleSelectionPreview();
+      const existingIndex = getBattleSetupTeam().findIndex(slot => slot.cardId === card.id);
+      let targetIndex = existingIndex;
+
+      if (targetIndex < 0) {
+        if (getBattleSetupTeam().length < BATTLE_TEAM_SIZE) {
+          targetIndex = getBattleSetupTeam().length;
+          const entry = chooseFirstAvailableBattleVariant(card.id, -1);
+          if (!entry) return;
+          getBattleSetupTeam().push({ cardId: card.id, variantKey: entry.key });
+        } else {
+          targetIndex = Math.min(Number(battleState.setup.activeIndex || 0), BATTLE_TEAM_SIZE - 1);
+          const entry = chooseFirstAvailableBattleVariant(card.id, targetIndex);
+          if (!entry) return;
+          getBattleSetupTeam()[targetIndex] = { cardId: card.id, variantKey: entry.key };
+        }
+      }
+
+      battleState.setup.activeIndex = targetIndex;
+      renderBattleSelection();
     });
 
     grid.appendChild(button);
   });
 
-  const variants = getBattleVariantEntries(battleState.setup.cardId);
-  if (!battleState.setup.variantKey || !variants.some(entry => entry.key === battleState.setup.variantKey)) {
-    battleState.setup.variantKey = variants[0]?.key || null;
-  }
-
-  renderBattleSelectionPreview();
+  renderBattleSelection();
 }
 
-function renderBattleSelectionPreview() {
-  const cardId = battleState?.setup?.cardId;
-  const card = getCardById(cardId);
+function renderBattleSelection() {
+  renderBattleTeamSlots();
+  renderBattleFighterVariants();
+  renderBattleSelectionPreview();
+  if (els.battleFighterGrid) {
+    els.battleFighterGrid.querySelectorAll('.battle-fighter-option').forEach(button => {
+      const cardId = button.dataset.cardId;
+      const selected = getBattleSetupTeam().some(slot => slot.cardId === cardId);
+      button.classList.toggle('is-selected', selected);
+    });
+  }
+}
+
+function renderBattleFighterVariants() {
   const variantGrid = els.battleVariantGrid;
-  if (!card || !variantGrid) {
-    if (els.battleFighterPreview) els.battleFighterPreview.textContent = 'No unlocked fighter is available yet.';
+  if (!variantGrid) return;
+  variantGrid.innerHTML = '';
+
+  const activeIndex = Number(battleState?.setup?.activeIndex || 0);
+  const slot = getBattleSetupTeam()[activeIndex];
+  const card = slot ? getCardById(slot.cardId) : null;
+
+  if (!card) {
+    variantGrid.innerHTML = '<div class="battle-empty-selection">Select a team slot first.</div>';
     if (els.battleStartButton) els.battleStartButton.disabled = true;
     return;
   }
 
   const variants = getBattleVariantEntries(card.id);
-  if (!variants.length) {
-    if (els.battleStartButton) els.battleStartButton.disabled = true;
-    variantGrid.innerHTML = '<div class="battle-empty-selection">No owned variants are available.</div>';
-    return;
-  }
-
-  if (!variants.some(entry => entry.key === battleState.setup.variantKey)) {
-    battleState.setup.variantKey = variants[0].key;
-  }
-
-  variantGrid.innerHTML = '';
   variants.forEach(entry => {
+    const available = getAvailableBattleVariantCount(entry.key, activeIndex) > 0;
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `battle-variant-option ${entry.key === battleState.setup.variantKey ? 'is-selected' : ''}`;
-    button.textContent = getBattleVariantLabel(entry);
+    button.className = `battle-variant-option ${entry.key === slot.variantKey ? 'is-selected' : ''}`;
+    button.disabled = !available;
+    button.textContent = `${getBattleVariantLabel(entry)} ×${entry.count}`;
     applyMutationStyleTokens(button, entry.mutations);
     button.title = `${entry.count} owned`;
     button.addEventListener('click', () => {
-      battleState.setup.variantKey = entry.key;
-      renderBattleSelectionPreview();
+      const usage = getBattleVariantUsage(activeIndex);
+      const owned = Number(state.mutations?.[entry.key] || 0);
+      if (entry.key !== slot.variantKey && owned <= (usage.get(entry.key) || 0)) return;
+      slot.variantKey = entry.key;
+      renderBattleSelection();
     });
     variantGrid.appendChild(button);
   });
 
-  const entry = variants.find(candidate => candidate.key === battleState.setup.variantKey) || variants[0];
-  const display = getBattleVariantDisplay(card, entry);
-  const preview = els.battleFighterPreview;
-  if (preview) {
-    preview.innerHTML = '';
-    const media = document.createElement('div');
-    media.className = 'battle-selection-preview__art';
-    const img = document.createElement('img');
-    const fallback = document.createElement('div');
-    fallback.className = 'battle-fighter-option__fallback';
-    fallback.textContent = '✦';
-    media.append(img, fallback);
-    setArtwork(img, fallback, null, card.image, `${display.name} artwork`);
-
-    const info = document.createElement('div');
-    info.className = 'battle-selection-preview__info';
-    const name = document.createElement('strong');
-    name.textContent = display.name;
-    const stats = document.createElement('span');
-    stats.textContent = `HP ${display.hp.toLocaleString('en-US')} • ATK ${display.atk.toLocaleString('en-US')} • ${entry.count} owned`;
-    const badgeWrap = document.createElement('div');
-    badgeWrap.className = 'battle-selection-preview__badges';
-    renderMutationBadges(badgeWrap, entry.mutations);
-    info.append(name, stats, badgeWrap);
-    preview.append(media, info);
-  }
-
-  if (els.battleStartButton) els.battleStartButton.disabled = false;
+  const valid = isBattleSetupValid();
+  if (els.battleStartButton) els.battleStartButton.disabled = !valid;
 }
 
-function chooseBattleEnemy(fighterId) {
-  const pool = getAvailableRollPool();
-  const candidates = (pool.length ? pool : CARDS).filter(card => card.id !== fighterId);
-  const source = candidates.length ? candidates : CARDS;
-  return source[Math.floor(Math.random() * source.length)] || null;
+function renderBattleSelectionPreview() {
+  const activeIndex = Number(battleState?.setup?.activeIndex || 0);
+  const slot = getBattleSetupTeam()[activeIndex];
+  const card = slot ? getCardById(slot.cardId) : null;
+  const preview = els.battleFighterPreview;
+  if (!preview) return;
+
+  preview.innerHTML = '';
+  if (!card) {
+    const empty = document.createElement('span');
+    empty.textContent = 'Select a fighter to assign to the active team slot.';
+    preview.appendChild(empty);
+    return;
+  }
+
+  const entry = getBattleVariantEntries(card.id).find(candidate => candidate.key === slot.variantKey);
+  if (!entry) return;
+  const display = getBattleVariantDisplay(card, entry);
+
+  const media = document.createElement('div');
+  media.className = 'battle-selection-preview__art';
+  const img = document.createElement('img');
+  const fallback = document.createElement('div');
+  fallback.className = 'battle-fighter-option__fallback';
+  fallback.textContent = '✦';
+  media.append(img, fallback);
+  setArtwork(img, fallback, null, card.image, `${display.name} artwork`);
+
+  const info = document.createElement('div');
+  info.className = 'battle-selection-preview__info';
+  const name = document.createElement('strong');
+  name.textContent = `SLOT ${activeIndex + 1}: ${display.name}`;
+  const stats = document.createElement('span');
+  stats.textContent = `HP ${display.hp.toLocaleString('en-US')} • ATK ${display.atk.toLocaleString('en-US')} • ${entry.count} owned`;
+  const badgeWrap = document.createElement('div');
+  badgeWrap.className = 'battle-selection-preview__badges';
+  renderMutationBadges(badgeWrap, entry.mutations);
+  info.append(name, stats, badgeWrap);
+  preview.append(media, info);
+
+  if (els.battleStartButton) els.battleStartButton.disabled = !isBattleSetupValid();
 }
 
 function resetBattleView() {
   clearBattleTurnTimer();
-  battleState = null;
+  battleState = { setup: { team: [], activeIndex: 0 } };
   els.battleSetup?.classList.remove('hidden');
   els.battleArena?.classList.add('hidden');
   els.battleVictory?.classList.add('hidden');
@@ -1686,6 +1906,74 @@ function appendBattleLog(message, tone = '') {
   line.textContent = message;
   els.battleLog.appendChild(line);
   els.battleLog.scrollTop = els.battleLog.scrollHeight;
+}
+
+function rollEnemyMutations() {
+  const activeWeathers = getActiveWeatherDefinitions();
+  if (!activeWeathers.length || Math.random() >= BATTLE_ENEMY_MUTATION_CHANCE) return [];
+
+  const candidates = activeWeathers
+    .map(weather => weather.mutation)
+    .filter(Boolean);
+  if (!candidates.length) return [];
+
+  const primary = candidates[Math.floor(Math.random() * candidates.length)];
+  return primary ? [primary] : [];
+}
+
+function chooseBattleEnemyTeam(playerTeam) {
+  const playerIds = new Set(playerTeam.map(unit => unit.card.id));
+  let pool = getAvailableRollPool().filter(card => !playerIds.has(card.id));
+  if (!pool.length) pool = CARDS.filter(card => !playerIds.has(card.id));
+  if (!pool.length) pool = [...CARDS];
+
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const team = [];
+  for (let index = 0; index < BATTLE_TEAM_SIZE; index += 1) {
+    const card = shuffled[index % shuffled.length];
+    const mutations = rollEnemyMutations();
+    const display = getDisplayCard(card, mutations);
+    team.push({
+      card,
+      mutations,
+      variantKey: getVariantKey(card.id, mutations),
+      display,
+      hp: display.hp,
+      maxHp: display.hp,
+      atk: display.atk,
+      defeated: false
+    });
+  }
+  return team;
+}
+
+function calculateBattleUnitPower(unit) {
+  return Math.max(0, Math.round(unit.maxHp + unit.atk * 2));
+}
+
+function calculateBattleTeamPower(team) {
+  return team.reduce((total, unit) => total + calculateBattleUnitPower(unit), 0);
+}
+
+function getBattleRewardProfile(playerPower, enemyPower) {
+  const ratio = enemyPower / Math.max(1, playerPower);
+  let multiplier = 1;
+  let label = 'Balanced Match';
+
+  if (ratio < 0.8) {
+    multiplier = 0.35;
+    label = 'Weak Match Penalty';
+  } else if (ratio <= 1.25) {
+    multiplier = 1;
+    label = 'Balanced Match';
+  } else {
+    // 1.50x at 1.25 ratio, scaling linearly to 2.50x at 2.00+.
+    multiplier = Math.min(2.5, 1.5 + ((ratio - 1.25) / 0.75));
+    label = 'Hard Match Bonus';
+  }
+
+  const reward = Math.max(0, Math.floor(BATTLE_BASE_REWARD_VND * multiplier));
+  return { ratio, multiplier, reward, label };
 }
 
 function renderBattleCombatant(side, unit) {
@@ -1711,10 +1999,54 @@ function renderBattleCombatant(side, unit) {
   setArtwork(image, fallback, backdrop, unit.card.image, `${unit.display.name} artwork`);
 }
 
+function renderBattleLineup(side, team, activeIndex) {
+  const container = side === 'player' ? els.battlePlayerLineup : els.battleEnemyLineup;
+  if (!container) return;
+  container.innerHTML = '';
+
+  team.forEach((unit, index) => {
+    const slot = document.createElement('div');
+    slot.className = `battle-lineup-card ${index === activeIndex ? 'is-active' : ''} ${unit.defeated ? 'is-defeated' : ''}`;
+    applyMutationStyleTokens(slot, unit.mutations);
+
+    const media = document.createElement('div');
+    media.className = 'battle-lineup-card__art';
+    const img = document.createElement('img');
+    img.alt = unit.display.name;
+    const fallback = document.createElement('div');
+    fallback.className = 'battle-fighter-option__fallback';
+    fallback.textContent = unit.defeated ? '×' : '✦';
+    media.append(img, fallback);
+    if (!unit.defeated) setArtwork(img, fallback, null, unit.card.image, `${unit.display.name} artwork`);
+    else img.style.display = 'none';
+
+    const info = document.createElement('div');
+    info.className = 'battle-lineup-card__info';
+    const name = document.createElement('strong');
+    name.textContent = unit.display.name;
+    const hp = document.createElement('span');
+    hp.textContent = unit.defeated ? 'DEFEATED' : `${Math.max(0, unit.hp).toLocaleString('en-US')} HP`;
+    info.append(name, hp);
+    slot.append(media, info);
+    container.appendChild(slot);
+  });
+}
+
 function renderBattleStats() {
-  if (!battleState?.player || !battleState?.enemy) return;
-  renderBattleCombatant('player', battleState.player);
-  renderBattleCombatant('enemy', battleState.enemy);
+  if (!battleState?.playerTeam || !battleState?.enemyTeam) return;
+  const player = battleState.playerTeam[battleState.playerIndex];
+  const enemy = battleState.enemyTeam[battleState.enemyIndex];
+  if (!player || !enemy) return;
+
+  battleState.player = player;
+  battleState.enemy = enemy;
+  renderBattleCombatant('player', player);
+  renderBattleCombatant('enemy', enemy);
+  renderBattleLineup('player', battleState.playerTeam, battleState.playerIndex);
+  renderBattleLineup('enemy', battleState.enemyTeam, battleState.enemyIndex);
+
+  if (els.battlePlayerTeamPower) els.battlePlayerTeamPower.textContent = `PLAYER POWER ${battleState.playerPower.toLocaleString('en-US')}`;
+  if (els.battleEnemyTeamPower) els.battleEnemyTeamPower.textContent = `ENEMY POWER ${battleState.enemyPower.toLocaleString('en-US')}`;
 }
 
 function animateBattleAttack(side) {
@@ -1727,46 +2059,76 @@ function animateBattleAttack(side) {
   void attacker.offsetWidth;
   void defender.offsetWidth;
   attacker.classList.add(side === 'player' ? 'battle-lunge-player' : 'battle-lunge-enemy');
-  window.setTimeout(() => {
-    defender.classList.add('battle-hit');
-  }, 170);
+  window.setTimeout(() => defender.classList.add('battle-hit'), 170);
   window.setTimeout(() => {
     attacker.classList.remove('battle-lunge-player', 'battle-lunge-enemy');
     defender.classList.remove('battle-hit');
   }, 720);
 }
 
+function animateBattlePromotion(side) {
+  const card = side === 'player' ? els.battlePlayerCard : els.battleEnemyCard;
+  if (!card) return;
+  card.classList.remove('battle-promote');
+  void card.offsetWidth;
+  card.classList.add('battle-promote');
+}
+
 function scheduleNextBattleTurn() {
   clearBattleTurnTimer();
   if (!battleState || battleState.finished) return;
   battleState.nextTurnAt = Date.now() + BATTLE_TURN_MS;
-  if (els.battleStatus) els.battleStatus.textContent = battleState.turn === 'player' ? 'PLAYER STRIKE IN 3s' : 'ENEMY STRIKE IN 3s';
+  if (els.battleStatus) {
+    els.battleStatus.textContent = battleState.turn === 'player'
+      ? 'PLAYER STRIKE IN 3s'
+      : 'ENEMY STRIKE IN 3s';
+  }
   battleTurnTimer = window.setTimeout(() => {
     battleTurnTimer = null;
     executeBattleTurn();
   }, BATTLE_TURN_MS);
 }
 
-function deductBattleVariantCopy() {
-  if (!battleState?.player) return false;
-  const cardId = battleState.player.card.id;
-  const variantKey = battleState.player.variantKey;
-  const currentVariantCount = Number(state.mutations[variantKey] || 0);
+function deductBattleVariantCopy(unit) {
+  if (!unit) return false;
+  const cardId = unit.card.id;
+  const variantKey = unit.variantKey;
+  const currentVariantCount = Number(state.mutations?.[variantKey] || 0);
   if (currentVariantCount <= 0) return false;
 
   if (currentVariantCount === 1) delete state.mutations[variantKey];
   else state.mutations[variantKey] = currentVariantCount - 1;
 
-  const currentCardCount = Number(state.unlocked[cardId] || 0);
+  const currentCardCount = Number(state.unlocked?.[cardId] || 0);
   if (currentCardCount <= 1) delete state.unlocked[cardId];
   else state.unlocked[cardId] = currentCardCount - 1;
-
   return true;
 }
 
-function canReplayBattleFighter() {
-  if (!battleState?.player) return false;
-  return Number(state.mutations[battleState.player.variantKey] || 0) > 0 && Number(state.unlocked[battleState.player.card.id] || 0) > 0;
+function canReplayBattleTeam() {
+  if (!battleState?.setup?.team || battleState.setup.team.length !== BATTLE_TEAM_SIZE) return false;
+  const usage = new Map();
+  for (const slot of battleState.setup.team) {
+    usage.set(slot.variantKey, (usage.get(slot.variantKey) || 0) + 1);
+    if (Number(state.unlocked?.[slot.cardId] || 0) <= 0) return false;
+  }
+  for (const [variantKey, used] of usage) {
+    if (Number(state.mutations?.[variantKey] || 0) < used) return false;
+  }
+  return true;
+}
+
+function applyBattleDefeatPenalty() {
+  const defeated = battleState?.playerTeam?.filter(unit => unit.defeated && Number(state.mutations?.[unit.variantKey] || 0) > 0) || [];
+  const lossRoll = Math.random() < BATTLE_DEFEAT_LOSS_CHANCE;
+
+  if (!lossRoll || !defeated.length) {
+    return { lost: false, reason: 'saved' };
+  }
+
+  const target = defeated[Math.floor(Math.random() * defeated.length)];
+  const lost = deductBattleVariantCopy(target);
+  return { lost, reason: lost ? 'lost' : 'saved', target };
 }
 
 function finishBattle(playerWon) {
@@ -1775,31 +2137,42 @@ function finishBattle(playerWon) {
   battleState.finished = true;
 
   if (playerWon) {
-    state.currency += BATTLE_REWARD_VND;
+    const rewardProfile = getBattleRewardProfile(battleState.playerPower, battleState.enemyPower);
+    state.currency += rewardProfile.reward;
     saveState();
     updateStats();
     renderUpgradeShop();
-    appendBattleLog(`Victory! +${formatCurrency(BATTLE_REWARD_VND)}`, 'victory');
+
+    const bonusPercent = Math.round((rewardProfile.multiplier - 1) * 100);
+    const rewardNote = bonusPercent >= 0
+      ? `+${bonusPercent}% reward`
+      : `${bonusPercent}% reward`;
+
+    appendBattleLog(`Victory! +${formatCurrency(rewardProfile.reward)} • ${rewardProfile.label}.`, 'victory');
     if (els.battleResultTitle) els.battleResultTitle.textContent = 'Victory!';
-    if (els.battleResultText) els.battleResultText.textContent = `You defeated ${battleState.enemy.display.name} and earned ${formatCurrency(BATTLE_REWARD_VND)}.`;
+    if (els.battleResultText) els.battleResultText.textContent = `4v4 cleared. ${formatCurrency(rewardProfile.reward)} earned (${rewardNote}).`;
+    if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${battleState.playerPower.toLocaleString('en-US')} vs Enemy Power: ${battleState.enemyPower.toLocaleString('en-US')} • ${rewardProfile.label} • ×${rewardProfile.multiplier.toFixed(2)} reward`;
   } else {
-    const lost = deductBattleVariantCopy();
+    const penalty = applyBattleDefeatPenalty();
     saveState();
     updateStats();
     renderCollection();
     renderUpgradeShop();
-    appendBattleLog('Defeat. Your fighter has been defeated.', 'defeat');
+
+    appendBattleLog(
+      penalty.lost ? `Defeat! 25% Loss Chance triggered — 1 copy lost from ${penalty.target.display.name}.` : 'Defeat! 25% Loss Chance: Card saved.',
+      'defeat'
+    );
     if (els.battleResultTitle) els.battleResultTitle.textContent = 'Defeat';
-    if (els.battleResultText) {
-      els.battleResultText.textContent = lost
-        ? 'Your Fighter was defeated and 1 copy was lost from your collection!'
-        : 'Your Fighter was defeated. No additional copy could be deducted.';
-    }
+    if (els.battleResultText) els.battleResultText.textContent = penalty.lost
+      ? `Defeated! 25% Loss Chance triggered: 1 copy lost from ${penalty.target.display.name}.`
+      : 'Defeated! 25% Loss Chance: Card saved.';
+    if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${battleState.playerPower.toLocaleString('en-US')} vs Enemy Power: ${battleState.enemyPower.toLocaleString('en-US')}`;
   }
 
   if (els.battleAutoAgainButton) {
-    els.battleAutoAgainButton.disabled = !canReplayBattleFighter();
-    els.battleAutoAgainButton.textContent = canReplayBattleFighter() ? 'Auto Battle Again' : 'Variant Unavailable';
+    els.battleAutoAgainButton.disabled = !canReplayBattleTeam();
+    els.battleAutoAgainButton.textContent = canReplayBattleTeam() ? 'Auto Battle Again' : 'Team Unavailable';
   }
 
   els.battleArena?.classList.add('hidden');
@@ -1807,82 +2180,104 @@ function finishBattle(playerWon) {
 }
 
 function startBattle(useExistingSetup = true) {
-  const cardId = useExistingSetup ? battleState?.setup?.cardId : null;
-  const variantKey = useExistingSetup ? battleState?.setup?.variantKey : null;
-  const fighter = getCardById(cardId);
-  const variantEntry = fighter && getBattleVariantEntries(fighter.id).find(entry => entry.key === variantKey);
-  if (!fighter || !variantEntry) return;
+  const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
+  if (!Array.isArray(setupTeam) || setupTeam.length !== BATTLE_TEAM_SIZE || !isBattleSetupValid(setupTeam)) return;
 
-  const enemy = chooseBattleEnemy(fighter.id);
-  if (!enemy) return;
+  const playerTeam = setupTeam.map(slot => {
+    const card = getCardById(slot.cardId);
+    const entry = getBattleVariantEntries(card.id).find(candidate => candidate.key === slot.variantKey);
+    const display = getBattleVariantDisplay(card, entry);
+    return {
+      card,
+      mutations: entry.mutations,
+      variantKey: entry.key,
+      display,
+      hp: display.hp,
+      maxHp: display.hp,
+      atk: display.atk,
+      defeated: false
+    };
+  });
 
-  const playerDisplay = getBattleVariantDisplay(fighter, variantEntry);
-  const enemyDisplay = getDisplayCard(enemy, []);
+  const enemyTeam = chooseBattleEnemyTeam(playerTeam);
+  const playerPower = calculateBattleTeamPower(playerTeam);
+  const enemyPower = calculateBattleTeamPower(enemyTeam);
 
   battleState = {
-    setup: { cardId: fighter.id, variantKey: variantEntry.key },
+    setup: { team: setupTeam.map(slot => ({ ...slot })), activeIndex: 0 },
     turn: 'player',
     finished: false,
     nextTurnAt: null,
-    player: {
-      card: fighter,
-      mutations: variantEntry.mutations,
-      variantKey: variantEntry.key,
-      display: playerDisplay,
-      hp: playerDisplay.hp,
-      maxHp: playerDisplay.hp,
-      atk: playerDisplay.atk
-    },
-    enemy: {
-      card: enemy,
-      mutations: [],
-      variantKey: getVariantKey(enemy.id, []),
-      display: enemyDisplay,
-      hp: enemyDisplay.hp,
-      maxHp: enemyDisplay.hp,
-      atk: enemyDisplay.atk
-    }
+    playerIndex: 0,
+    enemyIndex: 0,
+    playerTeam,
+    enemyTeam,
+    playerPower,
+    enemyPower,
+    player: playerTeam[0],
+    enemy: enemyTeam[0]
   };
 
-  clearBattleTurnTimer();
   els.battleSetup?.classList.add('hidden');
   els.battleVictory?.classList.add('hidden');
   els.battleArena?.classList.remove('hidden');
   if (els.battleLog) els.battleLog.innerHTML = '';
 
-  appendBattleLog(`${playerDisplay.name} enters the arena against ${enemyDisplay.name}.`);
+  appendBattleLog(`4v4 battle begins: ${playerTeam[0].display.name} leads the line.`);
+  appendBattleLog(`Enemy mutations are active-weather boosted (70% roll chance).`);
   appendBattleLog('First strike begins in 3 seconds.', 'player');
   renderBattleStats();
   scheduleNextBattleTurn();
 }
 
 function executeBattleTurn() {
-  if (!battleState || battleState.finished || !battleState.player || !battleState.enemy) return;
-  const { player, enemy } = battleState;
+  if (!battleState || battleState.finished || !battleState.playerTeam || !battleState.enemyTeam) return;
 
-  if (battleState.turn === 'player') {
-    animateBattleAttack('player');
-    enemy.hp = Math.max(0, enemy.hp - player.atk);
-    appendBattleLog(`${player.display.name} attacks for ${player.atk.toLocaleString('en-US')} ATK.`, 'player');
-    renderBattleStats();
-    if (enemy.hp <= 0) {
-      finishBattle(true);
-      return;
-    }
-    battleState.turn = 'enemy';
-    scheduleNextBattleTurn();
-    return;
-  }
+  const attackerTeam = battleState.turn === 'player' ? battleState.playerTeam : battleState.enemyTeam;
+  const defenderTeam = battleState.turn === 'player' ? battleState.enemyTeam : battleState.playerTeam;
+  const attackerIndex = battleState.turn === 'player' ? battleState.playerIndex : battleState.enemyIndex;
+  const defenderIndex = battleState.turn === 'player' ? battleState.enemyIndex : battleState.playerIndex;
+  const attacker = attackerTeam[attackerIndex];
+  const defender = defenderTeam[defenderIndex];
+  if (!attacker || !defender || attacker.defeated || defender.defeated) return;
 
-  animateBattleAttack('enemy');
-  player.hp = Math.max(0, player.hp - enemy.atk);
-  appendBattleLog(`${enemy.display.name} attacks for ${enemy.atk.toLocaleString('en-US')} ATK.`, 'enemy');
+  animateBattleAttack(battleState.turn);
+  defender.hp = Math.max(0, defender.hp - attacker.atk);
+  appendBattleLog(`${attacker.display.name} attacks ${defender.display.name} for ${attacker.atk.toLocaleString('en-US')} ATK.`, battleState.turn);
   renderBattleStats();
-  if (player.hp <= 0) {
-    finishBattle(false);
-    return;
+
+  if (defender.hp <= 0) {
+    defender.defeated = true;
+    appendBattleLog(`${defender.display.name} has been defeated!`, battleState.turn === 'player' ? 'player' : 'enemy');
+
+    if (battleState.turn === 'player') {
+      battleState.enemyIndex += 1;
+      if (battleState.enemyIndex >= BATTLE_TEAM_SIZE) {
+        renderBattleStats();
+        finishBattle(true);
+        return;
+      }
+      battleState.enemy = battleState.enemyTeam[battleState.enemyIndex];
+      appendBattleLog(`${battleState.enemy.display.name} steps into the arena.`, 'enemy');
+      animateBattlePromotion('enemy');
+      battleState.turn = 'enemy';
+    } else {
+      battleState.playerIndex += 1;
+      if (battleState.playerIndex >= BATTLE_TEAM_SIZE) {
+        renderBattleStats();
+        finishBattle(false);
+        return;
+      }
+      battleState.player = battleState.playerTeam[battleState.playerIndex];
+      appendBattleLog(`${battleState.player.display.name} steps into the arena.`, 'player');
+      animateBattlePromotion('player');
+      battleState.turn = 'player';
+    }
+  } else {
+    battleState.turn = battleState.turn === 'player' ? 'enemy' : 'player';
   }
-  battleState.turn = 'player';
+
+  renderBattleStats();
   scheduleNextBattleTurn();
 }
 
@@ -2029,6 +2424,7 @@ els.battleAutoAgainButton?.addEventListener("click", () => {
 });
 els.battleChangeFighterButton?.addEventListener("click", () => {
   clearBattleTurnTimer();
+  battleState = { setup: { team: [], activeIndex: 0 } };
   resetBattleView();
 });
 els.rollButton?.addEventListener("click", () => rollCard("manual"));
