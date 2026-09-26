@@ -178,7 +178,8 @@ const els = {
   battleResultTitle: document.getElementById("battleResultTitle"),
   battleResultText: document.getElementById("battleResultText"),
   battleResultPower: document.getElementById("battleResultPower"),
-  battleAutoAgainButton: document.getElementById("battleAutoAgainButton"),
+  battleAutoAgainButton: document.getElementById("battle-again-btn"),
+  battleCloseResultButton: document.getElementById("close-battle-result-btn"),
   battleChangeFighterButton: document.getElementById("battleChangeFighterButton")
 };
 
@@ -1151,30 +1152,54 @@ function cardMatchesMutationFilter(card, filterValue) {
 }
 
 function getFilteredCards() {
-  const query = els.searchInput?.value.trim().toLowerCase() || "";
-  const filter = els.mutationFilter?.value || "all";
-  const sort = els.sortSelect?.value || "rarity";
+  const query = String(els.searchInput?.value || "").trim().toLowerCase();
+  const filter = String(els.mutationFilter?.value || "all").toLowerCase();
+  const sort = String(els.sortSelect?.value || "rarity").toLowerCase();
 
   const list = CARDS.filter(card => {
-    const profile = getCardMutationProfile(card.id);
+    // Collection data can outlive the current card schema. Never assume
+    // optional legacy fields such as rarity/passive.name exist.
+    const safeName = String(card?.name || "Unknown Card");
+    const safePassive = String(card?.passive?.name || "");
+    const profile = getCardMutationProfile(card?.id);
     const mutationText = profile.variants
-      .flatMap(entry => entry.mutations.map(mutation => mutation.name))
+      .flatMap(entry => entry.mutations.map(mutation => String(mutation?.name || "")))
       .join(" ")
       .toLowerCase();
-    const searchMatch = !query || card.name.toLowerCase().includes(query) || card.passive.name.toLowerCase().includes(query) || mutationText.includes(query);
-    return searchMatch && cardMatchesMutationFilter(card, filter);
+
+    const searchMatch = !query
+      || safeName.toLowerCase().includes(query)
+      || safePassive.toLowerCase().includes(query)
+      || mutationText.includes(query);
+
+    try {
+      return searchMatch && cardMatchesMutationFilter(card, filter);
+    } catch (error) {
+      // A malformed legacy mutation record must never abort the whole
+      // Collection render. The card remains searchable/renderable.
+      console.warn("Collection filter skipped malformed card metadata:", card?.id, error);
+      return searchMatch;
+    }
   });
 
   list.sort((a, b) => {
-    const profileA = getCardMutationProfile(a.id);
-    const profileB = getCardMutationProfile(b.id);
-    if (sort === "name") return a.name.localeCompare(b.name);
-    if (sort === "atk") return b.stats.atk - a.stats.atk || profileB.rank - profileA.rank;
-    if (sort === "collected") return Number(state.unlocked[b.id] || 0) - Number(state.unlocked[a.id] || 0) || profileB.rank - profileA.rank;
+    const chanceA = Number.isFinite(Number(a?.chance)) ? Number(a.chance) : 0;
+    const chanceB = Number.isFinite(Number(b?.chance)) ? Number(b.chance) : 0;
+    const nameA = String(a?.name || "Unknown Card");
+    const nameB = String(b?.name || "Unknown Card");
+    const profileA = getCardMutationProfile(a?.id);
+    const profileB = getCardMutationProfile(b?.id);
 
-    // Rarity / drop-chance sort: highest 1-in-X denominator first,
-    // which places the rarest cards before the common cards.
-    return b.chance - a.chance || a.name.localeCompare(b.name);
+    if (sort === "name") return nameA.localeCompare(nameB);
+    if (sort === "atk") return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0) || profileB.rank - profileA.rank;
+    if (sort === "collected") {
+      return getOwnedCardCount(b?.id) - getOwnedCardCount(a?.id) || profileB.rank - profileA.rank;
+    }
+
+    // Rarity sorting is intentionally numeric only: the largest 1-in-X
+    // denominator (lowest probability) appears first. No legacy rarity
+    // string/order is used here.
+    return chanceB - chanceA || nameA.localeCompare(nameB);
   });
 
   return list;
@@ -1284,112 +1309,123 @@ function renderCollection() {
   if (!els.collectionGrid) return;
   els.collectionGrid.innerHTML = "";
 
-  for (const card of getFilteredCards()) {
-    const count = getOwnedCardCount(card.id);
-    const owned = count > 0;
-    const visuals = getCardMutationVisuals(card.id);
-    const profile = visuals.profile;
+  const cards = getFilteredCards();
+  for (const card of cards) {
+    try {
+      const cardId = String(card?.id || "");
+      if (!cardId) continue;
 
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = [
-      "collection-card",
-      `rarity-${card.rarity.toLowerCase()}`,
-      owned ? "" : "locked",
-      profile.variants.length ? "has-mutation-glow" : "",
-      ...visuals.classes
-    ].filter(Boolean).join(" ");
-    item.style.setProperty("--collection-mutation-gradient", visuals.gradient || "transparent");
-    item.style.setProperty("--collection-mutation-glow", visuals.glow || "#7d5cff");
-    item.title = owned ? `Owned ${count}× • Open dedicated preview` : `Undiscovered • 1 in ${card.chance.toLocaleString("en-US")}`;
+      const count = getOwnedCardCount(cardId);
+      const owned = count > 0;
+      const safeName = String(card?.name || "Unknown Card");
+      const chance = Number.isFinite(Number(card?.chance)) ? Number(card.chance) : 0;
+      const image = String(card?.image || "assets/cards/default.png");
+      const visuals = getCardMutationVisuals(cardId);
+      const profile = visuals.profile;
 
-    const art = document.createElement("div");
-    art.className = "collection-mini__art";
-    art.style.setProperty("--art-bg-image", `url("${escapeCssUrl(card.image)}")`);
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = [
+        "collection-card",
+        owned ? "" : "locked",
+        profile.variants.length ? "has-mutation-glow" : "",
+        ...visuals.classes
+      ].filter(Boolean).join(" ");
+      item.style.setProperty("--collection-mutation-gradient", visuals.gradient || "transparent");
+      item.style.setProperty("--collection-mutation-glow", visuals.glow || "#7d5cff");
+      item.title = owned
+        ? `Owned ${count}× • Open dedicated preview`
+        : `Undiscovered • 1 in ${chance.toLocaleString("en-US")}`;
 
-    const img = document.createElement("img");
-    const fallback = document.createElement("div");
-    fallback.className = "collection-mini__fallback";
-    fallback.innerHTML = `<span>✦</span><small>ARTWORK</small>`;
-    fallback.style.display = "none";
+      const art = document.createElement("div");
+      art.className = "collection-mini__art";
+      art.style.setProperty("--art-bg-image", `url("${escapeCssUrl(image)}")`);
 
-    const lock = document.createElement("div");
-    lock.className = "collection-mini__lock";
-    lock.textContent = owned ? "" : "🔒";
+      const img = document.createElement("img");
+      const fallback = document.createElement("div");
+      fallback.className = "collection-mini__fallback";
+      fallback.innerHTML = `<span>✦</span><small>ARTWORK</small>`;
+      fallback.style.display = "none";
 
-    const body = document.createElement("div");
-    body.className = "collection-mini__body";
+      const lock = document.createElement("div");
+      lock.className = "collection-mini__lock";
+      lock.textContent = owned ? "" : "🔒";
 
-    const titleRow = document.createElement("div");
-    titleRow.className = "collection-title-row";
-    const title = document.createElement("h3");
-    title.className = "collection-mini__name";
-    title.textContent = owned ? card.name : "Undiscovered Card";
-    const tier = document.createElement("span");
-    tier.className = "collection-tier-label";
-    tier.textContent = profile.tier.name;
-    titleRow.append(title, tier);
+      const body = document.createElement("div");
+      body.className = "collection-mini__body";
 
-    const meta = document.createElement("div");
-    meta.className = "collection-mini__meta";
-    const rarity = document.createElement("span");
-    rarity.textContent = card.rarity;
-    const rate = document.createElement("span");
-    rate.className = "collection-mini__rate";
-    rate.textContent = `1 in ${card.chance.toLocaleString("en-US")}`;
-    meta.append(rarity, rate);
+      const titleRow = document.createElement("div");
+      titleRow.className = "collection-title-row";
+      const title = document.createElement("h3");
+      title.className = "collection-mini__name";
+      title.textContent = owned ? safeName : "Undiscovered Card";
+      const tier = document.createElement("span");
+      tier.className = "collection-tier-label";
+      tier.textContent = profile.tier?.name || "Normal";
+      titleRow.append(title, tier);
 
-    if (card.requiredWeather) {
-      const requirement = document.createElement("span");
-      requirement.className = `weather-requirement ${isWeatherActive(card.requiredWeather) ? "active" : ""}`;
-      requirement.textContent = `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}`;
-      meta.appendChild(requirement);
-    }
+      const meta = document.createElement("div");
+      meta.className = "collection-mini__meta";
+      const rate = document.createElement("span");
+      rate.className = "collection-mini__rate";
+      rate.textContent = `1 in ${chance.toLocaleString("en-US")}`;
+      meta.append(rate);
 
-    const badgeList = document.createElement("div");
-    badgeList.className = "mutation-badge-list";
-    badgeList.setAttribute("aria-label", "Unlocked mutation variants");
+      if (card?.requiredWeather) {
+        const requirement = document.createElement("span");
+        requirement.className = `weather-requirement ${isWeatherActive(card.requiredWeather) ? "active" : ""}`;
+        requirement.textContent = `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}`;
+        meta.appendChild(requirement);
+      }
 
-    const variants = owned ? profile.variants : [];
-    if (variants.length) {
-      variants.forEach(entry => {
+      const badgeList = document.createElement("div");
+      badgeList.className = "mutation-badge-list";
+      badgeList.setAttribute("aria-label", "Unlocked mutation variants");
+
+      const variants = owned ? profile.variants : [];
+      if (variants.length) {
+        variants.forEach(entry => {
+          const badge = document.createElement("span");
+          badge.className = [
+            "collection-mutation-badge",
+            entry.isMulti ? "mutation-multi" : "",
+            ...entry.mutations.map(mutation => mutation.className)
+          ].filter(Boolean).join(" ");
+          badge.textContent = `${entry.mutations.length ? entry.mutations.map(mutation => mutation.name).join(" + ") : "Normal"} ×${entry.count}`;
+          applyMutationStyleTokens(badge, entry.mutations);
+          badgeList.appendChild(badge);
+        });
+      } else {
         const badge = document.createElement("span");
-        badge.className = [
-          "collection-mutation-badge",
-          entry.isMulti ? "mutation-multi" : "",
-          ...entry.mutations.map(mutation => mutation.className)
-        ].filter(Boolean).join(" ");
-        badge.textContent = `${entry.mutations.length ? entry.mutations.map(mutation => mutation.name).join(" + ") : "Normal"} ×${entry.count}`;
-        applyMutationStyleTokens(badge, entry.mutations);
+        badge.className = "collection-mutation-badge mutation-normal";
+        badge.textContent = owned ? "Normal ×0" : "LOCKED";
         badgeList.appendChild(badge);
-      });
-    } else {
-      const badge = document.createElement("span");
-      badge.className = "collection-mutation-badge mutation-normal";
-      badge.textContent = owned ? "Normal ×0" : "LOCKED";
-      badgeList.appendChild(badge);
+      }
+
+      body.append(titleRow, meta, badgeList);
+      art.append(img, fallback, lock);
+      item.append(art, body);
+
+      if (owned) {
+        setArtwork(img, fallback, null, image, `${safeName} artwork`);
+        item.addEventListener("click", () => openCardPreview(cardId));
+      } else {
+        img.style.display = "none";
+        fallback.style.display = "grid";
+        item.disabled = true;
+      }
+
+      els.collectionGrid.appendChild(item);
+    } catch (error) {
+      // One corrupt/legacy card record must never abort Collection rendering.
+      console.warn("Collection card render skipped safely:", card?.id, error);
     }
-
-    body.append(titleRow, meta, badgeList);
-    art.append(img, fallback, lock);
-    item.append(art, body);
-
-    if (owned) {
-      setArtwork(img, fallback, null, card.image, `${card.name} artwork`);
-      item.addEventListener("click", () => openCardPreview(card.id));
-    } else {
-      img.style.display = "none";
-      fallback.style.display = "grid";
-      item.disabled = true;
-    }
-
-    els.collectionGrid.appendChild(item);
   }
 
   if (!els.collectionGrid.children.length) {
     const empty = document.createElement("div");
     empty.className = "empty-grid empty-state";
-    empty.innerHTML = "<p>No cards match the current mutation filter.</p>";
+    empty.innerHTML = "<p>No cards match the current filters.</p>";
     els.collectionGrid.appendChild(empty);
   }
 }
@@ -2133,50 +2169,74 @@ function applyBattleDefeatPenalty() {
 
 function finishBattle(playerWon) {
   if (!battleState || battleState.finished) return;
+
   clearBattleTurnTimer();
   battleState.finished = true;
 
-  if (playerWon) {
-    const rewardProfile = getBattleRewardProfile(battleState.playerPower, battleState.enemyPower);
-    state.currency += rewardProfile.reward;
-    saveState();
-    updateStats();
-    renderUpgradeShop();
+  const safePlayerPower = Number.isFinite(Number(battleState.playerPower)) ? Math.max(0, Number(battleState.playerPower)) : 0;
+  const safeEnemyPower = Number.isFinite(Number(battleState.enemyPower)) ? Math.max(0, Number(battleState.enemyPower)) : 0;
+  battleState.playerPower = safePlayerPower;
+  battleState.enemyPower = safeEnemyPower;
 
-    const bonusPercent = Math.round((rewardProfile.multiplier - 1) * 100);
-    const rewardNote = bonusPercent >= 0
-      ? `+${bonusPercent}% reward`
-      : `${bonusPercent}% reward`;
+  try {
+    if (playerWon) {
+      const rewardProfile = getBattleRewardProfile(safePlayerPower, safeEnemyPower);
+      const reward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward)) : 0;
+      state.currency = Math.max(0, Number(state.currency) || 0) + reward;
+      saveState();
+      updateStats();
+      renderUpgradeShop();
 
-    appendBattleLog(`Victory! +${formatCurrency(rewardProfile.reward)} • ${rewardProfile.label}.`, 'victory');
-    if (els.battleResultTitle) els.battleResultTitle.textContent = 'Victory!';
-    if (els.battleResultText) els.battleResultText.textContent = `4v4 cleared. ${formatCurrency(rewardProfile.reward)} earned (${rewardNote}).`;
-    if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${battleState.playerPower.toLocaleString('en-US')} vs Enemy Power: ${battleState.enemyPower.toLocaleString('en-US')} • ${rewardProfile.label} • ×${rewardProfile.multiplier.toFixed(2)} reward`;
-  } else {
-    const penalty = applyBattleDefeatPenalty();
-    saveState();
-    updateStats();
-    renderCollection();
-    renderUpgradeShop();
+      const bonusPercent = Math.round((rewardProfile.multiplier - 1) * 100);
+      const rewardNote = bonusPercent >= 0 ? `+${bonusPercent}% reward` : `${bonusPercent}% reward`;
 
-    appendBattleLog(
-      penalty.lost ? `Defeat! 25% Loss Chance triggered — 1 copy lost from ${penalty.target.display.name}.` : 'Defeat! 25% Loss Chance: Card saved.',
-      'defeat'
-    );
-    if (els.battleResultTitle) els.battleResultTitle.textContent = 'Defeat';
-    if (els.battleResultText) els.battleResultText.textContent = penalty.lost
-      ? `Defeated! 25% Loss Chance triggered: 1 copy lost from ${penalty.target.display.name}.`
-      : 'Defeated! 25% Loss Chance: Card saved.';
-    if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${battleState.playerPower.toLocaleString('en-US')} vs Enemy Power: ${battleState.enemyPower.toLocaleString('en-US')}`;
+      appendBattleLog(`Victory! +${formatCurrency(reward)} • ${rewardProfile.label}.`, 'victory');
+      if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
+      if (els.battleResultText) els.battleResultText.textContent = `4v4 cleared. +${formatCurrency(reward)} earned (${rewardNote}).`;
+      if (els.battleResultPower) {
+        els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${rewardProfile.label} • ×${Number(rewardProfile.multiplier || 1).toFixed(2)}`;
+      }
+    } else {
+      const penalty = applyBattleDefeatPenalty();
+      const targetName = penalty?.target?.display?.name || penalty?.target?.card?.name || 'your defeated fighter';
+      saveState();
+      updateStats();
+      renderCollection();
+      renderUpgradeShop();
+
+      const notice = penalty?.lost
+        ? `Defeated! 25% Loss Chance: Lost 1x ${targetName}.`
+        : 'Defeated! 25% Loss Chance: Card Saved!';
+      appendBattleLog(notice, 'defeat');
+      if (els.battleResultTitle) els.battleResultTitle.textContent = '💀 DEFEAT!';
+      if (els.battleResultText) els.battleResultText.textContent = notice;
+      if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')}`;
+    }
+  } catch (error) {
+    // Battle resolution must always reach the end-game screen even if a
+    // malformed legacy collection record is encountered during cleanup.
+    console.error('Battle result rendering failed safely:', error);
+    if (els.battleResultTitle) els.battleResultTitle.textContent = playerWon ? '🏆 VICTORY!' : '💀 DEFEAT!';
+    if (els.battleResultText) els.battleResultText.textContent = playerWon ? 'Battle complete. Reward processed safely.' : 'Battle complete. Defeat penalty processed safely.';
+    if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')}`;
   }
 
+  let replayable = false;
+  try { replayable = canReplayBattleTeam(); } catch (error) { console.warn('Replay check failed safely:', error); }
   if (els.battleAutoAgainButton) {
-    els.battleAutoAgainButton.disabled = !canReplayBattleTeam();
-    els.battleAutoAgainButton.textContent = canReplayBattleTeam() ? 'Auto Battle Again' : 'Team Unavailable';
+    els.battleAutoAgainButton.disabled = !replayable;
+    els.battleAutoAgainButton.textContent = replayable ? '⚔️ Battle Again' : 'Team Unavailable';
   }
 
   els.battleArena?.classList.add('hidden');
   els.battleVictory?.classList.remove('hidden');
+  els.battleVictory?.classList.remove('battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
+  els.battleVictory?.classList.add(playerWon ? 'battle-result--victory' : 'battle-result--defeat');
+}
+
+// Explicit alias for integrations that expect an endBattle() API.
+function endBattle(playerWon) {
+  finishBattle(Boolean(playerWon));
 }
 
 function startBattle(useExistingSetup = true) {

@@ -449,16 +449,16 @@
         <div id="battleLog" class="battle-log" aria-live="polite"></div>
       </div>
 
-      <div id="battleVictory" class="battle-result hidden" aria-live="polite">
+      <div id="battleVictory" class="battle-result battle-result--neutral hidden" aria-live="polite" role="status">
         <div class="battle-result__icon">✦</div>
         <span class="eyebrow">MATCH COMPLETE</span>
-        <h3 id="battleResultTitle">Victory!</h3>
+        <h3 id="battleResultTitle">🏆 VICTORY!</h3>
         <p id="battleResultText">You defeated the enemy.</p>
         <div id="battleResultPower" class="battle-result__power">Player Power: 0 vs Enemy Power: 0</div>
         <div class="battle-result__actions">
-          <button id="battleAutoAgainButton" class="battle-primary-button" type="button">Auto Battle Again</button>
+          <button id="battle-again-btn" class="battle-primary-button" type="button">⚔️ Battle Again</button>
           <button id="battleChangeFighterButton" class="ghost-button" type="button">Change Fighter</button>
-          <button class="ghost-button" data-close-modal="battleModal" type="button">Close</button>
+          <button id="close-battle-result-btn" class="ghost-button" data-close-modal="battleModal" type="button">❌ Close Arena</button>
         </div>
       </div>
     </section>

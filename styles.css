@@ -2437,6 +2437,34 @@ body {
 .battle-log__line.is-victory { color: #7dffbe; font-weight: 900; }
 .battle-log__line.is-defeat { color: #ff7b94; font-weight: 900; }
 
+/* Battle result state overrides: end-game screen remains inside the existing arena modal. */
+.battle-result--victory {
+  color: #dfffe9;
+}
+.battle-result--victory .battle-result__icon {
+  color: #7dffbe;
+  border-color: rgba(77,255,157,.34);
+  background: rgba(77,255,157,.10);
+  box-shadow: 0 0 55px rgba(77,255,157,.24);
+}
+.battle-result--victory h3 {
+  color: #7dffbe;
+  text-shadow: 0 0 22px rgba(77,255,157,.28);
+}
+.battle-result--defeat {
+  color: #ffe5eb;
+}
+.battle-result--defeat .battle-result__icon {
+  color: #ff718d;
+  border-color: rgba(255,83,110,.34);
+  background: rgba(255,83,110,.10);
+  box-shadow: 0 0 55px rgba(255,83,110,.24);
+}
+.battle-result--defeat h3 {
+  color: #ff718d;
+  text-shadow: 0 0 22px rgba(255,83,110,.28);
+}
+
 .battle-result {
   height: calc(100% - 62px);
   display: flex;
