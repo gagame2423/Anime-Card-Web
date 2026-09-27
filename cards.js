@@ -24,6 +24,19 @@ const CARDS = [
     image: "assets/cards/narutokid.png"
   },
   {
+    id: "normal-demon",
+    name: "Normal Demon",
+    rarity: "Common",
+    chance: 3,
+    requiredWeather: null,
+    stats: { hp: 300, atk: 10 },
+    passive: {
+      name: "Lifesteal",
+      description: "Every kill gain 10% hp boost."
+    },
+    image: "assets/cards/normaldemon.png"
+  },
+  {
     id: "deku-mc",
     name: "Powerless Guy",
     rarity: "Common",
@@ -64,7 +77,7 @@ const CARDS = [
   },
   {
     id: "tanjiro",
-    name: "tanjiro",
+    name: "Tanjiro",
     rarity: "Rare",
     chance: 40,
     requiredWeather: null,
@@ -83,10 +96,23 @@ const CARDS = [
     requiredWeather: null,
     stats: { hp: 420, atk: 150 },
     passive: {
-      name: "Starfall",
-      description: "Every third attack calls down an extra astral strike."
+      name: "GOMU NO MU NO PISTOL",
+      description: "Every two attack launch a puch with more 50% atk."
     },
     image: "assets/cards/luffykid.png"
+  },
+  {
+    id: "six-seven",
+    name: "Six Seven",
+    rarity: "Epic",
+    chance: 67,
+    requiredWeather: null,
+    stats: { hp: 676, atk: 67 },
+    passive: {
+      name: "SIX SEVEN",
+      description: "First entry stun the enemy for the next 3 turn."
+    },
+    image: "assets/cards/sixseven.png"
   },
   {
     id: "kaneki-ghoul",
@@ -96,7 +122,7 @@ const CARDS = [
     requiredWeather: null,
     stats: { hp: 600, atk: 100 },
     passive: {
-      name: "Starfall",
+      name: "GHOUL",
       description: "Every third attack suck enemy blood and selfheal equal to 25% enemy current hp"
     },
     image: "assets/cards/kaneki.png"
@@ -109,10 +135,36 @@ const CARDS = [
     requiredWeather: null,
     stats: { hp: 500, atk: 100 },
     passive: {
-      name: "Trap",
-      description: "When the match start have 50% chance to strike x10 attack damage."
+      name: "Chop Chop",
+      description: "Has 33% to dodge income attack , when dodge success attack back with 50% attack damage."
     },
     image: "assets/cards/thetrapper.png"
+  },
+  {
+    id: "buggy",
+    name: "Buggy",
+    rarity: "Epic",
+    chance: 234,
+    requiredWeather: null,
+    stats: { hp: 600, atk: 110 },
+    passive: {
+      name: "Chop Chop",
+      description: "Has 33% to dodge income attack , when dodge success attack back with 50% attack damage."
+    },
+    image: "assets/cards/buggy.png"
+  },
+  {
+    id: "bounty-hunter",
+    name: "Bounty Hunter",
+    rarity: "Epic",
+    chance: 300,
+    requiredWeather: null,
+    stats: { hp: 500, atk: 100 },
+    passive: {
+      name: "BOUNTY",
+      description: "Every kill gain money equal to enemy hp."
+    },
+    image: "assets/cards/bountyhunter.png"
   },
   {
     id: "jotaro-kujo",
@@ -128,6 +180,19 @@ const CARDS = [
     image: "assets/cards/jotarokujo.png"
   },
   {
+    id: "saber",
+    name: "Saber",
+    rarity: "Epic",
+    chance: 800,
+    requiredWeather: null,
+    stats: { hp: 800, atk: 400 },
+    passive: {
+      name: "EXCALIBUR!!!",
+      description: "On eight attack strike x8 attack damage."
+    },
+    image: "assets/cards/saber.png"
+  },
+  {
     id: "starter-legendary",
     name: "Son Goku",
     rarity: "Legendary",
@@ -141,6 +206,19 @@ const CARDS = [
     image: "assets/cards/songoku.png"
   },
   {
+    id: "kr-kuuga",
+    name: "Kamen Rider Kuuga",
+    rarity: "Legendary",
+    chance: 20000,
+    requiredWeather: null,
+    stats: { hp: 1250, atk: 400 },
+    passive: {
+      name: "KUUGA",
+      description: "Every third attack change form : Blue , Green , Purple : + Blue : Gain 20% critical chance ,+ Green : Gain 50% critical damage , + Purple : Gain 30% more hp."
+    },
+    image: "assets/cards/krkuuga.png"
+  },
+  {
     id: "starter-secret",
     name: "The Truth",
     rarity: "Secret",
@@ -148,13 +226,52 @@ const CARDS = [
     requiredWeather: null,
     stats: { hp: 10000, atk: 2000 },
     passive: {
-      name: "Genesis Break",
-      description: "A cosmic passive that massively amplifies the next critical hit."
+      name: "Omniscience",
+      description: "Immune to every passive of opponent."
     },
     image: "assets/cards/thetruth.png"
   },
 
   // Existing weather-exclusive cards.
+  {
+    id: "nami",
+    name: "Nami",
+    rarity: "Rare",
+    chance: 45,
+    requiredWeather: "Raining",
+    stats: { hp: 50, atk: 10 },
+    passive: {
+      name: "Greedy",
+      description: "If Nami on the team , when win gain 100% bonus reward."
+    },
+    image: "assets/cards/nami.png"
+  },
+  {
+    id: "giyu-tomioka",
+    name: "Giyu Tomioka",
+    rarity: "Epic",
+    chance: 400,
+    requiredWeather: "Raining",
+    stats: { hp: 620, atk: 109 },
+    passive: {
+      name: "Dead Calm",
+      description: "On Fifth Attack , stun the enemy one turn , and the next three turn immune to income attack ."
+    },
+    image: "assets/cards/giyutomioka.png"
+  },
+  {
+    id: "sea-beast",
+    name: "Sea Beast",
+    rarity: "Epic",
+    chance: 1200,
+    requiredWeather: "Raining",
+    stats: { hp: 2000, atk: 200 },
+    passive: {
+      name: "Big Fish",
+      description: "If enemy attack a teamate , Sea Beast will take that damage for teamate."
+    },
+    image: "assets/cards/seabeast.png"
+  },
   {
     id: "weather-solar-deity",
     name: "Escanor",
@@ -182,6 +299,19 @@ const CARDS = [
     image: "assets/cards/griffith.png"
   },
   {
+    id: "rukia",
+    name: "Rukia",
+    rarity: "Legendary",
+    chance: 1350,
+    requiredWeather: "Snowing",
+    stats: { hp: 1350, atk: 300 },
+    passive: {
+      name: "Freeze",
+      description: "Every attack have 10% chance to freeze enemy for one turn. When attack freeze enemy deal bonus 35% atk damage."
+    },
+    image: "assets/cards/rukia.png"
+  },
+  {
     id: "ice-admiral",
     name: "Ice Admiral",
     rarity: "Mythic",
@@ -207,7 +337,19 @@ const CARDS = [
     },
     image: "assets/cards/esdeath.png"
   },
-
+  {
+    id: "toshiro",
+    name: "Toshiro",
+    rarity: "Mythic",
+    chance: 26000,
+    requiredWeather: "Snowing",
+    stats: { hp: 1000, atk: 2000 },
+    passive: {
+      name: "Absolute Zero",
+      description: "On fifth turn , Toshiro gain 50% atk buff , from then on every attack have 50% chance to stun enemy for one turn."
+    },
+    image: "assets/cards/toshiro.png"
+  },
   // New weather-exclusive cards. Add more entries below using the same schema.
   {
     id: "weather-shadow-monarch",
@@ -234,7 +376,33 @@ const CARDS = [
       description: "Every 10th attack strike x100 damage attack to all enemy"
     },
     image: "assets/cards/cidatomic.png"
+  },
+  {
+    id: "kr-decade",
+    name: "Kamen Rider Decade",
+    rarity: "Mythic",
+    chance: 200000,
+    requiredWeather: "Shadow",
+    stats: { hp: 6400, atk: 3200 },
+    passive: {
+      name: "Rider Card",
+      description: "When entry shape shift into enemy card with the same passive but keep own stats."
+    },
+    image: "assets/cards/krdecade.png"
   },  
+  {
+    id: "light-admiral",
+    name: "Light Admiral",
+    rarity: "Secret",
+    chance: 7000,
+    requiredWeather: "Heavenly",
+    stats: { hp: 5000, atk: 1000 },
+    passive: {
+      name: "Light Speed",
+      description: "Has 20% to dodge income attack , and when dodge success stun the enemy next turn."
+    },
+    image: "assets/cards/kizaru.png"
+  }, 
   {
     id: "weather-heavenly-seraph",
     name: "The First Human",
