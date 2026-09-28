@@ -320,7 +320,7 @@ const CARDS = [
       name: "BLACK FLASH",
       description: "Every attack has 33% chance to strike x3 atk damage."
     },
-    image: "assets/cards/yujiitadori.png"
+    image: "assets/cards/itadoriyuji.png"
   },
   {
     id: "guts",
