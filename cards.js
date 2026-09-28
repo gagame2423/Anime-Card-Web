@@ -135,10 +135,23 @@ const CARDS = [
     requiredWeather: null,
     stats: { hp: 500, atk: 100 },
     passive: {
-      name: "Chop Chop",
-      description: "Has 33% to dodge income attack , when dodge success attack back with 50% attack damage."
+      name: "Trap",
+      description: "When enem entry has 50% chance to get strike x5 atk damage."
     },
     image: "assets/cards/thetrapper.png"
+  },
+  {
+    id: "nezuko",
+    name: "Nezuko",
+    rarity: "Epic",
+    chance: 190,
+    requiredWeather: null,
+    stats: { hp: 600, atk: 150 },
+    passive: {
+      name: "Bleed",
+      description: "Attack inflict [ Bleed ] for 2 turn , [ Bleed ] drain hp enemy equal to 5% of Nezuko atk every turn."
+    },
+    image: "assets/cards/nezuko.png"
   },
   {
     id: "buggy",
@@ -206,6 +219,19 @@ const CARDS = [
     image: "assets/cards/songoku.png"
   },
   {
+    id: "kakashi",
+    name: "Kakashi",
+    rarity: "Legendary",
+    chance: 4900,
+    requiredWeather: null,
+    stats: { hp: 2000, atk: 505 },
+    passive: {
+      name: "Kamui",
+      description: "Has 22% to dodge income attack , and attack back with the same atk damage."
+    },
+    image: "assets/cards/kakashi.png"
+  },
+  {
     id: "kr-kuuga",
     name: "Kamen Rider Kuuga",
     rarity: "Legendary",
@@ -219,6 +245,123 @@ const CARDS = [
     image: "assets/cards/krkuuga.png"
   },
   {
+    id: "bulma",
+    name: "Bulma",
+    rarity: "Legendary",
+    chance: 3080,
+    requiredWeather: null,
+    stats: { hp: 3080, atk: 100 },
+    passive: {
+      name: "WISH",
+      description: "Every turn she not the one who attack , she have 10% chance to buff the outcome attack of the one who attack 30% atk damage."
+    },
+    image: "assets/cards/bulma.png"
+  },
+  {
+    id: "denji",
+    name: "Denji",
+    rarity: "Legendary",
+    chance: 3333,
+    requiredWeather: null,
+    stats: { hp: 3333, atk: 333 },
+    passive: {
+      name: "POCHITA",
+      description: "Every attack has 33% chance to follow the next attack , the follow up attack can follow up again."
+    },
+    image: "assets/cards/denji.png"
+  },
+  {
+    id: "uchiha-itachi",
+    name: "Uchiha Itachi",
+    rarity: "Legendary",
+    chance: 5500,
+    requiredWeather: null,
+    stats: { hp: 2550, atk: 450 },
+    passive: {
+      name: "Amaterasu",
+      description: "Every attack have 30% inflict [ Burn ] instantly follow up another attack , [ Burn ] deal damage to enemy equal to 5% atk damage , [ Burn ] last 3 turn ."
+    },
+    image: "assets/cards/uchihaitachi.png"
+  },
+  {
+    id: "madness-doctor",
+    name: "Madness Doctor",
+    rarity: "Legendary",
+    chance: 10101,
+    requiredWeather: null,
+    stats: { hp: 10101, atk: 101 },
+    passive: {
+      name: "Madness",
+      description: "Every seconth attack has 40% chance to lower enemy atk by 5%."
+    },
+    image: "assets/cards/madnessdoctor.png"
+  },
+  {
+    id: "erza",
+    name: "Erza",
+    rarity: "Legendary",
+    chance: 12120,
+    requiredWeather: null,
+    stats: { hp: 2550, atk: 450 },
+    passive: {
+      name: "MAGIC ARMOR",
+      description: "If hp below 50% immune to every passive."
+    },
+    image: "assets/cards/erza.png"
+  },
+  {
+    id: "yuji-itadori",
+    name: "Yuji Itadori",
+    rarity: "Legendary",
+    chance: 17000,
+    requiredWeather: null,
+    stats: { hp: 4000, atk: 600 },
+    passive: {
+      name: "BLACK FLASH",
+      description: "Every attack has 33% chance to strike x3 atk damage."
+    },
+    image: "assets/cards/yujiitadori.png"
+  },
+  {
+    id: "guts",
+    name: "Guts",
+    rarity: "Secret",
+    chance: 18888,
+    requiredWeather: null,
+    stats: { hp: 8000, atk: 800 },
+    passive: {
+      name: "OUTRAGE",
+      description: "Have 33% chance to turn on Berserker mode , while in mode attack inflict [ Bleed ] for next 2 turn , [ Bleed ] drain hp equal to 10% of atk Guts every turn ."
+    },
+    image: "assets/cards/guts.png"
+  },
+  {
+    id: "polnareff",
+    name: "Polnareff",
+    rarity: "Secret",
+    chance: 36000,
+    requiredWeather: null,
+    stats: { hp: 10000, atk: 1000 },
+    passive: {
+      name: "SILVER CHARIOT",
+      description: "When hp below 25% , gain 100% atk damage boost."
+    },
+    image: "assets/cards/polnareff.png"
+  },
+  {
+    id: "the-flash",
+    name: "The Flash",
+    rarity: "Secret",
+    chance: 52000,
+    requiredWeather: null,
+    stats: { hp: 5200, atk: 2500 },
+    passive: {
+      name: "FLASH",
+      description: "Has 60% chance to dodge income attack , if dodge more than 3 in a row The Flash instantly dead because heart attack."
+    },
+    image: "assets/cards/theflash.png"
+  },
+  {
     id: "starter-secret",
     name: "The Truth",
     rarity: "Secret",
@@ -230,6 +373,19 @@ const CARDS = [
       description: "Immune to every passive of opponent."
     },
     image: "assets/cards/thetruth.png"
+  },
+  {
+    id: "viltrumite",
+    name: "Viltrumite",
+    rarity: "Secret",
+    chance: 222000,
+    requiredWeather: null,
+    stats: { hp: 20000, atk: 2222 },
+    passive: {
+      name: "PUNCH",
+      description: "Every third attack has 33% chance to deal bonus 222% atk damage."
+    },
+    image: "assets/cards/viltrumite.png"
   },
 
   // Existing weather-exclusive cards.
@@ -273,6 +429,45 @@ const CARDS = [
     image: "assets/cards/seabeast.png"
   },
   {
+    id: "arlong",
+    name: "Arlong",
+    rarity: "Epic",
+    chance: 2400,
+    requiredWeather: "Raining",
+    stats: { hp: 2400, atk: 240 },
+    passive: {
+      name: "ZAWATER",
+      description: "Enemy facing Arlong have 24% chance to miss attack ."
+    },
+    image: "assets/cards/arlong.png"
+  },
+  {
+    id: "peashooter",
+    name: "Peashooter",
+    rarity: "Common",
+    chance: 100,
+    requiredWeather: "Sunny",
+    stats: { hp: 1000, atk: 100 },
+    passive: {
+      name: "Plant",
+      description: "If hp below 30% , heal 5% hp every turn."
+    },
+    image: "assets/cards/peashooter.png"
+  },
+  {
+    id: "hutao",
+    name: "Hutao",
+    rarity: "Legendary",
+    chance: 2020,
+    requiredWeather: "Sunny",
+    stats: { hp: 2020, atk: 400 },
+    passive: {
+      name: "Fire Burst",
+      description: "Attaking enemy have [ Burn ] deal more 50% atk."
+    },
+    image: "assets/cards/hutao.png"
+  },
+  {
     id: "weather-solar-deity",
     name: "Escanor",
     rarity: "Legendary",
@@ -286,6 +481,19 @@ const CARDS = [
     image: "assets/cards/escanor.png"
   },
   {
+    id: "aatrox",
+    name: "Aatrox",
+    rarity: "Mythic",
+    chance: 6666,
+    requiredWeather: "Eclipse",
+    stats: { hp: 6666, atk: 666 },
+    passive: {
+      name: "WORLD ENDER",
+      description: "Every attack heal 5% hp."
+    },
+    image: "assets/cards/aatrox.png"
+  },
+  {
     id: "weather-eclipse-harvester",
     name: "Griffith",
     rarity: "Mythic",
@@ -293,10 +501,23 @@ const CARDS = [
     requiredWeather: "Eclipse",
     stats: { hp: 9999, atk: 666 },
     passive: {
-      name: "Blood Moon",
-      description: "The darker the battlefield, the more dangerous the next critical hit becomes."
+      name: "ECLIPSED",
+      description: "When entry sacrifice all teammate for 100% atk damage boost per teammate alive."
     },
     image: "assets/cards/griffith.png"
+  },
+  {
+    id: "dante-limbus",
+    name: "Dante Limbus",
+    rarity: "Mythic",
+    chance: 10000,
+    requiredWeather: "Eclipse",
+    stats: { hp: 10000, atk: 1000 },
+    passive: {
+      name: "M@!L%#TH",
+      description: "When enemy died because of fatality attack , revice teammate with Dante stats but keep teammate passive ( once per match )."
+    },
+    image: "assets/cards/dantelimbus.png"
   },
   {
     id: "rukia",
@@ -350,6 +571,19 @@ const CARDS = [
     },
     image: "assets/cards/toshiro.png"
   },
+  {
+    id: "yuta-okkotsu",
+    name: "Yuta Okkotsu",
+    rarity: "Mythic",
+    chance: 191022,
+    requiredWeather: "Sugar",
+    stats: { hp: 19100, atk: 2022 },
+    passive: {
+      name: "Cursed Love",
+      description: "Can survive fatality attack , if heal below 50% instantly heal 25% hp back and gain 50% atk damage ( once per match )."
+    },
+    image: "assets/cards/yutaokkotsu.png"
+  },
   // New weather-exclusive cards. Add more entries below using the same schema.
   {
     id: "weather-shadow-monarch",
@@ -378,12 +612,38 @@ const CARDS = [
     image: "assets/cards/cidatomic.png"
   },
   {
+    id: "enderman",
+    name: "Enderman",
+    rarity: "Mythic",
+    chance: 99999,
+    requiredWeather: "Shadow",
+    stats: { hp: 9999, atk: 999 },
+    passive: {
+      name: "PEARL",
+      description: "Survice fatality attack."
+    },
+    image: "assets/cards/enderman.png"
+  },
+  {
+    id: "homura-akemi",
+    name: "Homura Akemi",
+    rarity: "Mythic",
+    chance: 199208,
+    requiredWeather: "Shadow",
+    stats: { hp: 20008, atk: 1990 },
+    passive: {
+      name: "Time Manipulation",
+      description: "When heal below 60% , freeze enemy 5 turn."
+    },
+    image: "assets/cards/homura.png"
+  },
+  {
     id: "kr-decade",
     name: "Kamen Rider Decade",
     rarity: "Mythic",
     chance: 200000,
     requiredWeather: "Shadow",
-    stats: { hp: 6400, atk: 3200 },
+    stats: { hp: 15000, atk: 5000 },
     passive: {
       name: "Rider Card",
       description: "When entry shape shift into enemy card with the same passive but keep own stats."
@@ -404,6 +664,19 @@ const CARDS = [
     image: "assets/cards/kizaru.png"
   }, 
   {
+    id: "gojo-young",
+    name: "Gojo Young",
+    rarity: "Secret",
+    chance: 8888,
+    requiredWeather: "Heavenly",
+    stats: { hp: 8888, atk: 888 },
+    passive: {
+      name: "Infinity",
+      description: "Has 88% chance to dodge income attack , but cant dodge passive."
+    },
+    image: "assets/cards/gojoyoung.png"
+  }, 
+  {
     id: "weather-heavenly-seraph",
     name: "The First Human",
     rarity: "Secret",
@@ -415,6 +688,32 @@ const CARDS = [
       description: "Radiant energy converts every perfect roll into bonus power."
     },
     image: "assets/cards/adamror.png"
+  },
+  {
+    id: "sailor-moon",
+    name: "Sailor Moon",
+    rarity: "Secret",
+    chance: 70007,
+    requiredWeather: "Heavenly",
+    stats: { hp: 7007, atk: 7007 },
+    passive: {
+      name: "Moon Manipulation",
+      description: "Every 1v1 Battle win have 20% chance to add one random Common-Uncommon Weather for 3 minutes."
+    },
+    image: "assets/cards/sailormoon.png"
+  },
+  {
+    id: "jin-mori",
+    name: "Jin Mori",
+    rarity: "Secret",
+    chance: 240000,
+    requiredWeather: "Heavenly",
+    stats: { hp: 20000, atk: 7200 },
+    passive: {
+      name: "72 Magic Spell",
+      description: "If a teammate dies , make a clone with Jin Mori stats but with that teammate passive ( three times per match )."
+    },
+    image: "assets/cards/jinmori.png"
   },
   {
     id: "weather-tsukuyomi-eye",
@@ -443,6 +742,19 @@ const CARDS = [
     image: "assets/cards/vastolord.png"
   },
   {
+    id: "dio-brando",
+    name: "Dio Brando",
+    rarity: "Legendary",
+    chance: 666,
+    requiredWeather: "Malevolent",
+    stats: { hp: 666, atk: 333 },
+    passive: {
+      name: "WGRYYYY",
+      description: "Attack has 20% chance to freeze enemy 2 turn , when freeze enemy success , selfheal 20% hp."
+    },
+    image: "assets/cards/diobrando.png"
+  },
+  {
     id: "weather-malevolent-king",
     name: "Malevolent King",
     rarity: "Secret",
@@ -450,10 +762,36 @@ const CARDS = [
     requiredWeather: "Malevolent",
     stats: { hp: 11000, atk: 6000 },
     passive: {
-      name: "Dread Domain",
-      description: "Cursed energy increases pressure against high-rarity opponents."
+      name: "Malevolent Kitchen",
+      description: "On fifth attack constantly slash enemy until enemy hp below 50%."
     },
     image: "assets/cards/sukuna.png"
+  },
+  {
+    id: "doflamingo",
+    name: "Doflamingo",
+    rarity: "Secret",
+    chance: 60220,
+    requiredWeather: "Malevolent",
+    stats: { hp: 16000, atk: 6020 },
+    passive: {
+      name: "STRING ARMY",
+      description: "Every kill has 30% chance to turn dead enemy into teammate ( once time per match )."
+    },
+    image: "assets/cards/doflamingo.png"
+  },
+  {
+    id: "mahoraga",
+    name: "Mahoraga",
+    rarity: "Secret",
+    chance: 800000,
+    requiredWeather: "Malevolent",
+    stats: { hp: 80000, atk: 8000 },
+    passive: {
+      name: "ADAPTION",
+      description: "Everytime getting attacked have 25% chance adapt the attack , when adapt the attack , gain 25% income damage reduction , reset when facing new enemy , every kill heal 50% hp back."
+    },
+    image: "assets/cards/mahoraga.png"
   }
 ];
 
