@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="passives.css" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -17,10 +18,10 @@
 
       <nav class="top-actions" aria-label="Game navigation">
         <div class="currency-box" aria-live="polite">
-          <span class="currency-icon">₫</span>
+          <span class="currency-icon" aria-hidden="true">💵</span>
           <div>
-            <small>VNĐ</small>
-            <strong id="currencyValue">0 VNĐ</strong>
+            <small>💵 BALANCE</small>
+            <strong id="currencyValue">💵 0</strong>
           </div>
         </div>
 
@@ -211,7 +212,10 @@
           <p class="eyebrow">YOUR CARDS</p>
           <h2 id="collectionModalTitle">Collection <span id="collectionModalCount">0/0</span></h2>
         </div>
-        <button class="modal-close" data-close-modal="collectionModal" type="button" aria-label="Close collection">×</button>
+        <div class="collection-header-actions">
+          <button id="salvageAllExtraDuplicatesButton" class="bulk-salvage-button" type="button">♻ Salvage All Extra Duplicates</button>
+          <button class="modal-close" data-close-modal="collectionModal" type="button" aria-label="Close collection">×</button>
+        </div>
       </header>
 
       <div class="collection-toolbar">
@@ -328,7 +332,6 @@
           <div class="preview-actions" aria-label="Card salvage actions">
             <button id="previewSalvageButton" class="preview-action-button preview-action-button--salvage" type="button">♻ Salvage 1 Copy</button>
             <button id="previewSalvageExtrasButton" class="preview-action-button preview-action-button--extra" type="button">♻ Salvage Extra Duplicates</button>
-            <button id="previewAutoDeleteButton" class="preview-action-icon" type="button" aria-label="Open Auto-Delete Settings" title="Auto-Delete Settings">🗑</button>
           </div>
 
           <div class="preview-note">
@@ -347,7 +350,7 @@
           <p class="eyebrow">SOLO COMBAT</p>
           <h2 id="battleModalTitle">⚔ Battle Arena</h2>
         </div>
-        <button class="modal-close" data-close-modal="battleModal" type="button" aria-label="Close battle">×</button>
+        <button id="battleCloseButton" class="modal-close" type="button" aria-label="Exit battle and forfeit">×</button>
       </header>
 
       <div class="battle-setup" id="battleSetup">
@@ -380,8 +383,25 @@
           </div>
 
           <div class="battle-card-picker-head">
-            <span class="battle-field-label">YOUR UNLOCKED CARDS</span>
-            <span class="battle-setup-hint">SELECT / REPLACE</span>
+            <div>
+              <span class="battle-field-label">YOUR UNLOCKED CARDS</span>
+              <span class="battle-setup-hint">SELECT / REPLACE</span>
+            </div>
+            <div class="battle-card-picker-tools" aria-label="Search and sort battle cards">
+              <label class="battle-card-search">
+                <span class="sr-only">Search unlocked cards</span>
+                <input id="cardSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="Search cards..." aria-label="Search unlocked cards" />
+              </label>
+              <label class="battle-card-sort">
+                <span class="sr-only">Sort unlocked cards</span>
+                <select id="cardSortSelect" aria-label="Sort unlocked cards">
+                  <option value="atk">Attack: High → Low</option>
+                  <option value="hp">HP: High → Low</option>
+                  <option value="name">Name: A → Z</option>
+                  <option value="rarity">Rarity / Value: High → Low</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div id="battleFighterGrid" class="battle-fighter-grid" aria-label="Unlocked battle fighters"></div>
 
@@ -418,15 +438,19 @@
               <div id="battlePlayerBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
               <img id="battlePlayerImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Player fighter artwork" />
               <div id="battlePlayerFallback" class="battle-fallback" aria-hidden="true">✦</div>
+              <div id="battlePlayerFloatingText" class="battle-floating-text" aria-live="polite" aria-label="Player combat feedback"></div>
             </div>
             <div class="battle-card-info">
               <h3 id="battlePlayerName">—</h3>
               <div class="battle-level-row"><strong id="battlePlayerLevel">Lv. 1</strong><span id="battlePlayerExpText">0/100 EXP</span></div>
               <div class="battle-exp-track"><div id="battlePlayerExpBar" class="battle-exp-fill"></div></div>
               <div id="battlePlayerMutationBadges" class="battle-mutation-badges"></div>
+              <div id="battlePlayerPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Player passive status"></div>
               <div class="battle-hp-meta"><span>HP</span><strong id="battlePlayerHp">0 / 0</strong></div>
               <div class="battle-hp-track"><div id="battlePlayerHpBar" class="battle-hp-fill"></div></div>
               <div class="battle-stats-row"><span>ATK</span><strong id="battlePlayerAtk">0</strong></div>
+              <div id="battlePlayerCombatStatus" class="battle-combat-status" aria-label="Player combat modifiers"></div>
+              <div id="battlePlayerStatusEffects" class="battle-status-effects" aria-label="Player status effects"></div>
             </div>
           </article>
 
@@ -442,15 +466,19 @@
               <div id="battleEnemyBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
               <img id="battleEnemyImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Enemy fighter artwork" />
               <div id="battleEnemyFallback" class="battle-fallback" aria-hidden="true">✦</div>
+              <div id="battleEnemyFloatingText" class="battle-floating-text" aria-live="polite" aria-label="Enemy combat feedback"></div>
             </div>
             <div class="battle-card-info">
               <h3 id="battleEnemyName">—</h3>
               <div class="battle-level-row"><strong id="battleEnemyLevel">Lv. 1</strong><span id="battleEnemyExpText">0/100 EXP</span></div>
               <div class="battle-exp-track"><div id="battleEnemyExpBar" class="battle-exp-fill"></div></div>
               <div id="battleEnemyMutationBadges" class="battle-mutation-badges"></div>
+              <div id="battleEnemyPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Enemy passive status"></div>
               <div class="battle-hp-meta"><span>HP</span><strong id="battleEnemyHp">0 / 0</strong></div>
               <div class="battle-hp-track"><div id="battleEnemyHpBar" class="battle-hp-fill"></div></div>
               <div class="battle-stats-row"><span>ATK</span><strong id="battleEnemyAtk">0</strong></div>
+              <div id="battleEnemyCombatStatus" class="battle-combat-status" aria-label="Enemy combat modifiers"></div>
+              <div id="battleEnemyStatusEffects" class="battle-status-effects" aria-label="Enemy status effects"></div>
             </div>
           </article>
         </div>
@@ -472,7 +500,7 @@
           </div>
         </div>
 
-        <div class="battle-auto-note">Auto combat • Every 3 seconds • Front cards alternate attacks • Weather-mutated enemies are possible</div>
+        <div class="battle-auto-note">Auto combat • Every 3 seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible</div>
         <div id="battleLog" class="battle-log" aria-live="polite"></div>
       </div>
 
@@ -484,8 +512,20 @@
         <div id="battleResultPower" class="battle-result__power">Player Power: 0 vs Enemy Power: 0</div>
         <div class="battle-result__metrics" aria-label="Battle rewards and loss status">
           <div class="battle-result__metric">
-            <span>Cash Earned</span>
-            <strong id="battleResultCash">+0 VNĐ</strong>
+            <span>Base Value</span>
+            <strong id="battleResultBaseValue" class="currency-display">💵 0</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Time Bonus</span>
+            <strong id="battleResultTimeBonus">+0%</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Level Multiplier</span>
+            <strong id="battleResultLevelDiff">×1.00</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Total Earned</span>
+            <strong id="battleResultCash" class="currency-display">💵 +0</strong>
           </div>
           <div class="battle-result__metric">
             <span>Battle EXP</span>
@@ -496,62 +536,15 @@
             <strong id="battleResultDropRate">+0.00%</strong>
           </div>
           <div class="battle-result__metric">
-            <span>25% Card Loss</span>
-            <strong id="battleResultLossStatus">—</strong>
+            <span>Card Collection Penalty</span>
+            <strong id="battleResultLossStatus">None</strong>
           </div>
         </div>
         <div class="battle-result__actions">
           <button id="battle-again-btn" class="battle-primary-button" type="button">⚔️ Battle Again</button>
           <button id="battleChangeFighterButton" class="ghost-button" type="button">Change Fighter</button>
-          <button id="close-battle-result-btn" class="ghost-button" data-close-modal="battleModal" type="button">❌ Close Arena</button>
+          <button id="close-battle-result-btn" class="ghost-button" type="button">↩ Return to Lobby</button>
         </div>
-      </div>
-    </section>
-  </div>
-
-  <!-- AUTO-SALVAGE SETTINGS -->
-  <div id="autoSalvageModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="autoSalvageTitle">
-    <section class="modal-panel auto-salvage-modal">
-      <header class="modal-header">
-        <div>
-          <p class="eyebrow">CARD ECONOMY</p>
-          <h2 id="autoSalvageTitle">Auto-Delete Settings</h2>
-        </div>
-        <button class="modal-close" data-close-modal="autoSalvageModal" type="button" aria-label="Close Auto-Delete Settings">×</button>
-      </header>
-
-      <div class="auto-salvage-body">
-        <label class="auto-salvage-master">
-          <input id="autoSalvageEnabled" type="checkbox" />
-          <span>Enable Auto-Salvage</span>
-          <small>New rolls matching any rule below are converted directly into VNĐ instead of being stored.</small>
-        </label>
-
-        <div class="auto-salvage-section">
-          <div class="auto-salvage-section__head">
-            <span>Mutation Rules</span>
-            <small>Any selected mutation is auto-salvaged.</small>
-          </div>
-          <div id="autoSalvageMutationOptions" class="auto-salvage-options"></div>
-        </div>
-
-        <div class="auto-salvage-section">
-          <div class="auto-salvage-section__head">
-            <span>Rarity Threshold</span>
-            <small>When enabled, cards at or below the chosen rarity are auto-salvaged.</small>
-          </div>
-          <select id="autoSalvageRarity" class="select-input" aria-label="Auto-salvage rarity threshold">
-            <option value="off">Off</option>
-            <option value="Common">Common and below</option>
-            <option value="Rare">Rare and below</option>
-            <option value="Epic">Epic and below</option>
-            <option value="Legendary">Legendary and below</option>
-            <option value="Mythic">Mythic and below</option>
-            <option value="Secret">All rarities</option>
-          </select>
-        </div>
-
-        <p class="auto-salvage-note">Manual Salvage always removes exactly one selected copy. “Salvage Extra Duplicates” keeps one copy of every distinct mutation variant.</p>
       </div>
     </section>
   </div>
@@ -569,11 +562,11 @@
 
       <div class="shop-balance">
         <span>Available balance</span>
-        <strong id="shopCurrency">0 VNĐ</strong>
+        <strong id="shopCurrency" class="currency-display">💵 0</strong>
       </div>
 
       <div class="upgrade-list">
-        <article class="upgrade-card">
+        <article class="upgrade-card" data-upgrade-card="rollSpeed">
           <div class="upgrade-icon speed-icon">⚡</div>
           <div class="upgrade-content">
             <div class="upgrade-topline">
@@ -591,7 +584,7 @@
           </div>
         </article>
 
-        <article class="upgrade-card">
+        <article class="upgrade-card" data-upgrade-card="luck">
           <div class="upgrade-icon luck-icon">✦</div>
           <div class="upgrade-content">
             <div class="upgrade-topline">
@@ -608,16 +601,53 @@
             <button id="buyLuckButton" class="buy-button" type="button"></button>
           </div>
         </article>
+
+        <article class="upgrade-card upgrade-card--progression" data-upgrade-card="expMulti">
+          <div class="upgrade-icon exp-icon">✦</div>
+          <div class="upgrade-content">
+            <div class="upgrade-topline">
+              <div>
+                <h3>EXP Multiplier</h3>
+                <p>Boosts roll and Battle EXP with compounding returns.</p>
+              </div>
+              <span id="expMultiLevel" class="level-badge">Lv. 0/100</span>
+            </div>
+            <div class="upgrade-stat-line">
+              <span>Current bonus</span>
+              <strong id="expMultiCurrent">1.00x EXP</strong>
+            </div>
+            <button id="buyExpMultiButton" class="buy-button upgrade-btn" data-upgrade="EXP_MULTI" type="button" aria-label="Upgrade EXP Multiplier"></button>
+          </div>
+        </article>
+
+        <article class="upgrade-card upgrade-card--progression" data-upgrade-card="coinMulti">
+          <div class="upgrade-icon coin-icon" aria-hidden="true">💵</div>
+          <div class="upgrade-content">
+            <div class="upgrade-topline">
+              <div>
+                <h3>💵 Multiplier</h3>
+                <p>Boosts Battle and card salvage income.</p>
+              </div>
+              <span id="coinMultiLevel" class="level-badge">Lv. 0/100</span>
+            </div>
+            <div class="upgrade-stat-line">
+              <span>Current bonus</span>
+              <strong id="coinMultiCurrent">1.00x 💵</strong>
+            </div>
+            <button id="buyCoinMultiButton" class="buy-button upgrade-btn" data-upgrade="COIN_MULTI" type="button" aria-label="Upgrade 💵 Multiplier"></button>
+          </div>
+        </article>
       </div>
 
       <p class="shop-note">
-        Costs use exponential scaling: <code>BaseCost × 1.65^Level</code>. All upgrade progress is saved locally.
+        Roll Speed / Luck use their existing curves. EXP uses <code>1 + Lv×0.12 + Lv^1.15×0.03</code> with <code>Base × 1.40^Lv</code> costs. 💵 uses <code>1 + Lv×0.15 + Lv^1.2×0.02</code> with <code>Base × 1.45^Lv</code> costs. All upgrade progress is saved locally.
       </p>
     </section>
   </div>
 
   <script src="weathers.js"></script>
   <script src="cards.js"></script>
+  <script src="passives.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

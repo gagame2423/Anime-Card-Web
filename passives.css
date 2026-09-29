@@ -1,0 +1,269 @@
+
+/* ============================================================
+   PASSIVE SYSTEM VISUALS
+   ============================================================ */
+
+.passive-box {
+  position: relative;
+  border: 1px solid rgba(115, 224, 255, .14);
+  background:
+    linear-gradient(180deg, rgba(115,224,255,.045), rgba(255,255,255,.018));
+}
+
+.passive-box::after {
+  content: "PASSIVE";
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  color: rgba(143, 239, 255, .58);
+  pointer-events: none;
+}
+
+.passive-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.passive-kicker::before {
+  content: "✦";
+  color: #8fefff;
+  text-shadow: 0 0 10px rgba(143,239,255,.55);
+}
+
+.passive-status-list,
+.battle-passive-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 22px;
+  margin-top: 7px;
+  align-items: center;
+}
+
+.passive-status-badge {
+  --passive-color: #8fefff;
+  --passive-glow: rgba(143,239,255,.30);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--passive-color) 42%, rgba(255,255,255,.10));
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--passive-color) 12%, rgba(10,14,24,.72)),
+    rgba(10,14,24,.72));
+  color: color-mix(in srgb, var(--passive-color) 92%, white);
+  box-shadow: 0 0 14px var(--passive-glow), inset 0 1px 0 rgba(255,255,255,.05);
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .04em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.passive-status-badge__icon {
+  flex: 0 0 auto;
+  font-size: 10px;
+}
+
+.passive-status-badge__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.passive-status-badge[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+.passive-status-badge[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 50;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translateX(-50%) translateY(3px);
+  width: min(280px, 75vw);
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  background: rgba(5,8,16,.97);
+  color: #eef5ff;
+  box-shadow: 0 14px 30px rgba(0,0,0,.38);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .14s ease, transform .14s ease;
+}
+
+.passive-status-badge[data-tooltip]:hover::after,
+.passive-status-badge[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+
+.passive-status-badge--buff {
+  color: #dfffe9;
+  border-color: rgba(112,242,189,.28);
+  background: linear-gradient(135deg, rgba(112,242,189,.14), rgba(73,208,137,.06));
+  box-shadow: inset 0 0 16px rgba(112,242,189,.05), 0 0 12px rgba(112,242,189,.08);
+}
+.passive-status-badge--buff .passive-status-badge__icon {
+  color: #8fffc6;
+}
+
+.passive-status-badge--crit {
+  --passive-color: #ffd86b;
+  --passive-glow: rgba(255,216,107,.32);
+}
+
+.passive-status-badge--rage {
+  --passive-color: #ff6d73;
+  --passive-glow: rgba(255,109,115,.30);
+}
+
+.passive-status-badge--form {
+  --passive-color: #a88bff;
+  --passive-glow: rgba(168,139,255,.28);
+}
+
+.passive-status-badge--aura {
+  --passive-color: #66f1d1;
+  --passive-glow: rgba(102,241,209,.25);
+}
+
+.passive-status-badge--slime {
+  --passive-color: #85f06d;
+  --passive-glow: rgba(133,240,109,.27);
+}
+
+.passive-status-badge--shield {
+  --passive-color: #6be8ff;
+  --passive-glow: rgba(107,232,255,.28);
+}
+
+.passive-status-badge--invincible {
+  --passive-color: #fff0a8;
+  --passive-glow: rgba(255,240,168,.34);
+}
+
+.passive-status-badge--freeze {
+  --passive-color: #8fefff;
+  --passive-glow: rgba(143,239,255,.36);
+}
+
+.passive-status-badge--stun {
+  --passive-color: #d7a7ff;
+  --passive-glow: rgba(215,167,255,.33);
+}
+
+.passive-status-badge--guard {
+  --passive-color: #79ffb1;
+  --passive-glow: rgba(121,255,177,.28);
+}
+
+.passive-status-badge--mode {
+  --passive-color: #ffb86b;
+  --passive-glow: rgba(255,184,107,.30);
+}
+
+.passive-status-badge--jackpot {
+  --passive-color: #ffe066;
+  --passive-glow: rgba(255,224,102,.32);
+}
+
+.passive-status-badge--stolen {
+  --passive-color: #f29cff;
+  --passive-glow: rgba(242,156,255,.31);
+}
+
+.passive-status-badge--passive {
+  --passive-color: #b8c6ff;
+  --passive-glow: rgba(184,198,255,.20);
+}
+
+.collection-passive-mini {
+  margin-top: 5px;
+  color: rgba(224,234,255,.76);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collection-passive-mini::before {
+  content: "✦ ";
+  color: #8fefff;
+}
+
+.battle-visual-card.has-passive-activity {
+  box-shadow:
+    0 0 0 1px rgba(143,239,255,.12),
+    0 0 28px rgba(143,239,255,.10);
+}
+
+.battle-visual-card.passive-active {
+  animation: passiveCardPulse 1.8s ease-in-out infinite;
+}
+
+.battle-log__line.is-passive::before {
+  content: "✦ ";
+  color: #8fefff;
+}
+
+.battle-log__line.is-critical {
+  text-shadow: 0 0 14px rgba(255,216,107,.42);
+}
+
+@keyframes passiveCardPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 0 rgba(143,239,255,0));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(143,239,255,.18));
+  }
+}
+
+@media (max-width: 720px) {
+  .passive-status-badge {
+    max-width: min(48vw, 190px);
+    font-size: 7px;
+    padding: 4px 6px;
+  }
+
+  .passive-status-badge[data-tooltip]::after {
+    left: 0;
+    transform: translateX(0) translateY(3px);
+    width: min(280px, 82vw);
+  }
+
+  .passive-status-badge[data-tooltip]:hover::after,
+  .passive-status-badge[data-tooltip]:focus-visible::after {
+    transform: translateX(0) translateY(0);
+  }
+}
+
+.passive-status-badge--debuff {
+  color: #ffd4dc;
+  border-color: rgba(255, 88, 117, .32);
+  background: rgba(255, 59, 92, .10);
+  box-shadow: 0 0 12px rgba(255, 71, 102, .08);
+}
+.passive-status-badge--debuff .passive-status-badge__icon {
+  color: #ff8297;
+}

@@ -13,7 +13,7 @@ const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
   "animeCardRngSave_v1"
 ]);
-const SAVE_SCHEMA_VERSION = 5;
+const SAVE_SCHEMA_VERSION = 6;
 const GLOBAL_TICK_MS = 1000;
 const BASE_COOLDOWN_MS = 1500;
 const SPEED_BASE_COST = 100;
@@ -22,6 +22,18 @@ const SPEED_FACTOR = 0.15;
 const LUCK_BASE_COST = 250;
 const LUCK_MAX_LEVEL = 500;
 const LUCK_FACTOR = 0.25;
+const EXP_MULTI_BASE_COST = 2500;
+const EXP_MULTI_MAX_LEVEL = 100;
+const EXP_MULTI_LINEAR = 0.12;
+const EXP_MULTI_CURVE = 0.03;
+const EXP_MULTI_EXPONENT = 1.15;
+const EXP_MULTI_COST_FACTOR = 1.40;
+const COIN_MULTI_BASE_COST = 4000;
+const COIN_MULTI_MAX_LEVEL = 100;
+const COIN_MULTI_LINEAR = 0.15;
+const COIN_MULTI_CURVE = 0.02;
+const COIN_MULTI_EXPONENT = 1.20;
+const COIN_MULTI_COST_FACTOR = 1.45;
 
 const CARD_RARITY_EXP_MULTIPLIERS = Object.freeze({
   Common: 1,
@@ -34,7 +46,6 @@ const CARD_RARITY_EXP_MULTIPLIERS = Object.freeze({
 const CARD_LEVEL_BASE_EXP = 100;
 const CARD_LEVEL_STAT_GROWTH = 0.0075;
 const CARD_LEVEL_MAX = 999;
-const AUTO_SALVAGE_RARITY_VALUES = Object.freeze(["off", "Common", "Rare", "Epic", "Legendary", "Mythic", "Secret"]);
 
 const FALLBACK_ART_DATA_URL = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Cdefs%3E%3ClinearGradient id%3D%22g%22 x1%3D%220%22 y1%3D%220%22 x2%3D%221%22 y2%3D%221%22%3E%3Cstop stop-color%3D%22%23141a2a%22%2F%3E%3Cstop offset%3D%221%22 stop-color%3D%22%23080b14%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22url(%23g)%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%2Csans-serif%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E";
 
@@ -50,11 +61,10 @@ const defaultState = {
   experience: 0,
   battleDropRateBonus: 0,
   cardProgress: {},
-  autoSalvage: { enabled: false, mutations: { normal: false }, rarityThreshold: "off" },
   unlocked: {},
   mutations: {},
   equipment: [],
-  upgrades: { rollSpeed: 0, luck: 0 },
+  upgrades: { rollSpeed: 0, luck: 0, expMulti: 0, coinMulti: 0 },
   lastResultId: null,
   weather: {
     gameSeconds: 0,
@@ -152,17 +162,13 @@ const els = {
   previewVariantMenu: document.getElementById("variantMenu"),
   previewCollectedCount: document.getElementById("previewCollectedCount"),
   previewRequirement: document.getElementById("previewRequirement"),
+  salvageAllExtraDuplicatesButton: document.getElementById("salvageAllExtraDuplicatesButton"),
   previewLevel: document.getElementById("previewLevel"),
   previewExpText: document.getElementById("previewExpText"),
   previewExpBar: document.getElementById("previewExpBar"),
   previewSalvageButton: document.getElementById("previewSalvageButton"),
   previewSalvageExtrasButton: document.getElementById("previewSalvageExtrasButton"),
-  previewAutoDeleteButton: document.getElementById("previewAutoDeleteButton"),
 
-  autoSalvageModal: document.getElementById("autoSalvageModal"),
-  autoSalvageEnabled: document.getElementById("autoSalvageEnabled"),
-  autoSalvageRarity: document.getElementById("autoSalvageRarity"),
-  autoSalvageMutationOptions: document.getElementById("autoSalvageMutationOptions"),
 
   upgradesModal: document.getElementById("upgradesModal"),
   shopCurrency: document.getElementById("shopCurrency"),
@@ -172,11 +178,19 @@ const els = {
   luckLevel: document.getElementById("luckLevel"),
   luckCurrent: document.getElementById("luckCurrent"),
   buyLuckButton: document.getElementById("buyLuckButton"),
+  expMultiLevel: document.getElementById("expMultiLevel"),
+  expMultiCurrent: document.getElementById("expMultiCurrent"),
+  buyExpMultiButton: document.getElementById("buyExpMultiButton"),
+  coinMultiLevel: document.getElementById("coinMultiLevel"),
+  coinMultiCurrent: document.getElementById("coinMultiCurrent"),
+  buyCoinMultiButton: document.getElementById("buyCoinMultiButton"),
 
   battleButton: document.getElementById("battleButton"),
   battleModal: document.getElementById("battleModal"),
   battleSetup: document.getElementById("battleSetup"),
   battleFighterGrid: document.getElementById("battleFighterGrid"),
+  cardSearchInput: document.getElementById("cardSearchInput"),
+  cardSortSelect: document.getElementById("cardSortSelect"),
   battleVariantGrid: document.getElementById("battleVariantGrid"),
   battleTeamSlots: document.getElementById("battleTeamSlots"),
   battleTeamCount: document.getElementById("battleTeamCount"),
@@ -189,7 +203,9 @@ const els = {
   battlePlayerImage: document.getElementById("battlePlayerImage"),
   battlePlayerFallback: document.getElementById("battlePlayerFallback"),
   battlePlayerBackdrop: document.getElementById("battlePlayerBackdrop"),
+  battlePlayerFloatingText: document.getElementById("battlePlayerFloatingText"),
   battlePlayerMutationBadges: document.getElementById("battlePlayerMutationBadges"),
+  battlePlayerPassiveStatus: document.getElementById("battlePlayerPassiveStatus"),
   battlePlayerName: document.getElementById("battlePlayerName"),
   battlePlayerLevel: document.getElementById("battlePlayerLevel"),
   battlePlayerExpText: document.getElementById("battlePlayerExpText"),
@@ -197,11 +213,15 @@ const els = {
   battlePlayerHp: document.getElementById("battlePlayerHp"),
   battlePlayerHpBar: document.getElementById("battlePlayerHpBar"),
   battlePlayerAtk: document.getElementById("battlePlayerAtk"),
+  battlePlayerCombatStatus: document.getElementById("battlePlayerCombatStatus"),
+  battlePlayerStatusEffects: document.getElementById("battlePlayerStatusEffects"),
   battleEnemyCard: document.getElementById("battleEnemyCard"),
   battleEnemyImage: document.getElementById("battleEnemyImage"),
   battleEnemyFallback: document.getElementById("battleEnemyFallback"),
   battleEnemyBackdrop: document.getElementById("battleEnemyBackdrop"),
+  battleEnemyFloatingText: document.getElementById("battleEnemyFloatingText"),
   battleEnemyMutationBadges: document.getElementById("battleEnemyMutationBadges"),
+  battleEnemyPassiveStatus: document.getElementById("battleEnemyPassiveStatus"),
   battleEnemyName: document.getElementById("battleEnemyName"),
   battleEnemyLevel: document.getElementById("battleEnemyLevel"),
   battleEnemyExpText: document.getElementById("battleEnemyExpText"),
@@ -209,6 +229,8 @@ const els = {
   battleEnemyHp: document.getElementById("battleEnemyHp"),
   battleEnemyHpBar: document.getElementById("battleEnemyHpBar"),
   battleEnemyAtk: document.getElementById("battleEnemyAtk"),
+  battleEnemyCombatStatus: document.getElementById("battleEnemyCombatStatus"),
+  battleEnemyStatusEffects: document.getElementById("battleEnemyStatusEffects"),
   battlePlayerLineup: document.getElementById("battlePlayerLineup"),
   battleEnemyLineup: document.getElementById("battleEnemyLineup"),
   battlePlayerTeamPower: document.getElementById("battlePlayerTeamPower"),
@@ -216,9 +238,13 @@ const els = {
   battleStatus: document.getElementById("battleStatus"),
   battleLog: document.getElementById("battleLog"),
   battleVictory: document.getElementById("battleVictory"),
+  battleCloseButton: document.getElementById("battleCloseButton"),
   battleResultTitle: document.getElementById("battleResultTitle"),
   battleResultText: document.getElementById("battleResultText"),
   battleResultPower: document.getElementById("battleResultPower"),
+  battleResultBaseValue: document.getElementById("battleResultBaseValue"),
+  battleResultTimeBonus: document.getElementById("battleResultTimeBonus"),
+  battleResultLevelDiff: document.getElementById("battleResultLevelDiff"),
   battleResultCash: document.getElementById("battleResultCash"),
   battleResultExp: document.getElementById("battleResultExp"),
   battleResultDropRate: document.getElementById("battleResultDropRate"),
@@ -239,12 +265,11 @@ function cloneDefaultState() {
     experience: 0,
     battleDropRateBonus: 0,
     cardProgress: {},
-    autoSalvage: { enabled: false, mutations: { normal: false }, rarityThreshold: "off" },
-    unlocked: {},
+      unlocked: {},
     mutations: {},
     inventory: {},
     equipment: [],
-    upgrades: { rollSpeed: 0, luck: 0 },
+    upgrades: { rollSpeed: 0, luck: 0, expMulti: 0, coinMulti: 0 },
     lastResultId: null,
     weather: {
       gameSeconds: 0,
@@ -282,24 +307,6 @@ function normalizeCardProgressRecords(rawProgress) {
     output[cardId] = { level, exp };
   }
   return output;
-}
-
-function normalizeAutoSalvageSettings(rawSettings) {
-  const raw = rawSettings && typeof rawSettings === "object" ? rawSettings : {};
-  const mutationSource = raw.mutations && typeof raw.mutations === "object" ? raw.mutations : {};
-  const mutations = { normal: Boolean(mutationSource.normal) };
-
-  if (Array.isArray(MUTATIONS)) {
-    for (const mutation of MUTATIONS) {
-      const id = normalizeMutationId(mutation?.id);
-      if (!id) continue;
-      mutations[id] = Boolean(mutationSource[id]);
-    }
-  }
-
-  const rarityRaw = String(raw.rarityThreshold || raw.rarity || "off");
-  const rarityThreshold = AUTO_SALVAGE_RARITY_VALUES.find(value => value.toLowerCase() === rarityRaw.toLowerCase()) || "off";
-  return { enabled: Boolean(raw.enabled), mutations, rarityThreshold };
 }
 
 function getCardLevelInfo(cardOrId) {
@@ -356,29 +363,15 @@ function grantCardExperience(cardId, amount) {
   return { gained: safeAmount, level: progress.level, levelUps };
 }
 
+function getDuplicateCardRollExperience(cardOrId) {
+  const info = getCardLevelInfo(cardOrId);
+  return Math.max(1, Math.floor(info.required * 0.50));
+}
+
 function calculateCardRollExperience(card, mutations = []) {
   const rarityMultiplier = getCardLevelRarityMultiplier(card);
   const mutationMultiplier = getMutationMultiplier(mutations);
-  return Math.max(1, Math.floor(8 * rarityMultiplier * mutationMultiplier));
-}
-
-function getAutoSalvageMutationMatch(card, mutations = []) {
-  const selected = state?.autoSalvage?.mutations || {};
-  const safeMutations = normalizeMutationObjects(mutations);
-  if (!safeMutations.length) return Boolean(selected.normal);
-  return safeMutations.some(mutation => selected[normalizeMutationId(mutation?.id)] === true);
-}
-
-function shouldAutoSalvageCard(card, mutations = []) {
-  const config = state?.autoSalvage;
-  if (!config?.enabled) return false;
-
-  const mutationMatch = getAutoSalvageMutationMatch(card, mutations);
-  const threshold = String(config.rarityThreshold || "off");
-  const thresholdIndex = AUTO_SALVAGE_RARITY_VALUES.indexOf(threshold);
-  const rarityIndex = AUTO_SALVAGE_RARITY_VALUES.indexOf(String(card?.rarity || ""));
-  const rarityMatch = threshold !== "off" && thresholdIndex >= 1 && rarityIndex >= 1 && rarityIndex <= thresholdIndex;
-  return mutationMatch || rarityMatch;
+  return Math.max(1, Math.floor(8 * rarityMultiplier * mutationMultiplier * getExpMultiplier()));
 }
 
 function getSalvageValue(card, mutations = []) {
@@ -580,6 +573,29 @@ function syncOwnershipRecords() {
     );
   }
 
+  // Every unlocked card must have a concrete Normal/base variant unless all
+  // copies are already represented by mutation variants. This keeps Battle
+  // setup and Collection ownership consistent even for legacy saves that only
+  // stored unlocked counts.
+  const nonBaseTotals = {};
+  for (const [key, count] of Object.entries(mergedMutations)) {
+    const parsed = parseVariantKey(key);
+    if (!parsed || !parsed.mutations.length) continue;
+    const cardId = normalizeCardId(parsed.cardId);
+    nonBaseTotals[cardId] = (nonBaseTotals[cardId] || 0) + Math.max(0, Number(count) || 0);
+  }
+
+  for (const [cardId, unlockedCount] of Object.entries(normalizedUnlocked)) {
+    const baseKey = canonicalVariantKey(cardId, []);
+    const remainingBase = Math.max(0, Math.floor(Number(unlockedCount) || 0) - (nonBaseTotals[cardId] || 0));
+    if (remainingBase > 0) {
+      mergedMutations[baseKey] = Math.max(
+        Math.max(0, Number(mergedMutations[baseKey]) || 0),
+        remainingBase
+      );
+    }
+  }
+
   // Rebuild one canonical inventory entry per card + mutation combination.
   const canonicalInventory = {};
   for (const [key, count] of Object.entries(mergedMutations)) {
@@ -711,7 +727,6 @@ function normalizeState(parsed = {}) {
   // fields introduced by future builds instead of reconstructing a fresh save.
   const normalized = {
     ...defaults,
-    ...parsed,
     upgrades: {
       ...defaults.upgrades,
       ...(parsed.upgrades && typeof parsed.upgrades === "object" ? parsed.upgrades : {})
@@ -740,7 +755,6 @@ function normalizeState(parsed = {}) {
     : 0;
 
   normalized.cardProgress = normalizeCardProgressRecords(parsed.cardProgress || parsed.cardLevels || parsed.levels);
-  normalized.autoSalvage = normalizeAutoSalvageSettings(parsed.autoSalvage || parsed.autoDelete || parsed.autoSalvageSettings);
 
   const rawUnlockedSource = (
     parsed.unlocked &&
@@ -844,6 +858,14 @@ function normalizeState(parsed = {}) {
     LUCK_MAX_LEVEL,
     Math.max(0, Math.floor(Number(parsed.upgrades?.luck) || 0))
   );
+  normalized.upgrades.expMulti = Math.min(
+    EXP_MULTI_MAX_LEVEL,
+    Math.max(0, Math.floor(Number(parsed.upgrades?.expMulti ?? parsed.upgrades?.experienceMultiplier) || 0))
+  );
+  normalized.upgrades.coinMulti = Math.min(
+    COIN_MULTI_MAX_LEVEL,
+    Math.max(0, Math.floor(Number(parsed.upgrades?.coinMulti ?? parsed.upgrades?.moneyMultiplier) || 0))
+  );
 
   normalized.lastResultId = parsed.lastResultId != null
     ? normalizeCardId(parsed.lastResultId) || null
@@ -905,8 +927,6 @@ function parseStoredSave(raw) {
       "battleDropRateBonus",
       "cardProgress",
       "cardLevels",
-      "autoSalvage",
-      "autoDelete",
       "unlocked",
       "unlockedCards",
       "mutations",
@@ -997,10 +1017,10 @@ function calculateCardReward(chance) {
 
 function formatCurrency(value) {
   const amount = Math.max(0, Math.floor(value));
-  if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, "")}B VNĐ`;
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M VNĐ`;
-  if (amount >= 1_000) return `${(amount / 1_000).toFixed(1).replace(/\.0$/, "")}K VNĐ`;
-  return `${amount.toLocaleString("vi-VN")} VNĐ`;
+  if (amount >= 1_000_000_000) return `💵 ${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, "")}B`;
+  if (amount >= 1_000_000) return `💵 ${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (amount >= 1_000) return `💵 ${(amount / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  return `💵 ${amount.toLocaleString("vi-VN")}`;
 }
 
 function formatCooldown(ms) {
@@ -1528,42 +1548,42 @@ function rollCard(source = "manual") {
       const display = getDisplayCard(result.card, mutations);
       const variantKey = getVariantKey(result.card.id, mutations);
       const cardId = normalizeCardId(result.card.id);
-      const rollExp = calculateCardRollExperience(result.card, mutations);
+      const ownedBeforeRoll = getOwnedCardCount(cardId) > 0;
+      const levelInfoBeforeRoll = getCardLevelInfo(result.card);
+      const duplicateXp = ownedBeforeRoll
+        ? getDuplicateCardRollExperience(result.card)
+        : 0;
+      const rollExp = ownedBeforeRoll
+        ? duplicateXp
+        : calculateCardRollExperience(result.card, mutations);
       const levelResult = grantCardExperience(cardId, rollExp);
-      const autoSalvaged = shouldAutoSalvageCard(result.card, mutations);
+      window.PassiveSystem?.onRoll?.({ card: result.card, result, mutations, source, duplicate: ownedBeforeRoll, xpAward: rollExp });
 
       state.lastResultId = cardId;
-
-      if (autoSalvaged) {
-        const salvageValue = getSalvageValue(result.card, mutations);
-        state.currency = Math.max(0, Number(state.currency) || 0) + salvageValue;
-        showResult(result.card, result.effectiveChance, mutations);
-        showRewardToast(salvageValue, mutations);
-        if (els.rewardToast) {
-          els.rewardToast.textContent = `🗑 AUTO-SALVAGED • +${formatCurrency(salvageValue)} • +${levelResult.gained} EXP`;
-        }
+      state.unlocked[cardId] = getUnlockedCountById(cardId) + 1;
+      state.mutations[variantKey] = (state.mutations[variantKey] || 0) + 1;
+      const inventoryEntry = state.inventory[variantKey];
+      if (inventoryEntry) {
+        inventoryEntry.count = Math.max(0, Math.floor(Number(inventoryEntry.count) || 0)) + 1;
       } else {
-        state.unlocked[cardId] = getUnlockedCountById(cardId) + 1;
-        state.mutations[variantKey] = (state.mutations[variantKey] || 0) + 1;
-        const inventoryEntry = state.inventory[variantKey];
-        if (inventoryEntry) {
-          inventoryEntry.count = Math.max(0, Math.floor(Number(inventoryEntry.count) || 0)) + 1;
-        } else {
-          const mutationIds = mutations.map(mutation => normalizeMutationId(mutation.id));
-          state.inventory[variantKey] = {
-            id: cardId,
-            cardId,
-            mutation: mutationIds.join("+"),
-            mutationIds,
-            count: 1
-          };
-        }
-        showResult(result.card, result.effectiveChance, mutations);
-        showRewardToast(0, mutations);
-        if (els.rewardToast) {
-          const mutationText = normalizeMutationObjects(mutations).map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ");
-          els.rewardToast.textContent = `${mutationText ? `✦ ${mutationText} • ` : ""}CARD ACQUIRED • +${levelResult.gained} EXP`;
-        }
+        const mutationIds = mutations.map(mutation => normalizeMutationId(mutation.id));
+        state.inventory[variantKey] = {
+          id: cardId,
+          cardId,
+          mutation: mutationIds.join("+"),
+          mutationIds,
+          count: 1
+        };
+      }
+
+      showResult(result.card, result.effectiveChance, mutations);
+      showRewardToast(0, mutations);
+      if (els.rewardToast) {
+        const mutationText = normalizeMutationObjects(mutations).map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ");
+        const xpLabel = ownedBeforeRoll
+          ? `DUPLICATE • +${rollExp.toLocaleString("en-US")} XP (50% of Lv.${levelInfoBeforeRoll.level} requirement)`
+          : `CARD ACQUIRED • +${levelResult.gained.toLocaleString("en-US")} EXP`;
+        els.rewardToast.textContent = `${mutationText ? `✦ ${mutationText} • ` : ""}${xpLabel}`;
       }
     } else {
       state.lastResultId = null;
@@ -1636,11 +1656,24 @@ function showRewardToast(reward, mutations = []) {
   const prefix = safeMutations.length
     ? `✦ ${safeMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")} • `
     : "";
-  els.rewardToast.textContent = `${prefix}+${formatCurrency(reward)}`;
+  els.rewardToast.textContent = `${prefix}${formatCurrency(reward)}`;
   els.rewardToast.classList.remove("show");
   void els.rewardToast.offsetWidth;
   els.rewardToast.classList.add("show");
   toastTimer = window.setTimeout(() => els.rewardToast.classList.remove("show"), 1500);
+}
+
+function showCurrencyToast(amount, message = "") {
+  if (!els.rewardToast) return;
+  clearTimeout(toastTimer);
+  const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
+  els.rewardToast.textContent = message
+    ? `${message} • ${formatCurrency(safeAmount)}`
+    : `${formatCurrency(safeAmount)}`;
+  els.rewardToast.classList.remove("show");
+  void els.rewardToast.offsetWidth;
+  els.rewardToast.classList.add("show");
+  toastTimer = window.setTimeout(() => els.rewardToast.classList.remove("show"), 1800);
 }
 
 function setArtwork(img, fallback, backdrop, src, alt) {
@@ -2062,6 +2095,10 @@ function renderCollection() {
 
       const meta = document.createElement("div");
       meta.className = "collection-mini__meta";
+      const passiveMini = document.createElement("div");
+      passiveMini.className = "collection-passive-mini";
+      passiveMini.textContent = String(card?.passive?.name || "Passive");
+      passiveMini.title = String(card?.passive?.description || "");
       const rate = document.createElement("span");
       rate.className = "collection-mini__rate";
       rate.textContent = `1 in ${chance.toLocaleString("en-US")}`;
@@ -2137,7 +2174,7 @@ function renderCollection() {
       expTrack.appendChild(expFill);
       levelWrap.append(levelLabel, expText, expTrack);
 
-      body.append(titleRow, meta, badgeList, levelWrap);
+      body.append(titleRow, meta, passiveMini, badgeList, levelWrap);
       art.append(img, fallback, lock);
       item.append(art, body);
 
@@ -2217,8 +2254,9 @@ function salvageVariantCopies(cardId, variantKey, copies = 1) {
   const cashPerCopy = getSalvageValue(card, entry.mutations);
   const actualRemoved = decrementOwnershipVariant(card.id, entry.key, removed);
   const cash = Math.max(0, cashPerCopy * actualRemoved);
-  state.currency = Math.max(0, Number(state.currency) || 0) + cash;
-  return { removed: actualRemoved, cash };
+  const scaledCash = getScaledCoinReward(cash);
+  state.currency = Math.max(0, Number(state.currency) || 0) + scaledCash;
+  return { removed: actualRemoved, cash: scaledCash, baseCash: cash };
 }
 
 function salvageExtraDuplicates(cardId) {
@@ -2238,41 +2276,39 @@ function salvageExtraDuplicates(cardId) {
   return { removed, cash };
 }
 
-function renderAutoSalvageSettings() {
-  if (els.autoSalvageEnabled) els.autoSalvageEnabled.checked = Boolean(state.autoSalvage?.enabled);
-  if (els.autoSalvageRarity) els.autoSalvageRarity.value = String(state.autoSalvage?.rarityThreshold || "off");
-  if (!els.autoSalvageMutationOptions) return;
-
-  els.autoSalvageMutationOptions.innerHTML = "";
-  const options = [{ id: "normal", name: "Normal / No Mutation" }];
-  if (Array.isArray(MUTATIONS)) {
-    MUTATIONS.forEach(mutation => {
-      const id = normalizeMutationId(mutation?.id);
-      if (id && !options.some(option => option.id === id)) options.push({ id, name: String(mutation?.name || id) });
-    });
-  }
-
-  options.forEach(option => {
-    const label = document.createElement("label");
-    label.className = "auto-salvage-option";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = Boolean(state.autoSalvage?.mutations?.[option.id]);
-    input.dataset.autoSalvageMutation = option.id;
-    input.addEventListener("change", () => {
-      state.autoSalvage.mutations[option.id] = input.checked;
-      saveState();
-    });
-    const text = document.createElement("span");
-    text.textContent = option.name;
-    label.append(input, text);
-    els.autoSalvageMutationOptions.appendChild(label);
-  });
+function getVariantRetentionScore(card, entry) {
+  if (!card || !entry) return 0;
+  const display = getBattleVariantDisplay(card, entry);
+  const rank = getVariantRank(entry);
+  const salvage = getSalvageValue(card, entry.mutations);
+  const stats = (Number(display?.hp) || 0) + ((Number(display?.atk) || 0) * 2);
+  return (rank * 1_000_000_000) + (salvage * 10_000) + stats;
 }
 
-function openAutoSalvageSettings() {
-  renderAutoSalvageSettings();
-  openModal("autoSalvageModal");
+function salvageAllExtraDuplicates() {
+  let removed = 0;
+  let cash = 0;
+
+  for (const card of ALL_CARDS) {
+    const variants = getVariantEntries(card.id);
+    if (!variants.length) continue;
+
+    const keeper = [...variants].sort((a, b) =>
+      getVariantRetentionScore(card, b) - getVariantRetentionScore(card, a) ||
+      a.key.localeCompare(b.key)
+    )[0];
+
+    for (const entry of variants) {
+      const keepCount = entry.key === keeper.key ? 1 : 0;
+      const extras = Math.max(0, entry.count - keepCount);
+      if (!extras) continue;
+      const result = salvageVariantCopies(card.id, entry.key, extras);
+      removed += result.removed;
+      cash += result.cash;
+    }
+  }
+
+  return { removed, cash };
 }
 
 function getPreviewVariant() {
@@ -2288,7 +2324,7 @@ function handlePreviewSalvage() {
   saveState();
   updateStats();
   renderCollection();
-  showRewardToast(result.cash);
+  showCurrencyToast(result.cash, "Card salvaged");
   const remaining = getPreviewVariants(previewSelection.cardId);
   if (!remaining.length) {
     closeModal("cardPreviewModal");
@@ -2305,7 +2341,7 @@ function handlePreviewSalvageExtras() {
   saveState();
   updateStats();
   renderCollection();
-  showRewardToast(result.cash);
+  showCurrencyToast(result.cash, "Extra duplicates salvaged");
   const remaining = getPreviewVariants(previewSelection.cardId);
   if (!remaining.length) {
     closeModal("cardPreviewModal");
@@ -2428,6 +2464,33 @@ function closeVariantMenu() {
 // STATS + UPGRADES
 // ============================================================
 
+function getExpMultiplier() {
+  const level = Math.max(0, Math.floor(Number(state?.upgrades?.expMulti) || 0));
+  return 1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE);
+}
+
+function getCoinMultiplier() {
+  const level = Math.max(0, Math.floor(Number(state?.upgrades?.coinMulti) || 0));
+  return 1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE);
+}
+
+function getProgressionUpgradeCost(type, level) {
+  const safeLevel = Math.max(0, Math.floor(Number(level) || 0));
+  if (type === "expMulti") return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(EXP_MULTI_BASE_COST * Math.pow(EXP_MULTI_COST_FACTOR, safeLevel)));
+  if (type === "coinMulti") return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(COIN_MULTI_BASE_COST * Math.pow(COIN_MULTI_COST_FACTOR, safeLevel)));
+  return 0;
+}
+
+function getScaledCoinReward(baseValue) {
+  const base = Math.max(0, Math.floor(Number(baseValue) || 0));
+  return Math.max(0, Math.floor(base * getCoinMultiplier()));
+}
+
+function getScaledExpReward(baseValue) {
+  const base = Math.max(0, Math.floor(Number(baseValue) || 0));
+  return Math.max(0, Math.floor(base * getExpMultiplier()));
+}
+
 function updateStats() {
   const unique = getUniqueCount();
   if (els.totalRolls) els.totalRolls.textContent = state.totalRolls.toLocaleString("en-US");
@@ -2441,34 +2504,86 @@ function updateStats() {
 function renderUpgradeShop() {
   const speedLevel = state.upgrades.rollSpeed;
   const luckLevel = state.upgrades.luck;
+  const expLevel = state.upgrades.expMulti;
+  const coinLevel = state.upgrades.coinMulti;
   const speedMaxed = speedLevel >= SPEED_MAX_LEVEL;
   const luckMaxed = luckLevel >= LUCK_MAX_LEVEL;
+  const expMaxed = expLevel >= EXP_MULTI_MAX_LEVEL;
+  const coinMaxed = coinLevel >= COIN_MULTI_MAX_LEVEL;
   const speedCost = getUpgradeCost(SPEED_BASE_COST, speedLevel);
   const luckCost = getUpgradeCost(LUCK_BASE_COST, luckLevel);
+  const expCost = getProgressionUpgradeCost("expMulti", expLevel);
+  const coinCost = getProgressionUpgradeCost("coinMulti", coinLevel);
 
-  if (els.shopCurrency) els.shopCurrency.textContent = formatCurrency(state.currency);
+  if (els.shopCurrency) els.shopCurrency.textContent = `${formatCurrency(state.currency)}`;
   if (els.speedLevel) els.speedLevel.textContent = `Lv. ${speedLevel}/${SPEED_MAX_LEVEL}`;
   if (els.speedCurrent) els.speedCurrent.textContent = speedMaxed ? "MAX" : formatCooldown(getCooldownMs());
   if (els.luckLevel) els.luckLevel.textContent = `Lv. ${luckLevel}/${LUCK_MAX_LEVEL}`;
   if (els.luckCurrent) els.luckCurrent.textContent = `${getLuckMultiplier().toFixed(2)}x`;
+  if (els.expMultiLevel) els.expMultiLevel.textContent = `Lv. ${expLevel}/${EXP_MULTI_MAX_LEVEL}`;
+  if (els.expMultiCurrent) els.expMultiCurrent.textContent = `${getExpMultiplier().toFixed(2)}x EXP`;
+  if (els.coinMultiLevel) els.coinMultiLevel.textContent = `Lv. ${coinLevel}/${COIN_MULTI_MAX_LEVEL}`;
+  if (els.coinMultiCurrent) els.coinMultiCurrent.textContent = `${getCoinMultiplier().toFixed(2)}x 💵`;
 
   configureBuyButton(els.buySpeedButton, speedMaxed, speedCost, "roll speed");
   configureBuyButton(els.buyLuckButton, luckMaxed, luckCost, "luck");
+  configureBuyButton(els.buyExpMultiButton, expMaxed, expCost, "EXP multiplier");
+  configureBuyButton(els.buyCoinMultiButton, coinMaxed, coinCost, "💵 multiplier");
 }
 
 function configureBuyButton(button, isMaxed, cost, label) {
   if (!button) return;
+  const card = button.closest('.upgrade-card');
+  const unaffordable = !isMaxed && Number(state.currency) < Number(cost);
   if (isMaxed) {
     button.textContent = "MAX LEVEL";
+    button.dataset.upgradeType = button === els.buyExpMultiButton ? "EXP_MULTI" : button === els.buyCoinMultiButton ? "COIN_MULTI" : "";
     button.disabled = true;
+    button.classList.remove('disabled-upgrade');
+    button.setAttribute('aria-disabled', 'true');
+    button.setAttribute('tabindex', '-1');
+    card?.classList.remove('unaffordable');
+    card?.classList.add('upgrade-maxed');
     return;
   }
   button.textContent = `Upgrade ${label} • ${formatCurrency(cost)}`;
-  button.disabled = state.currency < cost;
+  button.dataset.upgradeType = button === els.buyExpMultiButton ? "EXP_MULTI" : button === els.buyCoinMultiButton ? "COIN_MULTI" : "";
+  button.disabled = unaffordable;
+  button.classList.toggle('disabled-upgrade', unaffordable);
+  button.setAttribute('aria-disabled', String(unaffordable));
+  button.setAttribute('tabindex', unaffordable ? '-1' : '0');
+  card?.classList.toggle('unaffordable', unaffordable);
+  card?.classList.remove('upgrade-maxed');
+}
+
+function upgrade(type) {
+  const normalized = String(type || "").toUpperCase();
+  if (normalized === "EXP_MULTI") return purchaseUpgrade("expMulti");
+  if (normalized === "COIN_MULTI") return purchaseUpgrade("coinMulti");
+  if (normalized === "ROLL_SPEED") return purchaseUpgrade("rollSpeed");
+  if (normalized === "LUCK") return purchaseUpgrade("luck");
+  return false;
 }
 
 function purchaseUpgrade(type) {
-  if (!(type in state.upgrades)) return;
+  const supported = ["rollSpeed", "luck", "expMulti", "coinMulti"];
+  if (!supported.includes(type)) return;
+
+  if (type === "expMulti" || type === "coinMulti") {
+    const maxLevel = type === "expMulti" ? EXP_MULTI_MAX_LEVEL : COIN_MULTI_MAX_LEVEL;
+    const level = Math.max(0, Math.floor(Number(state.upgrades[type]) || 0));
+    if (level >= maxLevel) return;
+
+    const cost = getProgressionUpgradeCost(type, level);
+    if (state.currency < cost) return;
+
+    state.currency -= cost;
+    state.upgrades[type] = level + 1;
+    saveState();
+    updateStats();
+    renderUpgradeShop();
+    return;
+  }
 
   const isSpeed = type === "rollSpeed";
   const level = state.upgrades[type];
@@ -2498,7 +2613,6 @@ const BATTLE_BASE_CASH_1V1 = 300;
 const BATTLE_TURN_MS = 3000;
 const BATTLE_TEAM_SIZE = 4;
 const BATTLE_ENEMY_MUTATION_CHANCE = 0.70;
-const BATTLE_DEFEAT_LOSS_CHANCE = 0.25;
 const BATTLE_1V1_MIN_SCALE = 0.78;
 const BATTLE_1V1_MAX_SCALE = 1.32;
 const BATTLE_1V1_TARGET_RATIO_MIN = 0.92;
@@ -2557,16 +2671,42 @@ function getBattleModeLabel() {
 
 let battleState = null;
 let battleTurnTimer = null;
+const battleAnimationTimers = new Set();
 // Do not persist this encounter hint: it only prevents immediate same-opponent
 // repetition while preserving fresh random selection every new battle.
 let lastBattleOpponentCardId = null;
 let lastBattleOpponentTeamSignature = '';
+let lastBattleOutcome = null;
 
 function clearBattleTurnTimer() {
   if (battleTurnTimer !== null) {
     window.clearTimeout(battleTurnTimer);
     battleTurnTimer = null;
   }
+}
+
+function clearBattleAnimationTimers() {
+  for (const timerId of battleAnimationTimers) {
+    try {
+      window.clearTimeout(timerId);
+    } catch (error) {
+      console.warn('Battle animation timer cleanup failed safely:', error);
+    }
+  }
+  battleAnimationTimers.clear();
+}
+
+function scheduleBattleAnimation(callback, delay) {
+  const timerId = window.setTimeout(() => {
+    battleAnimationTimers.delete(timerId);
+    try {
+      callback();
+    } catch (error) {
+      console.warn('Battle animation callback failed safely:', error);
+    }
+  }, Math.max(0, Number(delay) || 0));
+  battleAnimationTimers.add(timerId);
+  return timerId;
 }
 
 function getUnlockedBattleCards() {
@@ -2687,11 +2827,43 @@ function renderBattleTeamSlots() {
   if (els.battleTeamCount) els.battleTeamCount.textContent = `${team.length}/${getBattleTeamSize()}`;
 }
 
+function getBattleCardRarityValue(card) {
+  const rarity = String(card?.rarity || 'Common');
+  const rarityScore = Number(rarityOrder[rarity] || 0);
+  const salvageValue = getSalvageValue(card, []);
+  const chanceValue = Number(card?.chance) || 0;
+  return rarityScore * 1_000_000 + salvageValue * 100 + chanceValue;
+}
+
+function getFilteredSortedBattleCards() {
+  const query = String(els.cardSearchInput?.value || '').trim().toLowerCase();
+  const sortMode = String(els.cardSortSelect?.value || 'atk');
+  const cards = [...getUnlockedBattleCards()].filter(card => {
+    const name = String(card?.name || '').toLowerCase();
+    return !query || name.includes(query);
+  });
+
+  cards.sort((a, b) => {
+    if (sortMode === 'hp') {
+      return (Number(b?.stats?.hp) || 0) - (Number(a?.stats?.hp) || 0) || String(a?.name || '').localeCompare(String(b?.name || ''));
+    }
+    if (sortMode === 'name') {
+      return String(a?.name || '').localeCompare(String(b?.name || ''));
+    }
+    if (sortMode === 'rarity') {
+      return getBattleCardRarityValue(b) - getBattleCardRarityValue(a) || String(a?.name || '').localeCompare(String(b?.name || ''));
+    }
+    return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0) || String(a?.name || '').localeCompare(String(b?.name || ''));
+  });
+
+  return cards;
+}
+
 function populateBattleFighterSelect() {
   const grid = els.battleFighterGrid;
   if (!grid) return;
 
-  const unlocked = getUnlockedBattleCards();
+  const unlocked = getFilteredSortedBattleCards();
   const previousTeam = Array.isArray(battleState?.setup?.team) ? battleState.setup.team.map(slot => ({ ...slot })) : [];
   const previousActive = Number(battleState?.setup?.activeIndex || 0);
   const previousMode = battleState?.mode === '1v1' ? '1v1' : '4v4';
@@ -2704,7 +2876,8 @@ function populateBattleFighterSelect() {
   };
 
   if (!unlocked.length) {
-    grid.innerHTML = '<div class="battle-empty-selection">Roll at least one card to enter the arena.</div>';
+    const hasAnyUnlocked = getUnlockedBattleCards().length > 0;
+    grid.innerHTML = `<div class="battle-empty-selection">${hasAnyUnlocked ? 'No unlocked cards match your search.' : 'Roll at least one card to enter the arena.'}</div>`;
     if (els.battleStartButton) els.battleStartButton.disabled = true;
     if (els.battleVariantGrid) els.battleVariantGrid.innerHTML = '';
     renderBattleSelection();
@@ -2863,10 +3036,14 @@ function renderBattleSelectionPreview() {
   name.textContent = `SLOT ${activeIndex + 1}: ${display.name}`;
   const stats = document.createElement('span');
   stats.textContent = `HP ${display.hp.toLocaleString('en-US')} • ATK ${display.atk.toLocaleString('en-US')} • ${entry.count} owned`;
+  const passive = document.createElement('span');
+  passive.className = 'collection-passive-mini';
+  passive.textContent = String(card?.passive?.name || 'Passive');
+  passive.title = String(card?.passive?.description || '');
   const badgeWrap = document.createElement('div');
   badgeWrap.className = 'battle-selection-preview__badges';
   renderMutationBadges(badgeWrap, entry.mutations);
-  info.append(name, stats, badgeWrap);
+  info.append(name, stats, passive, badgeWrap);
   preview.append(media, info);
 
   if (els.battleStartButton) els.battleStartButton.disabled = !isBattleSetupValid();
@@ -2897,7 +3074,9 @@ function setBattleMode(mode) {
 
 function resetBattleView(mode = '4v4') {
   clearBattleTurnTimer();
-  battleState = { mode: mode === '1v1' ? '1v1' : '4v4', setup: { team: [], activeIndex: 0 } };
+  clearBattleAnimationTimers();
+  battleState = { mode: mode === '1v1' ? '1v1' : '4v4', setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
+  setBattleModalLock(false);
   els.battleSetup?.classList.remove('hidden');
   els.battleArena?.classList.add('hidden');
   els.battleVictory?.classList.add('hidden');
@@ -2917,9 +3096,18 @@ function appendBattleLog(message, tone = '') {
   if (!els.battleLog) return;
   const line = document.createElement('div');
   line.className = `battle-log__line ${tone ? `is-${tone}` : ''}`;
-  line.textContent = message;
+  line.textContent = String(message);
   els.battleLog.appendChild(line);
-  els.battleLog.scrollTop = els.battleLog.scrollHeight;
+
+  // Keep long auto-combat sessions bounded while always revealing the newest event.
+  const MAX_BATTLE_LOG_LINES = 260;
+  while (els.battleLog.children.length > MAX_BATTLE_LOG_LINES) {
+    els.battleLog.removeChild(els.battleLog.firstElementChild);
+  }
+  requestAnimationFrame(() => {
+    if (!els.battleLog) return;
+    els.battleLog.scrollTop = els.battleLog.scrollHeight;
+  });
 }
 
 function rollEnemyMutations() {
@@ -3105,39 +3293,64 @@ function calculateBattleTeamPower(team) {
   return team.reduce((total, unit) => total + calculateBattleUnitPower(unit), 0);
 }
 
+function getBattleEnemySalvageBase() {
+  const enemyTeam = Array.isArray(battleState?.enemyTeam) ? battleState.enemyTeam.filter(unit => unit && !unit.isClone) : [];
+  if (!enemyTeam.length) return 0;
+  return Math.max(0, enemyTeam.reduce((total, unit) => {
+    return total + getSalvageValue(unit?.card, unit?.mutations || []);
+  }, 0));
+}
+
 function getBattleRewardProfile(playerPower, enemyPower) {
   const mode = getBattleMode();
-  const safePlayerPower = Math.max(1, Number(playerPower) || 0);
+  const safePlayerPower = Math.max(1, Number(playerPower) || 1);
   const safeEnemyPower = Math.max(0, Number(enemyPower) || 0);
-  const rawRatio = safeEnemyPower / safePlayerPower;
+  const durationSeconds = Math.max(0, (Date.now() - Number(battleState?.startedAt || Date.now())) / 1000);
+  const timeMultiplier = 1 + Math.min(durationSeconds * 0.02, 0.5);
+  const playerLevel = Math.max(1, Number(battleState?.initialPlayerLevel || battleState?.playerTeam?.[0]?.level || 1));
+  const enemyLevel = Math.max(1, Number(battleState?.initialEnemyLevel || battleState?.enemyTeam?.[0]?.level || 1));
+  const levelDiffMultiplier = Math.max(0.5, Math.min(1.5, enemyLevel / playerLevel));
+  const baseValue = getBattleEnemySalvageBase();
+  const rawCoins = baseValue * timeMultiplier * levelDiffMultiplier;
+  const baseFinalCoins = Math.max(0, Math.floor(rawCoins));
+  const reward = getScaledCoinReward(baseFinalCoins);
+  const timeBonusPercent = Math.round((timeMultiplier - 1) * 100);
 
-  if (mode === '1v1') {
-    const ratio = Math.max(0.90, Math.min(1.15, rawRatio));
-    const multiplier = Math.max(0.90, Math.min(1.25, 1 + (ratio - 1) * 1.25));
-    const reward = Math.max(0, Math.floor(BATTLE_BASE_CASH_1V1 * multiplier));
-    const experience = Math.max(0, Math.floor(BATTLE_BASE_XP_1V1 * multiplier));
-    const dropRateBonus = Number((0.35 + Math.max(0, multiplier - 0.90) * 1.25).toFixed(2));
-    return { mode, ratio, multiplier, reward, experience, dropRateBonus, label: 'Adaptive 1v1' };
-  }
+  const baseExperience = Math.max(1, Math.floor(100 * Math.min(1.5, timeMultiplier)));
+  const experience = getScaledExpReward(baseExperience);
+  const dropRateBonus = Number(Math.min(5, 0.5 + timeBonusPercent * 0.02).toFixed(2));
 
-  let multiplier = 1.20;
-  let label = 'Balanced 4v4';
-  if (rawRatio < 0.80) {
-    multiplier = 0.75;
-    label = 'Weak Match';
-  } else if (rawRatio <= 1.25) {
-    multiplier = 1.20;
-    label = 'Balanced 4v4';
-  } else {
-    multiplier = Math.min(3.00, 1.65 + ((rawRatio - 1.25) / 0.75) * 1.35);
-    label = 'Hard 4v4 Bonus';
-  }
-
-  const reward = Math.max(0, Math.floor(BATTLE_BASE_CASH_4V4 * multiplier));
-  const experience = Math.max(0, Math.floor(BATTLE_BASE_XP_4V4 * multiplier));
-  const dropRateBonus = Number(Math.min(5, 2 + Math.max(0, multiplier - 0.75) * 2.2).toFixed(2));
-  return { mode, ratio: rawRatio, multiplier, reward, experience, dropRateBonus, label };
+  return {
+    mode,
+    reward,
+    experience,
+    dropRateBonus,
+    baseValue,
+    durationSeconds,
+    timeMultiplier,
+    timeBonusPercent,
+    playerLevel,
+    enemyLevel,
+    levelDiffMultiplier,
+    rawCoins,
+    multiplier: timeMultiplier * levelDiffMultiplier,
+    label: `${mode.toUpperCase()} scaled reward`
+  };
 }
+
+function showBattleFloatingText(unit, text, tone = 'damage', duration = 1150) {
+  if (!unit || !battleState) return;
+  const side = battleState.playerTeam?.includes(unit) ? 'player' : battleState.enemyTeam?.includes(unit) ? 'enemy' : null;
+  if (!side) return;
+  const container = side === 'player' ? els.battlePlayerFloatingText : els.battleEnemyFloatingText;
+  if (!container) return;
+  const item = document.createElement('span');
+  item.className = `battle-floating-text__item is-${String(tone).replace(/[^a-z0-9_-]/gi, '')}`;
+  item.textContent = String(text || '');
+  container.appendChild(item);
+  window.setTimeout(() => item.remove(), Math.max(300, Number(duration) || 1150));
+}
+
 function renderBattleCombatant(side, unit) {
   const prefix = side === 'player' ? 'battlePlayer' : 'battleEnemy';
   const cardEl = side === 'player' ? els.battlePlayerCard : els.battleEnemyCard;
@@ -3145,7 +3358,8 @@ function renderBattleCombatant(side, unit) {
   const fallback = side === 'player' ? els.battlePlayerFallback : els.battleEnemyFallback;
   const backdrop = side === 'player' ? els.battlePlayerBackdrop : els.battleEnemyBackdrop;
   const mutationBadges = side === 'player' ? els.battlePlayerMutationBadges : els.battleEnemyMutationBadges;
-  const ratio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
+  const passiveStatus = side === 'player' ? els.battlePlayerPassiveStatus : els.battleEnemyPassiveStatus;
+  const ratio = Math.max(0, Math.min(1, Number(unit?.maxHp) > 0 ? (Number(unit?.hp) || 0) / Number(unit.maxHp) : 0));
 
   const nameEl = els[prefix + 'Name'];
   const hpEl = els[prefix + 'Hp'];
@@ -3154,22 +3368,158 @@ function renderBattleCombatant(side, unit) {
   const levelEl = els[prefix + 'Level'];
   const expTextEl = els[prefix + 'ExpText'];
   const expBarEl = els[prefix + 'ExpBar'];
-  const playerLevelInfo = getCardLevelInfo(unit.card);
-  const displayLevel = side === 'enemy' ? clampBattleEnemyLevel(unit.level) : playerLevelInfo.level;
-  const displayExp = side === 'enemy' ? 0 : playerLevelInfo.exp;
-  const displayRequired = side === 'enemy' ? getCardLevelExpRequired(unit.card, displayLevel) : playerLevelInfo.required;
-  const displayProgress = side === 'enemy' ? 0 : playerLevelInfo.progress;
 
-  if (nameEl) nameEl.textContent = side === 'enemy' ? `[Lv. ${displayLevel}] ${unit.display.name}` : unit.display.name;
-  if (hpEl) hpEl.textContent = `${Math.max(0, unit.hp).toLocaleString('en-US')} / ${unit.maxHp.toLocaleString('en-US')}`;
+  const levelInfo = side === 'enemy'
+    ? {
+        level: clampBattleEnemyLevel(unit?.level),
+        exp: 0,
+        required: getCardLevelExpRequired(unit?.card, unit?.level || 1),
+        progress: 0
+      }
+    : getCardLevelInfo(unit?.card);
+
+  if (nameEl) {
+    const baseName = String(unit?.display?.name || unit?.card?.name || 'Unknown Card');
+    nameEl.textContent = side === 'enemy'
+      ? `[Lv. ${levelInfo.level}] ${baseName}`
+      : baseName;
+  }
+
+  if (hpEl) {
+    hpEl.textContent = `${Math.max(0, Number(unit?.hp) || 0).toLocaleString('en-US')} / ${Math.max(1, Number(unit?.maxHp) || 1).toLocaleString('en-US')}`;
+  }
   if (hpBar) hpBar.style.width = `${ratio * 100}%`;
-  if (atkEl) atkEl.textContent = unit.atk.toLocaleString('en-US');
-  if (levelEl) levelEl.textContent = `Lv. ${displayLevel}`;
-  if (expTextEl) expTextEl.textContent = side === 'enemy' ? `NPC • ${displayRequired.toLocaleString('en-US')} EXP base` : `${displayExp}/${displayRequired} EXP`;
-  if (expBarEl) expBarEl.style.width = `${Math.round(displayProgress * 100)}%`;
-  renderMutationBadges(mutationBadges, unit.mutations);
-  applyCardMutationVisual(cardEl, unit.mutations);
-  setArtwork(image, fallback, backdrop, unit.card.image, `${unit.display.name} artwork`);
+  if (atkEl) atkEl.textContent = Math.max(0, Number(unit?.atk) || 0).toLocaleString('en-US');
+  if (levelEl) levelEl.textContent = `Lv. ${levelInfo.level}`;
+  if (expTextEl) expTextEl.textContent = side === 'enemy'
+    ? `NPC • ${levelInfo.required.toLocaleString('en-US')} EXP base`
+    : `${levelInfo.exp}/${levelInfo.required} EXP`;
+  if (expBarEl) expBarEl.style.width = `${Math.round((levelInfo.progress || 0) * 100)}%`;
+
+  renderMutationBadges(mutationBadges, unit?.mutations);
+  applyCardMutationVisual(cardEl, unit?.mutations);
+
+  const passive = window.PassiveSystem?.getPassiveDescription?.(unit) || {
+    name: String(unit?.card?.passive?.name || 'Passive'),
+    description: String(unit?.card?.passive?.description || '')
+  };
+  const passiveTooltip = window.PassiveSystem?.getPassiveTooltipData?.(unit) || {
+    name: passive.name,
+    description: passive.description,
+    status: unit?.passiveState?.lastPassiveTrigger ? `Triggered: ${unit.passiveState.lastPassiveTrigger}` : 'Active'
+  };
+  const statuses = window.PassiveSystem?.getPassiveStatusBadges?.(unit) || [];
+
+  if (passiveStatus) {
+    passiveStatus.innerHTML = '';
+
+    // Primary passive tag is always present, even when runtime statuses are active.
+    const baseBadge = document.createElement('span');
+    baseBadge.className = 'passive-status-badge passive-status-badge--passive passive-skill-tag';
+    baseBadge.tabIndex = 0;
+    baseBadge.dataset.passiveTooltip = 'true';
+    baseBadge.dataset.passiveTooltipName = passiveTooltip.name;
+    baseBadge.dataset.passiveTooltipDescription = passiveTooltip.description;
+    baseBadge.dataset.passiveTooltipStatus = passiveTooltip.status;
+    const baseIcon = document.createElement('span');
+    baseIcon.className = 'passive-status-badge__icon';
+    baseIcon.textContent = '◇';
+    const baseLabel = document.createElement('span');
+    baseLabel.className = 'passive-status-badge__label';
+    baseLabel.textContent = passiveTooltip.name;
+    baseBadge.append(baseIcon, baseLabel);
+    passiveStatus.appendChild(baseBadge);
+
+    statuses.forEach(status => {
+      const badge = document.createElement('span');
+      badge.className = `passive-status-badge passive-status-badge--${String(status?.tone || 'passive').replace(/[^a-z0-9_-]/gi, '')}`;
+      const icon = document.createElement('span');
+      icon.className = 'passive-status-badge__icon';
+      icon.textContent = String(status?.icon || '✦');
+      const label = document.createElement('span');
+      label.className = 'passive-status-badge__label';
+      label.textContent = String(status?.label || passive.name);
+      badge.append(icon, label);
+      badge.tabIndex = 0;
+      badge.dataset.passiveTooltip = 'true';
+      badge.dataset.passiveTooltipName = passiveTooltip.name;
+      badge.dataset.passiveTooltipDescription = passiveTooltip.description;
+      badge.dataset.passiveTooltipStatus = String(status?.status || (status?.category === 'status' ? 'Active' : passiveTooltip.status));
+      passiveStatus.appendChild(badge);
+    });
+  }
+
+  renderBattleCombatModifiers(side, unit);
+
+  if (cardEl) {
+    const hasRuntimeActivity = statuses.length > 0;
+    cardEl.classList.toggle('has-passive-activity', hasRuntimeActivity);
+    cardEl.classList.toggle('passive-active', Boolean(unit?.passiveState?.lastPassiveTrigger));
+    const effectLabels = statuses.map(status => String(status?.label || '').toLowerCase());
+    cardEl.classList.toggle('battle-status-burn', effectLabels.some(label => label.includes('burn')));
+    cardEl.classList.toggle('battle-status-bleed', effectLabels.some(label => label.includes('bleed')));
+    cardEl.classList.toggle('battle-status-freeze', effectLabels.some(label => label.includes('freeze')));
+    cardEl.classList.toggle('battle-status-stun', effectLabels.some(label => label.includes('stun')));
+  }
+
+  setArtwork(
+    image,
+    fallback,
+    backdrop,
+    unit?.card?.image || FALLBACK_ART_DATA_URL,
+    `${unit?.display?.name || unit?.card?.name || 'Card'} artwork`
+  );
+}
+
+function renderBattleCombatModifiers(side, unit) {
+  const statusEl = side === 'player' ? els.battlePlayerCombatStatus : els.battleEnemyCombatStatus;
+  const effectsEl = side === 'player' ? els.battlePlayerStatusEffects : els.battleEnemyStatusEffects;
+  if (!statusEl || !effectsEl) return;
+
+  const summary = window.PassiveSystem?.getCombatStatusSummary?.(unit, battleState) || {
+    atkMultiplierPct: 0, hpPct: 100, currentHp: Math.max(0, Number(unit?.hp) || 0), maxHp: Math.max(1, Number(unit?.maxHp) || 1), dodgePct: 0, damageReductionPct: 0, shield: 0, shieldPct: 0, effects: []
+  };
+
+  statusEl.innerHTML = '';
+  const chipData = [
+    { icon: '⚔', label: `${summary.atkMultiplierPct >= 0 ? '+' : ''}${Math.round(summary.atkMultiplierPct)}% ATK`, tone: summary.atkMultiplierPct > 0 ? 'buff' : summary.atkMultiplierPct < 0 ? 'debuff' : 'neutral' },
+    { icon: '❤', label: `HP ${Math.round(summary.currentHp).toLocaleString('en-US')} / ${Math.round(summary.maxHp).toLocaleString('en-US')}`, tone: summary.hpPct < 100 ? 'debuff' : 'neutral' },
+    { icon: '◌', label: `${Math.round(summary.dodgePct)}% Dodge`, tone: summary.dodgePct > 0 ? 'dodge' : 'neutral' },
+    { icon: '⛨', label: `${Math.round(summary.damageReductionPct)}% DR`, tone: summary.damageReductionPct > 0 ? 'guard' : 'neutral' }
+  ];
+
+  chipData.forEach(item => {
+    const chip = document.createElement('span');
+    chip.className = `battle-combat-status__chip is-${item.tone}`;
+    chip.innerHTML = `<span class="battle-combat-status__icon">${item.icon}</span><span>${item.label}</span>`;
+    statusEl.appendChild(chip);
+  });
+
+  const shieldRow = document.createElement('div');
+  shieldRow.className = `battle-shield ${summary.shield > 0 ? 'has-shield' : ''}`;
+  const shieldMeta = document.createElement('div');
+  shieldMeta.className = 'battle-shield__meta';
+  const shieldLabel = document.createElement('span');
+  shieldLabel.textContent = '🛡 Shield';
+  const shieldValue = document.createElement('strong');
+  shieldValue.textContent = Math.round(summary.shield).toLocaleString('en-US');
+  shieldMeta.append(shieldLabel, shieldValue);
+  const shieldTrack = document.createElement('div');
+  shieldTrack.className = 'battle-shield__track';
+  const shieldFill = document.createElement('div');
+  shieldFill.className = 'battle-shield__fill';
+  shieldFill.style.width = `${Math.round(summary.shieldPct)}%`;
+  shieldTrack.appendChild(shieldFill);
+  shieldRow.append(shieldMeta, shieldTrack);
+  statusEl.appendChild(shieldRow);
+
+  effectsEl.innerHTML = '';
+  (summary.effects || []).forEach(effect => {
+    const badge = document.createElement('span');
+    badge.className = `battle-effect-badge battle-effect-badge--${String(effect.tone || 'neutral').replace(/[^a-z0-9_-]/gi, '')}`;
+    badge.textContent = `${effect.icon || '✦'} ${effect.label}`;
+    effectsEl.appendChild(badge);
+  });
 }
 
 function renderBattleLineup(side, team, activeIndex) {
@@ -3177,9 +3527,16 @@ function renderBattleLineup(side, team, activeIndex) {
   if (!container) return;
   container.innerHTML = '';
 
-  team.forEach((unit, index) => {
+  const orderedIndices = side === 'player'
+    ? team.map((_, index) => index).reverse()
+    : team.map((_, index) => index);
+
+  orderedIndices.forEach(index => {
+    const unit = team[index];
     const slot = document.createElement('div');
     slot.className = `battle-lineup-card ${index === activeIndex ? 'is-active' : ''} ${unit.defeated ? 'is-defeated' : ''}`;
+    slot.dataset.slotIndex = String(index + 1);
+    slot.setAttribute('aria-label', `${side === 'player' ? 'Player' : 'Enemy'} Slot ${index + 1}${index === activeIndex ? ' active' : ''}`);
     applyMutationStyleTokens(slot, unit.mutations);
 
     const media = document.createElement('div');
@@ -3233,8 +3590,8 @@ function animateBattleAttack(side) {
   void attacker.offsetWidth;
   void defender.offsetWidth;
   attacker.classList.add(side === 'player' ? 'battle-lunge-player' : 'battle-lunge-enemy');
-  window.setTimeout(() => defender.classList.add('battle-hit'), 170);
-  window.setTimeout(() => {
+  scheduleBattleAnimation(() => defender.classList.add('battle-hit'), 170);
+  scheduleBattleAnimation(() => {
     attacker.classList.remove('battle-lunge-player', 'battle-lunge-enemy');
     defender.classList.remove('battle-hit');
   }, 720);
@@ -3263,30 +3620,6 @@ function scheduleNextBattleTurn() {
   }, BATTLE_TURN_MS);
 }
 
-function deductBattleVariantCopy(unit) {
-  if (!unit) return false;
-  const cardId = unit.card.id;
-  const variantKey = unit.variantKey;
-  const currentVariantCount = Math.max(0, Math.floor(Number(state.mutations?.[variantKey] || 0)));
-  const inventoryEntry = state.inventory?.[variantKey];
-  const inventoryCount = Math.max(0, Math.floor(Number(inventoryEntry?.count) || 0));
-  if (currentVariantCount <= 0 && inventoryCount <= 0) return false;
-
-  if (currentVariantCount <= 1) delete state.mutations[variantKey];
-  else state.mutations[variantKey] = currentVariantCount - 1;
-
-  if (inventoryEntry) {
-    if (inventoryCount <= 1) delete state.inventory[variantKey];
-    else inventoryEntry.count = inventoryCount - 1;
-  }
-
-  const normalizedCardId = normalizeCardId(cardId);
-  const currentCardCount = getUnlockedCountById(normalizedCardId);
-  if (currentCardCount <= 1) delete state.unlocked[normalizedCardId];
-  else state.unlocked[normalizedCardId] = currentCardCount - 1;
-  return true;
-}
-
 function canReplayBattleTeam() {
   if (!battleState?.setup?.team || battleState.setup.team.length !== getBattleTeamSize()) return false;
   const usage = new Map();
@@ -3300,24 +3633,18 @@ function canReplayBattleTeam() {
   return true;
 }
 
-function applyBattleDefeatPenalty() {
-  const defeated = battleState?.playerTeam?.filter(unit => unit.defeated && Number(state.mutations?.[unit.variantKey] || 0) > 0) || [];
-  const lossRoll = Math.random() < BATTLE_DEFEAT_LOSS_CHANCE;
-
-  if (!lossRoll || !defeated.length) {
-    return { lost: false, reason: 'saved' };
-  }
-
-  const target = defeated[Math.floor(Math.random() * defeated.length)];
-  const lost = deductBattleVariantCopy(target);
-  return { lost, reason: lost ? 'lost' : 'saved', target };
+// Defeat never modifies the player's card collection. Battle loss is terminal-only.
+function getBattleDefeatNotice() {
+  return 'Defeated! No cards were lost. Your entire collection is preserved.';
 }
 
 function finishBattle(playerWon) {
   if (!battleState || battleState.finished) return;
 
   clearBattleTurnTimer();
+  clearBattleAnimationTimers();
   battleState.finished = true;
+  battleState.isBattling = false;
 
   const safePlayerPower = Number.isFinite(Number(battleState.playerPower)) ? Math.max(0, Number(battleState.playerPower)) : 0;
   const safeEnemyPower = Number.isFinite(Number(battleState.enemyPower)) ? Math.max(0, Number(battleState.enemyPower)) : 0;
@@ -3326,7 +3653,8 @@ function finishBattle(playerWon) {
 
   try {
     if (playerWon) {
-      const rewardProfile = getBattleRewardProfile(safePlayerPower, safeEnemyPower);
+      const baseRewardProfile = getBattleRewardProfile(safePlayerPower, safeEnemyPower);
+      const rewardProfile = window.PassiveSystem?.modifyVictoryRewards?.(battleState, baseRewardProfile) || baseRewardProfile;
       const reward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward)) : 0;
       const experience = Number.isFinite(Number(rewardProfile.experience)) ? Math.max(0, Math.floor(rewardProfile.experience)) : 0;
       state.currency = Math.max(0, Number(state.currency) || 0) + reward;
@@ -3348,44 +3676,48 @@ function finishBattle(playerWon) {
       }
       saveState();
       updateStats();
+      window.PassiveSystem?.onVictory?.(battleState);
       renderUpgradeShop();
       collectionNeedsRefresh = false;
       renderCollection();
 
-      const bonusPercent = Math.round((rewardProfile.multiplier - 1) * 100);
       const modeLabel = rewardProfile.mode.toUpperCase();
       const levelNote = levelUps.length ? ` • Level Up: ${levelUps.join(', ')}` : '';
 
-      appendBattleLog(`Victory! +${formatCurrency(reward)} battle cash • +${experience} EXP • +${dropRateBonus.toFixed(2)}% Drop Rate Bonus • ${rewardProfile.label}.${levelNote}`, 'victory');
+      appendBattleLog(`Victory! Base ${formatCurrency(baseRewardProfile.baseValue)} • Time +${baseRewardProfile.timeBonusPercent}% • Level ×${baseRewardProfile.levelDiffMultiplier.toFixed(2)} • Earned ${formatCurrency(reward)}.${levelNote}`, 'victory');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
-      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. Battle reward: ${formatCurrency(reward)} + ${experience} EXP + ${dropRateBonus.toFixed(2)}% Drop Rate.`;
+      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. Base Value ${formatCurrency(baseRewardProfile.baseValue)} • Time Bonus +${baseRewardProfile.timeBonusPercent}% • Level ×${baseRewardProfile.levelDiffMultiplier.toFixed(2)}.`;
       if (els.battleResultPower) {
-        els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${rewardProfile.label} • ×${Number(rewardProfile.multiplier || 1).toFixed(2)}`;
+        els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${baseRewardProfile.durationSeconds.toFixed(1)}s battle`;
       }
-      if (els.battleResultCash) els.battleResultCash.textContent = `+${formatCurrency(reward)}`;
+      if (els.battleResultBaseValue) els.battleResultBaseValue.textContent = `${formatCurrency(baseRewardProfile.baseValue)}`;
+      if (els.battleResultTimeBonus) els.battleResultTimeBonus.textContent = `+${baseRewardProfile.timeBonusPercent}%`;
+      if (els.battleResultLevelDiff) els.battleResultLevelDiff.textContent = `×${baseRewardProfile.levelDiffMultiplier.toFixed(2)}`;
+      if (els.battleResultCash) els.battleResultCash.textContent = `${formatCurrency(reward)}`;
       if (els.battleResultExp) els.battleResultExp.textContent = `+${experience.toLocaleString('en-US')} EXP`;
       if (els.battleResultDropRate) els.battleResultDropRate.textContent = `+${dropRateBonus.toFixed(2)}%`;
       if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = 'N/A — Victory';
     } else {
-      const penalty = applyBattleDefeatPenalty();
-      const targetName = penalty?.target?.display?.name || penalty?.target?.card?.name || 'your defeated fighter';
+      // Defeat ends the match only. Never delete, decrement, salvage, or otherwise
+      // mutate the player's card collection as a battle-loss consequence.
+      const notice = getBattleDefeatNotice();
       saveState();
       updateStats();
       collectionNeedsRefresh = false;
       renderCollection();
       renderUpgradeShop();
 
-      const notice = penalty?.lost
-        ? `Defeated! 25% Loss Chance: Lost 1x ${targetName}.`
-        : 'Defeated! 25% Loss Chance: Card Saved!';
       appendBattleLog(notice, 'defeat');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '💀 DEFEAT!';
       if (els.battleResultText) els.battleResultText.textContent = notice;
       if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')}`;
-      if (els.battleResultCash) els.battleResultCash.textContent = '+0 VNĐ';
+      if (els.battleResultBaseValue) els.battleResultBaseValue.textContent = '💵 0';
+      if (els.battleResultTimeBonus) els.battleResultTimeBonus.textContent = '+0%';
+      if (els.battleResultLevelDiff) els.battleResultLevelDiff.textContent = '×0.00';
+      if (els.battleResultCash) els.battleResultCash.textContent = '💵 +0';
       if (els.battleResultExp) els.battleResultExp.textContent = '+0 EXP';
       if (els.battleResultDropRate) els.battleResultDropRate.textContent = '+0.00%';
-      if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = penalty?.lost ? 'LOST 1 CARD' : 'SAVED';
+      if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = 'NONE — COLLECTION PRESERVED';
     }
   } catch (error) {
     // Battle resolution must always reach the end-game screen even if a
@@ -3404,6 +3736,7 @@ function finishBattle(playerWon) {
   }
 
   els.battleArena?.classList.add('hidden');
+  setBattleModalLock(false);
   const battleResultView = document.getElementById('battle-result-modal') || els.battleVictory;
   if (battleResultView) {
     battleResultView.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
@@ -3427,10 +3760,13 @@ function startBattle(useExistingSetup = true) {
 
   // A new encounter must never reuse a prior opponent object. Clear the
   // transient battle encounter before generating a fresh opponent/team.
+  clearBattleAnimationTimers();
   battleState = {
     ...(battleState || {}),
     currentOpponent: null,
-    finished: false
+    finished: false,
+    isBattling: true,
+    currentTurn: 0
   };
 
   const playerTeam = setupTeam.map(slot => {
@@ -3462,6 +3798,8 @@ function startBattle(useExistingSetup = true) {
     setup: { team: setupTeam.map(slot => ({ ...slot })), activeIndex: 0 },
     turn: 'player',
     finished: false,
+    isBattling: true,
+    currentTurn: 0,
     nextTurnAt: null,
     playerIndex: 0,
     enemyIndex: 0,
@@ -3469,11 +3807,20 @@ function startBattle(useExistingSetup = true) {
     enemyTeam,
     playerPower,
     enemyPower,
+    startedAt: Date.now(),
+    initialPlayerLevel: Math.max(1, playerTeam.length ? playerTeam.reduce((sum, unit) => sum + (Number(unit?.level) || 1), 0) / playerTeam.length : 1),
+    initialEnemyLevel: Math.max(1, enemyTeam.length ? enemyTeam.reduce((sum, unit) => sum + (Number(unit?.level) || 1), 0) / enemyTeam.length : 1),
+    enemyBaseValue: Math.max(0, enemyTeam.reduce((sum, unit) => sum + getSalvageValue(unit?.card, unit?.mutations || []), 0)),
     player: playerTeam[0],
     enemy: enemyTeam[0]
   };
 
+  window.PassiveSystem?.beginBattle?.(battleState);
+  battleState.playerPower = calculateBattleTeamPower(battleState.playerTeam);
+  battleState.enemyPower = calculateBattleTeamPower(battleState.enemyTeam);
+
   els.battleSetup?.classList.add('hidden');
+  setBattleModalLock(true);
   els.battleVictory?.classList.add('hidden');
   els.battleVictory?.setAttribute('aria-hidden', 'true');
   els.battleArena?.classList.remove('hidden');
@@ -3490,53 +3837,32 @@ function startBattle(useExistingSetup = true) {
 function executeBattleTurn() {
   if (!battleState || battleState.finished || !battleState.playerTeam || !battleState.enemyTeam) return;
 
-  const attackerTeam = battleState.turn === 'player' ? battleState.playerTeam : battleState.enemyTeam;
-  const defenderTeam = battleState.turn === 'player' ? battleState.enemyTeam : battleState.playerTeam;
-  const attackerIndex = battleState.turn === 'player' ? battleState.playerIndex : battleState.enemyIndex;
-  const defenderIndex = battleState.turn === 'player' ? battleState.enemyIndex : battleState.playerIndex;
-  const attacker = attackerTeam[attackerIndex];
-  const defender = defenderTeam[defenderIndex];
-  if (!attacker || !defender || attacker.defeated || defender.defeated) return;
+  try {
+    battleState.currentTurn = Math.max(0, Number(battleState.currentTurn) || 0) + 1;
+    appendBattleLog(`TURN ${battleState.currentTurn} • ${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} ATTACK`, battleState.turn === 'player' ? 'player' : 'enemy');
+    const resolution = window.PassiveSystem?.resolveTurn?.(battleState) || { ended: false, winner: null };
 
-  animateBattleAttack(battleState.turn);
-  defender.hp = Math.max(0, defender.hp - attacker.atk);
-  appendBattleLog(`${attacker.display.name} attacks ${defender.display.name} for ${attacker.atk.toLocaleString('en-US')} ATK.`, battleState.turn);
-  renderBattleStats();
+    battleState.playerPower = calculateBattleTeamPower(battleState.playerTeam);
+    battleState.enemyPower = calculateBattleTeamPower(battleState.enemyTeam);
 
-  if (defender.hp <= 0) {
-    defender.defeated = true;
-    appendBattleLog(`${defender.display.name} has been defeated!`, battleState.turn === 'player' ? 'player' : 'enemy');
+    renderBattleStats();
 
-    if (battleState.turn === 'player') {
-      battleState.enemyIndex += 1;
-      if (battleState.enemyIndex >= getBattleTeamSize()) {
-        renderBattleStats();
-        finishBattle(true);
-        return;
-      }
-      battleState.enemy = battleState.enemyTeam[battleState.enemyIndex];
-      appendBattleLog(`${battleState.enemy.display.name} steps into the arena.`, 'enemy');
-      animateBattlePromotion('enemy');
-      battleState.turn = 'enemy';
-    } else {
-      battleState.playerIndex += 1;
-      if (battleState.playerIndex >= getBattleTeamSize()) {
-        renderBattleStats();
-        finishBattle(false);
-        return;
-      }
-      battleState.player = battleState.playerTeam[battleState.playerIndex];
-      appendBattleLog(`${battleState.player.display.name} steps into the arena.`, 'player');
-      animateBattlePromotion('player');
-      battleState.turn = 'player';
+    if (resolution.ended) {
+      finishBattle(resolution.winner === 'player');
+      return;
     }
-  } else {
-    battleState.turn = battleState.turn === 'player' ? 'enemy' : 'player';
-  }
 
-  renderBattleStats();
-  scheduleNextBattleTurn();
+    scheduleNextBattleTurn();
+  } catch (error) {
+    console.error('Battle turn failed safely:', error);
+    appendBattleLog('Battle turn encountered a recoverable error. The turn was skipped.', 'defeat');
+    if (battleState?.turn) {
+      battleState.turn = battleState.turn === 'player' ? 'enemy' : 'player';
+    }
+    scheduleNextBattleTurn();
+  }
 }
+
 
 // ============================================================
 // GLOBAL LOOP
@@ -3598,6 +3924,22 @@ function recoverElapsedRealTime() {
 // MODALS + RESET
 // ============================================================
 
+function isBattleMatchActive() {
+  return Boolean(
+    battleState &&
+    battleState.finished !== true &&
+    battleState.isBattling === true &&
+    els.battleArena &&
+    !els.battleArena.classList.contains('hidden')
+  );
+}
+
+function setBattleModalLock(active) {
+  const isActive = Boolean(active);
+  document.body.classList.toggle('battle-lock', isActive);
+  els.battleModal?.classList.toggle('battle-modal--active', isActive);
+}
+
 function openModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
@@ -3610,17 +3952,90 @@ function openModal(id) {
   if (id === "upgradesModal") renderUpgradeShop();
   if (id === "cardPreviewModal") renderPreview();
   if (id === "battleModal") resetBattleView();
-  if (id === "autoSalvageModal") renderAutoSalvageSettings();
+}
+
+function returnToLobby() {
+  try {
+    clearBattleTurnTimer();
+    clearBattleAnimationTimers();
+    setBattleModalLock(false);
+    const modal = els.battleModal || document.getElementById('battleModal');
+    modal?.classList.add('hidden');
+    modal?.classList.remove('battle-modal--active');
+    els.battleArena?.classList.add('hidden');
+    els.battleVictory?.classList.add('hidden');
+    els.battleVictory?.setAttribute('aria-hidden', 'true');
+    els.battleSetup?.classList.remove('hidden');
+    if (els.battleLog) els.battleLog.innerHTML = '';
+    if (els.battleStatus) els.battleStatus.textContent = 'PREPARING';
+    battleState = null;
+    document.body.classList.remove('battle-lock', 'modal-open');
+  } catch (error) {
+    console.error('Return to Lobby cleanup failed safely:', error);
+    try {
+      document.getElementById('battleModal')?.classList.add('hidden');
+      document.body.classList.remove('battle-lock', 'modal-open');
+      battleState = null;
+    } catch (fallbackError) {
+      console.error('Return to Lobby fallback cleanup failed:', fallbackError);
+    }
+  }
+}
+
+function surrenderBattle() {
+  if (!battleState) {
+    closeModal('battleModal');
+    return;
+  }
+
+  const wasActive = isBattleMatchActive();
+  clearBattleTurnTimer();
+  clearBattleAnimationTimers();
+
+  if (wasActive) {
+    battleState.finished = true;
+    battleState.isBattling = false;
+    battleState.outcome = 'surrendered';
+    battleState.exitReason = 'player-surrender';
+    lastBattleOutcome = { outcome: 'surrendered', at: Date.now() };
+    appendBattleLog('Battle exited by player — match surrendered. No battle rewards were granted.', 'defeat');
+  }
+
+  els.battleArena?.classList.add('hidden');
+  els.battleVictory?.classList.add('hidden');
+  els.battleVictory?.setAttribute('aria-hidden', 'true');
+  els.battleSetup?.classList.remove('hidden');
+  if (els.battleStatus) els.battleStatus.textContent = 'PREPARING';
+  setBattleModalLock(false);
+  els.battleModal?.classList.add('hidden');
+  els.battleModal?.classList.remove('battle-modal--active');
+  document.body.classList.remove('battle-lock', 'modal-open');
+  battleState = null;
 }
 
 function closeModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
+
+  // Active combat can only exit through the dedicated battle [X] surrender path.
+  if (id === "battleModal" && isBattleMatchActive()) return;
+
   modal.classList.add("hidden");
   if (id === "cardPreviewModal") closeVariantMenu();
   if (id === "battleModal") {
     clearBattleTurnTimer();
-    if (battleState?.finished !== true) battleState = null;
+    clearBattleAnimationTimers();
+    setBattleModalLock(false);
+    try {
+      els.battleArena?.classList.add('hidden');
+      els.battleVictory?.classList.add('hidden');
+      els.battleVictory?.setAttribute('aria-hidden', 'true');
+      els.battleSetup?.classList.remove('hidden');
+      if (els.battleStatus) els.battleStatus.textContent = 'PREPARING';
+    } catch (error) {
+      console.warn('Battle modal cleanup failed safely:', error);
+    }
+    battleState = null;
   }
 
   const anyOpen = [...document.querySelectorAll(".modal-backdrop")]
@@ -3629,7 +4044,7 @@ function closeModal(id) {
 }
 
 function resetGame() {
-  const confirmed = window.confirm("Reset rolls, VNĐ, upgrades, collection, mutations, weather, and equipment? This cannot be undone.");
+  const confirmed = window.confirm("Reset rolls, 💵 upgrades, collection, mutations, weather, and equipment? This cannot be undone.");
   if (!confirmed) return;
 
   clearCooldownExpiryTimer();
@@ -3670,28 +4085,166 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+
+// ============================================================
+// PASSIVE SYSTEM HOST BRIDGE
+// passives.js owns combat mechanics; app.js supplies persistence/UI
+// callbacks and the live Weather database.
+// ============================================================
+
+if (window.PassiveSystem?.configureHost) {
+  window.PassiveSystem.configureHost({
+    getCardById,
+    appendBattleLog,
+    showBattleFloatingText,
+    renderBattleStats,
+    renderCollection,
+    isWeatherActive,
+    addRandomCommonUncommonWeather(durationSeconds = 180) {
+      const candidates = Object.values(WEATHER_TIERS)
+        .filter(tier => tier?.id === 'common' || tier?.id === 'uncommon')
+        .flatMap(tier => Array.isArray(tier?.weatherIds) ? tier.weatherIds : [])
+        .map(id => WEATHER_BY_ID?.[id])
+        .filter(Boolean);
+
+      if (!candidates.length) return false;
+
+      const weather = candidates[Math.floor(Math.random() * candidates.length)];
+      const now = Math.floor(Number(state?.weather?.gameSeconds) || 0);
+      const expiresAt = now + Math.max(1, Math.floor(Number(durationSeconds) || 180));
+      const existing = state.weather.active.find(entry => entry.weatherId === weather.id);
+
+      if (existing) {
+        existing.expiresAt = Math.max(existing.expiresAt, expiresAt);
+      } else {
+        state.weather.active.push({
+          weatherId: weather.id,
+          startedAt: now,
+          expiresAt
+        });
+      }
+
+      showWeatherToast(weather);
+      saveState();
+      renderClockAndWeather(true);
+      renderAvailableCards();
+      return true;
+    }
+  });
+}
+
 // ============================================================
 // EVENT WIRING
 // ============================================================
 
+function setupBattlePassiveTooltipDelegation() {
+  if (document.getElementById('battlePassiveTooltip')) return;
+
+  const tooltip = document.createElement('div');
+  tooltip.id = 'battlePassiveTooltip';
+  tooltip.className = 'battle-passive-tooltip';
+  tooltip.hidden = true;
+
+  const icon = document.createElement('span');
+  icon.className = 'battle-passive-tooltip__icon';
+  icon.textContent = '◇';
+  const content = document.createElement('div');
+  content.className = 'battle-passive-tooltip__content';
+  const title = document.createElement('strong');
+  const status = document.createElement('span');
+  status.className = 'battle-passive-tooltip__status';
+  const description = document.createElement('p');
+  content.append(title, status, description);
+  tooltip.append(icon, content);
+  document.body.appendChild(tooltip);
+
+  let activeTarget = null;
+
+  const hide = () => {
+    activeTarget = null;
+    tooltip.hidden = true;
+    tooltip.classList.remove('is-visible');
+  };
+
+  const show = target => {
+    if (!target?.dataset?.passiveTooltip) return;
+    activeTarget = target;
+    title.textContent = String(target.dataset.passiveTooltipName || 'Passive');
+    status.textContent = String(target.dataset.passiveTooltipStatus || 'Active');
+    description.textContent = String(target.dataset.passiveTooltipDescription || '');
+    tooltip.hidden = false;
+
+    requestAnimationFrame(() => {
+      if (!activeTarget) return;
+      const rect = activeTarget.getBoundingClientRect();
+      const width = tooltip.offsetWidth;
+      const left = Math.min(
+        Math.max(8, rect.left),
+        Math.max(8, window.innerWidth - width - 8)
+      );
+      const top = Math.max(8, rect.top - tooltip.offsetHeight - 10);
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      tooltip.classList.add('is-visible');
+    });
+  };
+
+  document.addEventListener('pointerover', event => {
+    const target = event.target?.closest?.('[data-passive-tooltip]');
+    if (target) show(target);
+  });
+
+  document.addEventListener('pointerout', event => {
+    const target = event.target?.closest?.('[data-passive-tooltip]');
+    if (!target || target.contains(event.relatedTarget)) return;
+    if (target === activeTarget) hide();
+  });
+
+  document.addEventListener('focusin', event => {
+    const target = event.target?.closest?.('[data-passive-tooltip]');
+    if (target) show(target);
+  });
+
+  document.addEventListener('focusout', event => {
+    const target = event.target?.closest?.('[data-passive-tooltip]');
+    if (target && target === activeTarget) hide();
+  });
+
+  window.addEventListener('resize', hide, { passive: true });
+  window.addEventListener('scroll', hide, { passive: true, capture: true });
+}
+
+setupBattlePassiveTooltipDelegation();
+window.upgrade = upgrade;
+
 els.buySpeedButton?.addEventListener("click", () => purchaseUpgrade("rollSpeed"));
 els.buyLuckButton?.addEventListener("click", () => purchaseUpgrade("luck"));
+els.buyExpMultiButton?.addEventListener("click", () => purchaseUpgrade("expMulti"));
+els.buyCoinMultiButton?.addEventListener("click", () => purchaseUpgrade("coinMulti"));
 els.collectionButton?.addEventListener("click", () => openModal("collectionModal"));
 els.upgradesButton?.addEventListener("click", () => openModal("upgradesModal"));
 els.battleButton?.addEventListener("click", openBattleModal);
+els.battleCloseButton?.addEventListener("click", event => { event.preventDefault(); surrenderBattle(); });
 els.resetButton?.addEventListener("click", resetGame);
 els.battleStartButton?.addEventListener("click", () => startBattle(true));
 els.battleModePicker?.querySelectorAll("[data-battle-mode]").forEach(button => {
   button.addEventListener("click", () => setBattleMode(button.dataset.battleMode));
 });
+els.cardSearchInput?.addEventListener("input", () => populateBattleFighterSelect());
+els.cardSortSelect?.addEventListener("change", () => populateBattleFighterSelect());
 els.battleAutoAgainButton?.addEventListener("click", () => {
   if (!canReplayBattleTeam()) return;
   startBattle(true);
 });
 els.battleChangeFighterButton?.addEventListener("click", () => {
   clearBattleTurnTimer();
-  battleState = { mode: getBattleMode(), setup: { team: [], activeIndex: 0 } };
+  clearBattleAnimationTimers();
+  battleState = { mode: getBattleMode(), setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
   resetBattleView(getBattleMode());
+});
+els.battleCloseResultButton?.addEventListener("click", event => {
+  event.preventDefault();
+  returnToLobby();
 });
 els.rollButton?.addEventListener("click", () => rollCard("manual"));
 els.searchInput?.addEventListener("input", () => {
@@ -3714,14 +4267,17 @@ els.autoRollToggle?.addEventListener("change", () => {
 
 els.previewSalvageButton?.addEventListener("click", handlePreviewSalvage);
 els.previewSalvageExtrasButton?.addEventListener("click", handlePreviewSalvageExtras);
-els.previewAutoDeleteButton?.addEventListener("click", openAutoSalvageSettings);
-els.autoSalvageEnabled?.addEventListener("change", () => {
-  state.autoSalvage.enabled = Boolean(els.autoSalvageEnabled.checked);
+els.salvageAllExtraDuplicatesButton?.addEventListener("click", () => {
+  const result = salvageAllExtraDuplicates();
+  if (result.removed <= 0) {
+    showCurrencyToast(0, "No extra duplicates to salvage");
+    return;
+  }
   saveState();
-});
-els.autoSalvageRarity?.addEventListener("change", () => {
-  state.autoSalvage.rarityThreshold = AUTO_SALVAGE_RARITY_VALUES.includes(els.autoSalvageRarity.value) ? els.autoSalvageRarity.value : "off";
-  saveState();
+  updateStats();
+  collectionNeedsRefresh = false;
+  renderCollection();
+  showCurrencyToast(result.cash, `Salvaged ${result.removed.toLocaleString("en-US")} extra duplicate cards`);
 });
 
 els.previewVariantMenuButton?.addEventListener("click", event => {
@@ -3742,13 +4298,19 @@ document.querySelectorAll("[data-close-modal]").forEach(button => {
 
 document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
   backdrop.addEventListener("click", event => {
-    if (event.target === backdrop) closeModal(backdrop.id);
+    if (event.target !== backdrop) return;
+    if (backdrop.id === 'battleModal' && isBattleMatchActive()) return;
+    closeModal(backdrop.id);
   });
 });
 
 document.addEventListener("keydown", event => {
   if (event.key !== "Escape") return;
   closeVariantMenu();
+  if (isBattleMatchActive()) {
+    event.preventDefault();
+    return;
+  }
   document.querySelectorAll(".modal-backdrop").forEach(modal => {
     if (!modal.classList.contains("hidden")) closeModal(modal.id);
   });
@@ -3774,6 +4336,19 @@ window.addEventListener("pagehide", () => {
 // ============================================================
 // INITIALIZE
 // ============================================================
+
+// Battle must always start dormant. This also neutralizes any stale modal
+// classes/timers left by a previous hot-reload or browser restore.
+clearBattleTurnTimer();
+clearBattleAnimationTimers();
+battleState = null;
+setBattleModalLock(false);
+els.battleModal?.classList.add('hidden');
+els.battleModal?.classList.remove('battle-modal--active');
+els.battleArena?.classList.add('hidden');
+els.battleVictory?.classList.add('hidden');
+els.battleVictory?.setAttribute('aria-hidden', 'true');
+els.battleSetup?.classList.remove('hidden');
 
 recoverElapsedRealTime();
 pruneExpiredWeathers();
