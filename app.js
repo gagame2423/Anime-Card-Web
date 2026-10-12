@@ -3993,11 +3993,139 @@ function renderTowerShop() {
 }
 
 // ============================================================
+// PROTECTED SAVE TRANSPORT (integrity + Base64, not encryption).
+// A client-side embedded key cannot provide server-grade anti-cheat.
+// ============================================================
+const SECRET_SALT = 'ANIME_CARD_RNG_SECURE_SECRET_KEY_2026';
+const SAVE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const SAVE_COOLDOWN_KEYS = Object.freeze({ export: 'save_cooldown_export', import: 'save_cooldown_import' });
+const SAVE_TRANSFER_LOCK = 'anime_card_rng_save_transfer';
+const SAVE_DATA_MAX_BYTES = 10 * 1024 * 1024;
+const SAVE_FILE_MAX_BYTES = 32 * 1024 * 1024;
+const PROTECTED_SAVE_FORMAT = 'anime-card-rng-protected-save';
+const SAVE_TAMPER_MESSAGE = 'Phát hiện dữ liệu đã bị chỉnh sửa trái phép!';
+let saveTransferBusy = false;
+let saveChecksumKeyPromise = null;
+
+function saveIntegrityError() {
+  const error = new Error(SAVE_TAMPER_MESSAGE); error.code = 'SAVE_TAMPERED'; return error;
+}
+function assertSaveCryptoSupport() {
+  if (!window.crypto?.subtle || typeof TextEncoder !== 'function' || typeof TextDecoder !== 'function') {
+    throw new Error('Trình duyệt không hỗ trợ Web Crypto. Hãy dùng trình duyệt hiện đại trong ngữ cảnh an toàn (HTTPS, localhost hoặc file được trình duyệt tin cậy).');
+  }
+}
+async function calculateSaveChecksum(dataString) {
+  assertSaveCryptoSupport();
+  try {
+    saveChecksumKeyPromise ||= window.crypto.subtle.importKey('raw', new TextEncoder().encode(SECRET_SALT), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const key = await saveChecksumKeyPromise;
+    const signed = await window.crypto.subtle.sign('HMAC', key, new TextEncoder().encode(dataString));
+    return Array.from(new Uint8Array(signed), byte => byte.toString(16).padStart(2, '0')).join('');
+  } catch (_) {
+    saveChecksumKeyPromise = null;
+    const error = new Error('Không thể tính checksum bảo vệ save. Chưa thay đổi dữ liệu.'); error.code = 'SAVE_CRYPTO_ERROR'; throw error;
+  }
+}
+function encodeSaveBase64(text) {
+  const bytes = new TextEncoder().encode(text); let binary = '';
+  for (let i = 0; i < bytes.length; i += 32768) binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+  return window.btoa(binary);
+}
+function decodeSaveBase64(encoded) {
+  if (typeof encoded !== 'string' || !encoded.length || encoded.length > SAVE_FILE_MAX_BYTES || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) throw saveIntegrityError();
+  const binary = window.atob(encoded);
+  // Reject ignored padding bits, whitespace, BOM and alternate encodings.
+  if (window.btoa(binary) !== encoded) throw saveIntegrityError();
+  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+  return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+}
+function saveChecksumsMatch(actual, expected) {
+  if (typeof expected !== 'string' || !/^[0-9a-f]{64}$/.test(expected)) return false;
+  let difference = 0;
+  for (let i = 0; i < actual.length; i++) difference |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
+  return difference === 0;
+}
+async function encryptGameSave(dataString) {
+  if (typeof dataString !== 'string' || new TextEncoder().encode(dataString).length > SAVE_DATA_MAX_BYTES) throw new Error('Dữ liệu save vượt giới hạn 10 MiB.');
+  const checksum = await calculateSaveChecksum(dataString);
+  return encodeSaveBase64(JSON.stringify({ format: PROTECTED_SAVE_FORMAT, version: 1, data: dataString, checksum }));
+}
+async function decryptGameSave(encoded) {
+  assertSaveCryptoSupport();
+  try {
+    const decoded = decodeSaveBase64(encoded), payload = JSON.parse(decoded);
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload) || payload.format !== PROTECTED_SAVE_FORMAT || payload.version !== 1 || typeof payload.data !== 'string' || new TextEncoder().encode(payload.data).length > SAVE_DATA_MAX_BYTES) throw saveIntegrityError();
+    // Require the exact outer serialization as well as authenticated data.
+    if (decoded !== JSON.stringify({ format: PROTECTED_SAVE_FORMAT, version: 1, data: payload.data, checksum: payload.checksum })) throw saveIntegrityError();
+    const actual = await calculateSaveChecksum(payload.data);
+    if (!saveChecksumsMatch(actual, payload.checksum)) throw saveIntegrityError();
+    return payload.data;
+  } catch (error) { if (error.code === 'SAVE_CRYPTO_ERROR') throw error; throw saveIntegrityError(); }
+}
+function readSaveActionTimestamp(action) {
+  const key = SAVE_COOLDOWN_KEYS[action];
+  if (!key) throw new Error('Thao tác chuyển save không hợp lệ.');
+  const raw = localStorage.getItem(key);
+  if (raw === null) return 0;
+  const value = Number(raw);
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(value) || value < 0) throw new Error('Lịch sử cooldown chuyển save không hợp lệ. Thao tác đã bị chặn.');
+  return value;
+}
+function getSaveCooldownRemaining(action, at = Date.now()) {
+  const lastAction = readSaveActionTimestamp(action);
+  return lastAction > 0 ? Math.max(0, lastAction + SAVE_COOLDOWN_MS - at) : 0;
+}
+function formatSaveCooldown(remainingMs) {
+  const daysExact = (remainingMs / 86400000).toLocaleString('vi-VN', { maximumFractionDigits: 8 });
+  let seconds = Math.ceil(remainingMs / 1000);
+  const days = Math.floor(seconds / 86400); seconds %= 86400;
+  const hours = Math.floor(seconds / 3600); seconds %= 3600;
+  const minutes = Math.floor(seconds / 60); seconds %= 60;
+  return `${daysExact} ngày (${days} ngày ${hours} giờ ${minutes} phút ${seconds} giây)`;
+}
+function assertSaveCooldownAllowed(action) {
+  const remaining = getSaveCooldownRemaining(action);
+  if (remaining > 0) throw new Error(`Chưa thể ${action === 'export' ? 'xuất' : 'nhập'} save. Còn ${formatSaveCooldown(remaining)} trong thời gian chờ 7 ngày.`);
+}
+function showSaveTransferError(error) {
+  const message = error?.message || String(error);
+  setSaveTransferStatus(message, true); window.alert(message);
+}
+function renderSaveTransferCooldowns() {
+  for (const action of ['export', 'import']) {
+    const label = document.getElementById(action === 'export' ? 'saveExportCooldown' : 'saveImportCooldown');
+    if (!label) continue;
+    try { const remaining = getSaveCooldownRemaining(action); label.textContent = remaining > 0 ? `Còn ${formatSaveCooldown(remaining)}` : 'Có thể thực hiện • cooldown riêng 7 ngày'; }
+    catch (error) { label.textContent = error.message; }
+  }
+}
+function setSaveTransferBusy(busy) {
+  saveTransferBusy = busy;
+  for (const id of ['exportSaveButton', 'importSaveButton']) { const button = document.getElementById(id); if (button) button.disabled = busy; }
+  document.getElementById('saveManagerModal')?.setAttribute('aria-busy', String(busy));
+}
+async function withSaveTransfer(action, operation) {
+  if (saveTransferBusy) { showSaveTransferError(new Error('Đang xử lý chuyển save. Vui lòng đợi hoàn tất.')); return false; }
+  setSaveTransferBusy(true);
+  try {
+    assertSaveCryptoSupport();
+    if (!navigator.locks?.request) throw new Error('Trình duyệt chưa hỗ trợ Web Locks để khóa chuyển save giữa các tab. Thao tác đã bị chặn an toàn.');
+    return await navigator.locks.request(SAVE_TRANSFER_LOCK, { ifAvailable: true }, async lock => {
+      if (!lock) throw new Error('Một tab khác đang chuyển save. Vui lòng đợi rồi thử lại.');
+      assertSaveCooldownAllowed(action);
+      return await operation();
+    });
+  } catch (error) { showSaveTransferError(error); return false; }
+  finally { setSaveTransferBusy(false); renderSaveTransferCooldowns(); }
+}
+
+// ============================================================
 // COMPLETE JSON SAVE TRANSFER
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, ...LEGACY_STORAGE_KEYS];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4010,21 +4138,33 @@ function buildGameSaveExport() {
   const storage = {};
   for (const key of getGameSaveKeys()) {
     const value = localStorage.getItem(key);
-    if (value !== null) storage[key] = JSON.parse(value);
+    if (value !== null) storage[key] = Object.values(SAVE_COOLDOWN_KEYS).includes(key) ? readSaveActionTimestamp(key === SAVE_COOLDOWN_KEYS.export ? 'export' : 'import') : JSON.parse(value);
   }
   return { format: 'anime-card-rng-save', version: 1, exportedAt: new Date().toISOString(), storage };
 }
-function exportGameSave() {
-  try {
-    const bundle = buildGameSaveExport();
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+async function exportGameSave() {
+  return withSaveTransfer('export', async () => {
+    const bundle = buildGameSaveExport(), actionAt = Date.now();
+    bundle.storage[SAVE_COOLDOWN_KEYS.export] = actionAt;
+    const protectedText = await encryptGameSave(JSON.stringify(bundle));
+    assertSaveCooldownAllowed('export');
+    const blob = new Blob([protectedText], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob), anchor = document.createElement('a');
-    anchor.href = url; anchor.download = `anime-card-rng-save-${bundle.exportedAt.replace(/[:.]/g, '-')}.json`;
-    document.body.append(anchor); anchor.click(); anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setSaveTransferStatus('Save exported. It includes cards, levels, items, potion timers, Tower progress and achievements.');
+    const previousTimestamp = localStorage.getItem(SAVE_COOLDOWN_KEYS.export);
+    anchor.href = url; anchor.download = `anime-card-save-${new Date(actionAt).toISOString().slice(0, 10)}.acrsave`;
+    document.body.append(anchor);
+    try {
+      // Reserve persistence before dispatch; rollback if download dispatch fails.
+      localStorage.setItem(SAVE_COOLDOWN_KEYS.export, String(actionAt));
+      anchor.click();
+    } catch (error) {
+      try { if (previousTimestamp === null) localStorage.removeItem(SAVE_COOLDOWN_KEYS.export); else localStorage.setItem(SAVE_COOLDOWN_KEYS.export, previousTimestamp); }
+      catch (_) { throw new Error('Không thể khôi phục lịch sử cooldown sau lỗi xuất save.'); }
+      throw new Error('Không thể xuất save: ' + error.message);
+    } finally { anchor.remove(); window.setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 1000); }
+    setSaveTransferStatus('Đã tạo và gửi tệp .acrsave tới trình duyệt. Lần xuất tiếp theo sau 7 ngày; thời gian chờ nhập được tính riêng.');
     return true;
-  } catch (error) { setSaveTransferStatus(error.message, true); return false; }
+  });
 }
 function validateSaveRecord(key, value) {
   const object = item => Boolean(item && typeof item === 'object' && !Array.isArray(item));
@@ -4032,6 +4172,7 @@ function validateSaveRecord(key, value) {
   const number = (item, label, integer = true) => ensure((typeof item === 'number' || (typeof item === 'string' && item.trim() !== '')) && Number.isFinite(Number(item)) && Number(item) >= 0 && (!integer || Number.isSafeInteger(Number(item))), `${label} must be a nonnegative ${integer ? 'integer' : 'number'}.`);
   const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
   const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
+  if (Object.values(SAVE_COOLDOWN_KEYS).includes(key)) { number(value, 'thời điểm chuyển save'); return value; }
   ensure(object(value), 'expected a JSON object.');
   if (key === STORAGE_KEY || LEGACY_STORAGE_KEYS.includes(key)) {
     ensure(Boolean(parseStoredSave(JSON.stringify(value))), 'not a recognized game save.');
@@ -4109,42 +4250,53 @@ function parseGameSaveImport(text) {
     const keys = getGameSaveKeys();
     for (const key of Object.keys(storage)) if (!keys.includes(key)) throw new Error(`Unsupported game store: ${key}`);
     for (const key of keys.slice(0, 4)) if (!(key in storage)) throw new Error('The save is incomplete: a game data store is missing.');
-  } else {
-    // Compatibility with a previous raw core save; omitted new systems reset.
-    validateSaveRecord(STORAGE_KEY, file);
-    storage = { [STORAGE_KEY]: file, [window.InventorySystem.KEY]: { version: 2, items: {}, buffs: {}, misses: 0 },
-      [window.TowerSystem.KEY]: { version: 1, coins: 0, victories: 0, cleared: {} },
-      [window.AchievementSystem.KEY]: { version: 1, stats: {}, towerProgress: {}, claimed: {}, unlockedRequirements: {} } };
-  }
+  } else { throw new Error('Save bảo vệ phải chứa đầy đủ gói dữ liệu game.'); }
   const result = {};
   for (const [key, entry] of Object.entries(storage)) result[key] = JSON.stringify(validateSaveRecord(key, entry));
   // Use the existing migration/ownership sanitizer for the authoritative card save.
   result[STORAGE_KEY] = JSON.stringify(normalizeState(JSON.parse(result[STORAGE_KEY])));
   return result;
 }
-function importGameSave(text) {
-  const imported = parseGameSaveImport(text); // Validation finishes before writes.
-  const keys = getGameSaveKeys(), previous = new Map(keys.map(key => [key, localStorage.getItem(key)]));
-  isImportingSave = true;
-  try {
-    for (const key of keys) {
-      if (Object.prototype.hasOwnProperty.call(imported, key)) localStorage.setItem(key, imported[key]);
-      else localStorage.removeItem(key);
+async function importGameSave(input) {
+  return withSaveTransfer('import', async () => {
+    let text;
+    if (typeof input === 'string') text = input;
+    else {
+      if (!input || typeof input.arrayBuffer !== 'function' || !/\.acrsave$/i.test(input.name || '')) throw new Error('Chỉ chấp nhận tệp .acrsave. Save JSON cũ không được nhập trực tiếp.');
+      if (input.size > SAVE_FILE_MAX_BYTES) throw new Error('Tệp .acrsave vượt giới hạn 32 MiB.');
+      try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(await input.arrayBuffer()); }
+      catch (_) { throw saveIntegrityError(); }
     }
-  } catch (error) {
-    let restored = true;
-    for (const [key, value] of previous) try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (_) { restored = false; }
-    isImportingSave = false;
-    throw new Error(restored ? 'Import could not be saved. Your previous progress has been restored.' : 'Import failed because browser storage is unavailable. Reload only after restoring a valid backup.');
-  }
-  isAutoRolling = false;
-  if (els.autoRollToggle) els.autoRollToggle.checked = false;
-  if (globalTickTimer !== null) { window.clearInterval(globalTickTimer); globalTickTimer = null; }
-  clearCooldownExpiryTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
-  setSaveTransferStatus('Save imported. Reloading your restored game…');
-  // saveState, pagehide and visibility handlers are suppressed during reload.
-  window.location.reload();
-  return true;
+    const dataString = await decryptGameSave(text);
+    const imported = parseGameSaveImport(dataString);
+    assertSaveCooldownAllowed('import');
+    // Imported history cannot shorten either timestamp already on this browser.
+    const incomingExport = Number(imported[SAVE_COOLDOWN_KEYS.export] || 0);
+    const incomingImport = Number(imported[SAVE_COOLDOWN_KEYS.import] || 0);
+    imported[SAVE_COOLDOWN_KEYS.export] = String(Math.max(readSaveActionTimestamp('export'), incomingExport));
+    imported[SAVE_COOLDOWN_KEYS.import] = String(Math.max(readSaveActionTimestamp('import'), incomingImport, Date.now()));
+    const keys = getGameSaveKeys(), previous = new Map(keys.map(key => [key, localStorage.getItem(key)]));
+    isImportingSave = true;
+    try {
+      for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(imported, key)) localStorage.setItem(key, imported[key]);
+        else localStorage.removeItem(key);
+      }
+    } catch (error) {
+      let restored = true;
+      for (const [key, value] of previous) try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (_) { restored = false; }
+      isImportingSave = false;
+      throw new Error(restored ? 'Không thể ghi save. Tiến độ và cooldown trước đó đã được khôi phục.' : 'Không thể ghi/khôi phục dữ liệu do bộ nhớ trình duyệt không khả dụng.');
+    }
+    isAutoRolling = false;
+    if (els.autoRollToggle) els.autoRollToggle.checked = false;
+    if (globalTickTimer !== null) { window.clearInterval(globalTickTimer); globalTickTimer = null; }
+    clearCooldownExpiryTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
+    setSaveTransferStatus('Đã nhập save bảo vệ. Đang tải lại game…');
+    // Existing saveState/pagehide/visibility guards protect restored stores.
+    window.location.reload();
+    return true;
+  });
 }
 
 // ============================================================
@@ -4203,6 +4355,7 @@ function renderAchievements() {
 
 function globalTick() {
   if (isImportingSave) return;
+  if (!document.getElementById('saveManagerModal')?.classList.contains('hidden')) renderSaveTransferCooldowns();
   refreshAchievements();
   const now = Date.now();
   const previous = Number(state.weather.lastRealTimestamp);
@@ -4290,6 +4443,7 @@ function openModal(id) {
   if (id === "inventoryModal") renderPotionInventory();
   if (id === "achievementModal") { refreshAchievements(); renderAchievements(); }
   if (id === "towerShopModal") renderTowerShop();
+  if (id === "saveManagerModal") renderSaveTransferCooldowns();
   if (id === "cardPreviewModal") renderPreview();
   if (id === "battleModal") resetBattleView();
 }
@@ -4692,11 +4846,14 @@ document.getElementById('achievementOpenButton')?.addEventListener('click', () =
 document.getElementById('achievementCategory')?.addEventListener('change', renderAchievements);
 document.getElementById('saveManagerOpenButton')?.addEventListener('click', () => openModal('saveManagerModal'));
 document.getElementById('exportSaveButton')?.addEventListener('click', exportGameSave);
-document.getElementById('importSaveButton')?.addEventListener('click', () => document.getElementById('importSaveInput')?.click());
+document.getElementById('importSaveButton')?.addEventListener('click', () => {
+  if (saveTransferBusy) return;
+  try { assertSaveCooldownAllowed('import'); document.getElementById('importSaveInput')?.click(); }
+  catch (error) { showSaveTransferError(error); }
+});
 document.getElementById('importSaveInput')?.addEventListener('change', async event => {
   const file = event.target.files?.[0]; if (!file) return;
-  try { if (file.size > 10 * 1024 * 1024) throw new Error('Save files must be smaller than 10 MB.'); importGameSave(await file.text()); }
-  catch (error) { setSaveTransferStatus(error.message, true); }
+  try { await importGameSave(file); }
   finally { event.target.value = ''; }
 });
 

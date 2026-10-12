@@ -1334,7 +1334,7 @@ const TOWER_REWARD_CARDS = [
   return Object.freeze({
     ...reward, towerFloor: 100, rarity: 'Secret', chance: 500000 + index * 50000,
     requiredWeather: null, nativeWeather: reward.towerType === 'normal' ? null : reward.towerType,
-    stats: { hp: 1200 + index * 800, atk: 180 + index * 120 },
+    stats: { hp: 12000 + index * 800, atk: 1800 + index * 120 },
     passive: null, // Trophy fighters use base stats; no hidden passive effect.
     image: source?.image || '',
     description: `Clear Floor 100 of the ${reward.towerType} Tower. Once unlocked, this card can be rolled in any weather.`

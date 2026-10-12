@@ -4254,3 +4254,7 @@ body {
   .achievement-grid, .save-transfer-actions { grid-template-columns: 1fr; padding: 0 14px 18px; }
   .achievement-toolbar { margin: 0 14px 14px; }
 }
+
+/* Protected save transfer status; no additional game timer. */
+.save-cooldown-label { color: #a3d5c5; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.save-transfer-actions button:disabled { opacity: .45; cursor: wait; }

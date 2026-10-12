@@ -359,12 +359,12 @@
   <div id="saveManagerModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="saveManagerTitle">
     <section class="modal-panel module-modal save-manager-modal">
       <header class="modal-header"><div><p class="eyebrow">TAKE YOUR PROGRESS WITH YOU</p><h2 id="saveManagerTitle">⇄ Save transfer</h2></div><button data-close-modal="saveManagerModal" class="modal-close" type="button" aria-label="Close save transfer">×</button></header>
-      <p class="module-description">Export your cards, levels, VNĐ, items, potion timers, weather, Tower progress and achievements as one JSON file.</p>
+      <p class="module-description">Xuất toàn bộ tiến độ thành tệp .acrsave có kiểm tra toàn vẹn. Xuất và nhập có thời gian chờ 7 ngày riêng biệt.</p>
       <div class="save-transfer-actions">
-        <article><h3>Export Save</h3><p>Download a backup to keep or move to another browser or device.</p><button id="exportSaveButton" type="button">↓ Export Save (.json)</button></article>
-        <article><h3>Import Save</h3><p>Choose an Anime Card RNG JSON backup. Import replaces your current progress and reloads the game.</p><button id="importSaveButton" type="button">↑ Import Save (.json)</button><input id="importSaveInput" type="file" accept=".json,application/json" hidden></article>
+        <article><h3>Export Save</h3><p>Tạo bản sao .acrsave để giữ hoặc chuyển sang thiết bị khác.</p><small id="saveExportCooldown" class="save-cooldown-label" aria-live="polite"></small><button id="exportSaveButton" type="button">↓ Export Save (.acrsave)</button></article>
+        <article><h3>Import Save</h3><p>Chọn save .acrsave hợp lệ. Nhập sẽ thay thế tiến độ hiện tại rồi tải lại game.</p><small id="saveImportCooldown" class="save-cooldown-label" aria-live="polite"></small><button id="importSaveButton" type="button">↑ Import Save (.acrsave)</button><input id="importSaveInput" type="file" accept=".acrsave" hidden></article>
       </div>
-      <p id="saveTransferStatus" class="module-description save-transfer-status" role="status" aria-live="polite">Your potion timers keep their original expiry time across devices.</p>
+      <p id="saveTransferStatus" class="module-description save-transfer-status" role="status" aria-live="polite">Timer potion giữ nguyên thời điểm hết hạn. File sửa sai checksum sẽ bị từ chối; Base64 là đóng gói, không phải mã hóa bí mật.</p>
     </section>
   </div>
   <!-- ITEMS: separate persistence from card ownership -->
