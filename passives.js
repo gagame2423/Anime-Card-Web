@@ -277,7 +277,7 @@
     const currentMax = Math.max(1, Number(unit.maxHp) || 1);
     const bonus = Math.max(0, currentMax * pct);
     unit.maxHp = Math.max(1, Math.round(currentMax + bonus));
-    if (healToNewMax) unit.hp = Math.min(unit.maxHp, Math.max(0, Number(unit.hp) || 0) + bonus);
+    if (healToNewMax && !isBleeding(unit)) unit.hp = Math.min(unit.maxHp, Math.max(0, Number(unit.hp) || 0) + bonus);
     const runtime = ensureRuntime(unit);
     runtime.maxHpBonusPct += pct;
     runtime.displayHpBonusPct += pct;
@@ -292,14 +292,20 @@
     const newMax = Math.max(1, Math.round(oldMax * safeFactor));
     const delta = newMax - oldMax;
     unit.maxHp = newMax;
-    if (healToNewMax) unit.hp = Math.min(newMax, Math.max(0, Number(unit.hp) || 0) + Math.max(0, delta));
+    if (healToNewMax && !isBleeding(unit)) unit.hp = Math.min(newMax, Math.max(0, Number(unit.hp) || 0) + Math.max(0, delta));
     ensureRuntime(unit).displayHpBonusPct += Math.max(0, safeFactor - 1);
     refreshUnitDisplay(unit);
     return delta;
   }
 
+  function isBleeding(unit) { return Array.isArray(ensureRuntime(unit)?.bleed) && ensureRuntime(unit).bleed.some(effect => Number(effect?.turns) > 0); }
+
   function heal(unit, amount, reason = '', state = null, source = null) {
     if (!unit || !isAlive(unit)) return 0;
+    if (isBleeding(unit)) {
+      if (Number(amount) > 0) { safeLog(`[ANTI-HEAL] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} cannot heal while BLEED is active${reason ? ` • ${reason}` : ''}.`, 'debuff'); host.showBattleFloatingText?.(unit, '🩸 HEAL BLOCKED', 'debuff'); }
+      return 0;
+    }
     const runtime = ensureRuntime(unit);
     const before = Math.max(0, Number(unit.hp) || 0);
     const delta = Math.max(0, Math.floor(Number(amount) || 0));
@@ -307,8 +313,14 @@
     unit.hp = Math.min(Math.max(1, Number(unit.maxHp) || 1), before + delta);
     const gained = unit.hp - before;
     if (gained > 0) {
-      if (before < (Number(unit.maxHp) || 1) * 0.60 && unit.hp >= (Number(unit.maxHp) || 1) * 0.60) {
-        triggerId(state, 'homura-akemi', 'onHealThreshold', unit, { source, amount: gained, support: true, allowForeignOwner: true, sourceCardId: cardIdOf(source) });
+      if (state && before < (Number(unit.maxHp) || 1) * 0.60 && unit.hp >= (Number(unit.maxHp) || 1) * 0.60) {
+        // Real support owner only. Previously any healed ally could impersonate
+        // Homura and freeze a target repeatedly without Homura on the team.
+        const homura = aliveUnits(teamOf(state, unit)).find(ally => getEffectivePassiveCardId(ally) === 'homura-akemi');
+        if (homura && !ensureRuntime(homura).homuraFreezeUsed) {
+          ensureRuntime(homura).homuraFreezeUsed = true;
+          triggerId(state, 'homura-akemi', 'onHealThreshold', homura, { source, amount: gained, support: true, allowForeignOwner: true, sourceCardId: cardIdOf(source) });
+        }
       }
       safeLog(`[PASSIVE] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} healed ${gained.toLocaleString('en-US')} HP${reason ? ` • ${reason}` : ''}.`, 'passive');
     }
@@ -1564,9 +1576,13 @@
 
     switch (id) {
       case 'meruem':
-        heal(defender, (Number(defender.maxHp) || 0) * 0.15, 'AURA SYNTHESIS', battleState, defender);
         runtime.auraStacks = Math.min(5, runtime.auraStacks + 1);
         addActiveTag(defender, `AURA ${runtime.auraStacks}/5`);
+        if (runtime.auraStacks === 5 && !runtime.auraHealTriggered) {
+          runtime.auraHealTriggered = true;
+          heal(defender, (Number(defender.maxHp) || 0) * 0.05, 'AURA SYNTHESIS (5/5 stacks)', battleState, defender);
+          safeLog(`[Self-Passive] ${defender.display?.name || 'Meruem'} reached 5/5 Aura stacks: 5% MAX HP heal attempted.`, 'passive');
+        }
         break;
 
       case 'doppio':
@@ -1681,7 +1697,7 @@
         runtime.temporaryMaxHpDelta = Math.max(1, Math.round(maxHpBase * 0.20));
         killer.atk = atkBase + runtime.temporaryAtkDelta;
         killer.maxHp = maxHpBase + runtime.temporaryMaxHpDelta;
-        killer.hp = Math.min(killer.maxHp, Math.max(1, Math.round((Number(killer.hp) || 1) * 1.20)));
+        if (!isBleeding(killer)) killer.hp = Math.min(killer.maxHp, Math.max(1, Math.round((Number(killer.hp) || 1) * 1.20)));
 
         runtime.temporaryAtkBonusPct = 0.20;
         runtime.temporaryMaxHpBonusPct = 0.20;
@@ -1782,6 +1798,8 @@
     if (!target || !attacker) return false;
     const runtime = ensureRuntime(target);
     const id = getEffectivePassiveCardId(target);
+    // Bleeding prohibits revival-HP restoration as well as ordinary heals.
+    if (isBleeding(target)) return false;
     if (runtime.invincibleTurns > 0 || runtime.hakariInvincible > 0) return true;
 
     if (id === 'rimuru' && runtime.slimePoints > 0) {
@@ -2071,7 +2089,7 @@
 
         if (id === 'senku') {
           for (const ally of alliesOf(battleState, unit, true)) {
-            heal(ally, (Number(ally.maxHp) || 0) * 0.10, 'CHEMISTRY', battleState, unit);
+            heal(ally, (Number(ally.maxHp) || 0) * 0.025, 'CHEMISTRY (2.5% MAX HP)', battleState, unit);
           }
         }
 
@@ -2261,6 +2279,7 @@
     const runtime = ensureRuntime(unit);
     const passive = getPassive(unit);
     const badges = [];
+    if (isBleeding(unit)) badges.push({ icon: '🩸', label: 'BLEED • HEAL BLOCKED', tone: 'bleed', category: 'status', status: 'Anti-heal' });
     const atkDisplayPct = Math.round((Math.max(0, Number(runtime.displayAtkBonusPct) || 0) + Math.max(0, Number(runtime.temporaryAtkBonusPct) || 0)) * 100);
     const hpDisplayPct = Math.round((Math.max(0, Number(runtime.displayHpBonusPct) || 0) + Math.max(0, Number(runtime.temporaryMaxHpBonusPct) || 0)) * 100);
     const flatAtkDisplay = Math.max(0, Math.round(Number(runtime.flatAtkBonusDisplay) || 0));

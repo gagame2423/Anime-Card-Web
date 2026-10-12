@@ -13,7 +13,7 @@ const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
   "animeCardRngSave_v1"
 ]);
-const SAVE_SCHEMA_VERSION = 6;
+const SAVE_SCHEMA_VERSION = 7;
 const GLOBAL_TICK_MS = 1000;
 const BASE_COOLDOWN_MS = 1500;
 const SPEED_BASE_COST = 100;
@@ -44,7 +44,7 @@ const CARD_RARITY_EXP_MULTIPLIERS = Object.freeze({
   Secret: 8
 });
 const CARD_LEVEL_BASE_EXP = 100;
-const CARD_LEVEL_STAT_GROWTH = 0.0075;
+const CARD_LEVEL_STAT_GROWTH = 0.075; // 7.5% HP/ATK per level (requested 5–10% range)
 const CARD_LEVEL_MAX = 999;
 
 const FALLBACK_ART_DATA_URL = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Cdefs%3E%3ClinearGradient id%3D%22g%22 x1%3D%220%22 y1%3D%220%22 x2%3D%221%22 y2%3D%221%22%3E%3Cstop stop-color%3D%22%23141a2a%22%2F%3E%3Cstop offset%3D%221%22 stop-color%3D%22%23080b14%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22url(%23g)%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%2Csans-serif%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E";
@@ -60,7 +60,9 @@ const defaultState = {
   currency: 0,
   experience: 0,
   battleDropRateBonus: 0,
+  dropChance: 0, // percent points; potion drop logic reads ONLY this stat and pity
   cardProgress: {},
+  achievementRewardReceipts: {},
   unlocked: {},
   mutations: {},
   equipment: [],
@@ -74,6 +76,7 @@ const defaultState = {
   }
 };
 
+let isImportingSave = false;
 let state = loadState();
 syncOwnershipRecords();
 saveState();
@@ -186,6 +189,17 @@ const els = {
   buyCoinMultiButton: document.getElementById("buyCoinMultiButton"),
 
   battleButton: document.getElementById("battleButton"),
+  inventoryOpenButton: document.getElementById("inventoryOpenButton"),
+  towerOpenButton: document.getElementById("towerOpenButton"),
+  towerBattleControls: document.getElementById("towerBattleControls"),
+  towerWeatherSelect: document.getElementById("towerWeatherSelect"),
+  towerFloorDisplay: document.getElementById("towerFloorDisplay"),
+  towerWeatherRules: document.getElementById("towerWeatherRules"),
+  towerShopOpenButton: document.getElementById("towerShopOpenButton"),
+  potionInventoryList: document.getElementById("potionInventoryList"),
+  towerShopItems: document.getElementById("towerShopItems"),
+  towerCoinBalance: document.getElementById("towerCoinBalance"),
+  dropChanceDisplay: document.getElementById("dropChanceDisplay"),
   battleModal: document.getElementById("battleModal"),
   battleSetup: document.getElementById("battleSetup"),
   battleFighterGrid: document.getElementById("battleFighterGrid"),
@@ -265,7 +279,8 @@ function cloneDefaultState() {
     experience: 0,
     battleDropRateBonus: 0,
     cardProgress: {},
-      unlocked: {},
+    achievementRewardReceipts: {},
+    unlocked: {},
     mutations: {},
     inventory: {},
     equipment: [],
@@ -365,7 +380,7 @@ function grantCardExperience(cardId, amount) {
 
 function getDuplicateCardRollExperience(cardOrId) {
   const info = getCardLevelInfo(cardOrId);
-  return Math.max(1, Math.floor(info.required * 0.50));
+  return Math.max(1, Math.floor(info.required * 0.50 * (window.InventorySystem?.multiplier("exp") || 1)));
 }
 
 function calculateCardRollExperience(card, mutations = []) {
@@ -754,6 +769,9 @@ function normalizeState(parsed = {}) {
     ? Math.max(0, Math.min(100, Number(parsed.battleDropRateBonus)))
     : 0;
 
+  normalized.achievementRewardReceipts = Object.fromEntries(
+    Object.entries(parsed.achievementRewardReceipts || {}).filter(([id, claimed]) => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && claimed === true)
+  );
   normalized.cardProgress = normalizeCardProgressRecords(parsed.cardProgress || parsed.cardLevels || parsed.levels);
 
   const rawUnlockedSource = (
@@ -849,6 +867,7 @@ function normalizeState(parsed = {}) {
   }
 
   normalized.equipment = Array.isArray(parsed.equipment) ? [...parsed.equipment] : [];
+  normalized.dropChance = Math.max(0, Math.min(20, Number(parsed.dropChance) || 0));
 
   normalized.upgrades.rollSpeed = Math.min(
     SPEED_MAX_LEVEL,
@@ -925,6 +944,7 @@ function parseStoredSave(raw) {
       "currency",
       "experience",
       "battleDropRateBonus",
+      "dropChance",
       "cardProgress",
       "cardLevels",
       "unlocked",
@@ -974,11 +994,14 @@ function loadState() {
 }
 
 function saveState() {
+  if (isImportingSave) return false;
   try {
     syncOwnershipRecords();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
   } catch (error) {
     console.warn("Save failed:", error);
+    return false;
   }
 }
 
@@ -1000,11 +1023,11 @@ function loadGame() {
 // ============================================================
 
 function getLuckMultiplier() {
-  return 1 + state.upgrades.luck * LUCK_FACTOR;
+  return (1 + state.upgrades.luck * LUCK_FACTOR) * (window.InventorySystem?.multiplier("luck") || 1);
 }
 
 function getCooldownMs() {
-  return BASE_COOLDOWN_MS / (1 + state.upgrades.rollSpeed * SPEED_FACTOR);
+  return BASE_COOLDOWN_MS / ((1 + state.upgrades.rollSpeed * SPEED_FACTOR) * (window.InventorySystem?.multiplier("speed") || 1));
 }
 
 function getUpgradeCost(baseCost, level) {
@@ -1325,9 +1348,13 @@ function startCooldown() {
 // RNG + MUTATIONS
 // ============================================================
 
+function isCardRollUnlocked(card) {
+  return !card.unlockRequirement || window.AchievementSystem?.isUnlocked(card.unlockRequirement) || state.achievementRewardReceipts?.[card.unlockRequirement] === true;
+}
+
 function getSortedCardsForRolling() {
   return [...ALL_CARDS]
-    .filter(card => card.requiredWeather == null || isWeatherActive(card.requiredWeather))
+    .filter(card => isCardRollUnlocked(card) && (card.requiredWeather == null || isWeatherActive(card.requiredWeather)))
     .sort((a, b) => b.chance - a.chance);
 }
 
@@ -1591,6 +1618,7 @@ function rollCard(source = "manual") {
     }
 
     saveState();
+    refreshAchievements();
     updateStats();
     if (source === "auto") {
       // Auto-Roll can fire while the player is typing/searching Collection.
@@ -1630,8 +1658,8 @@ function showResult(card, effectiveChance, mutations = []) {
   if (els.resultChance) els.resultChance.textContent = card.chance.toLocaleString("en-US");
   if (els.resultHp) els.resultHp.textContent = display.hp.toLocaleString("en-US");
   if (els.resultAtk) els.resultAtk.textContent = display.atk.toLocaleString("en-US");
-  if (els.resultPassiveName) els.resultPassiveName.textContent = card.passive.name;
-  if (els.resultPassiveDescription) els.resultPassiveDescription.textContent = card.passive.description;
+  if (els.resultPassiveName) els.resultPassiveName.textContent = card.passive?.name || "No passive";
+  if (els.resultPassiveDescription) els.resultPassiveDescription.textContent = card.passive?.description || "This fighter uses its base HP and ATK without an additional combat passive.";
 
   renderMutationBadges(els.resultMutationBadges, mutations);
   applyCardMutationVisual(els.resultCard, mutations);
@@ -1920,7 +1948,7 @@ function getFilteredCards() {
 
 function getAvailableRollPool() {
   return [...ALL_CARDS]
-    .filter(card => card.requiredWeather == null || isWeatherActive(card.requiredWeather))
+    .filter(card => isCardRollUnlocked(card) && (card.requiredWeather == null || isWeatherActive(card.requiredWeather)))
     .sort((a, b) => b.chance - a.chance);
 }
 
@@ -2110,6 +2138,12 @@ function renderCollection() {
         requirement.textContent = `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}`;
         meta.appendChild(requirement);
       }
+      if (card?.unlockRequirement) {
+        const requirement = document.createElement('span');
+        requirement.className = `weather-requirement ${isCardRollUnlocked(card) ? 'active' : ''}`;
+        requirement.textContent = `${isCardRollUnlocked(card) ? 'Unlocked' : 'Requires'}: ${window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement}`;
+        meta.appendChild(requirement);
+      }
 
       const badgeList = document.createElement("div");
       badgeList.className = "mutation-badge-list";
@@ -2256,6 +2290,8 @@ function salvageVariantCopies(cardId, variantKey, copies = 1) {
   const cash = Math.max(0, cashPerCopy * actualRemoved);
   const scaledCash = getScaledCoinReward(cash);
   state.currency = Math.max(0, Number(state.currency) || 0) + scaledCash;
+  window.AchievementSystem?.recordCurrencyEarned(scaledCash);
+  refreshAchievements();
   return { removed: actualRemoved, cash: scaledCash, baseCash: cash };
 }
 
@@ -2409,16 +2445,16 @@ function renderPreview() {
   els.previewVariantCount.textContent = `${variant.count}×`;
   els.previewHp.textContent = display.hp.toLocaleString("en-US");
   els.previewAtk.textContent = display.atk.toLocaleString("en-US");
-  els.previewPassiveName.textContent = card.passive.name;
-  els.previewPassiveDescription.textContent = card.passive.description;
+  els.previewPassiveName.textContent = card.passive?.name || "No passive";
+  els.previewPassiveDescription.textContent = card.passive?.description || "This fighter uses its base HP and ATK without an additional combat passive.";
   const previewMutations = normalizeMutationObjects(variant.mutations);
   els.previewVariantLabel.textContent = previewMutations.length
     ? previewMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")
     : "Normal Variant";
   els.previewCollectedCount.textContent = `${getOwnedCardCount(card.id).toLocaleString("en-US")}× total`;
-  els.previewRequirement.textContent = card.requiredWeather
-    ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}`
-    : "Available in the standard pool";
+  els.previewRequirement.textContent = card.unlockRequirement
+    ? `${window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement} • Permanently unlocked in the standard pool`
+    : card.requiredWeather ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}` : 'Available in the standard pool';
 
   renderMutationBadges(els.previewMutationBadges, variant.mutations);
   applyCardMutationVisual(els.previewCard, variant.mutations);
@@ -2466,12 +2502,12 @@ function closeVariantMenu() {
 
 function getExpMultiplier() {
   const level = Math.max(0, Math.floor(Number(state?.upgrades?.expMulti) || 0));
-  return 1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE);
+  return (1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE)) * (window.InventorySystem?.multiplier("exp") || 1);
 }
 
 function getCoinMultiplier() {
   const level = Math.max(0, Math.floor(Number(state?.upgrades?.coinMulti) || 0));
-  return 1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE);
+  return (1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE)) * (window.InventorySystem?.multiplier("rich") || 1);
 }
 
 function getProgressionUpgradeCost(type, level) {
@@ -2654,7 +2690,7 @@ function getEnemyDisplayCard(card, mutations = [], enemyLevel = 1) {
 }
 
 function getBattleMode() {
-  return battleState?.mode === '1v1' ? '1v1' : '4v4';
+  return battleState?.mode === '1v1' ? '1v1' : battleState?.mode === 'tower' ? 'tower' : '4v4';
 }
 
 function getBattleTeamSize() {
@@ -2665,8 +2701,13 @@ function isOneVsOneBattle() {
   return getBattleMode() === '1v1';
 }
 
+function isTowerBattle() { return getBattleMode() === 'tower'; }
+function getTowerWeatherMode() { return String(els.towerWeatherSelect?.value || 'normal'); }
+
+function getBattleTurnMs() { return window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
 function getBattleModeLabel() {
-  return isOneVsOneBattle() ? '1V1 • 3s TURNS' : '4V4 • 3s TURNS';
+  const timing = `${getBattleTurnMs() / 1000}s TURNS`;
+  return isTowerBattle() ? `TOWER ${battleState?.towerFloor || window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1} • 4V4 • ${timing}` : `${isOneVsOneBattle() ? '1V1' : '4V4'} • ${timing}`;
 }
 
 let battleState = null;
@@ -2710,12 +2751,12 @@ function scheduleBattleAnimation(callback, delay) {
 }
 
 function getUnlockedBattleCards() {
-  return ALL_CARDS.filter(card => getOwnedCardCount(card.id) > 0);
+  return ALL_CARDS.filter(card => getOwnedCardCount(card.id) > 0 && (!isTowerBattle() || getVariantEntries(card.id).some(entry => window.TowerSystem?.eligiblePlayerCard(card, entry, getTowerWeatherMode(), WEATHERS))));
 }
 
 function getBattleVariantEntries(cardId) {
   return getVariantEntries(cardId)
-    .filter(entry => entry.count > 0)
+    .filter(entry => entry.count > 0 && (!isTowerBattle() || window.TowerSystem?.eligiblePlayerCard(getCardById(cardId), entry, getTowerWeatherMode(), WEATHERS)))
     .sort((a, b) => getVariantRank(a) - getVariantRank(b) || a.key.localeCompare(b.key));
 }
 
@@ -2866,7 +2907,7 @@ function populateBattleFighterSelect() {
   const unlocked = getFilteredSortedBattleCards();
   const previousTeam = Array.isArray(battleState?.setup?.team) ? battleState.setup.team.map(slot => ({ ...slot })) : [];
   const previousActive = Number(battleState?.setup?.activeIndex || 0);
-  const previousMode = battleState?.mode === '1v1' ? '1v1' : '4v4';
+  const previousMode = getBattleMode();
   grid.innerHTML = '';
 
   clearBattleTurnTimer();
@@ -2877,7 +2918,7 @@ function populateBattleFighterSelect() {
 
   if (!unlocked.length) {
     const hasAnyUnlocked = getUnlockedBattleCards().length > 0;
-    grid.innerHTML = `<div class="battle-empty-selection">${hasAnyUnlocked ? 'No unlocked cards match your search.' : 'Roll at least one card to enter the arena.'}</div>`;
+    grid.innerHTML = `<div class="battle-empty-selection">${isTowerBattle() && hasAnyUnlocked ? 'No weather-eligible cards. Choose a native-weather card or matching Mutation / Double Mutation.' : hasAnyUnlocked ? 'No unlocked cards match your search.' : 'Roll at least one card to enter the arena.'}</div>`;
     if (els.battleStartButton) els.battleStartButton.disabled = true;
     if (els.battleVariantGrid) els.battleVariantGrid.innerHTML = '';
     renderBattleSelection();
@@ -2999,7 +3040,7 @@ function renderBattleFighterVariants() {
   });
 
   const valid = isBattleSetupValid();
-  if (els.battleStartButton) els.battleStartButton.disabled = !valid;
+  if (els.battleStartButton) els.battleStartButton.disabled = !valid || (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode()));
 }
 
 function renderBattleSelectionPreview() {
@@ -3046,7 +3087,7 @@ function renderBattleSelectionPreview() {
   info.append(name, stats, passive, badgeWrap);
   preview.append(media, info);
 
-  if (els.battleStartButton) els.battleStartButton.disabled = !isBattleSetupValid();
+  if (els.battleStartButton) els.battleStartButton.disabled = !isBattleSetupValid() || (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode()));
 }
 
 function renderBattleModePicker() {
@@ -3059,13 +3100,14 @@ function renderBattleModePicker() {
     });
   }
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
+  renderTowerControls();
   if (els.battleStartButton) {
-    els.battleStartButton.textContent = isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+    els.battleStartButton.textContent = isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
   }
 }
 
 function setBattleMode(mode) {
-  const nextMode = mode === '1v1' ? '1v1' : '4v4';
+  const nextMode = mode === '1v1' ? '1v1' : mode === 'tower' ? 'tower' : '4v4';
   clearBattleTurnTimer();
   battleState = { mode: nextMode, setup: { team: [], activeIndex: 0 } };
   renderBattleModePicker();
@@ -3075,7 +3117,7 @@ function setBattleMode(mode) {
 function resetBattleView(mode = '4v4') {
   clearBattleTurnTimer();
   clearBattleAnimationTimers();
-  battleState = { mode: mode === '1v1' ? '1v1' : '4v4', setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
+  battleState = { mode: mode === '1v1' ? '1v1' : mode === 'tower' ? 'tower' : '4v4', setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
   setBattleModalLock(false);
   els.battleSetup?.classList.remove('hidden');
   els.battleArena?.classList.add('hidden');
@@ -3258,8 +3300,8 @@ function chooseBattleEnemyTeam(playerTeam) {
   const mode = getBattleMode();
   const playerIds = new Set(playerTeam.map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean));
   let pool = getAvailableRollPool().filter(card => !playerIds.has(normalizeCardId(card?.id)));
-  if (!pool.length) pool = ALL_CARDS.filter(card => !playerIds.has(normalizeCardId(card?.id)));
-  if (!pool.length) pool = [...ALL_CARDS];
+  if (!pool.length) pool = ALL_CARDS.filter(card => isCardRollUnlocked(card) && !playerIds.has(normalizeCardId(card?.id)));
+  if (!pool.length) pool = ALL_CARDS.filter(isCardRollUnlocked);
 
   if (mode === '1v1') {
     return [chooseAdaptive1v1Enemy(playerTeam[0], pool)];
@@ -3608,16 +3650,16 @@ function animateBattlePromotion(side) {
 function scheduleNextBattleTurn() {
   clearBattleTurnTimer();
   if (!battleState || battleState.finished) return;
-  battleState.nextTurnAt = Date.now() + BATTLE_TURN_MS;
-  if (els.battleStatus) {
-    els.battleStatus.textContent = battleState.turn === 'player'
-      ? 'PLAYER STRIKE IN 3s'
-      : 'ENEMY STRIKE IN 3s';
-  }
+  const turnMs = getBattleTurnMs();
+  battleState.nextTurnAt = Date.now() + turnMs;
+  if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${turnMs / 1000}s`;
+  if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
+  const autoNote = document.getElementById('battleAutoNote');
+  if (autoNote) autoNote.textContent = `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
   battleTurnTimer = window.setTimeout(() => {
     battleTurnTimer = null;
     executeBattleTurn();
-  }, BATTLE_TURN_MS);
+  }, turnMs);
 }
 
 function canReplayBattleTeam() {
@@ -3658,9 +3700,20 @@ function finishBattle(playerWon) {
       const reward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward)) : 0;
       const experience = Number.isFinite(Number(rewardProfile.experience)) ? Math.max(0, Math.floor(rewardProfile.experience)) : 0;
       state.currency = Math.max(0, Number(state.currency) || 0) + reward;
+      window.AchievementSystem?.recordCurrencyEarned(reward);
+      window.AchievementSystem?.recordBattleWin();
       const dropRateBonus = Number.isFinite(Number(rewardProfile.dropRateBonus)) ? Math.max(0, Number(rewardProfile.dropRateBonus)) : 0;
       state.experience = Math.max(0, Number(state.experience) || 0) + experience;
       state.battleDropRateBonus = Math.max(0, Math.min(100, Number(state.battleDropRateBonus) || 0) + dropRateBonus);
+      // Independent player stat: neither Reward Bonus nor money multipliers are read by the potion RNG.
+      state.dropChance = Math.max(0, Math.min(20, (Number(state.dropChance) || 0) + Math.max(0, Number(baseRewardProfile.dropRateBonus) || 0))); // unmodified by Reward Bonus passives
+      const potionDrop = window.InventorySystem?.rollVictoryDrop(state.dropChance);
+      const towerPrize = battleState.mode === 'tower' ? window.TowerSystem?.recordVictory(battleState.towerWeather, battleState.towerFloor) : null;
+      refreshAchievements();
+      if (potionDrop?.dropped) appendBattleLog(`🧪 Potion drop: ${potionDrop.name} (${Math.round(potionDrop.chance * 100)}% roll).`, 'victory');
+      else if (potionDrop) appendBattleLog(`🧪 No potion (${Math.round(potionDrop.chance * 100)}% chance) • Pity increased for next win.`, 'status');
+      if (towerPrize?.awarded) appendBattleLog(`🏰 Floor ${battleState.towerFloor} cleared! +${towerPrize.coins} Tower Coins${towerPrize.elite ? ' • ELITE BONUS' : ''}.`, 'victory');
+      renderPotionInventory(); renderTowerShop();
 
       // Persist the monetary reward before any card/level-up/rendering work.
       // A malformed legacy record must never erase a legitimate victory payout.
@@ -3686,7 +3739,7 @@ function finishBattle(playerWon) {
 
       appendBattleLog(`Victory! Base ${formatCurrency(baseRewardProfile.baseValue)} • Time +${baseRewardProfile.timeBonusPercent}% • Level ×${baseRewardProfile.levelDiffMultiplier.toFixed(2)} • Earned ${formatCurrency(reward)}.${levelNote}`, 'victory');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
-      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. Base Value ${formatCurrency(baseRewardProfile.baseValue)} • Time Bonus +${baseRewardProfile.timeBonusPercent}% • Level ×${baseRewardProfile.levelDiffMultiplier.toFixed(2)}.`;
+      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. ${towerPrize?.awarded ? `Tower Floor ${battleState.towerFloor}: +${towerPrize.coins} 🪙. ` : ''}${potionDrop?.dropped ? `Potion: ${potionDrop.name}. ` : ''}Base Value ${formatCurrency(baseRewardProfile.baseValue)} • Time Bonus +${baseRewardProfile.timeBonusPercent}% • Level ×${baseRewardProfile.levelDiffMultiplier.toFixed(2)}.`;
       if (els.battleResultPower) {
         els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${baseRewardProfile.durationSeconds.toFixed(1)}s battle`;
       }
@@ -3756,7 +3809,9 @@ function endBattle(playerWon) {
 
 function startBattle(useExistingSetup = true) {
   const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
+  if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
   if (!Array.isArray(setupTeam) || setupTeam.length !== getBattleTeamSize() || !isBattleSetupValid(setupTeam)) return;
+  if (isTowerBattle() && setupTeam.some(slot => !window.TowerSystem?.eligiblePlayerCard(getCardById(slot.cardId), getVariantEntries(slot.cardId).find(entry => entry.key === slot.variantKey), getTowerWeatherMode(), WEATHERS))) return;
 
   // A new encounter must never reuse a prior opponent object. Clear the
   // transient battle encounter before generating a fresh opponent/team.
@@ -3785,7 +3840,11 @@ function startBattle(useExistingSetup = true) {
     };
   });
 
-  const enemyTeam = chooseBattleEnemyTeam(playerTeam);
+  if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
+  const towerFloor = isTowerBattle() ? window.TowerSystem.nextFloor(getTowerWeatherMode()) : null;
+  const towerWeather = isTowerBattle() ? getTowerWeatherMode() : null;
+  const enemyTeam = isTowerBattle() ? window.TowerSystem.buildOpponents(ALL_CARDS, towerFloor, towerWeather, WEATHERS) : chooseBattleEnemyTeam(playerTeam);
+  if (enemyTeam.length !== playerTeam.length) return;
   const playerPower = calculateBattleTeamPower(playerTeam);
   const enemyPower = calculateBattleTeamPower(enemyTeam);
 
@@ -3794,6 +3853,7 @@ function startBattle(useExistingSetup = true) {
 
   battleState = {
     mode,
+    towerFloor, towerWeather,
     currentOpponent: enemyTeam[0] || null,
     setup: { team: setupTeam.map(slot => ({ ...slot })), activeIndex: 0 },
     turn: 'player',
@@ -3827,9 +3887,9 @@ function startBattle(useExistingSetup = true) {
   if (els.battleLog) els.battleLog.innerHTML = '';
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
-  appendBattleLog(`Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
-  appendBattleLog(`Enemy mutations are active-weather boosted (70% roll chance).`);
-  appendBattleLog(`First strike begins in 3 seconds. ${teamSize} fighter${teamSize === 1 ? '' : 's'} per side.`, 'player');
+  appendBattleLog(isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
+  appendBattleLog(isTowerBattle() ? `Tower weather-themed enemy appearances are weighted at 75%, not exclusive.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
+  appendBattleLog(`First strike begins in ${getBattleTurnMs() / 1000} seconds. ${teamSize} fighter${teamSize === 1 ? '' : 's'} per side.`, 'player');
   renderBattleStats();
   scheduleNextBattleTurn();
 }
@@ -3865,10 +3925,285 @@ function executeBattleTurn() {
 
 
 // ============================================================
+// MODULAR INVENTORY / TOWER UI ADAPTERS
+// Only UI binding and coordination live here. All mechanics and storage are
+// implemented in inventory.js and tower.js.
+// ============================================================
+function renderPotionInventory() {
+  const inventory = window.InventorySystem;
+  if (!inventory) return;
+  const chance = inventory.dropChance(state.dropChance || 0);
+  if (els.dropChanceDisplay) els.dropChanceDisplay.textContent = `Drop Chance stat: +${Number(state.dropChance || 0).toFixed(2)}% • Next potion chance: ${Math.round(chance * 100)}% • Pity: ${inventory.getPity()} misses`;
+  const grid = els.potionInventoryList;
+  if (!grid || document.getElementById('inventoryModal')?.classList.contains('hidden')) return;
+  const category = document.getElementById('inventoryCategory');
+  if (category) {
+    const types = [...new Set(['potion', 'currency', 'material', 'gear', 'ticket', ...inventory.list().map(item => item.type)])];
+    const selected = category.value || 'all', signature = JSON.stringify(types);
+    if (category.dataset.types !== signature) {
+      category.replaceChildren();
+      for (const type of ['all', ...types]) {
+        const option = document.createElement('option'); option.value = type;
+        option.textContent = type === 'all' ? 'All items' : type[0].toUpperCase() + type.slice(1); category.append(option);
+      }
+      category.value = types.includes(selected) ? selected : 'all'; category.dataset.types = signature;
+    }
+  }
+  inventory.renderGrid(grid, {
+    search: document.getElementById('inventorySearch')?.value || '', category: category?.value || 'all',
+    onUse: id => {
+      updateStats(); renderUpgradeShop(); renderPotionInventory();
+      if (id === 'speed_battle_potion' && battleState?.isBattling && !battleState.finished) scheduleNextBattleTurn();
+    }
+  });
+}
+function renderTowerControls() {
+  const tower = window.TowerSystem;
+  if (!tower) return;
+  const isTower = isTowerBattle();
+  els.towerBattleControls?.classList.toggle('hidden', !isTower);
+  const selector = els.towerWeatherSelect;
+  if (selector && !selector.options.length) {
+    for (const weather of tower.weatherList(WEATHERS)) {
+      const option = document.createElement('option'); option.value = weather.id; option.textContent = weather.name; selector.appendChild(option);
+    }
+  }
+  const mode = getTowerWeatherMode();
+  const floor = tower.nextFloor(mode);
+  if (els.towerFloorDisplay) els.towerFloorDisplay.textContent = `Floor ${floor} • ∞${tower.isElite(floor) ? ' • ELITE' : ''}`;
+  if (els.towerWeatherRules) els.towerWeatherRules.textContent = mode === 'normal' ? 'Normal Tower: any owned card or mutation is eligible.' : 'Weather Tower: only native weather cards or matching Mutation / Double Mutation may be deployed.';
+  if (els.battleStartButton && isTower && tower.completed(mode)) els.battleStartButton.disabled = true;
+}
+function renderTowerShop() {
+  const tower = window.TowerSystem, inventory = window.InventorySystem;
+  if (!tower || !inventory) return;
+  if (els.towerCoinBalance) els.towerCoinBalance.textContent = `🪙 ${tower.coins.toLocaleString('en-US')} Tower Coins • Speed Battle Potion: 100 coins`;
+  const grid = els.towerShopItems;
+  if (!grid || document.getElementById('towerShopModal')?.classList.contains('hidden')) return;
+  grid.replaceChildren();
+  for (const offer of tower.SHOP_ITEMS) {
+    const potion = inventory.getItem(offer.id); if (!potion) continue;
+    const card = document.createElement('article'); card.className = 'module-item';
+    const name = document.createElement('strong'); name.textContent = `${potion.icon} ${potion.name}`;
+    const detail = document.createElement('p'); detail.textContent = `${potion.description} • Owned: ${potion.quantity}`;
+    const button = document.createElement('button'); button.type = 'button'; button.textContent = `Purchase • ${offer.cost} 🪙`; button.disabled = tower.coins < offer.cost;
+    button.addEventListener('click', () => { if (tower.purchasePotion(potion.id, inventory)) { renderTowerShop(); renderPotionInventory(); } });
+    card.append(name, detail, button); grid.appendChild(card);
+  }
+}
+
+// ============================================================
+// COMPLETE JSON SAVE TRANSFER
+// Validate every store before writing; pagehide must not overwrite an import.
+// ============================================================
+function getGameSaveKeys() {
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, ...LEGACY_STORAGE_KEYS];
+}
+function setSaveTransferStatus(message, failed = false) {
+  const status = document.getElementById('saveTransferStatus');
+  if (status) { status.textContent = message; status.classList.toggle('is-error', failed); }
+}
+function buildGameSaveExport() {
+  syncGameClockToNow(); refreshAchievements(); window.InventorySystem?.tick();
+  if (![window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
+  if (!saveState()) throw new Error('Your progress could not be saved. Please try again.');
+  const storage = {};
+  for (const key of getGameSaveKeys()) {
+    const value = localStorage.getItem(key);
+    if (value !== null) storage[key] = JSON.parse(value);
+  }
+  return { format: 'anime-card-rng-save', version: 1, exportedAt: new Date().toISOString(), storage };
+}
+function exportGameSave() {
+  try {
+    const bundle = buildGameSaveExport();
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob), anchor = document.createElement('a');
+    anchor.href = url; anchor.download = `anime-card-rng-save-${bundle.exportedAt.replace(/[:.]/g, '-')}.json`;
+    document.body.append(anchor); anchor.click(); anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setSaveTransferStatus('Save exported. It includes cards, levels, items, potion timers, Tower progress and achievements.');
+    return true;
+  } catch (error) { setSaveTransferStatus(error.message, true); return false; }
+}
+function validateSaveRecord(key, value) {
+  const object = item => Boolean(item && typeof item === 'object' && !Array.isArray(item));
+  const ensure = (condition, message) => { if (!condition) throw new Error(`Invalid ${key}: ${message}`); };
+  const number = (item, label, integer = true) => ensure((typeof item === 'number' || (typeof item === 'string' && item.trim() !== '')) && Number.isFinite(Number(item)) && Number(item) >= 0 && (!integer || Number.isSafeInteger(Number(item))), `${label} must be a nonnegative ${integer ? 'integer' : 'number'}.`);
+  const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
+  const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
+  ensure(object(value), 'expected a JSON object.');
+  if (key === STORAGE_KEY || LEGACY_STORAGE_KEYS.includes(key)) {
+    ensure(Boolean(parseStoredSave(JSON.stringify(value))), 'not a recognized game save.');
+    for (const field of ['totalRolls', 'currency', 'experience', 'battleDropRateBonus', 'dropChance']) if (field in value) number(value[field], field, field !== 'battleDropRateBonus' && field !== 'dropChance');
+    for (const field of ['unlocked', 'unlockedCards']) if (field in value) {
+      ensure(object(value[field]) || Array.isArray(value[field]), `${field} must contain card records.`);
+      if (object(value[field])) for (const n of Object.values(value[field])) if (n !== true && n !== false) number(n, field);
+    }
+    if ('mutations' in value) counts(value.mutations, 'mutations');
+    if ('inventory' in value) {
+      ensure(object(value.inventory) || Array.isArray(value.inventory), 'inventory must contain card variants.');
+      for (const entry of Object.values(value.inventory)) { ensure(object(entry), 'invalid card variant.'); if ('count' in entry) number(entry.count, 'variant count'); }
+    }
+    for (const field of ['cardProgress', 'cardLevels', 'levels']) if (field in value) {
+      ensure(object(value[field]), `${field} must be an object.`);
+      for (const entry of Object.values(value[field])) {
+        if (object(entry)) { if ('level' in entry) number(entry.level, 'level'); if ('exp' in entry) number(entry.exp, 'EXP'); }
+        else number(entry, 'level');
+      }
+    }
+    if ('upgrades' in value) counts(value.upgrades, 'upgrades');
+    if ('equipment' in value) ensure(Array.isArray(value.equipment), 'equipment must be an array.');
+    if ('achievementRewardReceipts' in value) flags(value.achievementRewardReceipts, 'reward receipts');
+    if ('weather' in value) {
+      ensure(object(value.weather), 'weather must be an object.');
+      for (const field of ['gameSeconds', 'lastRealTimestamp', 'lastSchedulerSecond', 'gameMinutes', 'lastSchedulerMinute']) if (field in value.weather) number(value.weather[field], field, false);
+      if ('active' in value.weather) {
+        ensure(Array.isArray(value.weather.active), 'active weather must be an array.');
+        for (const entry of value.weather.active) { ensure(object(entry) && typeof entry.weatherId === 'string', 'invalid active weather.'); number(entry.expiresAt, 'weather expiry', false); if ('startedAt' in entry) number(entry.startedAt, 'weather start', false); }
+      }
+    }
+  } else if (key === window.InventorySystem.KEY) {
+    if ('version' in value) ensure([1, 2].includes(value.version), 'unsupported item save version.');
+    ensure(object(value.items) || Array.isArray(value.items), 'items must contain item stacks.');
+    for (const entry of Object.values(value.items)) {
+      if (object(entry)) {
+        ensure('quantity' in entry || 'count' in entry, 'item is missing its quantity.'); number(entry.quantity ?? entry.count, 'item quantity');
+        for (const field of ['id', 'name', 'description', 'type', 'icon', 'image', 'tier']) if (field in entry) ensure(typeof entry[field] === 'string', `${field} must be text.`);
+      } else number(entry, 'item quantity');
+    }
+    if ('buffs' in value) counts(value.buffs, 'potion expiry');
+    if ('misses' in value) number(value.misses, 'pity');
+  } else if (key === window.TowerSystem.KEY) {
+    if ('version' in value) ensure(value.version === 1, 'unsupported Tower save version.');
+    if ('coins' in value) number(value.coins, 'Tower Coins');
+    if ('victories' in value) number(value.victories, 'Tower victories');
+    ensure(object(value.cleared), 'cleared floors must be an object.'); counts(value.cleared, 'cleared floors');
+  } else if (key === window.AchievementSystem.KEY) {
+    if ('version' in value) ensure(value.version === 1, 'unsupported achievement save version.');
+    ensure(object(value.stats), 'achievement stats must be an object.'); counts(value.stats, 'achievement stats');
+    for (const field of ['claimed', 'unlockedRequirements']) if (field in value) flags(value[field], field);
+    if ('towerProgress' in value) counts(value.towerProgress, 'achievement Tower progress');
+  }
+  return value;
+}
+function parseGameSaveImport(text) {
+  if (typeof text !== 'string' || text.length > 10 * 1024 * 1024) throw new Error('Save files must be valid JSON smaller than 10 MB.');
+  let file; try { file = JSON.parse(text); } catch (_) { throw new Error('This file is not valid JSON.'); }
+  const object = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
+  if (!object(file)) throw new Error('This is not an Anime Card RNG save.');
+  // Reject unsafe record names and non-finite numbers before any normalization.
+  function validateTree(value, depth = 0) {
+    if (depth > 50) throw new Error('Save data is nested too deeply.');
+    if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Save contains an invalid number.');
+    if (value && typeof value === 'object') for (const [key, entry] of Object.entries(value)) {
+      if (['__proto__', 'prototype', 'constructor'].includes(key)) throw new Error('Save contains an invalid record name.');
+      validateTree(entry, depth + 1);
+    }
+  }
+  validateTree(file);
+  let storage;
+  if ('format' in file || 'storage' in file) {
+    if (file.format !== 'anime-card-rng-save' || file.version !== 1 || !object(file.storage)) throw new Error('Unsupported save format or version.');
+    storage = file.storage;
+    const keys = getGameSaveKeys();
+    for (const key of Object.keys(storage)) if (!keys.includes(key)) throw new Error(`Unsupported game store: ${key}`);
+    for (const key of keys.slice(0, 4)) if (!(key in storage)) throw new Error('The save is incomplete: a game data store is missing.');
+  } else {
+    // Compatibility with a previous raw core save; omitted new systems reset.
+    validateSaveRecord(STORAGE_KEY, file);
+    storage = { [STORAGE_KEY]: file, [window.InventorySystem.KEY]: { version: 2, items: {}, buffs: {}, misses: 0 },
+      [window.TowerSystem.KEY]: { version: 1, coins: 0, victories: 0, cleared: {} },
+      [window.AchievementSystem.KEY]: { version: 1, stats: {}, towerProgress: {}, claimed: {}, unlockedRequirements: {} } };
+  }
+  const result = {};
+  for (const [key, entry] of Object.entries(storage)) result[key] = JSON.stringify(validateSaveRecord(key, entry));
+  // Use the existing migration/ownership sanitizer for the authoritative card save.
+  result[STORAGE_KEY] = JSON.stringify(normalizeState(JSON.parse(result[STORAGE_KEY])));
+  return result;
+}
+function importGameSave(text) {
+  const imported = parseGameSaveImport(text); // Validation finishes before writes.
+  const keys = getGameSaveKeys(), previous = new Map(keys.map(key => [key, localStorage.getItem(key)]));
+  isImportingSave = true;
+  try {
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(imported, key)) localStorage.setItem(key, imported[key]);
+      else localStorage.removeItem(key);
+    }
+  } catch (error) {
+    let restored = true;
+    for (const [key, value] of previous) try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (_) { restored = false; }
+    isImportingSave = false;
+    throw new Error(restored ? 'Import could not be saved. Your previous progress has been restored.' : 'Import failed because browser storage is unavailable. Reload only after restoring a valid backup.');
+  }
+  isAutoRolling = false;
+  if (els.autoRollToggle) els.autoRollToggle.checked = false;
+  if (globalTickTimer !== null) { window.clearInterval(globalTickTimer); globalTickTimer = null; }
+  clearCooldownExpiryTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
+  setSaveTransferStatus('Save imported. Reloading your restored game…');
+  // saveState, pagehide and visibility handlers are suppressed during reload.
+  window.location.reload();
+  return true;
+}
+
+// ============================================================
+// ACHIEVEMENT COORDINATION (tracking/storage/rendering in achievements.js)
+// ============================================================
+function getAchievementSnapshot() {
+  return { uniqueCards: getUniqueCount(), totalRolls: state.totalRolls, currency: state.currency,
+    knownBattleWins: window.TowerSystem?.victories || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {} };
+}
+function applyAchievementReward(achievement) {
+  state.achievementRewardReceipts ||= {};
+  if (state.achievementRewardReceipts[achievement.id] === true) return true;
+  const previous = JSON.parse(JSON.stringify(state));
+  try {
+    const reward = achievement.reward || {};
+    if (reward.cardId) {
+      const card = getCardById(reward.cardId);
+      if (!card) return false;
+      const id = normalizeCardId(card.id), key = canonicalVariantKey(id, []);
+      state.unlocked[id] = getUnlockedCountById(id) + 1;
+      state.mutations[key] = Math.max(0, Number(state.mutations[key]) || 0) + 1;
+      state.inventory[key] = { id, cardId: id, mutation: '', mutationIds: [], count: Math.max(0, Number(state.inventory[key]?.count) || 0) + 1 };
+    }
+    const currency = Math.max(0, Number(reward.currency) || 0);
+    state.currency += currency;
+    state.achievementRewardReceipts[achievement.id] = true;
+    if (!saveState()) throw new Error('The reward could not be saved.');
+    if (currency) window.AchievementSystem?.recordCurrencyEarned(currency);
+    return true;
+  } catch (error) { state = previous; console.warn('Achievement reward save failed', error); return false; }
+}
+function refreshAchievements() {
+  const achievements = window.AchievementSystem;
+  if (!achievements || isImportingSave) return;
+  achievements.sync(getAchievementSnapshot());
+  const ready = achievements.list().filter(item => item.complete && !item.claimed && !item.automatic).length;
+  const badge = document.getElementById('achievementReadyCount');
+  if (badge) { badge.textContent = ready ? String(ready) : ''; badge.hidden = ready === 0; }
+  if (!document.getElementById('achievementModal')?.classList.contains('hidden')) renderAchievements();
+}
+function renderAchievements() {
+  const achievements = window.AchievementSystem;
+  if (!achievements) return;
+  const category = document.getElementById('achievementCategory')?.value || 'all';
+  const items = achievements.list();
+  const summary = document.getElementById('achievementSummary');
+  if (summary) summary.textContent = `${items.filter(item => item.claimed).length} claimed • ${items.filter(item => item.complete && !item.claimed && !item.automatic).length} ready • ${items.length} milestones`;
+  achievements.render(document.getElementById('achievementList'), category, () => {
+    saveState(); updateStats(); renderUpgradeShop(); renderAvailableCards(); renderCollection(); refreshAchievements();
+  });
+}
+
+// ============================================================
 // GLOBAL LOOP
 // ============================================================
 
 function globalTick() {
+  if (isImportingSave) return;
+  refreshAchievements();
   const now = Date.now();
   const previous = Number(state.weather.lastRealTimestamp);
   const deltaSeconds = Number.isFinite(previous)
@@ -3881,6 +4216,8 @@ function globalTick() {
   const afterWeatherSignature = JSON.stringify(state.weather.active.map(entry => [entry.weatherId, entry.expiresAt]));
   const weatherChanged = clockChange.weatherChanged || clockChange.expired || beforeWeatherSignature !== afterWeatherSignature;
 
+  window.InventorySystem?.tick(now);
+  renderPotionInventory();
   completeCooldown(false);
   renderClockAndWeather(false);
   renderCooldownUI(now);
@@ -3950,6 +4287,9 @@ function openModal(id) {
     renderCollection();
   }
   if (id === "upgradesModal") renderUpgradeShop();
+  if (id === "inventoryModal") renderPotionInventory();
+  if (id === "achievementModal") { refreshAchievements(); renderAchievements(); }
+  if (id === "towerShopModal") renderTowerShop();
   if (id === "cardPreviewModal") renderPreview();
   if (id === "battleModal") resetBattleView();
 }
@@ -4044,8 +4384,9 @@ function closeModal(id) {
 }
 
 function resetGame() {
-  const confirmed = window.confirm("Reset rolls, 💵 upgrades, collection, mutations, weather, and equipment? This cannot be undone.");
+  const confirmed = window.confirm("Reset rolls, 💵 upgrades, collection, mutations, weather, equipment, items, achievements, and Tower progress? This cannot be undone.");
   if (!confirmed) return;
+  window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.AchievementSystem?.reset();
 
   clearCooldownExpiryTimer();
   clearBattleTurnTimer();
@@ -4318,6 +4659,7 @@ document.addEventListener("keydown", event => {
 
 // Recover real time on background/foreground and before the page unloads.
 document.addEventListener("visibilitychange", () => {
+  if (isImportingSave) return;
   if (document.visibilityState === "visible") {
     recoverElapsedRealTime();
     renderClockAndWeather(true);
@@ -4329,8 +4671,33 @@ document.addEventListener("visibilitychange", () => {
 });
 
 window.addEventListener("pagehide", () => {
+  if (isImportingSave) return;
   syncGameClockToNow();
   saveState();
+});
+
+// Modular feature entry points. These do not attach extra global/battle timers.
+els.inventoryOpenButton?.addEventListener('click', () => openModal('inventoryModal'));
+document.getElementById('inventorySearch')?.addEventListener('input', renderPotionInventory);
+document.getElementById('inventoryCategory')?.addEventListener('change', renderPotionInventory);
+els.towerOpenButton?.addEventListener('click', () => { openModal('battleModal'); setBattleMode('tower'); });
+els.towerShopOpenButton?.addEventListener('click', () => openModal('towerShopModal'));
+els.towerWeatherSelect?.addEventListener('change', () => {
+  if (!isTowerBattle() || battleState?.isBattling) return;
+  battleState.setup = { team: [], activeIndex: 0 };
+  renderBattleModePicker(); populateBattleFighterSelect();
+});
+
+document.getElementById('achievementOpenButton')?.addEventListener('click', () => openModal('achievementModal'));
+document.getElementById('achievementCategory')?.addEventListener('change', renderAchievements);
+document.getElementById('saveManagerOpenButton')?.addEventListener('click', () => openModal('saveManagerModal'));
+document.getElementById('exportSaveButton')?.addEventListener('click', exportGameSave);
+document.getElementById('importSaveButton')?.addEventListener('click', () => document.getElementById('importSaveInput')?.click());
+document.getElementById('importSaveInput')?.addEventListener('change', async event => {
+  const file = event.target.files?.[0]; if (!file) return;
+  try { if (file.size > 10 * 1024 * 1024) throw new Error('Save files must be smaller than 10 MB.'); importGameSave(await file.text()); }
+  catch (error) { setSaveTransferStatus(error.message, true); }
+  finally { event.target.value = ''; }
 });
 
 // ============================================================
@@ -4350,6 +4717,8 @@ els.battleVictory?.classList.add('hidden');
 els.battleVictory?.setAttribute('aria-hidden', 'true');
 els.battleSetup?.classList.remove('hidden');
 
+window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
+refreshAchievements();
 recoverElapsedRealTime();
 pruneExpiredWeathers();
 renderClockAndWeather(true);

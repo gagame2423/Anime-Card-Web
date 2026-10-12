@@ -526,7 +526,7 @@ const CARDS = [
     stats: { hp: 1550, atk: 55 },
     passive: {
       name: "Chemistry",
-      description: "[SELF + ALLY EFFECT] [ALLY SUPPORT] At the start of each turn when this unit is not the attacker, all teammates recover 10% HP"
+      description: "[SELF + ALLY EFFECT] [ALLY SUPPORT] At the start of each turn when this unit is not the attacker, all teammates recover 2.5% of their Max HP (blocked by Bleed)"
     },
     image: "assets/cards/senku.png"
   },
@@ -578,7 +578,7 @@ const CARDS = [
     stats: { hp: 74000, atk: 5000 },
     passive: {
       name: "Aura Synthesis",
-      description: "[SELF] Each time this unit is attacked, this unit heals for 15% of its Max HP and gains 1 Aura stack (5 max); each stack grants +10% critical damage"
+      description: "[SELF] Each time this unit is attacked, this unit gains 1 Aura stack (max 5). Upon first reaching 5/5 Aura, this unit heals for 5% Max HP (blocked by Bleed); each stack grants +10% critical damage"
     },
     image: "assets/cards/meruem.png"
   },
@@ -1074,7 +1074,7 @@ const CARDS = [
     stats: { hp: 20008, atk: 1990 },
     passive: {
       name: "Time Manipulation",
-      description: "[SELF + ALLY SUPPORT] When a heal brings this unit or a teammate from below 60% HP to at least 60% HP, this unit freezes an enemy for 5 turns"
+      description: "[SELF + ALLY SUPPORT] When a heal brings this unit or a teammate from below 60% HP to at least 60% HP, this unit freezes an enemy for 5 turns (once per battle)"
     },
     image: "assets/cards/homura.png"
   },
@@ -1313,6 +1313,35 @@ const CARDS = [
     image: "assets/cards/mahoraga.png"
   }
 ];
+
+// Floor-100 rewards: one unique ID per Tower. These cards are gated by the
+// requirement, then enter the ordinary roll pool with no active-weather gate.
+// Edit chance/stats/source artwork here without changing achievements.js.
+const TOWER_REWARD_CARDS = [
+  { id: 'tower-champion-normal', towerType: 'normal', unlockRequirement: 'tower_floor_100_normal', sourceId: 'starter-common', name: 'Naruto • Tower Champion' },
+  { id: 'tower-champion-raining', towerType: 'raining', unlockRequirement: 'tower_floor_100_raining', sourceId: 'aquaman', name: 'Aquaman • Storm Champion' },
+  { id: 'tower-champion-snowing', towerType: 'snowing', unlockRequirement: 'tower_floor_100_snowing', sourceId: 'toshiro', name: 'Toshiro • Frost Champion' },
+  { id: 'tower-champion-sunny', towerType: 'sunny', unlockRequirement: 'tower_floor_100_sunny', sourceId: 'weather-solar-deity', name: 'Solar Deity • Sun Champion' },
+  { id: 'tower-champion-sugar', towerType: 'sugar', unlockRequirement: 'tower_floor_100_sugar', sourceId: 'android-21', name: 'Android 21 • Sugar Champion' },
+  { id: 'tower-champion-reaper', towerType: 'reaper', unlockRequirement: 'tower_floor_100_reaper', sourceId: 'weather-reaper-hollow', name: 'Hollow • Reaper Champion' },
+  { id: 'tower-champion-eclipse', towerType: 'eclipse', unlockRequirement: 'tower_floor_100_eclipse', sourceId: 'weather-eclipse-harvester', name: 'Eclipse Harvester • Eclipse Champion' },
+  { id: 'tower-champion-malevolent', towerType: 'malevolent', unlockRequirement: 'tower_floor_100_malevolent', sourceId: 'weather-malevolent-king', name: 'Malevolent King • Cursed Champion' },
+  { id: 'tower-champion-tsukuyomi', towerType: 'tsukuyomi', unlockRequirement: 'tower_floor_100_tsukuyomi', sourceId: 'weather-tsukuyomi-eye', name: 'Tsukuyomi Eye • Moon Champion' },
+  { id: 'tower-champion-heavenly', towerType: 'heavenly', unlockRequirement: 'tower_floor_100_heavenly', sourceId: 'weather-heavenly-seraph', name: 'Heavenly Seraph • Light Champion' },
+  { id: 'tower-champion-shadow', towerType: 'shadow', unlockRequirement: 'tower_floor_100_shadow', sourceId: 'weather-shadow-monarch', name: 'Shadow Monarch • Shadow Champion' }
+].map((reward, index) => {
+  const source = CARDS.find(card => card.id === reward.sourceId);
+  return Object.freeze({
+    ...reward, towerFloor: 100, rarity: 'Secret', chance: 500000 + index * 50000,
+    requiredWeather: null, nativeWeather: reward.towerType === 'normal' ? null : reward.towerType,
+    stats: { hp: 12000 + index * 800, atk: 1800 + index * 120 },
+    passive: null, // Trophy fighters use base stats; no hidden passive effect.
+    image: source?.image || '',
+    description: `Clear Floor 100 of the ${reward.towerType} Tower. Once unlocked, this card can be rolled in any weather.`
+  });
+});
+CARDS.push(...TOWER_REWARD_CARDS);
+if (typeof window !== 'undefined') window.TOWER_REWARD_CARDS = TOWER_REWARD_CARDS;
 
 // The base card database is immutable at the array level. Gameplay code must
 // always sort/filter a fresh copy so Collection/Battle rendering can never

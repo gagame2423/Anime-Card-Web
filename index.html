@@ -58,6 +58,10 @@
           </span>
         </button>
 
+        <button id="inventoryOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🧪</span><span><small>STORAGE</small><strong>Items</strong></span></button>
+        <button id="towerOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🏰</span><span><small>TOWER</small><strong>Climb</strong></span></button>
+        <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
+        <button id="saveManagerOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Export or import save"><span class="nav-icon">⇄</span><span><small>BACKUP</small><strong>Save</strong></span></button>
         <button id="resetButton" class="ghost-button" type="button">Reset</button>
       </nav>
     </header>
@@ -342,6 +346,46 @@
     </section>
   </div>
 
+  <!-- ACHIEVEMENTS: independent tracking, permanent milestone rewards -->
+  <div id="achievementModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="achievementModalTitle">
+    <section class="modal-panel module-modal achievement-modal">
+      <header class="modal-header"><div><p class="eyebrow">YOUR JOURNEY</p><h2 id="achievementModalTitle">🏆 Achievements</h2></div><button data-close-modal="achievementModal" class="modal-close" type="button" aria-label="Close achievements">×</button></header>
+      <p class="module-description">Milestones keep your best progress after spending or salvage. Floor 100 Champion cards are awarded automatically and unlock permanently for future rolls.</p>
+      <div class="achievement-toolbar"><span id="achievementSummary" aria-live="polite"></span><label><span class="sr-only">Achievement category</span><select id="achievementCategory"><option value="all">All milestones</option><option value="collection">Collection</option><option value="battles">Battle wins</option><option value="currency">VNĐ milestones</option><option value="rolls">Total rolls</option><option value="tower">Tower progress</option></select></label></div>
+      <div id="achievementList" class="achievement-grid" aria-label="Achievements and rewards"></div>
+    </section>
+  </div>
+  <!-- SAVE TRANSFER: all persistent game stores travel together -->
+  <div id="saveManagerModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="saveManagerTitle">
+    <section class="modal-panel module-modal save-manager-modal">
+      <header class="modal-header"><div><p class="eyebrow">TAKE YOUR PROGRESS WITH YOU</p><h2 id="saveManagerTitle">⇄ Save transfer</h2></div><button data-close-modal="saveManagerModal" class="modal-close" type="button" aria-label="Close save transfer">×</button></header>
+      <p class="module-description">Export your cards, levels, VNĐ, items, potion timers, weather, Tower progress and achievements as one JSON file.</p>
+      <div class="save-transfer-actions">
+        <article><h3>Export Save</h3><p>Download a backup to keep or move to another browser or device.</p><button id="exportSaveButton" type="button">↓ Export Save (.json)</button></article>
+        <article><h3>Import Save</h3><p>Choose an Anime Card RNG JSON backup. Import replaces your current progress and reloads the game.</p><button id="importSaveButton" type="button">↑ Import Save (.json)</button><input id="importSaveInput" type="file" accept=".json,application/json" hidden></article>
+      </div>
+      <p id="saveTransferStatus" class="module-description save-transfer-status" role="status" aria-live="polite">Your potion timers keep their original expiry time across devices.</p>
+    </section>
+  </div>
+  <!-- ITEMS: separate persistence from card ownership -->
+  <div id="inventoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="inventoryModalTitle">
+    <section class="modal-panel module-modal"><header class="modal-header"><div><p class="eyebrow">PERSISTENT STORAGE</p><h2 id="inventoryModalTitle">🎒 Item Storage</h2></div><button data-close-modal="inventoryModal" class="modal-close" type="button" aria-label="Close inventory">×</button></header>
+      <p class="module-description">Your items, neatly stacked. Use potions for 10-minute bonuses; active timers continue across reloads.</p>
+      <p class="module-description" id="dropChanceDisplay">Drop Chance: 0% • Battle-win potion chance: 10%</p>
+      <div class="inventory-toolbar">
+        <label class="inventory-search"><span>Search items</span><input id="inventorySearch" type="search" placeholder="Name or description…" autocomplete="off"></label>
+        <label class="inventory-filter"><span>Category</span><select id="inventoryCategory"><option value="all">All items</option></select></label>
+      </div>
+      <div id="potionInventoryList" class="inventory-grid" aria-label="Stored items"></div>
+    </section>
+  </div>
+  <!-- TOWER SHOP -->
+  <div id="towerShopModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="towerShopTitle">
+    <section class="modal-panel module-modal"><header class="modal-header"><div><p class="eyebrow">FLOOR REWARDS</p><h2 id="towerShopTitle">🏰 Tower Shop</h2></div><button data-close-modal="towerShopModal" class="modal-close" type="button" aria-label="Close tower shop">×</button></header>
+      <p class="module-description" id="towerCoinBalance">🪙 0 Tower Coins</p>
+      <div id="towerShopItems" class="module-grid"></div>
+    </section>
+  </div>
   <!-- SOLO BATTLE -->
   <div id="battleModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="battleModalTitle">
     <section class="modal-panel battle-modal">
@@ -372,6 +416,14 @@
               <strong>1v1</strong>
               <span>Adaptive enemy • anti-inflation scaling</span>
             </button>
+            <button type="button" class="battle-mode-option" data-battle-mode="tower" aria-pressed="false"><strong>🏰 TOWER</strong><span>Infinite floors • 4v4 • Tower Coins</span></button>
+          </div>
+          <div id="towerBattleControls" class="tower-controls hidden">
+            <label for="towerWeatherSelect">Tower type</label>
+            <select id="towerWeatherSelect" class="select-input" aria-label="Tower weather"></select>
+            <strong id="towerFloorDisplay">Floor 1 • ∞</strong>
+            <span id="towerWeatherRules">Normal Tower: all your cards are eligible.</span>
+            <button id="towerShopOpenButton" class="tower-shop-button" type="button">🪙 Tower Shop</button>
           </div>
 
           <div class="battle-team-builder">
@@ -500,7 +552,7 @@
           </div>
         </div>
 
-        <div class="battle-auto-note">Auto combat • Every 3 seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible</div>
+        <div id="battleAutoNote" class="battle-auto-note">Auto combat • Every 3 seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible</div>
         <div id="battleLog" class="battle-log" aria-live="polite"></div>
       </div>
 
@@ -648,6 +700,9 @@
   <script src="weathers.js"></script>
   <script src="cards.js"></script>
   <script src="passives.js"></script>
+  <script src="inventory.js"></script>
+  <script src="tower.js"></script>
+  <script src="achievements.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
