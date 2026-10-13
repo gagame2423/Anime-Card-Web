@@ -4258,3 +4258,46 @@ body {
 /* Protected save transfer status; no additional game timer. */
 .save-cooldown-label { color: #a3d5c5; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .save-transfer-actions button:disabled { opacity: .45; cursor: wait; }
+
+/* Navigation stays visible; secondary actions share one compact drawer. */
+.topbar { flex-wrap: wrap; }
+.brand { display: block; }
+.top-actions { position: relative; flex-wrap: wrap; overflow: visible; max-width: 100%; }
+.currency-box, .game-clock-box { flex-shrink: 0; }
+.utility-menu { position: static; }
+.utility-menu__trigger { display: grid; place-items: center; min-width: 46px; font-size: 24px; list-style: none; }
+.utility-menu__trigger::-webkit-details-marker { display: none; }
+.utility-menu__panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 100; width: min(250px, calc(100vw - 32px)); display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: #101423; box-shadow: 0 16px 40px rgba(0,0,0,.6); }
+.utility-menu:not([open]) .utility-menu__panel { display: none; }
+.utility-menu__panel .nav-button { width: 100%; }
+.utility-menu__panel .nav-icon { display: grid; }
+.utility-menu__panel .nav-button span:last-child { display: block; }
+.utility-menu__panel .ghost-button { text-align: left; }
+.utility-menu__trigger:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
+
+/* Persistent replay preference stays reachable during combat and results. */
+.battle-header-controls { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.battle-auto-continue { position: relative; display: flex; align-items: center; gap: 7px; cursor: pointer; color: #b9c2da; font-size: 10px; font-weight: 800; }
+.battle-auto-continue input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.battle-auto-continue__track { width: 34px; height: 20px; flex-shrink: 0; border: 1px solid #5c647c; border-radius: 20px; background: #2b3045; transition: background .15s ease; }
+.battle-auto-continue__track::after { content: ''; display: block; width: 14px; height: 14px; margin: 2px; border-radius: 50%; background: #b9c2da; transition: transform .15s ease; }
+.battle-auto-continue input:checked + .battle-auto-continue__track { background: #1a6858; border-color: #70f2bd; }
+.battle-auto-continue input:checked + .battle-auto-continue__track::after { transform: translateX(14px); background: #a0ffdb; }
+.battle-auto-continue input:focus-visible + .battle-auto-continue__track { outline: 2px solid #9cefff; outline-offset: 3px; }
+.battle-auto-continue b { min-width: 23px; color: #d8e6ed; font-size: 9px; }
+/* Extra passive reserves scroll in one row instead of crowding the arena. */
+.battle-lineup { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - 15px) / 4); overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+@media (max-width: 900px) {
+  .topbar { flex-direction: column; align-items: stretch; }
+  .top-actions { width: 100%; justify-content: flex-start; }
+}
+@media (max-width: 540px) {
+  #battleModal .battle-modal > .modal-header { flex-wrap: wrap; gap: 8px; min-height: 62px; }
+  #battleModal .modal-header h2 { font-size: 17px; }
+  .battle-header-controls { margin-left: auto; gap: 8px; }
+  .battle-auto-continue { font-size: 9px; }
+}
+@media (max-width: 640px) {
+  .top-actions > .nav-button { min-width: 46px; justify-content: center; }
+  .top-actions > .nav-button .nav-icon { display: grid; }
+}

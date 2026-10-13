@@ -34,7 +34,7 @@
           </div>
         </div>
 
-        <button id="collectionButton" class="nav-button" type="button">
+        <button id="collectionButton" class="nav-button" type="button" aria-label="Open collection">
           <span class="nav-icon">▦</span>
           <span>
             <small>COLLECTION</small>
@@ -42,7 +42,7 @@
           </span>
         </button>
 
-        <button id="upgradesButton" class="nav-button accent-button" type="button">
+        <button id="upgradesButton" class="nav-button accent-button" type="button" aria-label="Open upgrade shop">
           <span class="nav-icon">↑</span>
           <span>
             <small>UPGRADES</small>
@@ -58,11 +58,15 @@
           </span>
         </button>
 
-        <button id="inventoryOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🧪</span><span><small>STORAGE</small><strong>Items</strong></span></button>
-        <button id="towerOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🏰</span><span><small>TOWER</small><strong>Climb</strong></span></button>
-        <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
-        <button id="saveManagerOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Export or import save"><span class="nav-icon">⇄</span><span><small>BACKUP</small><strong>Save</strong></span></button>
-        <button id="resetButton" class="ghost-button" type="button">Reset</button>
+        <details id="utilityMenu" class="utility-menu">
+          <summary class="ghost-button utility-menu__trigger" aria-label="More game actions" title="More game actions">⋯</summary>
+          <div class="utility-menu__panel" aria-label="Game utilities">
+            <button id="inventoryOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🧪</span><span><small>STORAGE</small><strong>Items</strong></span></button>
+            <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
+            <button id="saveManagerOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Export or import save"><span class="nav-icon">⇄</span><span><small>BACKUP</small><strong>Save</strong></span></button>
+            <button id="resetButton" class="ghost-button" type="button">Reset</button>
+          </div>
+        </details>
       </nav>
     </header>
 
@@ -394,7 +398,16 @@
           <p class="eyebrow">SOLO COMBAT</p>
           <h2 id="battleModalTitle">⚔ Battle Arena</h2>
         </div>
-        <button id="battleCloseButton" class="modal-close" type="button" aria-label="Exit battle and forfeit">×</button>
+        <div class="battle-header-controls">
+          <label class="battle-auto-continue" for="autoContinueBattleToggle">
+            <span>Auto Continue Battle</span>
+            <input id="autoContinueBattleToggle" type="checkbox" role="switch" aria-describedby="autoContinueBattleHint" />
+            <span class="battle-auto-continue__track" aria-hidden="true"></span>
+            <b id="autoContinueBattleState" aria-hidden="true">OFF</b>
+          </label>
+          <span id="autoContinueBattleHint" class="sr-only">After a victory, continue with this lineup after 1.5 seconds. Stop on defeat or exit.</span>
+          <button id="battleCloseButton" class="modal-close" type="button" aria-label="Exit battle and forfeit">×</button>
+        </div>
       </header>
 
       <div class="battle-setup" id="battleSetup">

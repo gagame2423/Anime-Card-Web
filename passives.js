@@ -251,9 +251,10 @@
     battleState.enemy = nextEnemy;
   }
 
-  function isTeamDefeated(team) {
-    const realUnits = aliveUnits(team).filter(unit => !unit?.isClone);
-    return realUnits.length === 0;
+  function isTeamDefeated(team, includeReserves = false) {
+    // Tower's queue includes every spawned fighter, including passive clones.
+    // Retain the existing Arena rule for temporary allies outside Tower.
+    return !aliveUnits(team).some(unit => includeReserves || !unit.isClone);
   }
 
   function appendTeamUnit(team, unit) {
@@ -1861,7 +1862,12 @@
           clone.side = target.side;
           const team = teamOf(battleState, metalCooler);
           const insertIndex = Math.max(0, team.indexOf(metalCooler) + 1);
+          const indexKey = team === battleState.playerTeam ? 'playerIndex' : 'enemyIndex';
+          const frontline = team[Number(battleState[indexKey]) || 0];
           team.splice(Math.min(team.length, insertIndex), 0, clone);
+          // Preserve the active fighter when an insertion shifts its position.
+          // Promotion after its death still follows the lineup's queue order.
+          if (frontline) battleState[indexKey] = team.indexOf(frontline);
           mr.cloneCount += 1;
           safeLog(`[PASSIVE] ${metalCooler.display?.name || 'Metal Cooler'} created a 50% stat clone of ${target.display?.name || 'the fallen teammate'} before the fatal blow.`, 'passive');
         }
@@ -2205,8 +2211,9 @@
   }
 
   function checkBattleWinner(battleState) {
-    if (isTeamDefeated(battleState?.enemyTeam)) return 'player';
-    if (isTeamDefeated(battleState?.playerTeam)) return 'enemy';
+    const includeReserves = battleState?.mode === 'tower';
+    if (isTeamDefeated(battleState?.enemyTeam, includeReserves)) return 'player';
+    if (isTeamDefeated(battleState?.playerTeam, includeReserves)) return 'enemy';
     return null;
   }
 
@@ -2247,6 +2254,8 @@
       return { ended: Boolean(winner), winner };
     }
 
+    const previousPlayer = battleState.player;
+    const previousEnemy = battleState.enemy;
     const previousPlayerIndex = Number(battleState.playerIndex) || 0;
     const previousEnemyIndex = Number(battleState.enemyIndex) || 0;
 
@@ -2260,10 +2269,10 @@
     ensureCurrentIndices(battleState);
     const currentPlayerIndex = Number(battleState.playerIndex) || 0;
     const currentEnemyIndex = Number(battleState.enemyIndex) || 0;
-    if (currentPlayerIndex !== previousPlayerIndex) {
+    if (currentPlayerIndex !== previousPlayerIndex && !isAlive(previousPlayer)) {
       safeLog(`[GAUNTLET] Player position ${previousPlayerIndex + 1} was defeated. Position ${currentPlayerIndex + 1} enters the arena.`, 'status');
     }
-    if (currentEnemyIndex !== previousEnemyIndex) {
+    if (currentEnemyIndex !== previousEnemyIndex && !isAlive(previousEnemy)) {
       safeLog(`[GAUNTLET] Enemy position ${previousEnemyIndex + 1} was defeated. Position ${currentEnemyIndex + 1} enters the arena.`, 'status');
     }
 

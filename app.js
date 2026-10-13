@@ -190,7 +190,6 @@ const els = {
 
   battleButton: document.getElementById("battleButton"),
   inventoryOpenButton: document.getElementById("inventoryOpenButton"),
-  towerOpenButton: document.getElementById("towerOpenButton"),
   towerBattleControls: document.getElementById("towerBattleControls"),
   towerWeatherSelect: document.getElementById("towerWeatherSelect"),
   towerFloorDisplay: document.getElementById("towerFloorDisplay"),
@@ -263,6 +262,7 @@ const els = {
   battleResultExp: document.getElementById("battleResultExp"),
   battleResultDropRate: document.getElementById("battleResultDropRate"),
   battleAutoAgainButton: document.getElementById("battle-again-btn"),
+  autoContinueBattleToggle: document.getElementById("autoContinueBattleToggle"),
   battleCloseResultButton: document.getElementById("close-battle-result-btn"),
   battleChangeFighterButton: document.getElementById("battleChangeFighterButton")
 };
@@ -2647,6 +2647,8 @@ const BATTLE_BASE_XP_1V1 = 140;
 const BATTLE_BASE_CASH_4V4 = 1000;
 const BATTLE_BASE_CASH_1V1 = 300;
 const BATTLE_TURN_MS = 3000;
+const AUTO_CONTINUE_DELAY_MS = 1500;
+const AUTO_CONTINUE_STORAGE_KEY = "anime_card_rng_auto_continue_battle";
 const BATTLE_TEAM_SIZE = 4;
 const BATTLE_ENEMY_MUTATION_CHANCE = 0.70;
 const BATTLE_1V1_MIN_SCALE = 0.78;
@@ -2712,6 +2714,35 @@ function getBattleModeLabel() {
 
 let battleState = null;
 let battleTurnTimer = null;
+let autoContinueBattleTimer = null;
+let autoContinueBattleEnabled = false;
+try { autoContinueBattleEnabled = localStorage.getItem(AUTO_CONTINUE_STORAGE_KEY) === 'true'; }
+catch (error) { console.warn('Could not load Auto Continue preference:', error); }
+
+function clearAutoContinueBattleTimer() {
+  if (autoContinueBattleTimer !== null) window.clearTimeout(autoContinueBattleTimer);
+  autoContinueBattleTimer = null;
+}
+
+function renderAutoContinueBattleToggle() {
+  if (els.autoContinueBattleToggle) els.autoContinueBattleToggle.checked = autoContinueBattleEnabled;
+  const label = document.getElementById('autoContinueBattleState');
+  if (label) label.textContent = autoContinueBattleEnabled ? 'ON' : 'OFF';
+}
+
+function scheduleAutoContinueBattle() {
+  clearAutoContinueBattleTimer();
+  const completedBattle = battleState;
+  if (!autoContinueBattleEnabled || completedBattle?.outcome !== 'victory' || !canReplayBattleTeam()) return;
+  autoContinueBattleTimer = window.setTimeout(() => {
+    autoContinueBattleTimer = null;
+    if (!autoContinueBattleEnabled || isImportingSave || saveTransferBusy || battleState !== completedBattle ||
+        !completedBattle.finished || completedBattle.outcome !== 'victory' ||
+        els.battleModal?.classList.contains('hidden') || !canReplayBattleTeam()) return;
+    startBattle(true);
+  }, AUTO_CONTINUE_DELAY_MS);
+}
+
 const battleAnimationTimers = new Set();
 // Do not persist this encounter hint: it only prevents immediate same-opponent
 // repetition while preserving fresh random selection every new battle.
@@ -3107,6 +3138,7 @@ function renderBattleModePicker() {
 }
 
 function setBattleMode(mode) {
+  clearAutoContinueBattleTimer();
   const nextMode = mode === '1v1' ? '1v1' : mode === 'tower' ? 'tower' : '4v4';
   clearBattleTurnTimer();
   battleState = { mode: nextMode, setup: { team: [], activeIndex: 0 } };
@@ -3115,6 +3147,7 @@ function setBattleMode(mode) {
 }
 
 function resetBattleView(mode = '4v4') {
+  clearAutoContinueBattleTimer();
   clearBattleTurnTimer();
   clearBattleAnimationTimers();
   battleState = { mode: mode === '1v1' ? '1v1' : mode === 'tower' ? 'tower' : '4v4', setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
@@ -3682,11 +3715,15 @@ function getBattleDefeatNotice() {
 
 function finishBattle(playerWon) {
   if (!battleState || battleState.finished) return;
+  // Even callers using endBattle() must wait for Tower's complete enemy queue.
+  if (playerWon && battleState.mode === 'tower' && window.PassiveSystem?.checkBattleWinner?.(battleState) !== 'player') return;
+  clearAutoContinueBattleTimer();
 
   clearBattleTurnTimer();
   clearBattleAnimationTimers();
   battleState.finished = true;
   battleState.isBattling = false;
+  battleState.outcome = playerWon ? 'victory' : 'defeat';
 
   const safePlayerPower = Number.isFinite(Number(battleState.playerPower)) ? Math.max(0, Number(battleState.playerPower)) : 0;
   const safeEnemyPower = Number.isFinite(Number(battleState.enemyPower)) ? Math.max(0, Number(battleState.enemyPower)) : 0;
@@ -3798,16 +3835,18 @@ function finishBattle(playerWon) {
   } else {
     console.warn('Battle result view is missing; result data was still processed.');
   }
+  if (playerWon && replayable) scheduleAutoContinueBattle();
 }
 
 // Explicit alias for integrations that expect an endBattle() API.
 function endBattle(playerWon) {
   if (!battleState || battleState.finished) return;
-  clearBattleTurnTimer();
   finishBattle(Boolean(playerWon));
 }
 
 function startBattle(useExistingSetup = true) {
+  clearAutoContinueBattleTimer();
+  if (isBattleMatchActive() || isImportingSave) return;
   const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
   if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
   if (!Array.isArray(setupTeam) || setupTeam.length !== getBattleTeamSize() || !isBattleSetupValid(setupTeam)) return;
@@ -3815,6 +3854,7 @@ function startBattle(useExistingSetup = true) {
 
   // A new encounter must never reuse a prior opponent object. Clear the
   // transient battle encounter before generating a fresh opponent/team.
+  clearBattleTurnTimer();
   clearBattleAnimationTimers();
   battleState = {
     ...(battleState || {}),
@@ -4125,7 +4165,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4173,6 +4213,7 @@ function validateSaveRecord(key, value) {
   const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
   const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
   if (Object.values(SAVE_COOLDOWN_KEYS).includes(key)) { number(value, 'thời điểm chuyển save'); return value; }
+  if (key === AUTO_CONTINUE_STORAGE_KEY) { ensure(typeof value === 'boolean', 'Auto Continue must be a boolean.'); return value; }
   ensure(object(value), 'expected a JSON object.');
   if (key === STORAGE_KEY || LEGACY_STORAGE_KEYS.includes(key)) {
     ensure(Boolean(parseStoredSave(JSON.stringify(value))), 'not a recognized game save.');
@@ -4291,7 +4332,7 @@ async function importGameSave(input) {
     isAutoRolling = false;
     if (els.autoRollToggle) els.autoRollToggle.checked = false;
     if (globalTickTimer !== null) { window.clearInterval(globalTickTimer); globalTickTimer = null; }
-    clearCooldownExpiryTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
+    clearCooldownExpiryTimer(); clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
     setSaveTransferStatus('Đã nhập save bảo vệ. Đang tải lại game…');
     // Existing saveState/pagehide/visibility guards protect restored stores.
     window.location.reload();
@@ -4433,6 +4474,7 @@ function setBattleModalLock(active) {
 function openModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
+  document.getElementById('utilityMenu')?.removeAttribute('open');
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
   if (id === "collectionModal") {
@@ -4449,6 +4491,7 @@ function openModal(id) {
 }
 
 function returnToLobby() {
+  clearAutoContinueBattleTimer();
   try {
     clearBattleTurnTimer();
     clearBattleAnimationTimers();
@@ -4477,6 +4520,7 @@ function returnToLobby() {
 }
 
 function surrenderBattle() {
+  clearAutoContinueBattleTimer();
   if (!battleState) {
     closeModal('battleModal');
     return;
@@ -4517,6 +4561,7 @@ function closeModal(id) {
   modal.classList.add("hidden");
   if (id === "cardPreviewModal") closeVariantMenu();
   if (id === "battleModal") {
+    clearAutoContinueBattleTimer();
     clearBattleTurnTimer();
     clearBattleAnimationTimers();
     setBattleModalLock(false);
@@ -4540,6 +4585,11 @@ function closeModal(id) {
 function resetGame() {
   const confirmed = window.confirm("Reset rolls, 💵 upgrades, collection, mutations, weather, equipment, items, achievements, and Tower progress? This cannot be undone.");
   if (!confirmed) return;
+  clearAutoContinueBattleTimer();
+  autoContinueBattleEnabled = false;
+  try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
+  renderAutoContinueBattleToggle();
+  returnToLobby();
   window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.AchievementSystem?.reset();
 
   clearCooldownExpiryTimer();
@@ -4721,6 +4771,28 @@ els.upgradesButton?.addEventListener("click", () => openModal("upgradesModal"));
 els.battleButton?.addEventListener("click", openBattleModal);
 els.battleCloseButton?.addEventListener("click", event => { event.preventDefault(); surrenderBattle(); });
 els.resetButton?.addEventListener("click", resetGame);
+els.autoContinueBattleToggle?.addEventListener('change', () => {
+  autoContinueBattleEnabled = els.autoContinueBattleToggle.checked;
+  try { localStorage.setItem(AUTO_CONTINUE_STORAGE_KEY, JSON.stringify(autoContinueBattleEnabled)); }
+  catch (error) { console.warn('Auto Continue preference could not be persisted:', error); }
+  renderAutoContinueBattleToggle();
+  if (autoContinueBattleEnabled) scheduleAutoContinueBattle();
+  else clearAutoContinueBattleTimer();
+});
+window.addEventListener('storage', event => {
+  if (event.key !== AUTO_CONTINUE_STORAGE_KEY && event.key !== null) return;
+  autoContinueBattleEnabled = event.key === null ? false : event.newValue === 'true';
+  renderAutoContinueBattleToggle();
+  if (!autoContinueBattleEnabled) clearAutoContinueBattleTimer();
+});
+const utilityMenu = document.getElementById('utilityMenu');
+document.addEventListener('click', event => {
+  if (utilityMenu?.open && (!utilityMenu.contains(event.target) || event.target.closest('button'))) utilityMenu.open = false;
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && utilityMenu?.open) { utilityMenu.open = false; utilityMenu.querySelector('summary')?.focus(); }
+});
+
 els.battleStartButton?.addEventListener("click", () => startBattle(true));
 els.battleModePicker?.querySelectorAll("[data-battle-mode]").forEach(button => {
   button.addEventListener("click", () => setBattleMode(button.dataset.battleMode));
@@ -4834,10 +4906,10 @@ window.addEventListener("pagehide", () => {
 els.inventoryOpenButton?.addEventListener('click', () => openModal('inventoryModal'));
 document.getElementById('inventorySearch')?.addEventListener('input', renderPotionInventory);
 document.getElementById('inventoryCategory')?.addEventListener('change', renderPotionInventory);
-els.towerOpenButton?.addEventListener('click', () => { openModal('battleModal'); setBattleMode('tower'); });
 els.towerShopOpenButton?.addEventListener('click', () => openModal('towerShopModal'));
 els.towerWeatherSelect?.addEventListener('change', () => {
   if (!isTowerBattle() || battleState?.isBattling) return;
+  clearAutoContinueBattleTimer();
   battleState.setup = { team: [], activeIndex: 0 };
   renderBattleModePicker(); populateBattleFighterSelect();
 });
@@ -4860,6 +4932,9 @@ document.getElementById('importSaveInput')?.addEventListener('change', async eve
 // ============================================================
 // INITIALIZE
 // ============================================================
+
+renderAutoContinueBattleToggle();
+clearAutoContinueBattleTimer();
 
 // Battle must always start dormant. This also neutralizes any stale modal
 // classes/timers left by a previous hot-reload or browser restore.
