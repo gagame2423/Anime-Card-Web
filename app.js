@@ -2642,10 +2642,10 @@ function purchaseUpgrade(type) {
 // 4v4 BATTLE ARENA - VISUAL + AUTOMATED, ISOLATED FROM RNG/TICKER
 // ============================================================
 
-const BATTLE_BASE_XP_4V4 = 480;
-const BATTLE_BASE_XP_1V1 = 140;
-const BATTLE_BASE_CASH_4V4 = 1000;
-const BATTLE_BASE_CASH_1V1 = 300;
+const BATTLE_EXP_RANGES = Object.freeze({
+  '4v4': Object.freeze({ min: 0.04, max: 0.10 }),
+  '1v1': Object.freeze({ min: 0.01, max: 0.05 })
+});
 const BATTLE_TURN_MS = 3000;
 const AUTO_CONTINUE_DELAY_MS = 1500;
 const AUTO_CONTINUE_STORAGE_KEY = "anime_card_rng_auto_continue_battle";
@@ -3376,41 +3376,51 @@ function getBattleEnemySalvageBase() {
   }, 0));
 }
 
+function getBattleCardExperienceRewards(mode, random = Math.random) {
+  const range = BATTLE_EXP_RANGES[mode];
+  if (!range) return { rate: 0, cards: [] }; // Tower grants no EXP at any stage.
+  const rate = range.min + (range.max - range.min) * Math.max(0, Math.min(1, Number(random()) || 0));
+  // Shared card levels receive one reward per original ID, never per clone/copy.
+  const ids = [...new Set((battleState?.setup?.team || []).map(slot => normalizeCardId(slot?.cardId)).filter(Boolean))];
+  const cards = ids.filter(id => getCardById(id) && getOwnedCardCount(id) > 0 && getCardLevelInfo(id).level < CARD_LEVEL_MAX).map(cardId => {
+    const required = getCardLevelInfo(cardId).required;
+    const baseExperience = Math.floor(required * rate + 1e-9);
+    return { cardId, required, baseExperience, experience: getScaledExpReward(baseExperience) };
+  });
+  return { rate, cards };
+}
+
 function getBattleRewardProfile(playerPower, enemyPower) {
   const mode = getBattleMode();
-  const safePlayerPower = Math.max(1, Number(playerPower) || 1);
-  const safeEnemyPower = Math.max(0, Number(enemyPower) || 0);
   const durationSeconds = Math.max(0, (Date.now() - Number(battleState?.startedAt || Date.now())) / 1000);
   const timeMultiplier = 1 + Math.min(durationSeconds * 0.02, 0.5);
   const playerLevel = Math.max(1, Number(battleState?.initialPlayerLevel || battleState?.playerTeam?.[0]?.level || 1));
   const enemyLevel = Math.max(1, Number(battleState?.initialEnemyLevel || battleState?.enemyTeam?.[0]?.level || 1));
   const levelDiffMultiplier = Math.max(0.5, Math.min(1.5, enemyLevel / playerLevel));
-  const baseValue = getBattleEnemySalvageBase();
-  const rawCoins = baseValue * timeMultiplier * levelDiffMultiplier;
-  const baseFinalCoins = Math.max(0, Math.floor(rawCoins));
-  const reward = getScaledCoinReward(baseFinalCoins);
   const timeBonusPercent = Math.round((timeMultiplier - 1) * 100);
-
-  const baseExperience = Math.max(1, Math.floor(100 * Math.min(1.5, timeMultiplier)));
-  const experience = getScaledExpReward(baseExperience);
   const dropRateBonus = Number(Math.min(5, 0.5 + timeBonusPercent * 0.02).toFixed(2));
-
+  const cardExperience = getBattleCardExperienceRewards(mode);
+  const damage = mode === 'tower' ? window.TowerSystem.damageSummary(battleState) : null;
+  const baseValue = damage ? window.TowerSystem.battleCurrency(damage.total) : getBattleEnemySalvageBase();
+  const rawCoins = damage ? baseValue : baseValue * timeMultiplier * levelDiffMultiplier;
+  const reward = getScaledCoinReward(Math.floor(rawCoins));
   return {
-    mode,
-    reward,
-    experience,
-    dropRateBonus,
-    baseValue,
-    durationSeconds,
-    timeMultiplier,
-    timeBonusPercent,
-    playerLevel,
-    enemyLevel,
-    levelDiffMultiplier,
-    rawCoins,
-    multiplier: timeMultiplier * levelDiffMultiplier,
-    label: `${mode.toUpperCase()} scaled reward`
+    mode, reward, experience: cardExperience.cards.reduce((sum, card) => sum + card.experience, 0),
+    cardExperienceRewards: cardExperience.cards, experienceRate: cardExperience.rate,
+    damage, dropRateBonus, baseValue, durationSeconds,
+    timeMultiplier: damage ? 1 : timeMultiplier, timeBonusPercent: damage ? 0 : timeBonusPercent,
+    playerLevel, enemyLevel, levelDiffMultiplier: damage ? 1 : levelDiffMultiplier,
+    rawCoins, multiplier: damage ? 1 : timeMultiplier * levelDiffMultiplier,
+    label: damage ? 'TOWER combined damage reward' : `${mode.toUpperCase()} scaled reward`
   };
+}
+
+function renderBattleRewardMetricLabels(tower) {
+  for (const [id, label] of Object.entries({
+    battleResultBaseLabel: tower ? 'Combined Damage' : 'Base Value',
+    battleResultTimeLabel: tower ? 'Player Damage' : 'Time Bonus',
+    battleResultLevelLabel: tower ? 'Enemy Damage' : 'Level Multiplier'
+  })) { const node = document.getElementById(id); if (node) node.textContent = label; }
 }
 
 function showBattleFloatingText(unit, text, tone = 'damage', duration = 1150) {
@@ -3724,6 +3734,7 @@ function finishBattle(playerWon) {
   battleState.finished = true;
   battleState.isBattling = false;
   battleState.outcome = playerWon ? 'victory' : 'defeat';
+  renderBattleRewardMetricLabels(battleState.mode === 'tower');
 
   const safePlayerPower = Number.isFinite(Number(battleState.playerPower)) ? Math.max(0, Number(battleState.playerPower)) : 0;
   const safeEnemyPower = Number.isFinite(Number(battleState.enemyPower)) ? Math.max(0, Number(battleState.enemyPower)) : 0;
@@ -3734,8 +3745,12 @@ function finishBattle(playerWon) {
     if (playerWon) {
       const baseRewardProfile = getBattleRewardProfile(safePlayerPower, safeEnemyPower);
       const rewardProfile = window.PassiveSystem?.modifyVictoryRewards?.(battleState, baseRewardProfile) || baseRewardProfile;
-      const reward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward)) : 0;
-      const experience = Number.isFinite(Number(rewardProfile.experience)) ? Math.max(0, Math.floor(rewardProfile.experience)) : 0;
+      const rawReward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward)) : 0;
+      const reward = battleState.mode === 'tower' ? Math.min(rawReward, Math.max(0, Number.MAX_SAFE_INTEGER - (Number(state.currency) || 0))) : rawReward;
+      const cardExperienceRewards = battleState.mode === 'tower' ? [] : baseRewardProfile.cardExperienceRewards.map(entry => ({
+        ...entry, experience: Math.max(0, Math.floor(entry.experience * (Number(rewardProfile.passiveMultiplier) || 1)))
+      }));
+      const experience = cardExperienceRewards.reduce((sum, entry) => sum + entry.experience, 0);
       state.currency = Math.max(0, Number(state.currency) || 0) + reward;
       window.AchievementSystem?.recordCurrencyEarned(reward);
       window.AchievementSystem?.recordBattleWin();
@@ -3757,12 +3772,11 @@ function finishBattle(playerWon) {
       saveState();
       updateStats();
 
-      const participatingIds = [...new Set((battleState.playerTeam || []).map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean))];
-      const expPerCard = participatingIds.length ? Math.max(1, Math.floor(experience / participatingIds.length)) : 0;
       const levelUps = [];
-      for (const cardId of participatingIds) {
-        const result = grantCardExperience(cardId, expPerCard);
-        if (result.levelUps > 0) levelUps.push(`${getCardById(cardId)?.name || cardId} Lv.${result.level}`);
+      for (const entry of cardExperienceRewards) {
+        const result = grantCardExperience(entry.cardId, entry.experience);
+        appendBattleLog(`EXP: ${getCardById(entry.cardId)?.name || entry.cardId} +${entry.experience.toLocaleString('en-US')} (${(baseRewardProfile.experienceRate * 100).toFixed(2)}% of ${entry.required.toLocaleString('en-US')} required EXP before bonuses).`, 'victory');
+        if (result.levelUps > 0) levelUps.push(`${getCardById(entry.cardId)?.name || entry.cardId} Lv.${result.level}`);
       }
       saveState();
       updateStats();
@@ -3774,17 +3788,20 @@ function finishBattle(playerWon) {
       const modeLabel = rewardProfile.mode.toUpperCase();
       const levelNote = levelUps.length ? ` • Level Up: ${levelUps.join(', ')}` : '';
 
-      appendBattleLog(`Victory! Base ${formatCurrency(baseRewardProfile.baseValue)} • Time +${baseRewardProfile.timeBonusPercent}% • Level ×${baseRewardProfile.levelDiffMultiplier.toFixed(2)} • Earned ${formatCurrency(reward)}.${levelNote}`, 'victory');
+      const earningSummary = baseRewardProfile.damage
+        ? `Combined damage ${baseRewardProfile.damage.total.toLocaleString('en-US')} (Player ${baseRewardProfile.damage.player.toLocaleString('en-US')} + Enemy ${baseRewardProfile.damage.enemy.toLocaleString('en-US')}) • 10 damage / VNĐ • Earned ${formatCurrency(reward)} • No Tower EXP.`
+        : `Base ${formatCurrency(baseRewardProfile.baseValue)} • Time +${baseRewardProfile.timeBonusPercent}% • Level ×${baseRewardProfile.levelDiffMultiplier.toFixed(2)} • Earned ${formatCurrency(reward)} • ${(baseRewardProfile.experienceRate * 100).toFixed(2)}% EXP per unique lineup card before bonuses.`;
+      appendBattleLog(`Victory! ${earningSummary}${levelNote}`, 'victory');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
-      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. ${towerPrize?.awarded ? `Tower Floor ${battleState.towerFloor}: +${towerPrize.coins} 🪙. ` : ''}${potionDrop?.dropped ? `Potion: ${potionDrop.name}. ` : ''}Base Value ${formatCurrency(baseRewardProfile.baseValue)} • Time Bonus +${baseRewardProfile.timeBonusPercent}% • Level ×${baseRewardProfile.levelDiffMultiplier.toFixed(2)}.`;
+      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. ${towerPrize?.awarded ? `Tower Floor ${battleState.towerFloor}: +${towerPrize.coins} 🪙. ` : ''}${potionDrop?.dropped ? `Potion: ${potionDrop.name}. ` : ''}${earningSummary}`;
       if (els.battleResultPower) {
         els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${baseRewardProfile.durationSeconds.toFixed(1)}s battle`;
       }
-      if (els.battleResultBaseValue) els.battleResultBaseValue.textContent = `${formatCurrency(baseRewardProfile.baseValue)}`;
-      if (els.battleResultTimeBonus) els.battleResultTimeBonus.textContent = `+${baseRewardProfile.timeBonusPercent}%`;
-      if (els.battleResultLevelDiff) els.battleResultLevelDiff.textContent = `×${baseRewardProfile.levelDiffMultiplier.toFixed(2)}`;
+      if (els.battleResultBaseValue) els.battleResultBaseValue.textContent = baseRewardProfile.damage ? baseRewardProfile.damage.total.toLocaleString('en-US') : formatCurrency(baseRewardProfile.baseValue);
+      if (els.battleResultTimeBonus) els.battleResultTimeBonus.textContent = baseRewardProfile.damage ? baseRewardProfile.damage.player.toLocaleString('en-US') : `+${baseRewardProfile.timeBonusPercent}%`;
+      if (els.battleResultLevelDiff) els.battleResultLevelDiff.textContent = baseRewardProfile.damage ? baseRewardProfile.damage.enemy.toLocaleString('en-US') : `×${baseRewardProfile.levelDiffMultiplier.toFixed(2)}`;
       if (els.battleResultCash) els.battleResultCash.textContent = `${formatCurrency(reward)}`;
-      if (els.battleResultExp) els.battleResultExp.textContent = `+${experience.toLocaleString('en-US')} EXP`;
+      if (els.battleResultExp) els.battleResultExp.textContent = battleState.mode === 'tower' ? '0 EXP • Tower' : `+${experience.toLocaleString('en-US')} EXP`;
       if (els.battleResultDropRate) els.battleResultDropRate.textContent = `+${dropRateBonus.toFixed(2)}%`;
       if (els.battleResultLossStatus) els.battleResultLossStatus.textContent = 'N/A — Victory';
     } else {
@@ -3801,9 +3818,10 @@ function finishBattle(playerWon) {
       if (els.battleResultTitle) els.battleResultTitle.textContent = '💀 DEFEAT!';
       if (els.battleResultText) els.battleResultText.textContent = notice;
       if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')}`;
-      if (els.battleResultBaseValue) els.battleResultBaseValue.textContent = '💵 0';
-      if (els.battleResultTimeBonus) els.battleResultTimeBonus.textContent = '+0%';
-      if (els.battleResultLevelDiff) els.battleResultLevelDiff.textContent = '×0.00';
+      const damage = battleState.mode === 'tower' ? window.TowerSystem.damageSummary(battleState) : null;
+      if (els.battleResultBaseValue) els.battleResultBaseValue.textContent = damage ? damage.total.toLocaleString('en-US') : '💵 0';
+      if (els.battleResultTimeBonus) els.battleResultTimeBonus.textContent = damage ? damage.player.toLocaleString('en-US') : '+0%';
+      if (els.battleResultLevelDiff) els.battleResultLevelDiff.textContent = damage ? damage.enemy.toLocaleString('en-US') : '×0.00';
       if (els.battleResultCash) els.battleResultCash.textContent = '💵 +0';
       if (els.battleResultExp) els.battleResultExp.textContent = '+0 EXP';
       if (els.battleResultDropRate) els.battleResultDropRate.textContent = '+0.00%';

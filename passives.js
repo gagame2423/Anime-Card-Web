@@ -243,6 +243,7 @@
     if (!battleState) return;
     const playerTeam = battleState.playerTeam || [];
     const enemyTeam = battleState.enemyTeam || [];
+    if (battleState.mode === 'tower') enemyTeam.forEach(unit => window.TowerSystem?.protectEnemyUnit?.(unit));
     const nextPlayer = firstLiving(playerTeam, Number(battleState.playerIndex || 0));
     const nextEnemy = firstLiving(enemyTeam, Number(battleState.enemyIndex || 0));
     if (nextPlayer) battleState.playerIndex = Math.max(0, playerTeam.indexOf(nextPlayer));
@@ -264,6 +265,7 @@
 
   function refreshUnitDisplay(unit) {
     if (!unit) return;
+    if (unit.isTowerEnemy) window.TowerSystem?.protectEnemyUnit?.(unit);
     unit.maxHp = Math.max(1, Number(unit.maxHp) || Number(unit.hp) || 1);
     unit.hp = Math.max(0, Number(unit.hp) || 0);
     unit.atk = Math.max(1, Number(unit.atk) || 1);
@@ -581,7 +583,9 @@
       for (const effect of list) {
         const dmg = Math.max(0, Math.floor(Number(effect?.damage) || 0));
         if (dmg > 0 && isAlive(unit)) {
+          const before = unit.hp;
           unit.hp = Math.max(0, unit.hp - dmg);
+          recordBattleDamage(battleState, effect.source, unit, before);
           runtime.lastDamageTaken = dmg;
           safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} takes ${dmg.toLocaleString('en-US')} ${kind.toUpperCase()} damage.`, 'status');
           if (unit.hp <= 0) {
@@ -619,7 +623,7 @@
     }
     if (runtime.stormTurns > 0) {
       runtime.stormTurns -= 1;
-      if (runtime.stormTurns <= 0 && runtime.stormAtkDelta > 0) {
+      if (runtime.stormTurns <= 0) {
         unit.atk = Math.max(1, (Number(unit.atk) || 1) - runtime.stormAtkDelta);
         runtime.stormAtkDelta = 0;
         runtime.displayAtkBonusPct = Math.max(0, Number(runtime.displayAtkBonusPct) || 0) - 0.60;
@@ -694,7 +698,23 @@
   function calculateBaseDamage(attacker) {
     const base = Math.max(1, Number(attacker?.atk) || Number(attacker?.display?.atk) || 1);
     const runtime = ensureRuntime(attacker);
-    return base * Math.max(0, 1 + (Number(runtime.atkBonusPct) || 0));
+    const attack = base * Math.max(0, 1 + (Number(runtime.atkBonusPct) || 0));
+    return window.TowerSystem?.limitEnemyAttack?.(attacker, attack) ?? attack;
+  }
+
+  // Observe actual HP loss without changing damage, shields or passive hooks.
+  function recordBattleDamage(battleState, source, target, previousHp) {
+    if (!battleState || !target) return;
+    const damage = Math.max(0, Number(previousHp) - Math.max(0, Number(target.hp) || 0));
+    if (!(damage > 0)) return;
+    const side = battleState.playerTeam?.includes(source) ? 'player'
+      : battleState.enemyTeam?.includes(source) ? 'enemy'
+      : battleState.playerTeam?.includes(target) ? 'enemy'
+      : battleState.enemyTeam?.includes(target) ? 'player' : null;
+    if (!side) return;
+    battleState.damageTotals ||= { player: 0, enemy: 0 };
+    const limit = Number.MAX_VALUE / 1024;
+    battleState.damageTotals[side] = Math.min(limit, Math.max(0, Number(battleState.damageTotals[side]) || 0) + damage);
   }
 
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
@@ -728,6 +748,7 @@
 
     const before = Math.max(0, Number(target.hp) || 0);
     target.hp = Math.max(0, before - Math.floor(remaining));
+    recordBattleDamage(battleState, attacker, target, before);
     const killed = target.hp <= 0;
     if (killed) target.defeated = true;
     refreshUnitDisplay(target);
@@ -1101,8 +1122,10 @@
 
     if (id === 'uchiha-sasuke' && hpRatio < 0.40 && !runtime.sasukeLowHpTriggered) {
       runtime.sasukeLowHpTriggered = true;
-      runtime.stormAtkDelta = Math.max(1, Math.round((Number(attacker.atk) || 1) * 0.60));
-      attacker.atk = Math.max(1, (Number(attacker.atk) || 1) + runtime.stormAtkDelta);
+      const beforeAtk = Number(attacker.atk) || 1;
+      runtime.stormAtkDelta = Math.max(1, Math.round(beforeAtk * 0.60));
+      attacker.atk = Math.max(1, beforeAtk + runtime.stormAtkDelta);
+      if (attacker.isTowerEnemy) runtime.stormAtkDelta = Math.max(0, attacker.atk - beforeAtk);
       runtime.displayAtkBonusPct = Math.max(runtime.displayAtkBonusPct, 0.60);
       runtime.stormTurns = 6;
       applyDamageReduction(attacker, 0.30, 6, 'STORM SUSANO');
@@ -1512,7 +1535,9 @@
       }
       case 'weather-reaper-hollow':
         if (sourcePassiveAllowed(target, attacker) && isAlive(target)) {
+          const before = target.hp;
           target.hp = 0;
+          recordBattleDamage(battleState, attacker, target, before);
           target.defeated = true;
           safeLog(`[PASSIVE] ${attacker.display?.name || 'Vasto Lord'} finished the target with a spectral silver edge.`, 'passive');
         }
@@ -1696,8 +1721,10 @@
         const maxHpBase = Math.max(1, Number(killer.maxHp) || 1);
         runtime.temporaryAtkDelta = Math.max(1, Math.round(atkBase * 0.20));
         runtime.temporaryMaxHpDelta = Math.max(1, Math.round(maxHpBase * 0.20));
+        if (killer.isTowerEnemy) killer.maxHp = maxHpBase + runtime.temporaryMaxHpDelta;
         killer.atk = atkBase + runtime.temporaryAtkDelta;
         killer.maxHp = maxHpBase + runtime.temporaryMaxHpDelta;
+        if (killer.isTowerEnemy) runtime.temporaryAtkDelta = Math.max(0, killer.atk - atkBase);
         if (!isBleeding(killer)) killer.hp = Math.min(killer.maxHp, Math.max(1, Math.round((Number(killer.hp) || 1) * 1.20)));
 
         runtime.temporaryAtkBonusPct = 0.20;
@@ -1894,7 +1921,9 @@
     const runtime = ensureRuntime(attacker);
     const reduction = runtime.weakenAttackTurns > 0 ? clamp(runtime.weakenAttackPct, 0, 0.95) : 0;
     const attackBuff = 1 + Math.max(0, Number(runtime.atkBonusPct) || 0);
-    return Math.max(1, Number(attacker.atk) || 1) * attackBuff * (1 - reduction);
+    const attack = Math.max(1, Number(attacker.atk) || 1) * attackBuff;
+    const bounded = window.TowerSystem?.limitEnemyAttack?.(attacker, attack) ?? attack;
+    return bounded * (1 - reduction);
   }
 
 
@@ -2024,6 +2053,9 @@
       result.critical = critical;
       result.hit = true;
     } else {
+      // Some survival passives leave the target at lower HP without using
+      // damageUnit(). Count that actual loss once, never the prevented hit.
+      recordBattleDamage(battleState, attacker, target, previousHp);
       result = { damage: 0, killed: false, preventedFatality: true, critical, hit: true };
     }
 
@@ -2399,6 +2431,7 @@
       defeated: false,
       isClone: true
     };
+    if (battleState?.mode === 'tower' && battleState.enemyTeam?.includes(source)) window.TowerSystem?.protectEnemyUnit?.(clone);
     ensureRuntime(clone);
     clone.passiveState.effectivePassiveId = cardIdOf(victim);
     return clone;
@@ -2451,6 +2484,7 @@
       side: jinUnit.side
     };
 
+    if (battleState?.mode === 'tower' && battleState.enemyTeam?.includes(jinUnit)) window.TowerSystem?.protectEnemyUnit?.(clone);
     ensureRuntime(clone).effectivePassiveId = originalPassiveId;
     ensureRuntime(clone).sourceCloneOf = originalPassiveId;
     runtime.cloneCount += 1;
@@ -2859,8 +2893,10 @@
       battleState.turnCounter = 0;
       battleState.turnCount = 0;
       battleState.passiveCashBonus = 0;
+      battleState.damageTotals = { player: 0, enemy: 0 };
       battleState.passiveDomain = null;
 
+      if (battleState.mode === 'tower') (battleState.enemyTeam || []).forEach(unit => window.TowerSystem?.protectEnemyUnit?.(unit));
       for (const unit of allUnits(battleState)) {
         const runtime = ensureRuntime(unit);
         runtime.baseAtkAtBattleStart = Math.max(1, Number(unit.atk) || Number(unit.display?.atk) || 1);

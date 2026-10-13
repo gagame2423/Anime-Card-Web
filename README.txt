@@ -2,9 +2,9 @@ Anime Card RNG — Nhật ký cập nhật và thông số kỹ thuật
 ======================================================
 
 Ngày đối chiếu mã nguồn: 13/10/2026.
-Phạm vi: kho vật phẩm tổng quát, Tower vô hạn, thành tựu, save bảo vệ .acrsave, hàng đợi clone đầy đủ và tự tiếp tục sau chiến thắng.
+Phạm vi: Tower tăng nhẹ sau tầng 100, ATK nền bằng 20% HP tối đa và giới hạn 25% sau buff, thưởng Elite 110 chỉ 100–110 xu; giữ VNĐ theo damage, Tower không EXP và các hệ thống đã duyệt.
 
-Tài liệu này mô tả bản sửa hàng đợi Tower, bổ sung Auto Continue Battle, dọn giao diện và chuyển tài liệu sang văn bản thuần. Lớp bảo vệ save của bản trước được giữ lại. Bản phát hành gồm nguồn game và README; không kèm runner kiểm thử, log hay file tạm. Các hệ thống gameplay giữ cơ chế hiện hành.
+Tài liệu này mô tả bản sửa khẩn cấp tỷ lệ HP/ATK và thưởng xu Tower; giữ VNĐ theo damage, EXP Arena theo từng thẻ, Tower không EXP, hàng đợi đầy đủ, Auto Continue và giao diện đã ổn định. Lớp bảo vệ save của bản trước được giữ lại. Bản phát hành gồm nguồn game và README; không kèm runner kiểm thử, log hay file tạm. Các hệ thống gameplay giữ cơ chế hiện hành.
 
 Tên thẻ, tên potion, tên thời tiết, ID và tên file được giữ nguyên để đối chiếu chính xác với mã nguồn. Các phần giải thích được viết bằng tiếng Việt.
 
@@ -21,6 +21,10 @@ Tên thẻ, tên potion, tên thời tiết, ID và tên file được giữ ngu
 - Đợt cập nhật: Bảo vệ chuyển save; Nội dung chính: Đóng gói .acrsave, HMAC-SHA-256, kiểm tra Base64/UTF-8 chuẩn, cooldown xuất/nhập 7 ngày độc lập, khóa giữa các tab và bảo toàn timestamp khi nhập.
 
 - Đợt cập nhật: Sửa Tower và tiện ích chiến đấu ngày 13/10/2026; Nội dung chính: Giải quyết toàn bộ hàng đợi Tower có clone, thêm Auto Continue sau 1,5 giây, bỏ nút Tower trùng, menu ⋯ responsive và chuyển toàn bộ tài liệu sang README.txt.
+
+- Đợt cập nhật: Cân bằng và kinh tế trước bản sửa khẩn cấp, ngày 13/10/2026; Nội dung chính: Thêm VNĐ theo damage, bỏ EXP Tower, EXP Arena theo từng ID. Đường cong HP +20%/ATK +30% và thưởng xu mạnh của đợt này đã được rút lại vì mất cân bằng; không còn là công thức hiện hành.
+
+- Đợt cập nhật: Sửa cân bằng khẩn cấp ngày 13/10/2026; Nội dung chính: Tầng 100 đạt 470.400 sức mạnh nền, ATK theo cùng đường cong HP, sau tầng 100 tăng tuyến tính nhẹ; giới hạn chỉ số đối thủ/clone Tower và giảm Elite tầng 110 còn 100–110 xu.
 
 1.2. Kho vật phẩm tổng quát
 ===========================
@@ -163,6 +167,20 @@ Cooldown sử dụng Date.now() và bộ nhớ của trình duyệt. Đổi đ�
 - Thanh điều hướng cho phép xuống hàng theo chiều rộng màn hình, giữ số dư VNĐ và đồng hồ trong ô riêng. Các nút Collection/Upgrades trên màn hình nhỏ có biểu tượng và tên truy cập rõ ràng; các mục trong menu vẫn có nhãn.
 - Hàng đợi đội hình Arena cuộn ngang khi passive tạo thêm đơn vị, giữ bốn vị trí mỗi vùng hiển thị thay vì tạo thêm hàng làm chật khu vực chiến đấu.
 
+1.9. Tower và kinh tế chiến đấu hiện hành
+========================================
+
+- Tầng 1–100 dùng đường cong HP lãi kép mượt, ATK luôn lấy 20% HP tối đa. Tầng 100, ba lính và một trùm có tổng sức mạnh nền 470.400, trước passive.
+- Từ tầng 101 chuyển sang tăng HP tuyến tính theo điểm neo tầng 100; không dùng tăng HP 20% và ATK 30% mỗi tầng nữa. ATK dùng cùng đường cong HP nên không có hiện tượng vượt HP ở tầng sâu.
+- Elite trước hoặc ở tầng 100 có bonus HP nền 5%. Sau tầng 100, mỗi mốc 10 tầng cộng vĩnh viễn 5% HP của điểm neo, không rút bonus ở tầng sau phòng Elite. Chi tiết tại mục 3.5.
+- Thưởng Elite 100 là 80–90 xu; Elite 110 là 100–110 xu. Tầng thường sau 100 nhận thêm 2 xu mỗi 5 tầng; không còn nhân ba khoảng thưởng sau tầng 100.
+- passives.js theo dõi damageTotals.player và damageTotals.enemy trong đối tượng trận. Tower VNĐ nền là floor((damage người chơi + damage đối thủ) / 10). Màn hình kết quả Tower thể hiện tổng damage và damage từng đội thay cho các ô bonus thời gian/chênh level.
+- Tower vẫn có xu, VNĐ, potion theo hệ thống cũ và thẻ Champion ở tầng 100, nhưng cấp 0 EXP chiến đấu cho cả thẻ lẫn bộ đếm EXP chung. EXP Potion/nâng cấp/passive không thể biến 0 EXP Tower thành số dương.
+- EXP khi thắng Arena thường: 4v4 lấy 4%–10%, 1v1 lấy 1%–5% EXP cần cho level hiện tại của từng ID thẻ trong đội đã chọn. Dùng chung một tỷ lệ ngẫu nhiên cho trận, tính số EXP riêng cho từng thẻ; không chia một gói EXP cố định cho toàn đội.
+- Các tỷ lệ trên là mức nền chưa có bonus. Nâng cấp EXP, EXP Potion và passive tăng thưởng vẫn áp dụng sau mức nền; khi có bonus, EXP thực nhận có thể vượt 10% hoặc 5%. Log trận ghi tỷ lệ nền, mẫu số EXP và lượng EXP thực cấp để đối chiếu.
+- Thẻ trùng ID trong nhiều vị trí nhận một khoản cho level dùng chung. Clone/đồng đội tạm từ passive không tạo thêm khoản EXP. Thẻ đã ở level 999 hoặc không còn sở hữu không nhận EXP thẻ.
+- Nếu auto-roll vẫn đang hoạt động trong Tower, EXP do roll là nguồn riêng và vẫn hoạt động như trước; bỏ EXP Tower không dừng hoặc thay đổi cơ chế roll.
+
 2. Cân Bằng & Sửa Lỗi
 =====================
 
@@ -218,8 +236,35 @@ Các quy tắc dưới đây đã tồn tại trong bản game modular đầu v�
 - Doflamingo thêm đồng đội chuyển hóa vào cuối đội; các reserve còn sống vẫn phải được giải quyết trước khi kết thúc Tower. Giữ nguyên tỷ lệ kích hoạt và chỉ số passive.
 - Giữ nguyên việc Frieza sắp xếp đối thủ theo ATK để gặp đơn vị yếu nhất trước; sửa phép chèn clone không ghi đè thứ tự mà passive chủ động thay đổi.
 - endBattle/finishBattle cũng chặn yêu cầu thắng Tower khi checkBattleWinner chưa xác nhận hàng đợi đã sạch; yêu cầu thắng bị chặn không hủy timer lượt combat đang chạy. Tower Coins, tăng tầng và mốc tầng 100 chỉ xử lý sau kết quả hợp lệ, một lần mỗi trận.
-- Quy tắc cũ về clone tạm thời trong Arena 1v1/4v4 được giữ nguyên; thay đổi điều kiện toàn bộ reserve áp dụng cho Tower. Không sửa chỉ số thẻ, xác suất RNG, tỷ lệ clone, Bleed, freeze hoặc công thức thưởng trong đợt này.
+- Quy tắc cũ về clone tạm thời trong Arena 1v1/4v4 được giữ nguyên; thay đổi điều kiện toàn bộ reserve áp dụng cho Tower. Đợt sửa hàng đợi trước đó không sửa chỉ số thẻ, xác suất RNG, tỷ lệ clone, Bleed, freeze hoặc công thức thưởng. Đợt cân bằng hiện tại thay công thức Tower/EXP như mục 2.5.
 - README.txt thay thế hoàn toàn README.md trong bản phát hành; không còn cú pháp Markdown, bảng Markdown hay khối mã có dấu rào.
+
+2.5. Thay đổi kinh tế và EXP được giữ lại
+========================================
+
+- Mức tăng lãi kép HP +20%/ATK +30% sau tầng 100 của bản trước đã bị rút lại trong bản sửa khẩn cấp. Bản hiện hành dùng cùng một đường cong HP để suy ra ATK; công thức hiện hành nằm ở mục 3.5.
+- Thưởng xu mạnh từ thuật toán nhân ba sau tầng 100 cũng bị rút lại. Thưởng Elite 110 hiện 100–110 xu; không phải 354–390 xu.
+- Bỏ thưởng EXP cố định theo thời gian trận và phép chia cho số ID trong đội. Yêu cầu level của từng thẻ quyết định EXP nền mới; mẫu số lấy trước khi cấp EXP của chiến thắng, nên roll tăng level trong trận được phản ánh đúng.
+- Bỏ lỗi tối thiểu 1 EXP mỗi thẻ trong Tower: nhánh Tower tạo danh sách thưởng EXP rỗng, không gọi grantCardExperience cho EXP trận và chỉ cộng 0 vào EXP chung.
+- Damage được ghi ngay tại điểm HP bị giảm để không mất số liệu khi mục tiêu được hồi máu, hồi sinh hoặc khi đội sinh thêm clone. Burn/Bleed, phản damage, support và đòn kết liễu tức thì đều đi vào thống kê phù hợp.
+- Ghi nhận HP giảm do passive sống sót trước đòn chí mạng mà không sửa tác dụng sống sót hoặc chỉ số damage của passive. Không tính overkill, damage bị chặn, hồi máu, tự hy sinh hay giảm HP do hết buff chỉ số.
+- Không sửa dữ liệu của 111 thẻ, tỷ lệ roll/mutation, giá potion, thời hạn buff, quy tắc Bleed/freeze, luật hàng đợi Tower hoặc Auto Continue. Đối thủ Tower chịu giới hạn tỷ lệ ATK mới, kể cả sau passive; Arena và thẻ người chơi giữ chỉ số riêng. Lớp HMAC/Base64, định dạng .acrsave và hai cooldown 7 ngày giữ nguyên.
+- Không thêm store localStorage hoặc nâng phiên bản save. Tiến độ Tower/xu/EXP hiện có được giữ; công thức mới chỉ áp dụng khi tạo trận và trao thưởng từ bản này trở đi, không truy thu thưởng cũ.
+
+2.6. Sửa khẩn cấp tỷ lệ HP/ATK và lạm phát xu
+============================================
+
+- Nguyên nhân ATK vượt HP: hai đường cong lãi kép độc lập có hệ số 1,30 và 1,20; tỷ lệ ATK/HP tăng theo số tầng. Đã bỏ hoàn toàn cặp hệ số này khỏi Tower.
+- ATK khi sinh đối thủ luôn bằng floor(0,20 × HP tối đa). HP nền do đó xấp xỉ năm lần ATK ở mọi tầng, cho cả lính và trùm.
+- TowerEnemy có bộ bảo vệ maxHp/atk trong tower.js. Max HP giữ hữu hạn và tối thiểu 5; ATK luôn từ 1 đến floor(0,25 × maxHp), vì vậy maxHp > ATK, kể cả ở giới hạn biểu diễn số.
+- Bảo vệ áp dụng trước passive vào trận, cho clone đối thủ từ Metal Cooler, Doflamingo, Jin Mori, khi hồi sinh và khi thay đổi HP/ATK trực tiếp giữa lượt. Thay đổi maxHp lập tức cập nhật trần ATK. Nhánh tính ATK hiệu lực có buff cũng chịu trần này trước khi áp dụng weaken.
+- ATK có thể thấp hơn 15% HP sau debuff hoặc passive tăng HP; không tăng ngược ATK để bù và vô hiệu hóa hiệu ứng phòng thủ. Tỷ lệ nền 20% nằm trong khoảng 15%–25%; trần runtime 25% bảo đảm HP tối đa vẫn cao hơn rõ rệt.
+- Luật dùng HP tối đa làm mẫu số, không dùng HP còn lại: đơn vị đang còn 1 HP vẫn có thể tấn công. Đơn vị chết không thể đáp ứng HP hiện tại > ATK; nó không được tấn công và vẫn giữ luật defeated hiện hành.
+- Tạm buff Storm Susano ghi đúng lượng ATK thực tăng sau trần, nên hết buff không trừ nhầm phần tăng đã bị chặn. Buff tạm Android 21 tăng maxHp trước ATK cho đối thủ Tower để giữ tỷ lệ và khôi phục chỉ số đúng khi hết hạn.
+- Giới hạn chỉ áp dụng đối thủ/clone thuộc enemyTeam trong Tower. Thẻ người chơi, clone người chơi và đối thủ Arena 1v1/4v4 không bị áp trần Tower.
+- Trần là giới hạn chỉ số ATK, không xóa passive chí mạng, đòn nhiều hit, phản damage, kết liễu hay hệ số damage kỹ năng. Những cơ chế đó vẫn có thể gây đòn mạnh theo mô tả; bản sửa loại bỏ ATK nền hàng chục triệu ở tầng 134, không bảo đảm mọi cặp thẻ đều không thể bị hạ trong một lượt.
+- Xu chuẩn sau tầng 100 tăng 2 xu mỗi 5 tầng. Elite dùng khoảng thưởng riêng tăng nhẹ theo tầng, bỏ nhân ba và phần căn bậc hai tăng nhanh của bản trước.
+- Giữ nguyên xu đã sở hữu và tiến độ cũ; không thu hồi xu người chơi đã nhận. Chỉ trận/thưởng được tạo từ bản này dùng công thức mới.
 
 3. Thông Số & Công Thức Chi Tiết
 ================================
@@ -309,32 +354,71 @@ VNĐ_salvage = floor[(Salvage_mỗi_bản × số_bản_thực_xóa) × M_VNĐ]
 
 EXP roll trùng đọc trực tiếp hệ số EXP Potion; không nhân thêm toàn bộ hệ số nâng cấp EXP. Level thẻ không tăng giá trị salvage trong công thức hiện hành.
 
-3.5. Tower vô hạn, đối thủ và Tower Coins
-=========================================
+3.5. Tower tăng nhẹ, tỷ lệ cố định và thưởng xu
+==============================================
 
-Gọi F là tầng cần đánh, sau khi làm tròn xuống và giới hạn tối thiểu 1. Hệ số tinh nhuệ E bằng 1,18 nếu F chia hết cho 10, ngoài ra bằng 1.
+Gọi F là tầng cần đánh, làm tròn xuống và tối thiểu 1. Q = 1 cho lính, Q = 5 cho trùm. G = Number.MAX_VALUE / 1024 là giới hạn số học để tránh Infinity, không phải tầng kết thúc.
 
-HP_lính(F) = max(1; round(100 × 1,055^(F - 1) × E))
-ATK_lính(F) = max(1; round(10 × 1,05^(F - 1) × E))
-HP_trùm(F) = max(1; round(500 × 1,055^(F - 1) × E))
-ATK_trùm(F) = max(1; round(50 × 1,05^(F - 1) × E))
+Tầng 1–100:
+E = 1,05 nếu F chia hết cho 10; ngoài ra E = 1.
+HP_raw(F,Q) = 100 × 400^((F - 1)/99) × Q × E.
 
-- HP nền tăng lãi kép 5,5% mỗi tầng; ATK nền tăng lãi kép 5% mỗi tầng.
-- Chỉ số Tower lấy từ tầng, không lấy sức mạnh đội người chơi làm nền.
-- Tầng thường ưu tiên lính đến Legendary và trùm từ Legendary; tầng tinh nhuệ ưu tiên Mythic/Secret, có pool dự phòng khi thiếu thẻ.
-- Trong Weather Tower, khi pool đủ điều kiện có thẻ native phù hợp, 75% lượt chọn ưu tiên pool đó. Phần chọn từ pool nền vẫn có thể chọn thẻ phù hợp; đây không phải bảo đảm chính xác 75% đội hình thuộc thời tiết.
-- Mutation thời tiết của đối thủ Tower được thử với xác suất 75% cho từng vị trí.
-- Tầng sau một tầng tinh nhuệ có thể có chỉ số thấp hơn tầng tinh nhuệ trước đó do mất bonus 18%, dù nền lãi kép vẫn tăng.
-- Không có tầng kết thúc được thiết kế. Để tránh tràn số JavaScript, phép tính chỉ số có chặn số học ở Number.MAX_VALUE / 1024; đây là giới hạn biểu diễn số, không phải mốc kết thúc Tower.
+Tầng 101 trở đi:
+d = F - 100.
+S(d) = 1 + 0,015 × d + 0,05 × floor(d / 10).
+HP_raw(F,Q) = 42.000 × S(d) × Q.
 
-Thưởng Tower Coins:
+Mỗi tầng sau 100 thêm 1,5% HP của điểm neo 42.000; mỗi mốc 10 tầng thêm vĩnh viễn 5% của điểm neo. Đây là tăng tuyến tính theo điểm neo, không phải lãi kép 1,015^d. Trung bình qua mỗi chu kỳ 10 tầng thêm 20% HP điểm neo; tỷ lệ tăng so với tầng hiện tại giảm dần theo độ sâu. Không có bước bỏ bonus Elite làm HP giảm ở tầng kế tiếp.
 
-B = floor((F - 1) / 6)
-A = 10 + floor(F / 10) nếu F là tầng tinh nhuệ; ngoài ra A = 0
-Xu_tối_thiểu = 3 + B + A
-Xu_tối_đa = 5 + B + A
+Chỉ số cuối:
+HP_tối_đa = max(5; round(min(G; HP_raw))).
+ATK_nền = max(1; floor(0,20 × HP_tối_đa)).
+ATK_trần_runtime = max(1; floor(0,25 × HP_tối_đa)).
+ATK_đối_thủ_runtime = clamp(ATK_sau_thay_đổi; 1; ATK_trần_runtime).
+Sức_mạnh_đơn_vị = round(HP_tối_đa + 2 × ATK).
+Sức_mạnh_đội_nền = 3 × Sức_mạnh_lính + Sức_mạnh_trùm.
 
-Game chọn ngẫu nhiên một số nguyên trong khoảng trên cho lần vượt tầng hợp lệ. Ví dụ tầng 1 thưởng 3–5 xu, tầng 10 thưởng 15–17 xu, tầng 100 thưởng 39–41 xu. VNĐ/EXP chiến đấu được tính riêng, không thay thế Tower Coins.
+Ví dụ chưa có passive:
+- Tầng 1: lính HP 100 / ATK 20; sức mạnh đội 1.120; thưởng 4–6 xu.
+- Tầng 2: lính HP 106 / ATK 21; sức mạnh đội 1.187; thưởng 4–6 xu.
+- Tầng 99: lính HP 37.651 / ATK 7.530; sức mạnh đội 421.690; thưởng 20–22 xu.
+- Tầng 100 Elite: lính HP 42.000 / ATK 8.400; trùm HP 210.000 / ATK 42.000; sức mạnh đội 470.400; thưởng 80–90 xu.
+- Tầng 101: lính HP 42.630 / ATK 8.526; sức mạnh đội 477.456; thưởng 24–28 xu.
+- Tầng 102: lính HP 43.260 / ATK 8.652; sức mạnh đội 484.512; thưởng 24–28 xu.
+- Tầng 110 Elite: lính HP 50.400 / ATK 10.080; trùm HP 252.000 / ATK 50.400; sức mạnh đội 564.480; thưởng 100–110 xu.
+- Tầng 134: lính HP 69.720 / ATK 13.944; trùm HP 348.600 / ATK 69.720; sức mạnh đội 780.864; thưởng 36–40 xu.
+- Tầng 200 Elite: lính HP 126.000 / ATK 25.200; sức mạnh đội 1.411.200; thưởng 190–200 xu.
+- Tầng 1.000 Elite: lính HP 798.000 / ATK 159.600; sức mạnh đội 8.937.600; thưởng 990–1.000 xu.
+
+Tầng 101→102 chỉ tăng 7.056 sức mạnh nền, khoảng 1,48%; không còn tăng 126.508 như bản trước. HP nền tại tầng 100 vẫn trong mục tiêu sức mạnh đội 400K–500K. Tăng/giảm HP bởi passive có thể đổi sức mạnh thực tế, nhưng không cho ATK đối thủ vượt trần 25% HP tối đa.
+
+Các thuật toán chọn thẻ, weather và mutation giữ nguyên:
+- Tầng thường ưu tiên lính đến Legendary, trùm từ Legendary; Elite ưu tiên Mythic/Secret, giữ pool dự phòng.
+- Weather Tower ưu tiên pool native phù hợp với xác suất thử 75% nếu có thẻ. Pool nền vẫn có thể chọn thẻ phù hợp.
+- Mutation thời tiết đối thủ được thử 75% mỗi vị trí. Lọc người chơi giữ native weather hoặc một trong hai mutation phù hợp.
+- Không giới hạn tầng thiết kế. Khi chạm G, số học không còn biểu diễn HP tăng thêm; ATK vẫn tính 20% HP hoặc chịu trần runtime 25%, không chạm cùng một giá trị với HP.
+
+Công thức xu:
+Tầng 1–99:
+B = 4 + floor((F - 1)/6).
+Nếu thường: Xu_min = B; Xu_max = B + 2.
+Nếu Elite: Xu_min = 3 × B + 10 + floor(F/10); Xu_max = 3 × (B + 2) + 10 + floor(F/10).
+
+Tầng 100 Elite:
+Xu_min = 80; Xu_max = 90.
+
+Tầng thường sau 100:
+K = floor((F - 101)/5).
+Xu_min = 24 + 2 × K; Xu_max = Xu_min + 4.
+Ví dụ: tầng 101–105 là 24–28, tầng thường 106–109 là 26–30, tầng 111–115 là 28–32. Phòng Elite nằm trong khoảng tầng dùng công thức riêng, không cộng cả hai công thức.
+
+Elite từ tầng 110:
+Xu_min = 90 + (F - 100); Xu_max = Xu_min + 10.
+Ví dụ: Elite 110 là 100–110; Elite 120 là 110–120; Elite 130 là 120–130. Khoảng thưởng Elite tăng 10 xu mỗi 10 tầng, không nhân ba mức thưởng thường.
+
+Xu_thử = Xu_min + floor(U × (Xu_max - Xu_min + 1)), U ngẫu nhiên trong [0;1).
+Xu_thực_cấp = min(Xu_thử; max(0; Number.MAX_SAFE_INTEGER - Xu_đang_có)).
+Các biên và tổng xu có giới hạn số học Number.MAX_SAFE_INTEGER để save hợp lệ. Chỉ thắng đúng tầng kế tiếp mới cấp thưởng; gọi lại kết quả không cấp trùng. Rich Potion/passive không nhân Tower Coins. Phòng Elite thưởng cao hơn phòng thường ngay sau nó là chủ ý; không làm giảm HP/ATK nền tầng kế tiếp.
 
 3.6. Thông số 11 thẻ Champion
 =============================
@@ -398,30 +482,70 @@ P_EXP và P_Rich bằng 1,25 khi potion tương ứng có hiệu lực, ngoài r
 
 Các giá trên là VNĐ, không phải Tower Coins.
 
-3.9. Combat và phần thưởng chiến đấu
-====================================
+3.9. Combat, VNĐ theo damage và EXP riêng từng thẻ
+=================================================
 
-- Lượt combat gốc: 3.000 ms; khi Speed Battle Potion còn hiệu lực: 1.000 ms.
-- Sức mạnh đơn vị: round(HP_tối_đa + 2 × ATK); sức mạnh đội là tổng sức mạnh các đơn vị.
-- Arena 1v1 dùng tỷ lệ mục tiêu sức mạnh từ 0,92 đến 1,22; hệ số giới hạn scale của đối thủ là 0,78–1,32.
-- Arena 4v4 dùng tỷ lệ mục tiêu từ 0,85 đến 1,30. Đây là đầu vào tạo đối thủ, không bảo đảm thắng hoặc bảo đảm tỷ lệ cuối sau mọi passive.
-- Level đối thủ Arena được chọn từ level người chơi, tỷ lệ mục tiêu và nhiễu ngẫu nhiên 0,92–1,08, rồi làm tròn/giới hạn trong 1–999.
-- Trong Arena thường, khi có thời tiết đặc biệt, xác suất thử mutation đối thủ là 70%.
+Nhịp combat giữ 3.000 ms; Speed Battle Potion còn hiệu lực dùng 1.000 ms. Auto Continue giữ độ trễ kết quả 1.500 ms. 1v1 thường vẫn dùng tỷ lệ đối thủ mục tiêu 0,92–1,22; 4v4 thường 0,85–1,30, level thích ứng và mutation thời tiết 70%. Tower dùng chỉ số tầng ở mục 3.5.
 
-Gọi t là thời gian trận tính bằng giây, V là tổng giá trị salvage của các thẻ đối thủ không phải clone, Lp/Le là level trung bình ban đầu của hai đội:
+A. VNĐ Arena thường, giữ công thức cũ
+Gọi t là giây trận, V là tổng giá trị salvage của đối thủ không phải clone; Lp/Le là level trung bình ban đầu:
+M_Thời_gian = 1 + min(0,02 × t; 0,50).
+M_Chênh_level = clamp(Le / Lp; 0,50; 1,50).
+VNĐ_nền_Arena = floor(V × M_Thời_gian × M_Chênh_level).
+VNĐ_trước_passive = floor(VNĐ_nền_Arena × M_VNĐ).
 
-M_Thời_gian = 1 + min(0,02 × t; 0,50)
-M_Chênh_level = clamp(Le / Lp; 0,50; 1,50)
-VNĐ_nền = floor(V × M_Thời_gian × M_Chênh_level)
-VNĐ_trước_bonus_passive = floor(VNĐ_nền × M_VNĐ)
-EXP_nền = max(1; floor(100 × min(1,50; M_Thời_gian)))
-EXP_trước_bonus_passive = floor(EXP_nền × M_EXP)
-Bonus_thời_gian_% = round((M_Thời_gian - 1) × 100)
-Tăng_D_nền = làm_tròn_2_chữ_số(min(5; 0,50 + 0,02 × Bonus_thời_gian_%))
+B. VNĐ Tower, công thức mới
+D_p = tổng HP thực mất do damage từ đội người chơi trong trận.
+D_e = tổng HP thực mất do damage từ đội đối thủ trong trận.
+D_total = D_p + D_e.
+DAMAGE_PER_VND = 10.
+VNĐ_nền_Tower = min(Number.MAX_SAFE_INTEGER; floor(D_total / 10)).
+VNĐ_trước_passive = floor(VNĐ_nền_Tower × M_VNĐ).
+VNĐ_sau_passive = floor(VNĐ_trước_passive × M_Thưởng_passive) + Bounty.
+VNĐ_thực_cấp_Tower = min(VNĐ_sau_passive; max(0; Number.MAX_SAFE_INTEGER - Số_dư_VNĐ)).
 
-Bonus thời gian đạt tối đa 50% ở 25 giây. Trong công thức hiện tại, Tăng_D_nền nằm trong khoảng 0,50–1,50 điểm phần trăm. Khi thắng, D được cộng giá trị nền này rồi giới hạn tối đa 20. Bộ đếm potion không tăng khi thua. Passive có thể điều chỉnh phần thưởng VNĐ/EXP thông qua bước xử lý thưởng riêng.
+M_Thưởng_passive = 2 nếu đội có passive Nami, nhân tiếp 2 nếu có Hakari Jackpot; không nhân lặp do nhiều bản sao cùng passive. Bounty là passiveCashBonus hiện hành. Cách áp dụng bonus thưởng VNĐ được giữ nguyên. Tower không dùng giá salvage đối thủ, thời gian hoặc chênh lệch level làm nền VNĐ nữa.
 
-Các hằng số cũ ghi “base cash” hay “base XP” cho 1v1/4v4 không phải nguồn quyết định khoản thưởng cố định trong hàm thưởng hiện hành; công thức ở trên mới là đường thực thi đang dùng.
+Ví dụ: D_p = 1.750, D_e = 250, tổng 2.000 HP => 200 VNĐ nền. Không bonus nhận 200 VNĐ. Rich Potion 1,25x nhận 250 VNĐ trước passive. Nami nhân 2 thành 500 VNĐ; Bounty có thì cộng sau. Các số hiển thị cuối trận là lượng được cấp sau giới hạn số học.
+
+Quy tắc bộ đếm damage:
+- Đòn đánh thường, chí mạng, chuỗi đòn, support, damage phản lại và damage passive qua damageUnit ghi HP trước - HP sau, ngay sau khi trừ HP và trước hồi máu tiếp theo.
+- Burn/Bleed ghi HP giảm thực tế và gán cho nguồn hiệu ứng, kể cả nguồn đã bị hạ hoặc là clone. Nếu hiệu ứng không có nguồn xác định, quy cho đội đối diện đơn vị chịu damage.
+- Đòn kết liễu trực tiếp của Vasto Lord ghi phần HP còn lại vào đội tấn công. Đòn thường trước đó đã ghi riêng; hai khoản cộng đúng tổng HP mất, không tính lại toàn bộ HP.
+- Passive sống sót trước đòn chí mạng ghi phần HP giảm nếu có, không ghi damage thô của đòn bị ngăn. Hồi sinh làm tăng HP không được tính là damage.
+- Damage bị dodge, miễn nhiễm hoặc khiên hấp thụ không làm mất HP nên không tính VNĐ. Overkill chỉ tính đến HP còn lại, không tính phần sát thương thừa.
+- Hồi máu, tăng/giảm HP tối đa, buff hết hạn, tự hy sinh Griffith và tự hủy The Flash không được cộng như damage đối thủ gây ra. Hồi máu không trừ số damage đã ghi; damage gây ra ở lần đánh sau hồi máu tiếp tục được tính.
+- Bộ đếm tạo mới ở beginBattle, nằm trong đối tượng trận, không lưu thành store mới và không phục hồi giữa trận khi reload. Auto Continue sang trận mới luôn bắt đầu bộ đếm bằng 0.
+- Mỗi đội và tổng damage được chặn ở G = Number.MAX_VALUE / 1024 để tránh tràn số. Thua hoặc đầu hàng vẫn không nhận VNĐ, xu hay EXP chiến đấu.
+
+C. EXP Arena thường
+EXP_cần_i = max(1; floor(100 × R_i × Level_hiện_tại_i)).
+Tỷ_lệ_4v4 = 0,04 + 0,06 × U.
+Tỷ_lệ_1v1 = 0,01 + 0,04 × U.
+U là một lần lấy ngẫu nhiên cho trận thắng trong [0;1); tỷ lệ liên tục trong khoảng nền 4%–10% hoặc 1%–5%, không phải một phần trăm nguyên cố định.
+EXP_nền_i = floor(EXP_cần_i × Tỷ_lệ).
+EXP_trước_passive_i = floor(EXP_nền_i × M_EXP).
+EXP_thực_cấp_i = floor(EXP_trước_passive_i × M_Thưởng_passive).
+EXP_trận_chung = tổng EXP_thực_cấp_i của các ID thẻ gốc hợp lệ.
+
+Chỉ tính các ID khác nhau trong setup.team trước trận, còn sở hữu và chưa đạt level 999. Bốn vị trí cùng một ID chỉ nhận một khoản cho level dùng chung; mutation khác cùng ID cũng không cấp trùng. Clone hoặc thẻ đối thủ được Doflamingo thu phục không mở thêm nguồn EXP. EXP_cần_i lấy ở thời điểm tính thưởng trước khi cấp, không dùng phần EXP còn thiếu đến level mà dùng toàn bộ yêu cầu level hiện tại. Không còn chia EXP chung cho số lượng thẻ.
+
+Ví dụ chưa có bonus:
+- Thẻ Common Lv.10 cần 1.000 EXP: 4v4 nhận khoảng 40–100 EXP; 1v1 nhận khoảng 10–50 EXP.
+- Thẻ Secret Lv.10 cần 8.000 EXP: 4v4 nhận khoảng 320–800 EXP; 1v1 nhận khoảng 80–400 EXP.
+- Thẻ Common cần 1.000 EXP, tỷ lệ 4v4 7% => 70 EXP nền; EXP Potion 1,25x => floor(87,5) = 87; Nami => 174 EXP. Mức nền vẫn 7%, lượng thực nhận cao hơn vì bonus giữ nguyên.
+
+Nâng cấp EXP, EXP Potion và passive có thể làm lượng thực nhận vượt khoảng nền. Giao diện ghi tỷ lệ nền cùng số EXP thực cấp trong log; ô Battle EXP là tổng EXP của các ID, không phải số nhận của mỗi thẻ. Nếu khoản thưởng vượt yêu cầu, grantCardExperience tiếp tục lên level và giữ EXP dư như trước. Thẻ level 999 không cấp EXP thẻ mới.
+
+D. Tower không EXP
+EXP_nền_Tower = EXP_thẻ_Tower = EXP_trận_chung_Tower = 0.
+Danh_sách_EXP_Tower = mảng rỗng.
+Không gọi grantCardExperience từ thưởng thắng Tower; EXP Potion/nâng cấp/passive không thay đổi quy tắc này. Mốc Champion tầng 100 vẫn cấp thẻ Normal; không phải khoản EXP. EXP do roll vẫn độc lập, không bị xóa hoặc chặn.
+
+E. Potion và chỉ số rơi thưởng, giữ cơ chế cũ
+Bonus_thời_gian_%_cho_drop = round((1 + min(0,02 × t; 0,50) - 1) × 100).
+Tăng_D_nền = làm_tròn_2_chữ_số(min(5; 0,50 + 0,02 × Bonus_thời_gian_%_cho_drop)).
+D sau thắng cộng mức nền trên và tối đa 20. Bonus thời gian đạt 50% ở 25 giây; Tăng_D_nền hiện trong 0,50–1,50 điểm phần trăm. Tính drop này vẫn dùng thời gian trận kể cả Tower, dù VNĐ Tower không dùng thời gian. Không đưa Speed Battle Potion vào danh sách drop; item này vẫn chỉ mua Tower Shop với 100 xu.
 
 3.10. Thưởng thành tựu
 ======================
@@ -504,12 +628,12 @@ Thư mục game/
 - File: index.html; Trách nhiệm: Bố cục, thanh điều hướng, các modal và thứ tự nạp script.
 - File: styles.css; Trách nhiệm: Giao diện chung, thẻ, mutation, battle, responsive, kho vật phẩm, thành tựu và chuyển save.
 - File: passives.css; Trách nhiệm: Trình bày trạng thái, badge và thông tin passive.
-- File: app.js; Trách nhiệm: Điều phối Auto Continue, timer kết quả, menu điều hướng, lựa chọn lưu bền, RNG, đồng hồ/thời tiết, kho thẻ, level/EXP, UI, chiến đấu, cấp thưởng, gói save/HMAC/Base64, kiểm tra cooldown, khóa chuyển save và import có khôi phục khi lỗi.
+- File: app.js; Trách nhiệm: Điều phối EXP Arena theo từng ID, trả VNĐ Tower từ bộ đếm damage, Auto Continue, timer kết quả, menu điều hướng, lựa chọn lưu bền, RNG, đồng hồ/thời tiết, kho thẻ, level/EXP, UI, chiến đấu, cấp thưởng, gói save/HMAC/Base64, kiểm tra cooldown, khóa chuyển save và import có khôi phục khi lỗi.
 - File: inventory.js; Trách nhiệm: Định nghĩa và lưu vật phẩm, chuyển đổi save cũ, stack, tiêu thụ potion, buff/timer, drop potion và giao diện kho.
-- File: tower.js; Trách nhiệm: Tiến độ từng Tower, lọc thời tiết, tạo đối thủ, chỉ số theo tầng, Tower Coins, danh mục cửa hàng và thông tin yêu cầu thưởng.
+- File: tower.js; Trách nhiệm: Đường cong HP chung, giới hạn ATK/HP, bảo vệ chỉ số đối thủ, công thức xu Elite nhẹ, quy đổi damage sang VNĐ; Tiến độ từng Tower, lọc thời tiết, tạo đối thủ, chỉ số theo tầng, Tower Coins, danh mục cửa hàng và thông tin yêu cầu thưởng.
 - File: achievements.js; Trách nhiệm: Định nghĩa mốc, theo dõi tiến độ, lưu cờ nhận/mở khóa, xử lý nhận thưởng và giao diện thành tựu.
 - File: cards.js; Trách nhiệm: Cơ sở dữ liệu 111 thẻ, thông số/tỷ lệ/ảnh, điều kiện thời tiết và cấu hình 11 thẻ thưởng Tower.
-- File: passives.js; Trách nhiệm: Kiểm tra toàn bộ reserve Tower, giữ tuyến đầu khi chèn clone; Xử lý passive trong trận, trạng thái, hồi máu, hồi sinh, hook chiến đấu và điều chỉnh thưởng theo passive.
+- File: passives.js; Trách nhiệm: Áp dụng trần Tower trước/sau passive và cho clone, giữ bookkeeping buff tạm; quan sát damage HP thực mất từng đội; kiểm tra toàn bộ reserve Tower, giữ tuyến đầu khi chèn clone; Xử lý passive trong trận, trạng thái, hồi máu, hồi sinh, hook chiến đấu và điều chỉnh thưởng theo passive.
 - File: weathers.js; Trách nhiệm: Cấu hình nhịp thời tiết, nhóm xác suất, mutation, hệ số và alias.
 - File: README.txt; Trách nhiệm: Nhật ký cập nhật, thông số, công thức và tài liệu cấu trúc bằng tiếng Việt.
 
@@ -543,9 +667,9 @@ Dữ liệu localStorage phụ thuộc trình duyệt và origin; hành vi với
 4.3. Chính sách bảo trì và đầu ra sạch
 ======================================
 
-- Sau mỗi lần thêm tính năng, sửa cân bằng hoặc sửa lỗi, cập nhật README tiếng Việt với hành vi thực tế, thông số, công thức và module liên quan.
+- Sau mỗi lần thêm tính năng, sửa cân bằng hoặc sửa lỗi, cập nhật README.txt tiếng Việt với hành vi thực tế, thông số, công thức và module liên quan.
 - Phân biệt rõ thay đổi mới, cơ chế kế thừa và việc chỉ sửa tài liệu; không mô tả một hằng số chưa được dùng như hành vi gameplay.
 - Giữ logic vật phẩm trong inventory.js, Tower trong tower.js, thành tựu trong achievements.js; không dồn các hệ thống này vào app.js.
 - Bản phát hành đầy đủ theo quy ước mới chỉ gồm 11 file sản xuất ở mục 4.1. Không kèm script kiểm thử, runner .cjs, báo cáo xác minh, log hoặc file tạm.
-- Những kiểm tra phát hành đã thực hiện gồm cú pháp module, hàng đợi Tower bảy vị trí, Metal Cooler/Doflamingo/Frieza, timer Auto Continue và các đường thoát, giao diện từ 320 đến 1.440 px, RNG/auto-roll, lọc Weather Tower, thưởng tầng 100, chống nhận trùng, xác thực file .acrsave, mốc cooldown 7 ngày, rollback lỗi ghi và chuyển save ở phiên trình duyệt riêng. Đây là các kịch bản kiểm tra đại diện, không phải bảo đảm đã thử mọi tổ hợp passive hoặc chơi thủ công mọi tầng.
+- Những kiểm tra phát hành đã thực hiện gồm cú pháp module, mốc 470.400, đường cong tuyến tính, tỷ lệ đối thủ qua tầng rất sâu và passive, xu Elite 100–110 ở tầng 110, damage hai đội/Burn/Bleed/finisher, 0 EXP Tower có bonus, EXP Arena và chống cấp trùng ID, hàng đợi Tower bảy vị trí, Metal Cooler/Doflamingo/Frieza, timer Auto Continue và các đường thoát, giao diện từ 320 đến 1.440 px, RNG/auto-roll, lọc Weather Tower, thưởng tầng 100, chống nhận trùng, xác thực file .acrsave, mốc cooldown 7 ngày, rollback lỗi ghi và chuyển save ở phiên trình duyệt riêng. Đây là các kịch bản kiểm tra đại diện, không phải bảo đảm đã thử mọi tổ hợp passive hoặc chơi thủ công mọi tầng.
 - Bản cập nhật hiện tại gồm 10 file nguồn và README này, tổng cộng 11 file sản xuất. Không đưa script kiểm thử, log hoặc file trung gian vào ZIP; lớp bảo vệ save không thay đổi phân tách module gameplay.

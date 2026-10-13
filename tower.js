@@ -10,8 +10,38 @@
   // Number arithmetic overflow guard; no gameplay floor cap.
   const NUMERIC_STAT_LIMIT = Number.MAX_VALUE / 1024;
   const floorNumber = value => Number.isFinite(Number(value)) ? Math.max(1, Math.floor(Number(value))) : 1;
-  const hpFactor = 1.055;
-  const atkFactor = 1.05;
+  const SCALING = Object.freeze({
+    transitionFloor: 100, minionHpAt100: 40000,
+    attackHpRatio: 0.20, maxAttackHpRatio: 0.25,
+    earlyEliteFactor: 1.05, lateGrowthPerFloor: 0.015,
+    lateMilestoneGrowth: 0.05
+  });
+  const protectedEnemies = new WeakSet();
+  function limitEnemyAttack(unit, value) {
+    if (!unit?.isTowerEnemy) return value;
+    const ceiling = Math.max(1, Math.floor(unit.maxHp * SCALING.maxAttackHpRatio));
+    return Math.max(1, Math.min(ceiling, Number(value) || 1));
+  }
+  function protectEnemyUnit(unit) {
+    if (!unit || protectedEnemies.has(unit)) return unit;
+    unit.isTowerEnemy = true;
+    const boundedHp = value => Math.max(5, Math.min(NUMERIC_STAT_LIMIT, Number(value) || 5));
+    let maxHp = boundedHp(unit.maxHp ?? unit.hp), atk = Number(unit.atk) || 1;
+    // Getters/setters preserve the ratio during direct passive assignments,
+    // including absorption, revival, clones and max-HP changes mid-turn.
+    Object.defineProperties(unit, {
+      maxHp: { enumerable: true, configurable: false, get: () => maxHp,
+        set: value => { maxHp = boundedHp(value); atk = limitEnemyAttack(unit, atk); } },
+      atk: { enumerable: true, configurable: false, get: () => limitEnemyAttack(unit, atk),
+        set: value => { atk = limitEnemyAttack(unit, value); } }
+    });
+    atk = limitEnemyAttack(unit, atk);
+    unit.hp = Math.min(maxHp, Math.max(0, Number(unit.hp) || 0));
+    protectedEnemies.add(unit);
+    return unit;
+  }
+  const DAMAGE_PER_VND = 10;
+  const MAX_COINS = Number.MAX_SAFE_INTEGER;
   function fresh() { return { version: 1, coins: 0, cleared: {}, victories: 0 }; }
   function load() {
     let raw;
@@ -66,9 +96,25 @@
     return Boolean(card) && matchWeather(card, mutations, mode, weathers);
   }
   function floorStats(floor, boss = false) {
-    const f = floorNumber(floor);
-    const elite = isElite(f);
-    return { hp: Math.max(1, Math.round(Math.min(NUMERIC_STAT_LIMIT, (boss ? 500 : 100) * Math.pow(hpFactor, f - 1) * (elite ? 1.18 : 1)))), atk: Math.max(1, Math.round(Math.min(NUMERIC_STAT_LIMIT, (boss ? 50 : 10) * Math.pow(atkFactor, f - 1) * (elite ? 1.18 : 1)))) };
+    const f = floorNumber(floor), role = boss ? 5 : 1;
+    const depth = Math.max(0, f - SCALING.transitionFloor);
+    const rawHp = f <= 100
+      ? 100 * Math.pow(SCALING.minionHpAt100 / 100, (f - 1) / 99) * (isElite(f) ? SCALING.earlyEliteFactor : 1)
+      : SCALING.minionHpAt100 * SCALING.earlyEliteFactor *
+        (1 + SCALING.lateGrowthPerFloor * depth + SCALING.lateMilestoneGrowth * Math.floor(depth / 10));
+    const hp = Math.max(5, Math.round(Math.min(NUMERIC_STAT_LIMIT, rawHp * role)));
+    // One HP curve drives both stats; ATK can never compound faster than HP.
+    return { hp, atk: Math.max(1, Math.floor(hp * SCALING.attackHpRatio)) };
+  }
+  function damageSummary(battleState) {
+    const bounded = n => Math.min(NUMERIC_STAT_LIMIT, Math.max(0, Number(n) || 0));
+    const player = bounded(battleState?.damageTotals?.player);
+    const enemy = bounded(battleState?.damageTotals?.enemy);
+    return { player, enemy, total: bounded(player + enemy) };
+  }
+  function battleCurrency(totalDamage) {
+    const damage = Math.max(0, Number(totalDamage) || 0);
+    return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(damage / DAMAGE_PER_VND));
   }
   function rarityRank(card) { return ({ Common: 0, Rare: 1, Epic: 2, Legendary: 3, Mythic: 4, Secret: 5 })[card?.rarity] ?? 0; }
   function sample(pool, random) { return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))] || null; }
@@ -93,18 +139,35 @@
       const mutations = weatherId(mode) !== 'normal' && matchingMutation && random() < .75 ? [matchingMutation] : [];
       const stats = floorStats(floor, boss);
       const display = { name: card.name, image: card.image, hp: stats.hp, atk: stats.atk, rarity: card.rarity };
-      result.push({ card, mutations, display, hp: stats.hp, maxHp: stats.hp, atk: stats.atk, defeated: false, level: floorNumber(floor), towerRole: boss ? 'boss' : 'minion', isTowerEnemy: true });
+      result.push(protectEnemyUnit({ card, mutations, display, hp: stats.hp, maxHp: stats.hp, atk: stats.atk, defeated: false, level: floorNumber(floor), towerRole: boss ? 'boss' : 'minion', isTowerEnemy: true }));
     }
     return result;
   }
-  function previewRewards(floor) { const f = floorNumber(floor); return { min: 3 + Math.floor((f - 1) / 6) + (isElite(f) ? 10 + Math.floor(f / 10) : 0), max: 5 + Math.floor((f - 1) / 6) + (isElite(f) ? 10 + Math.floor(f / 10) : 0) }; }
+  function previewRewards(floor) {
+    const f = floorNumber(floor);
+    let min, max;
+    if (isElite(f) && f >= 100) {
+      min = f === 100 ? 80 : 90 + (f - 100);
+      max = min + 10;
+    } else if (f > 100) {
+      min = 24 + 2 * Math.floor((f - 101) / 5);
+      max = min + 4;
+    } else {
+      const base = 4 + Math.floor((f - 1) / 6);
+      const multiplier = isElite(f) ? 3 : 1;
+      const bonus = isElite(f) ? 10 + Math.floor(f / 10) : 0;
+      min = base * multiplier + bonus; max = (base + 2) * multiplier + bonus;
+    }
+    return { min: Math.min(MAX_COINS, min), max: Math.min(MAX_COINS, max) };
+  }
   function recordVictory(mode, floor, random = Math.random) {
     const id = weatherId(mode), expected = nextFloor(id);
     if (!Number.isInteger(floor) || floor !== expected) return { awarded: false, coins: 0 };
     const rewards = previewRewards(floor);
     const coins = rewards.min + Math.floor(random() * (rewards.max - rewards.min + 1));
-    data.coins += coins; data.cleared[id] = floor; data.victories += 1; persist();
-    return { awarded: true, coins, unlockRequirement: floor >= 100 ? rewardRequirement(id) : null, nextFloor: nextFloor(id), completed: completed(id), elite: isElite(floor) };
+    const granted = Math.min(coins, Math.max(0, MAX_COINS - data.coins));
+    data.coins += granted; data.cleared[id] = floor; data.victories += 1; persist();
+    return { awarded: true, coins: granted, unlockRequirement: floor >= 100 ? rewardRequirement(id) : null, nextFloor: nextFloor(id), completed: completed(id), elite: isElite(floor) };
   }
   function purchasePotion(id, inventory) {
     const offer = SHOP_ITEMS.find(item => item.id === id);
@@ -118,5 +181,5 @@
     return (cards || []).filter(card => card?.unlockRequirement === rewardRequirement(mode));
   }
   function reset() { data = fresh(); persist(); }
-  host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });
+  host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, SCALING, protectEnemyUnit, limitEnemyAttack, DAMAGE_PER_VND, damageSummary, battleCurrency, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });
 })(window);
