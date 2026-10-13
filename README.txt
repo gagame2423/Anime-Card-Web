@@ -2,9 +2,9 @@ Anime Card RNG — Nhật ký cập nhật và thông số kỹ thuật
 ======================================================
 
 Ngày đối chiếu mã nguồn: 13/10/2026.
-Phạm vi: Tower tăng nhẹ sau tầng 100, ATK nền bằng 20% HP tối đa và giới hạn 25% sau buff, thưởng Elite 110 chỉ 100–110 xu; giữ VNĐ theo damage, Tower không EXP và các hệ thống đã duyệt.
+Phạm vi bản tinh chỉnh: sửa đội đối thủ Normal Time Trial bằng bộ sinh thẻ thật của Tower; tạo đội mới mỗi Room và khi bắt đầu lại Room 1; gộp hai chế độ vào một nút Time Trial mở màn hình chọn loại trong Arena. Giữ nguyên công thức Room, lượt 2 giây, vé EXP, khóa đối thủ Tower, cân bằng HP/ATK, VNĐ Tower theo damage, Auto Continue, 11 Champion, nút passive + và save .acrsave/cooldown 7 ngày.
 
-Tài liệu này mô tả bản sửa khẩn cấp tỷ lệ HP/ATK và thưởng xu Tower; giữ VNĐ theo damage, EXP Arena theo từng thẻ, Tower không EXP, hàng đợi đầy đủ, Auto Continue và giao diện đã ổn định. Lớp bảo vệ save của bản trước được giữ lại. Bản phát hành gồm nguồn game và README; không kèm runner kiểm thử, log hay file tạm. Các hệ thống gameplay giữ cơ chế hiện hành.
+Tài liệu này mô tả bản bổ sung Time Trial, vé, shop Shards, thành tựu Luck vĩnh viễn và sửa bố cục passive/đường dẫn artwork. Các nội dung 11 Champion được giữ lại đầy đủ. Champion mới thay định nghĩa thẻ thưởng cũ nhưng giữ ID và biên nhận thành tựu, nên không xóa tiến độ và không cấp trùng. Hệ thống Tower, kinh tế, EXP Arena và bảo vệ chuyển save được kế thừa. Gói phát hành chỉ gồm 11 file nguồn và README.txt, không kèm runner kiểm thử, log hay file tạm.
 
 Tên thẻ, tên potion, tên thời tiết, ID và tên file được giữ nguyên để đối chiếu chính xác với mã nguồn. Các phần giải thích được viết bằng tiếng Việt.
 
@@ -25,6 +25,14 @@ Tên thẻ, tên potion, tên thời tiết, ID và tên file được giữ ngu
 - Đợt cập nhật: Cân bằng và kinh tế trước bản sửa khẩn cấp, ngày 13/10/2026; Nội dung chính: Thêm VNĐ theo damage, bỏ EXP Tower, EXP Arena theo từng ID. Đường cong HP +20%/ATK +30% và thưởng xu mạnh của đợt này đã được rút lại vì mất cân bằng; không còn là công thức hiện hành.
 
 - Đợt cập nhật: Sửa cân bằng khẩn cấp ngày 13/10/2026; Nội dung chính: Tầng 100 đạt 470.400 sức mạnh nền, ATK theo cùng đường cong HP, sau tầng 100 tăng tuyến tính nhẹ; giới hạn chỉ số đối thủ/clone Tower và giảm Elite tầng 110 còn 100–110 xu.
+
+- Đợt cập nhật: Tinh chỉnh logic ngày 13/10/2026; Nội dung chính: Lưu đội hình gốc tầng chưa vượt theo từng Tower, retry không đổi thẻ/mutation, nút Reset Opponents ở bản cũ (đã bỏ trong bản hiện tại), save tương thích ngược và Weather Report tạo khiên từ HP tối đa đang hoạt động.
+
+- Đợt cập nhật: Tích hợp Champion ngày 13/10/2026; Nội dung chính: Bỏ nút và API reset đối thủ; nút + mở passive nhiều dòng; đủ 11 Champion với kỹ năng riêng, chỉ roll sau mở khóa và đúng thời tiết; lựa chọn buff Aqua trước trận.
+
+- Đợt cập nhật: Time Trial ngày 13/10/2026; Nội dung chính: timetrial.js riêng, Normal 4v4 180 giây, EXP 1v1 300 giây, lượt cố định 2 giây, Shards/shop/vé, 10 mốc Luck +0,1; nút passive absolute 8 px và ảnh Champion riêng.
+
+- Đợt tinh chỉnh Time Trial ngày 13/10/2026; Nội dung chính: thay thẻ giả cố định bằng đối thủ ngẫu nhiên từ bộ sinh Tower, tránh trùng thẻ trong cùng Room khi pool đủ; đội mới sau thắng hoặc khi bắt đầu lại Room 1; một cửa vào Time Trial trong Arena, modal chọn Normal/EXP và thông tin vé trước trận.
 
 1.2. Kho vật phẩm tổng quát
 ===========================
@@ -65,7 +73,7 @@ achievements.js phụ trách danh sách mốc, theo dõi tiến độ, kiểm tr
 
 Quy ước: K = 1.000; M = 1.000.000; B = 1.000.000.000; T = 1.000.000.000.000. 100T = 100.000.000.000.000 VNĐ.
 
-- Hiện có 111 thẻ và 54 mục thành tựu: 43 mốc thường cùng 11 mốc Champion. Mốc collection 125 chưa được hiển thị vì cơ sở dữ liệu hiện chưa có đủ 125 thẻ.
+- Hiện có 111 thẻ và 64 mục thành tựu: 43 mốc thường cũ, 11 mốc Champion và 10 mốc Time Trial. Mốc collection 125 chưa được hiển thị vì cơ sở dữ liệu hiện chưa có đủ 125 thẻ.
 - Collection tính số ID thẻ khác nhau, không cộng thêm thẻ độc nhất khi có bản trùng hoặc mutation khác của cùng thẻ.
 - Tiến độ collection dùng mức cao nhất từng đạt; salvage không làm mất mốc đã hoàn thành.
 - Tiến độ tiền dùng giá trị lớn hơn giữa tổng VNĐ đã ghi nhận kiếm được và số dư cao nhất từng đạt. Chi tiêu không làm mất mốc.
@@ -84,8 +92,9 @@ Mỗi Tower có một thẻ thưởng độc nhất, khai báo trong TOWER_REWAR
 unlockRequirement: 'tower_floor_100_normal'
 
 - Khi vượt tầng 100, người chơi nhận ngay một bản Normal, không gắn mutation.
-- Thẻ có ID mới, chỉ số riêng, ảnh dùng lại từ thẻ nguồn và không có passive bổ sung: passive: null.
-- Khi chưa mở khóa, thẻ bị loại khỏi pool roll. Sau khi mở khóa, thẻ vào pool roll chuẩn và không yêu cầu thời tiết đang hoạt động.
+- Bản hiện tại giữ 11 ID tower-champion-* và unlockRequirement cũ, thay tên/chỉ số/tỷ lệ và bổ sung passive riêng theo mục 3.6. Ảnh Champion được đổi sang 11 đường dẫn PNG riêng tại mục 3.15. Không thay chỉ số, tỷ lệ, ID hoặc thời tiết của Champion trong đợt Time Trial; gói nguồn không có sẵn các PNG chưa được cung cấp.
+- Khi chưa mở khóa, thẻ bị loại khỏi pool roll. Sau mở khóa, chỉ vào pool khi thời tiết tương ứng hoạt động. Equinox yêu cầu Normal: không có thời tiết đặc biệt nào hoạt động. Naruto x Sasuke nhận Tsukuyomi/Mangekyo; Mangekyo được quy về Tsukuyomi theo alias hiện hành.
+- Nếu nhiều thời tiết đồng thời hoạt động, Champion nào khớp một thời tiết được đưa vào pool. Đã sở hữu hoặc đã mở khóa không bỏ qua điều kiện thời tiết của lần roll hiện tại.
 - Mở khóa giữ vĩnh viễn dù bản được thưởng đã bị salvage; game không cấp lại bản miễn phí sau salvage.
 - Các lần roll sau vẫn áp dụng mutation và EXP theo cơ chế hiện có.
 - Champion của Weather Tower có nativeWeather tương ứng, nên bản Normal vẫn có thể tham gia Tower thời tiết đó.
@@ -101,8 +110,8 @@ Modal chuyển save giữ hai nút Export Save và Import Save, nhưng định d
 Quy trình xuất:
 
 1. Kiểm tra Web Crypto, Web Locks và cooldown xuất trước khi thực hiện.
-2. Đồng bộ đồng hồ/thành tựu, ghi đủ bốn store game, kể cả game mới chưa từng vào Tower.
-3. Tạo JSON gồm collection, biến thể, level/EXP, VNĐ, nâng cấp, trang bị, thời tiết, vật phẩm, buff, Tower và thành tựu. Khóa tương thích cũ được kèm theo nếu tồn tại; không thu thập dữ liệu ngoài game.
+2. Đồng bộ đồng hồ/thành tựu, ghi đủ năm store game, kể cả game mới chưa từng vào Tower.
+3. Tạo JSON gồm collection, biến thể, level/EXP, VNĐ, nâng cấp, trang bị, thời tiết, vật phẩm, buff, Tower (kể cả đội hình tầng đang khóa) và thành tựu. Khóa tương thích cũ được kèm theo nếu tồn tại; không thu thập dữ liệu ngoài game.
 4. Ghi timestamp của lần xuất vào gói, tính HMAC-SHA-256, tạo payload rồi biểu diễn UTF-8 dưới dạng Base64.
 5. Tạo file anime-card-save-YYYY-MM-DD.acrsave; ngày trong tên file dùng UTC.
 6. Lưu cooldown ngay trước khi giao download tới trình duyệt; nếu giao download lỗi, khôi phục timestamp cũ. Không giao file nếu không thể ghi cooldown.
@@ -136,7 +145,7 @@ Payload có bốn trường cố định: format, version, data, checksum. data 
 
 Khi file lỗi định dạng, thay đổi dữ liệu/checksum, thêm khoảng trắng/BOM hoặc đổi biểu diễn ngoài không đúng chuẩn, import bị từ chối và hiện alert:
 
-> Phát hiện dữ liệu đã bị chỉnh sửa trái phép!
+Phát hiện dữ liệu đã bị chỉnh sửa trái phép!
 
 Import bị từ chối không ghi dữ liệu và không bắt đầu cooldown mới. JSON qua checksum nhưng sai cấu trúc game cũng bị từ chối; thông báo cấu trúc dữ liệu phân biệt với thông báo checksum.
 
@@ -181,12 +190,78 @@ Cooldown sử dụng Date.now() và bộ nhớ của trình duyệt. Đổi đ�
 - Thẻ trùng ID trong nhiều vị trí nhận một khoản cho level dùng chung. Clone/đồng đội tạm từ passive không tạo thêm khoản EXP. Thẻ đã ở level 999 hoặc không còn sở hữu không nhận EXP thẻ.
 - Nếu auto-roll vẫn đang hoạt động trong Tower, EXP do roll là nguồn riêng và vẫn hoạt động như trước; bỏ EXP Tower không dừng hoặc thay đổi cơ chế roll.
 
+1.10. Giữ đội hình Tower để retry có chiến thuật
+==============================================
+
+- Lần đầu bắt đầu tầng kế tiếp, Tower tạo đội hình bốn vị trí theo thuật toán hiện hành rồi lưu bản thiết kế gồm floor, cardId và mutationIds theo đúng thứ tự ba lính + một trùm.
+- Bản thiết kế lưu trong trường encounters của anime_card_rng_tower_v1, khóa con theo loại Tower. Không lưu đối tượng đơn vị đang đánh hoặc trạng thái passive vào bản thiết kế.
+- Thua rồi Battle Again, thua rồi đổi đội, đầu hàng, về lobby, đóng/mở Arena hoặc reload vẫn giữ bản thiết kế của tầng chưa vượt. Đổi sang Tower khác và quay lại cũng giữ đội đã tạo riêng của từng Tower.
+- Mỗi lần bắt đầu lại tạo đối tượng mới từ bản thiết kế, tính lại chỉ số nền bằng công thức tầng hiện hành, đầy HP trước passive vào trận, không mang defeated, Burn/Bleed, shield, bộ đếm hồi sinh, clone hoặc damageTotals từ trận trước.
+- Thẻ, mutation, thứ tự lính/trùm của đội hình gốc không bị RNG lại khi retry. Passive vào trận, crit, dodge, hiệu ứng làm đổi thứ tự hoặc sinh clone vẫn xử lý bình thường; trận retry không bị buộc lặp toàn bộ kết quả ngẫu nhiên của trận thua.
+- Thắng hợp lệ xóa bản thiết kế của Tower vừa vượt. Tầng tiếp theo tạo đội hình mới khi bắt đầu, kể cả khi Auto Continue bắt đầu tự động. Gọi lại kết quả tầng đã vượt không xóa hay cấp thưởng cho tầng mới.
+- Nút Reset Opponent/Reset Opponents đã bị xóa khỏi HTML, CSS và event listener. tower.js không còn công khai resetEncounter. Không có thao tác đổi riêng đội đối thủ của tầng đang mắc kẹt.
+- Tắt/đổi Auto Continue và các luật dọn timer vẫn giữ như trước; retry, đổi đội người chơi, đổi Tower hoặc mở/đóng Arena đều không reroll bản thiết kế còn hợp lệ.
+- Reset toàn bộ game vẫn xóa cả bản thiết kế. Save trước bản này chưa có encounters vẫn đọc được; đội hình được khóa từ lần bắt đầu tầng đầu tiên trong bản mới.
+- Dữ liệu đang khóa đi theo export/import .acrsave. Import kiểm tra floor phải là tầng chưa vượt tiếp theo, đúng bốn vị trí, ID thẻ đối thủ hợp lệ và mutation có trong định nghĩa; dữ liệu sai bị từ chối trước khi ghi localStorage.
+- Khi dữ liệu cục bộ hỏng hoặc cơ sở dữ liệu tương lai không còn ID đã lưu, bản ghi không hợp lệ không được dùng. Chỉ lưu được lâu dài khi localStorage ghi thành công; lỗi bộ nhớ giữ cơ chế cảnh báo hiện hành.
+
+1.11. Weather Report đọc chỉ số trận hiện tại
+============================================
+
+- BUBBLE CONTROL trước đây ưu tiên card.stats.hp (50.000 HP gốc của Weather Report), khiến khiên không theo level, mutation, buff và chỉ số Tower.
+- Công thức mới lấy unit.maxHp tại thời điểm tạo khiên. Trường này đã chứa hệ số level, mutation và các thay đổi HP đang hoạt động trong trận.
+- Cứ mỗi ba lượt combat, tạo khiên bằng 30% HP tối đa hiện tại, làm tròn xuống và tối thiểu 1. Nếu Max HP đổi sau lần tạo trước, lần kích hoạt kế tiếp dùng giá trị mới.
+- Không lấy HP còn lại đang bị thương làm nền. Ví dụ Max HP 200.000 nhưng chỉ còn 25.000 HP vẫn tạo khiên 60.000, không phải 7.500 hoặc 15.000 từ chỉ số thẻ gốc.
+- Nếu buff đưa Max HP lên 300.000, lần tạo kế tiếp là 90.000. Đối thủ Tower có Max HP theo tầng cũng dùng giá trị theo tầng thay vì HP gốc 50.000 trong cards.js.
+- Khiên đã tạo là một lượng HP cố định tại lần kích hoạt, không tự hồi hoặc đổi kích thước mỗi lần bị đánh. Chỉ lần kích hoạt sau tính lại theo chỉ số mới; giữ cơ chế hấp thụ khiên hiện hành.
+- Giữ nguyên lịch ba lượt, thời hạn một chu kỳ lượt theo engine, hiệu ứng Snail hai lượt khi đối thủ phá khiên, kiểm tra miễn nhiễm và không mở rộng passive sang đồng đội.
+- cards.js cập nhật riêng mô tả Weather Report từ base HP sang current Max HP. ID, tên, chỉ số gốc, rarity, xác suất roll, hình ảnh và các thẻ khác giữ nguyên.
+
+1.12. Đọc đầy đủ passive và chọn buff Aqua
+==========================================
+
+- Thẻ kết quả roll, Collection, preview, phần xem trước đội hình và hai thẻ Arena có nút + để mở mô tả đầy đủ trong modal riêng.
+- Văn bản dùng textContent, giữ xuống dòng thật, nhận chuỗi có \n hoặc <br>, và nhận mảng passive/passives với nhiều phần tên + mô tả. Không chạy HTML từ nội dung passive.
+- Arena hiển thị kỹ năng lấy được của Dark Aurora và Ice King Crown như các phần passive riêng trong nội dung đầy đủ.
+- Modal có vùng cuộn, ngắt từ dài và kích thước theo viewport. Escape hoặc nút × chỉ đóng modal passive; khi đọc trong trận, Escape không kết thúc trận hoặc reset đội.
+- Có Aqua trong đội: phần chuẩn bị hiện lựa chọn +50% HP cả đội hoặc +50% thưởng. Mặc định HP. Lựa chọn được lấy lúc Start và giữ qua Battle Again/Auto Continue trong phiên giao diện hiện tại; không thêm khóa save cho lựa chọn này.
+- Passive chiến đấu được dispatch theo ID, không so khớp tên gần giống. Thukuna không kích hoạt các slash của Malevolent King cũ; Dark Decade có hook chuyển hóa riêng, không dùng nhầm Kamen Rider Decade cũ.
+
+1.13. Time Trial trong Arena
+=============================
+
+- Arena có bốn lựa chọn chính: 4v4, 1v1, Tower và một nút Time Trial. Bấm Time Trial mở modal chọn Normal 4v4 hoặc EXP 1v1; không còn hai nút Time Trial riêng trong hàng mode Arena.
+- Modal nêu thời gian, phần thưởng và phí vé từng loại; hiển thị số EXP Time Trial Ticket trong Storage. Chọn loại mới đưa về bước chọn đội tương ứng 4 hoặc 1 thẻ. Mở/đóng modal hoặc chọn lại cùng loại giữ đội đang chuẩn bị; không tiêu vé trước khi Start thành công. Escape chỉ đóng màn hình chọn loại, giữ Arena đang mở.
+- Normal Time Trial: chọn 4 thẻ/biến thể, mỗi Room có 3 lính + 1 trùm, tối đa 180 giây. Chỉ nhận Shards từ các đối thủ gốc đã bị hạ; không nhận VNĐ, EXP hoặc potion rơi.
+- Các đối thủ gốc là thẻ thật, có tên, ảnh và passive theo cards.js. timetrial.js dùng trực tiếp TowerSystem.buildOpponents, sau đó áp dụng HP/ATK riêng của Room; không đọc hoặc ghi bản thiết kế đối thủ bị khóa của Tower.
+- Mỗi lần bắt đầu Room mới sinh đội ngẫu nhiên mới. Sau thua/hết giờ, tiến độ về Room 1 và lần Start tiếp theo sinh đội Room 1 mới, không dùng lại đội của lượt thất bại. Không thêm nút reroll giữa trận; các thẻ vẫn có thể xuất hiện lại ngẫu nhiên ở Room khác.
+- Thắng Room mở Room tiếp theo. Tự tiếp tục dùng toggle Auto Continue đang có; OFF thì bấm Continue. Giữa hai Room đã thắng có thể thoát/reload và giữ Room kế tiếp.
+- Thua, hết giờ, đầu hàng, đổi mode khi đang đánh hoặc reload/chuyển save trong trận chưa hoàn tất đưa Normal về Room 1. Shards đã nhận và mốc cao nhất đã vượt được giữ lại.
+- EXP Time Trial: chọn 1 thẻ/biến thể, tiêu 1 EXP Time Trial Ticket để vào 300 giây. Quái mới xuất hiện sau khi quái cũ chết; quái có HP 10% Max HP runtime của thẻ đã chọn, ATK luôn 0.
+- Mỗi kill cấp thẻ đã chọn 0,1%–1,0% EXP cần cho cấp hiện tại, không có VNĐ/Shards/vật phẩm. EXP đã cấp và phần EXP lẻ giữ qua thoát/reload; không hoàn vé của trận đã bắt đầu.
+- Hết 300 giây, EXP Trial hiện kết quả hoàn tất với số quái, tổng % EXP và EXP nguyên/level-up. Auto Continue ON sẽ tiêu thêm 1 vé cho lần kế tiếp; không đủ vé thì dừng. OFF thì bắt đầu lần tiếp theo bằng nút và một vé mới.
+- Mỗi lượt người chơi hoặc quái đều 2 giây. Quái 0 ATK không tạo đòn đánh gây sát thương; lượt quái vẫn xử lý Burn/Freeze và hiệu ứng theo lượt. Các passive người chơi có thể tác động ở lượt quái như cơ chế hiện hành.
+- Speed Battle Potion không tăng tốc, không khởi động lại lượt chờ khi dùng trong Time Trial và không kéo dài hạn giờ. Potion vẫn được tiêu/lưu timer như bình thường để dùng ngoài Time Trial.
+
+1.14. Shop Shards, thành tựu Luck và dữ liệu mới
+=================================================
+
+- Time Trial Shop mở từ phần chuẩn bị Arena hoặc màn hình kết quả, có số dư Shards và sáu loại đổi.
+- 50 Shards: EXP Potion, Speed Potion, Lucky Potion, Rich Potion hoặc 1 EXP Time Trial Ticket. 200 Shards: 1 Speed Battle Potion.
+- Vé là vật phẩm type ticket, ID exp_time_trial_ticket, stack trong Storage; dùng qua Arena, không có nút uống potion.
+- Các Room 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 đã vượt mở mốc nhận +0,1 Luck vĩnh viễn mỗi mốc. Nhận trong Achievements, một lần duy nhất; tổng cộng tối đa +1,0 Luck.
+- Luck dựa trên cờ đã nhận và biên nhận trong save chính, không tăng lại sau reload, retry hoặc khi gọi claim lặp. Mốc cao nhất không giảm khi Normal Trial reset về Room 1.
+- Store riêng anime_card_rng_timetrial_v1 được gói vào .acrsave. Import save cũ thiếu store này vẫn được nhận sau xác thực HMAC; bắt đầu Time Trial với Room 1/0 Shards, không sửa tiến độ cũ.
+- Mọi store Time Trial trong file mới được kiểm tra kiểu dữ liệu, Room, số Shards, phần EXP lẻ và metadata hạn giờ trước khi ghi localStorage. Giữ nguyên Base64/HMAC-SHA-256, khóa bí mật, định dạng .acrsave và cooldown xuất/nhập 604.800.000 ms độc lập.
+
 2. Cân Bằng & Sửa Lỗi
 =====================
 
 2.1. Các lỗi đã sửa trong những đợt mở rộng gần nhất
 ====================================================
 
+- Hạng mục: Time Trial thiếu/ngừng random đối thủ; Hành vi sau sửa: Bỏ Minion/Boss giả có image rỗng và passive null; dùng bộ sinh Tower với pool, vai trò và fallback giống Tower Normal; giữ 3 lính + 1 trùm, ảnh/passive thật và chỉ số Room riêng.
+- Hạng mục: Hai nút Time Trial làm hàng mode dài; Hành vi sau sửa: Một nút mở modal Normal/EXP, lựa chọn có thông tin thời gian/thưởng/vé; nhãn nút chính phản ánh loại đã chọn, modal xếp một cột trên màn hình nhỏ.
 - Hạng mục: Weather Tower bỏ sót mutation; Hành vi sau sửa: Đọc mutationId của dữ liệu thời tiết thô, hoặc đối tượng mutation đã phân giải; kiểm tra thẻ native và cả hai mutation.
 - Hạng mục: Dữ liệu mutation cũ; Hành vi sau sửa: Hợp nhất mutations, mutationIds, mutation; mảng rỗng ở một trường không che dữ liệu ở trường khác. Giữ alias blizzard → frost, sacrifice → eclipsed.
 - Hạng mục: Giới hạn tầng 100; Hành vi sau sửa: Gỡ giới hạn khỏi tải save, tầng kế tiếp, tính chỉ số, thưởng và nhãn giao diện. Save sau tầng 100 không bị hạ xuống 100.
@@ -220,7 +295,7 @@ Các quy tắc dưới đây đã tồn tại trong bản game modular đầu v�
 ================================
 
 - 100 thẻ gốc giữ nguyên định nghĩa trong đợt thêm thành tựu và thẻ thưởng.
-- 11 Champion là thẻ mới; chỉ số gốc, tỷ lệ roll và điều kiện mở khóa được công bố tại mục 3.6.
+- Đợt hiện tại thay cấu hình 11 thẻ thưởng cũ bằng 11 Champion được yêu cầu; chỉ số gốc/tỷ lệ/khóa thời tiết/passive chính xác nằm ở mục 3.6. Không dùng lại công thức HP 12.000 + 800 × i hoặc chance 500.000 + 50.000 × i của thẻ thưởng cũ.
 - passives.js, passives.css và weathers.js được giữ nguyên trong đợt thêm achievements/JSON save.
 - Trong đợt bảo vệ save trước đó, không chỉnh chỉ số, passive, trạng thái, tỷ lệ roll hoặc nhịp thời tiết. Thay đổi tập trung vào định dạng chuyển save, xác thực và timestamp cooldown.
 
@@ -248,7 +323,7 @@ Các quy tắc dưới đây đã tồn tại trong bản game modular đầu v�
 - Bỏ lỗi tối thiểu 1 EXP mỗi thẻ trong Tower: nhánh Tower tạo danh sách thưởng EXP rỗng, không gọi grantCardExperience cho EXP trận và chỉ cộng 0 vào EXP chung.
 - Damage được ghi ngay tại điểm HP bị giảm để không mất số liệu khi mục tiêu được hồi máu, hồi sinh hoặc khi đội sinh thêm clone. Burn/Bleed, phản damage, support và đòn kết liễu tức thì đều đi vào thống kê phù hợp.
 - Ghi nhận HP giảm do passive sống sót trước đòn chí mạng mà không sửa tác dụng sống sót hoặc chỉ số damage của passive. Không tính overkill, damage bị chặn, hồi máu, tự hy sinh hay giảm HP do hết buff chỉ số.
-- Không sửa dữ liệu của 111 thẻ, tỷ lệ roll/mutation, giá potion, thời hạn buff, quy tắc Bleed/freeze, luật hàng đợi Tower hoặc Auto Continue. Đối thủ Tower chịu giới hạn tỷ lệ ATK mới, kể cả sau passive; Arena và thẻ người chơi giữ chỉ số riêng. Lớp HMAC/Base64, định dạng .acrsave và hai cooldown 7 ngày giữ nguyên.
+- Các đợt cân bằng giữ chỉ số, ID và tỷ lệ roll của 111 thẻ; đợt logic hiện tại chỉ cập nhật mô tả Weather Report. Không sửa tỷ lệ mutation, giá potion, thời hạn buff, quy tắc Bleed/freeze, luật hàng đợi Tower hoặc Auto Continue. Đối thủ Tower chịu giới hạn tỷ lệ ATK mới, kể cả sau passive; Arena và thẻ người chơi giữ chỉ số riêng. Lớp HMAC/Base64, định dạng .acrsave và hai cooldown 7 ngày giữ nguyên.
 - Không thêm store localStorage hoặc nâng phiên bản save. Tiến độ Tower/xu/EXP hiện có được giữ; công thức mới chỉ áp dụng khi tạo trận và trao thưởng từ bản này trở đi, không truy thu thưởng cũ.
 
 2.6. Sửa khẩn cấp tỷ lệ HP/ATK và lạm phát xu
@@ -266,6 +341,45 @@ Các quy tắc dưới đây đã tồn tại trong bản game modular đầu v�
 - Xu chuẩn sau tầng 100 tăng 2 xu mỗi 5 tầng. Elite dùng khoảng thưởng riêng tăng nhẹ theo tầng, bỏ nhân ba và phần căn bậc hai tăng nhanh của bản trước.
 - Giữ nguyên xu đã sở hữu và tiến độ cũ; không thu hồi xu người chơi đã nhận. Chỉ trận/thưởng được tạo từ bản này dùng công thức mới.
 
+2.7. Sửa ngẫu nhiên hóa khi retry và nguồn HP khiên
+=================================================
+
+- app.js trước đây gọi buildOpponents mỗi lần Start/Battle Again, nên defeat cũng lấy một đội ngẫu nhiên mới. Bản mới gọi getOpponents: lấy bản thiết kế cùng loại Tower/tầng nếu còn hợp lệ, chỉ tạo mới khi chưa có hoặc sang tầng mới.
+- buildOpponents vẫn là hàm tạo đội hình ngẫu nhiên thuần, dùng cho khởi tạo và xem chỉ số. Không tái sử dụng đơn vị có HP/trạng thái cũ để giữ đội hình.
+- Chống bản thiết kế bị thay đổi do combat: lưu ID/chuỗi mutation độc lập, trả đơn vị mới và bản sao mutation cho từng lần bắt đầu. Hồi sinh, tăng ATK, chỉnh HP, thêm clone trong trận không sửa bản thiết kế.
+- Thêm trường encounters tùy chọn trong store Tower version 1; không thêm khóa localStorage và không đổi format .acrsave, HMAC hoặc cooldown. Bộ kiểm tra import xác thực trường mới, vẫn chấp nhận save cũ không có trường này.
+- Đổi Weather Report sang Max HP runtime; không thay getBaseAtk dùng bởi các passive khác, không chỉnh tỷ lệ 30% hoặc thời gian trạng thái.
+- Cân bằng khẩn cấp giữ nguyên: sức mạnh nền tầng 100 là 470.400; ATK nền 20% Max HP, trần đối thủ 25%; Elite tầng 110 100–110 xu. VNĐ theo tổng damage và 0 EXP Tower vẫn giữ.
+
+2.8. Logic Champion và tương tác với cơ chế cũ
+===============================================
+
+- Toàn bộ 100 định nghĩa thẻ gốc giữ nguyên so với bản trước. Chỉ 11 định nghĩa thẻ thưởng Tower được thay theo yêu cầu.
+- Đội đối thủ Tower vẫn bị loại các thẻ có unlockRequirement khỏi pool tạo ngẫu nhiên; không đưa Champion vào đội NPC để phá cân bằng tầng.
+- Buff/hồi sinh/clone do đối thủ Tower tạo vẫn chịu bảo vệ ATK tối đa 25% Max HP. Đây là giới hạn đối thủ NPC, không sửa chỉ số Champion của người chơi: Aizen 60.000 ATK và Ice King 46.000 ATK giữ đúng cấu hình.
+- Kỹ năng diện rộng xét mọi đối thủ đang sống, gồm vị trí bổ sung. Không dùng cái chết của trùm để bỏ qua các đơn vị còn lại.
+- Bonus các dạng Buu chỉ tồn tại trong dạng tương ứng; khi rời dạng 2, gỡ lượng HP và bookkeeping buff của dạng đó. Không cộng dồn bonus dạng trước.
+- Khiên chặn hết sát thương không tạo sát thương chuyển hướng giả cho Calamity. Chuyển hướng, phản đòn và đòn nối có dấu riêng để tránh vòng lặp phản đòn hoặc Solar Claw nối vô hạn.
+- Sasuke xem trước sát thương chưa chí mạng của đòn né, gồm hệ số kỹ năng và runtime. Xem trước không tiêu hao buff một lần của đối thủ. Đòn né xảy ra trước phép thử chí mạng theo thứ tự combat hiện hành.
+- Đòn kết liễu Vasto Lord kiểm tra quyền tự hồi sinh của Aizen/Ice King. Aizen không được clone, kể cả Jin Mori/Metal Cooler; Aizen và Ice King không được hồi sinh bởi Dante hoặc nguồn đồng đội. Equinox đã tự hủy không thể hồi sinh bằng nguồn nào.
+- Burn, Freeze, Heresy và Crown tôn trọng miễn nhiễm passive của mục tiêu theo luật hiện hành. Bleed tiếp tục chặn hồi HP, kể cả hồi sinh có phục hồi HP; không nới anti-heal cho Champion.
+- Các bản thiết kế, biên nhận, collection và buff potion vẫn lưu bằng store/định dạng cũ. Không đổi khóa HMAC, checksum, thời gian chờ 7 ngày hoặc danh sách potion drop.
+
+2.9. Sửa bố cục passive và các ranh giới Time Trial
+===================================================
+
+- Nút + dùng position: absolute; bottom: 8px; right: 8px trong parent relative. Thêm khoảng trống và chiều cao tối thiểu phù hợp, nên nút không tham gia dòng văn bản hoặc bị đẩy xuống dưới container.
+- Áp dụng ở thẻ roll, preview, Collection, preview chọn đội và thẻ Arena. Giữ modal đầy đủ, xuống dòng, nhiều passive và Escape chỉ đóng phần đọc passive.
+- Cập nhật đúng 11 đường dẫn ảnh, giữ nguyên mọi HP/ATK/chance/passive/weather lock của Champion và giữ nguyên 100 định nghĩa thẻ cũ.
+- Hiệu ứng vào trận của người chơi được xử lý sau khi bắt đầu lượt thử/tiêu vé; kill do bẫy Trapper không bị bỏ qua. HP quái được cân lại theo buff HP khi vào trận của Aqua/Wish, giữ sát thương đã nhận.
+- EXP Monster có getter ATK 0 và nhánh không gây đòn trong engine; helper chuẩn hóa không ép quái thành ATK 1. ATK 0 của quái cũng được dùng khi Aizen tính damage theo ATK mục tiêu.
+- Giới hạn 2 giây được kiểm tra trước potion. Hạn giờ tuyệt đối được kiểm tra bằng cả timeout và global tick/trước lượt; không cấp kill mới sau hạn giờ hoặc bắt đầu lại timer khi mở modal/tiêu potion.
+- Shards và EXP có cờ đã trả cho mỗi đối thủ, không nhận trùng khi resolve/end được gọi lại. Kết quả Normal chỉ thắng khi toàn bộ hàng đợi đối thủ còn sống đã hết.
+- Normal không đi qua pipeline thưởng Arena/Tower; EXP Trial không nhận thưởng VNĐ, drop, Shards, bonus thưởng hoặc EXP potion/nâng cấp. Các tỷ lệ thưởng cố định được giữ đúng; buff combat của thẻ vẫn hoạt động.
+- Tăng cấp trong EXP Trial cập nhật chỉ số runtime theo tỷ lệ level mới/cũ và điều chỉnh delta buff tạm/dạng Buu. Bleed vẫn chặn tăng HP do hồi phục; không sửa thời lượng trạng thái hoặc luật passive cũ.
+- Tiêu vé và shop chỉ hoàn tất khi ghi được localStorage; grant/remove vật phẩm khôi phục số lượng trong RAM nếu ghi thất bại. Chặn double Start, lặp claim hoặc tự tiếp tục khi không còn vé.
+- Reset game đầy đủ xóa cả Time Trial; đóng/đầu hàng một Time Trial không xóa Tower encounter hay collection. Timer cũ được dọn khi kết thúc, rời trận hoặc import thành công.
+
 3. Thông Số & Công Thức Chi Tiết
 ================================
 
@@ -281,7 +395,8 @@ Các quy tắc dưới đây đã tồn tại trong bản game modular đầu v�
 3.2. RNG, Luck và cooldown roll
 ===============================
 
-M_Luck = (1 + 0,25 × u_Luck) × P_Lucky
+M_Luck = (1 + 0,25 × u_Luck + L_TimeTrial) × P_Lucky
+L_TimeTrial = 0,1 × số mốc Time Trial đã nhận, tối đa 1,0 cho 10 mốc hiện có.
 Cooldown_ms = 1.500 / [(1 + 0,15 × u_Speed) × P_Speed]
 Chance_hiệu_dụng = max(0,000001; chance_thẻ / M_Luck)
 p_thử_thẻ = min(1; 1 / Chance_hiệu_dụng)
@@ -420,30 +535,146 @@ Xu_thử = Xu_min + floor(U × (Xu_max - Xu_min + 1)), U ngẫu nhiên trong [0;
 Xu_thực_cấp = min(Xu_thử; max(0; Number.MAX_SAFE_INTEGER - Xu_đang_có)).
 Các biên và tổng xu có giới hạn số học Number.MAX_SAFE_INTEGER để save hợp lệ. Chỉ thắng đúng tầng kế tiếp mới cấp thưởng; gọi lại kết quả không cấp trùng. Rich Potion/passive không nhân Tower Coins. Phòng Elite thưởng cao hơn phòng thường ngay sau nó là chủ ý; không làm giảm HP/ATK nền tầng kế tiếp.
 
-3.6. Thông số 11 thẻ Champion
-=============================
+3.6. Thông số và passive đầy đủ của 11 Champion
+================================================
 
-Các giá trị là ở level 1, bản Normal, trước hiệu ứng trận đấu. Tất cả có rarity nội bộ Secret, không có passive bổ sung và không yêu cầu thời tiết đang hoạt động để roll sau mở khóa.
+Thông số sau là level 1, bản Normal, trước level/mutation/buff. Tất cả rarity nội bộ Secret. Mỗi thẻ cần vượt tầng 100 của Tower tương ứng; nhận ngay 1 bản Normal và mở khóa vĩnh viễn. Giữ ID/biên nhận cũ, không thưởng thêm cho người đã nhận Champion trước bản này.
 
-- Tower: Normal; Thẻ thưởng: Naruto • Tower Champion; HP gốc: 12.000; ATK gốc: 1.800; Tỷ lệ thử nền khi đã mở khóa: 1 trên 500.000
-- Tower: Raining; Thẻ thưởng: Aquaman • Storm Champion; HP gốc: 12.800; ATK gốc: 1.920; Tỷ lệ thử nền khi đã mở khóa: 1 trên 550.000
-- Tower: Snowing; Thẻ thưởng: Toshiro • Frost Champion; HP gốc: 13.600; ATK gốc: 2.040; Tỷ lệ thử nền khi đã mở khóa: 1 trên 600.000
-- Tower: Sunny; Thẻ thưởng: Solar Deity • Sun Champion; HP gốc: 14.400; ATK gốc: 2.160; Tỷ lệ thử nền khi đã mở khóa: 1 trên 650.000
-- Tower: Sugar; Thẻ thưởng: Android 21 • Sugar Champion; HP gốc: 15.200; ATK gốc: 2.280; Tỷ lệ thử nền khi đã mở khóa: 1 trên 700.000
-- Tower: Reaper; Thẻ thưởng: Hollow • Reaper Champion; HP gốc: 16.000; ATK gốc: 2.400; Tỷ lệ thử nền khi đã mở khóa: 1 trên 750.000
-- Tower: Eclipse; Thẻ thưởng: Eclipse Harvester • Eclipse Champion; HP gốc: 16.800; ATK gốc: 2.520; Tỷ lệ thử nền khi đã mở khóa: 1 trên 800.000
-- Tower: Malevolent; Thẻ thưởng: Malevolent King • Cursed Champion; HP gốc: 17.600; ATK gốc: 2.640; Tỷ lệ thử nền khi đã mở khóa: 1 trên 850.000
-- Tower: Tsukuyomi; Thẻ thưởng: Tsukuyomi Eye • Moon Champion; HP gốc: 18.400; ATK gốc: 2.760; Tỷ lệ thử nền khi đã mở khóa: 1 trên 900.000
-- Tower: Heavenly; Thẻ thưởng: Heavenly Seraph • Light Champion; HP gốc: 19.200; ATK gốc: 2.880; Tỷ lệ thử nền khi đã mở khóa: 1 trên 950.000
-- Tower: Shadow; Thẻ thưởng: Shadow Monarch • Shadow Champion; HP gốc: 20.000; ATK gốc: 3.000; Tỷ lệ thử nền khi đã mở khóa: 1 trên 1.000.000
+Tỷ lệ 1/N là chance cấu hình, không bị đổi. Gacha vẫn thử tuần tự theo độ hiếm, có Luck và có thể miss như mục 3.2, nên đây không phải cam kết tần suất cuối độc lập. Nhận thẻ thành tựu không cần roll trúng. Các lần gacha sau cần cả mở khóa và đúng thời tiết; mutation/EXP roll giữ cơ chế cũ.
 
-Với chỉ số thứ tự i từ 0 đến 10 theo bảng:
+3.6.1. Majin Buu
+-----------------
+ID: tower-champion-sugar
+Tower/khóa thời tiết: Sugar; yêu cầu tower_floor_100_sugar.
+HP: 76.000; ATK: 7.600; tỷ lệ: 1/760.000.
+Passive: Candy Eater.
+- Mỗi đòn chính tăng ngẫu nhiên đều 1–3 kẹo; dạng 1 tăng thêm 1. Đòn nối/phản đòn không tăng thêm bộ đếm đòn chính.
+- Dạng 1, 0–10 kẹo: sát thương đòn chính ×1,25.
+- Dạng 2, 11–25 kẹo: Max HP +50%. Khi bị đánh, tiêu 1 kẹo và hồi floor(3% × Max HP đang hoạt động).
+- Dạng 3, 26–50 kẹo: mỗi đòn gây sát thương HP thật triệu hồi Ghost. HP Ghost bằng HP thực mất do đòn đó; ATK = floor(10% × ATK hiện tại của Buu), tối thiểu 1. Không tạo Ghost HP giả từ khiên hoặc đòn né.
+- Dạng 4, 51–75 kẹo: né 76%. Né được tăng 5 kẹo, hồi 7,6% Max HP và bỏ lượt tấn công kế tiếp bằng stun 1 lượt.
+- Dạng 5, 76–99 kẹo: mỗi đòn chính thứ 3, đánh thêm 3 đối thủ ngẫu nhiên khác vị trí nhau, mỗi mục tiêu nhận 50% ATK hiện tại. Nếu ít hơn 3 đối thủ, đánh tất cả số còn sống; vẫn có đòn chính bình thường.
+- Dạng cuối, 100 kẹo: đòn chính và sát thương thêm đánh toàn bộ đội địch, mỗi mục tiêu một lần trong lượt này. Không tiếp tục tăng kẹo ở dạng cuối.
+- Quy ước bổ sung do yêu cầu chưa định lượng mức tiêu kẹo: tiêu 1 kẹo mỗi lượt tấn công dạng cuối. Giữ dạng cuối từ 100 xuống 0, không tụt về các dạng giữa trong giai đoạn tiêu kẹo.
+- Ở 0: trở về dạng 1, tự stun 5 lượt của Buu, khóa tăng kẹo/đổi dạng trong thời gian hồi dạng. Hết 5 lượt mới tích kẹo lại.
+- “Không cộng dồn qua ngưỡng” được thực hiện bằng bonus dạng loại trừ nhau; lượng kẹo là một bộ đếm liên tục để có thể đạt 100. HP dạng 2 được gỡ khi rời dạng; không giữ bonus dạng 1–5 trong dạng cuối.
 
-HP_gốc = 12.000 + 800 × i
-ATK_gốc = 1.800 + 120 × i
-chance = 500.000 + 50.000 × i
+3.6.2. Thukuna
+---------------
+ID: tower-champion-malevolent
+Tower/khóa thời tiết: Malevolent; yêu cầu tower_floor_100_malevolent.
+HP: 66.666; ATK: 9.999; tỷ lệ: 1/666.999.
+Passive: Malevolent Kitchen.
+- Sau 5 đòn chính, mỗi lượt combat của bất kỳ bên nào gây 25% ATK hiện tại lên mọi đối thủ đang sống, khi Thukuna còn sống.
+- Mỗi lần bị đánh có xác suất 66% hồi 6% Max HP và tăng ATK thêm 9%, không giới hạn số lần.
+- Tăng ATK theo chỉ số hiện tại: ATK_k = round(ATK_(k-1) × 1,09). Trên NPC Tower vẫn áp dụng trần ATK/HP.
 
-Cấp thẻ tự động không cần roll trúng tỷ lệ trên. Tỷ lệ chỉ áp dụng cho các lần gacha sau khi mở khóa, cùng hệ số Luck và quy tắc thử tuần tự ở mục 3.2.
+3.6.3. Aizen Beyond
+--------------------
+ID: tower-champion-reaper
+Tower/khóa thời tiết: Reaper; yêu cầu tower_floor_100_reaper.
+HP: 100.000; ATK: 60.000; tỷ lệ: 1/6.000.000.
+Passive: Illusion Shattering Flower.
+- Mỗi 2 đòn chính gây thêm sát thương lên mọi đối thủ, bằng 60% ATK hiện tại của chính mục tiêu đó, gồm suy yếu ATK đang có.
+- Khi nhận sát thương HP có xác suất 6% phản 50% lượng sát thương vừa nhận. Dấu phản đòn ngăn chuỗi phản đòn lặp.
+- Sát thương chí tử thật sau khiên/giảm sát thương: tự hồi sinh một lần mỗi trận, đầy Max HP và ATK ×1,50. Đòn bị khiên chặn chưa dùng lượt hồi sinh.
+- Không được clone hoặc hồi sinh bằng đồng đội. Trạng thái hồi sinh làm mới ở trận retry; quyền nhận thẻ không làm mới.
+
+3.6.4. Naruto x Sasuke
+-----------------------
+ID: tower-champion-tsukuyomi
+Tower/khóa thời tiết: Tsukuyomi / Mangekyo; yêu cầu tower_floor_100_tsukuyomi.
+HP: 200.000; ATK: 20.000; tỷ lệ: 1/2.000.000.
+Passive: Datebayo.
+- Khi đối thủ tuyến đầu mới xuất hiện, chọn Naruto hoặc Sasuke với xác suất 50/50. Giữ chế độ đến khi đối thủ đó chết; đối thủ mới làm chọn lại và reset bộ đếm đòn của chế độ.
+- Naruto: mỗi đòn thứ 3 ×3 sát thương, triệu hồi clone có 10% Max HP/ATK hiện tại. Không giới hạn tổng clone; mọi clone còn sống đánh nối sau đòn Naruto. Clone chết hồi chủ 10% Max HP. Chuyển Sasuke xóa mọi clone, không coi việc xóa là clone chết để hồi miễn phí.
+- Sasuke: mỗi đòn thứ 2 gây thêm 50% ATK lên toàn bộ đối thủ. Có 20% né.
+- Né: Burn trên người đánh, 5 lượt của người đó, mỗi lượt floor(25% × ATK Sasuke tại thời điểm áp dụng). Tạo khiên bằng sát thương chưa chí mạng của đòn đã né, còn tối đa 3 lượt combat tiếp theo; khiên chưa tiêu hao biến mất khi hết hạn hoặc chuyển Naruto.
+- Khi stack Burn do Sasuke kết thúc tự nhiên, người bị Burn stun 1 lượt của họ. Các Burn khác không tự kích hoạt stun này.
+
+3.6.5. Kamen Rider Dark Decade
+-------------------------------
+ID: tower-champion-shadow
+Tower/khóa thời tiết: Shadow; yêu cầu tower_floor_100_shadow.
+HP: 102.000; ATK: 28.000; tỷ lệ: 1/2.009.000.
+Passive: Dark Aurora.
+- Hạ đối thủ: 29% chuyển hóa thành đồng đội vào tuyến đầu, có Max HP/ATK hiện tại của Dark Decade và passive của nạn nhân; đồng thời Dark Decade lấy passive đó.
+- Giữ hook chuyển hóa gốc của Dark Aurora khi đã lấy passive. Passive lấy được dispatch theo ID nguồn và được khởi tạo vào trận; giao diện Arena hiển thị cả Dark Aurora và kỹ năng lấy được. Thay kỹ năng không xóa Heresy/Crown đang có hoặc reset số hồi sinh đồng đội chuyển hóa; khiên Sasuke cũ được gỡ khi đổi kỹ năng.
+- Đồng đội chuyển hóa chết khi Dark Decade còn sống: hồi sinh đầy HP ở cuối hàng với chỉ số Dark Decade hiện tại và passive đã lấy; tối đa 2 lần cho mỗi đồng đội. Không tạo nhiều tham chiếu tới cùng đơn vị trong hàng đợi.
+- Giới hạn không clone/không hồi sinh của Aizen, Ice King hoặc Equinox chết vĩnh viễn vẫn được ưu tiên; không dùng chuyển hóa để bỏ qua các giới hạn này.
+
+3.6.6. Wonder Of You
+---------------------
+ID: tower-champion-eclipse
+Tower/khóa thời tiết: Eclipse; yêu cầu tower_floor_100_eclipse.
+HP: 800.000; ATK: 8; tỷ lệ: 1/8.000.000.
+Passive: Calamity.
+- Khi vào trận chọn đều một đồng đội khác còn sống để bảo vệ; đồng đội chết thì chọn lại. Không có đồng đội khác thì không có mục tiêu bảo vệ.
+- Sau khiên/giảm sát thương hiện hành, đồng đội nhận 50% phần sát thương còn lại; 50% chuyển về Wonder Of You. Phần chuyển tiếp vẫn dùng luật phòng thủ của đơn vị nhận.
+- Xác suất 8% phản phần chuyển hướng về người đánh; đồng đội vẫn nhận phần 50% của mình. Không phản/chuyển hướng lặp và không tạo sát thương từ đòn bị chặn hoàn toàn.
+- Đồng đội được bảo vệ hạ đối thủ: Wonder Of You hồi 80% Max HP.
+- Wonder Of You chết trong khi có mục tiêu bảo vệ: xác suất 8% kết liễu người đánh. Đòn kết liễu bỏ qua khiên/giảm sát thương, nhưng vẫn tôn trọng miễn nhiễm passive và quyền chống chí tử/tự hồi sinh.
+
+3.6.7. The Judgement
+---------------------
+ID: tower-champion-heavenly
+Tower/khóa thời tiết: Heavenly; yêu cầu tower_floor_100_heavenly.
+HP: 40.000; ATK: 5.000; tỷ lệ: 1/300.300.
+Passive: Divine Light.
+- Mỗi 2 đòn chính thử beam 33%; trúng gây 50% ATK lên mọi đối thủ. Mỗi mục tiêu nhận sát thương có xác suất 66% nhận Heresy 1–3 lượt, phân bố đều.
+- Nếu còn ít nhất một đối thủ Heresy, vào Zealous: xác suất beam 66%, sát thương 66% ATK, xác suất Heresy 33%.
+- Heresy: mọi sát thương tấn công/kỹ năng của đơn vị ×0,91; đòn chính có xác suất 3% miss. Hết hạn sau số lượt của đơn vị bị hiệu ứng, kể cả lượt bị khống chế. Không sửa thời tiết của trận.
+
+3.6.8. Aqua
+-------------
+ID: tower-champion-raining
+Tower/khóa thời tiết: Raining; yêu cầu tower_floor_100_raining.
+HP: 222.222; ATK: 2.222; tỷ lệ: 1/2.222.222.
+Passive: Useless.
+- Trước Start, người chơi chọn một trong hai: +50% Max HP toàn đội hoặc +50% thưởng. HP chọn theo cả đội, gồm Aqua, áp dụng một lần cho mỗi bên, không cộng lại chỉ vì nhiều Aqua cùng đội.
+- Quy ước thưởng giữ hệ thống Reward Bonus hiện có: VNĐ, EXP Arena và Reward Bonus hiển thị ×1,50; passiveMultiplier cấp EXP từng ID ×1,50. Không nhân Tower Coins, Drop Chance riêng hoặc xác suất potion độc lập. Tower vẫn không EXP dù chọn thưởng.
+- Lượt đồng đội tấn công mà Aqua không phải đơn vị đang đánh: hồi đồng đội 10% Max HP và tăng ATK hiện tại ×1,022, làm tròn như buff cũ. Buff áp dụng ở đầu lượt, kể cả lượt đó sau này bị stun/freeze. Aqua không hỗ trợ đội đối phương và không tự kích hoạt thêm khi đòn nối cùng lượt xảy ra.
+- Mỗi Aqua còn sống có thể hỗ trợ; sau khi Aqua chết, lựa chọn thưởng đã chốt vẫn áp dụng khi trận thắng như các passive thưởng hiện hành.
+
+3.6.9. Charizard Mega X
+------------------------
+ID: tower-champion-sunny
+Tower/khóa thời tiết: Sunny; yêu cầu tower_floor_100_sunny.
+HP: 78.000; ATK: 13.000; tỷ lệ: 1/634.000.
+Passive: Solar Claw.
+- Xác suất chí mạng nền 33%; các buff crit khác vẫn theo luật cũ.
+- Chí mạng gây Burn 3 lượt của mục tiêu, mỗi lượt floor(33% × ATK Charizard tại lúc áp dụng).
+- Chí mạng kích hoạt một đòn nối bảo đảm chí mạng với hệ số sát thương ×3. Giữ hệ số crit nền ×1,50: đòn nối chưa có phòng thủ gây 4,50 × ATK; ví dụ ATK 13.000 gây 58.500, đòn đầu crit 19.500.
+- Đòn nối có thể thêm Burn nhưng không tạo đòn nối thứ hai. Nếu mục tiêu đã chết thì không đánh thêm vào xác.
+
+3.6.10. Equinox
+----------------
+ID: tower-champion-normal
+Tower/khóa thời tiết: Normal (không có thời tiết đặc biệt); yêu cầu tower_floor_100_normal.
+HP: 250.000; ATK: 25.000; tỷ lệ: 1/2.500.025.
+Passive: Emotional Meter.
+- Khởi đầu tích cực 50%, tiêu cực 50%; hai phía bổ sung nhau, tổng luôn 100%.
+- Mỗi đòn chính tăng tích cực ngẫu nhiên đều 10–20 điểm phần trăm; mỗi lần nhận đòn tăng tiêu cực 10–20 điểm. Giới hạn từng phía 0–100%.
+- Tích cực 100%: toàn đội đang sống Max HP ×2, ATK ×1,25, khóa thanh cảm xúc.
+- Tiêu cực 100%: gây 25 × ATK hiện tại lên mọi đối thủ rồi tự chết vĩnh viễn. Không có nguồn hồi sinh hoặc clone sau khi chết vĩnh viễn; thử meter sau khóa không kích hoạt lại.
+
+3.6.11. Ice King
+------------------
+ID: tower-champion-snowing
+Tower/khóa thời tiết: Snowing; yêu cầu tower_floor_100_snowing.
+HP: 104.600; ATK: 46.000; tỷ lệ: 1/1.058.000.
+Passive: Ice Manipulation.
+- Khi bị đánh: 20% đóng băng người đánh 2 lượt của họ. Đòn chính vào mục tiêu đang freeze tăng sát thương ×1,50.
+- Chí tử lần đầu: tự hồi sinh đầy Max HP và vào giai đoạn tồn tại thêm 5 lượt combat. Trong giai đoạn đó, đòn chí tử tiếp theo không tạo lần hồi sinh mới; timer không reset.
+- Hết 5 lượt combat sau lượt bắt đầu hồi sinh: chết vĩnh viễn. Không hồi sinh bằng nguồn đồng đội; không khởi động vòng hồi sinh mới trong cùng trận.
+- Khi chết, 58% chọn đều một đồng đội khác còn sống để trao Ice King Crown. Crown là thêm phép thử 10% cho đòn chính trúng: đóng băng mục tiêu 3 lượt, không tăng sai thời lượng freeze 2 lượt gốc của Ice King.
+
+Các quy tắc chung:
+- ATK hiện tại trong Champion là ATK runtime sau level/mutation/buff và suy yếu. Max HP là chỉ số hiện tại; không dùng lại chỉ số index để tính kỹ năng.
+- Damage kỹ năng là giá trị trước khiên/giảm sát thương; bộ đếm VNĐ chỉ ghi HP thực mất. Không cộng hồi máu, khiên hoặc HP thêm do buff vào damageTotals.
+- “Mỗi lượt combat” là mỗi bước xử lý một bên. “Lượt của đơn vị” là lần đơn vị đó được lên lịch tấn công. Đòn nối không làm giảm timer độc lập thêm một lượt.
+- Burn dùng từng stack với sát thương chốt lúc áp dụng; Freeze/Heresy giữ thời lượng theo luật trên. Aura phòng thủ, phản chiêu Asta và chống chí tử vẫn đi qua các hook liên quan.
+- Các hằng số Champion không thay hằng số crit/dodge chung, không đổi stats/tỷ lệ của 100 thẻ cũ. Lưu bộ đếm Champion trong đối tượng trận, không ghi trạng thái kẹo/clone/afterlife vào bản thiết kế retry.
 
 3.7. Potion, timer và tỷ lệ rơi thưởng
 ======================================
@@ -452,11 +683,11 @@ Cấp thẻ tự động không cần roll trúng tỷ lệ trên. Tỷ lệ ch�
 - Vật phẩm: Speed Potion; Tác dụng khi hoạt động: Nhân tốc độ roll 1,10; cooldown chia 1,10; Thời gian mỗi chai: 600 giây; Giá Tower Shop: 25 Tower Coins; Nguồn rơi từ thắng trận: Có
 - Vật phẩm: Rich Potion; Tác dụng khi hoạt động: Nhân hệ số VNĐ 1,25; Thời gian mỗi chai: 600 giây; Giá Tower Shop: 25 Tower Coins; Nguồn rơi từ thắng trận: Có
 - Vật phẩm: EXP Potion; Tác dụng khi hoạt động: Nhân hệ số EXP 1,25; Thời gian mỗi chai: 600 giây; Giá Tower Shop: 25 Tower Coins; Nguồn rơi từ thắng trận: Có
-- Vật phẩm: Speed Battle Potion; Tác dụng khi hoạt động: Lượt combat từ 3 giây xuống 1 giây, áp dụng Arena và Tower; Thời gian mỗi chai: 600 giây; Giá Tower Shop: 100 Tower Coins; Nguồn rơi từ thắng trận: Không; độc quyền Tower Shop
+- Vật phẩm: Speed Battle Potion; Tác dụng khi hoạt động: Lượt combat từ 3 giây xuống 1 giây, áp dụng Arena thường và Tower, không áp dụng Time Trial; Thời gian mỗi chai: 600 giây; Giá Tower Shop: 100 Tower Coins hoặc Time Trial Shop: 200 Shards; Nguồn rơi từ thắng trận: Không; chỉ mua từ hai shop
 
 Thời_điểm_hết_hạn_mới = max(thời_gian_hiện_tại; thời_điểm_hết_hạn_cũ) + 600.000 ms
 
-Dùng thêm chai cùng loại kéo dài timer; không cộng dồn thêm phần trăm buff. Timer dùng thời gian thực tuyệt đối, tiếp tục hết hạn khi đóng game. Speed Battle Potion không thay đổi tốc độ roll. Sau hết hiệu lực, lượt combat được lên lịch tiếp theo dùng nhịp gốc 3 giây.
+Dùng thêm chai cùng loại kéo dài timer; không cộng dồn thêm phần trăm buff. Timer dùng thời gian thực tuyệt đối, tiếp tục hết hạn khi đóng game. Speed Battle Potion không thay đổi tốc độ roll. Sau hết hiệu lực, lượt Arena thường/Tower được lên lịch tiếp theo dùng nhịp gốc 3 giây. Cả hai Time Trial luôn 2 giây, kể cả đang dùng, hết hạn hoặc dùng thêm Speed Battle Potion; timer potion vẫn trôi theo thời gian thực.
 
 Gọi m là số lần thắng liên tiếp không rơi potion, lưu tối đa 10; D là chỉ số Drop Chance, đơn vị điểm phần trăm, giới hạn từ 0 đến 20:
 
@@ -485,7 +716,7 @@ Các giá trên là VNĐ, không phải Tower Coins.
 3.9. Combat, VNĐ theo damage và EXP riêng từng thẻ
 =================================================
 
-Nhịp combat giữ 3.000 ms; Speed Battle Potion còn hiệu lực dùng 1.000 ms. Auto Continue giữ độ trễ kết quả 1.500 ms. 1v1 thường vẫn dùng tỷ lệ đối thủ mục tiêu 0,92–1,22; 4v4 thường 0,85–1,30, level thích ứng và mutation thời tiết 70%. Tower dùng chỉ số tầng ở mục 3.5.
+Nhịp Arena thường/Tower giữ 3.000 ms; Speed Battle Potion còn hiệu lực dùng 1.000 ms. Time Trial luôn dùng 2.000 ms, kiểm tra mode trước khi đọc buff potion. Auto Continue giữ độ trễ kết quả 1.500 ms. 1v1 thường vẫn dùng tỷ lệ đối thủ mục tiêu 0,92–1,22; 4v4 thường 0,85–1,30, level thích ứng và mutation thời tiết 70%. Tower dùng chỉ số tầng ở mục 3.5.
 
 A. VNĐ Arena thường, giữ công thức cũ
 Gọi t là giây trận, V là tổng giá trị salvage của đối thủ không phải clone; Lp/Le là level trung bình ban đầu:
@@ -545,7 +776,7 @@ Không gọi grantCardExperience từ thưởng thắng Tower; EXP Potion/nâng 
 E. Potion và chỉ số rơi thưởng, giữ cơ chế cũ
 Bonus_thời_gian_%_cho_drop = round((1 + min(0,02 × t; 0,50) - 1) × 100).
 Tăng_D_nền = làm_tròn_2_chữ_số(min(5; 0,50 + 0,02 × Bonus_thời_gian_%_cho_drop)).
-D sau thắng cộng mức nền trên và tối đa 20. Bonus thời gian đạt 50% ở 25 giây; Tăng_D_nền hiện trong 0,50–1,50 điểm phần trăm. Tính drop này vẫn dùng thời gian trận kể cả Tower, dù VNĐ Tower không dùng thời gian. Không đưa Speed Battle Potion vào danh sách drop; item này vẫn chỉ mua Tower Shop với 100 xu.
+D sau thắng cộng mức nền trên và tối đa 20. Bonus thời gian đạt 50% ở 25 giây; Tăng_D_nền hiện trong 0,50–1,50 điểm phần trăm. Tính drop này vẫn dùng thời gian trận kể cả Tower, dù VNĐ Tower không dùng thời gian. Không đưa Speed Battle Potion vào danh sách drop; item này mua Tower Shop với 100 xu hoặc Time Trial Shop với 200 Shards.
 
 3.10. Thưởng thành tựu
 ======================
@@ -604,6 +835,142 @@ Nếu cả hai đội đồng thời hết đơn vị, giữ thứ tự đánh g
 
 Điều_kiện_tự_tiếp_tục = ON VÀ kết quả victory VÀ đội hợp lệ VÀ đúng trận đã thắng VÀ Arena còn mở VÀ không đang chuyển save.
 
+3.13. Bản thiết kế tầng và công thức Weather Report
+==================================================
+
+Khóa tầng đang thử = loại Tower + tầng chưa vượt tiếp theo.
+encounters[loại_Tower] = { floor: F, lineup: [{ cardId, mutationIds }, ... bốn vị trí] }.
+Vị trí 1–3 là lính; vị trí 4 là trùm.
+
+Retry_F = đơn_vị_mới(bản_thiết_kế_F), không gọi RNG chọn thẻ/mutation.
+Thắng_F => xóa encounters[loại_Tower]; lần bắt đầu F+1 tạo bản thiết kế mới.
+Không có Reset_Opponents hoặc resetEncounter trong giao diện/API hiện tại. Chỉ thắng đúng tầng mới giải phóng bản thiết kế; Reset toàn bộ game vẫn xóa toàn bộ tiến độ theo chức năng gốc.
+
+Tỷ lệ chọn thẻ, mutation, chỉ số tầng, ngẫu nhiên thắng/thua và danh sách drop không đổi. Đội hình mới có thể ngẫu nhiên trùng thẻ với đội trước, nhưng được lấy mẫu mới; không ép xuất hiện thẻ chưa gặp hoặc đổi xác suất để tránh trùng.
+
+Ở lượt combat T chia hết cho 3, nếu Weather Report còn sống và passive hiệu lực:
+Khiên_mới = max(1; floor(0,30 × Max_HP_runtime_tại_T)).
+weatherShield = Khiên_mới.
+weatherShieldExpiresAt = T + 1.
+shield = max(shield_còn_lại; Khiên_mới), giữ hàm addShield hiện hành.
+
+Nhánh hết hạn cũ chạy khi turnCount >= weatherShieldExpiresAt + 1, tức T+2; đây là một chu kỳ đòn đối phương sau khi tạo khiên. Khi đối thủ làm vỡ khiên weather, đặt Snail 2 lượt nếu luật miễn nhiễm cho phép. Không cộng HP hồi máu vào bộ đếm damage hay VNĐ từ khiên.
+
+Max_HP_runtime lấy trực tiếp từ đơn vị sau level, mutation và buff HP đã áp dụng. Không nhân lại các hệ số lần nữa; không dùng card.stats.hp làm dự phòng ưu tiên cho khiên. ATK không nằm trong công thức khiên Weather Report, nên không thêm hệ số ATK không có trong mô tả kỹ năng.
+
+3.14. Công thức Time Trial và các quy ước chính xác
+===================================================
+
+3.14.1. Đồng hồ và lượt
+-----------------------
+TURN_MS = 2.000.
+Normal_DURATION_MS = 180.000; EXP_DURATION_MS = 300.000.
+deadline = Date.now() tại Start thành công + duration.
+còn_lại_ms = max(0; deadline - Date.now()).
+Nếu Date.now() >= deadline, không xử lý thêm lượt mới.
+
+Mỗi Room Normal có hạn mới 180 giây; mỗi lần EXP dùng vé có hạn mới 300 giây. Delay kết quả của Auto Continue vẫn 1.500 ms, nằm ngoài trận; không cộng thêm vào hạn trận đang đánh. Nếu một tab bị treo/chạy nền, không mô phỏng nhiều lượt để cấp thưởng sau giờ; deadline thực quyết định kết thúc.
+
+3.14.2. Normal Time Trial: HP/ATK và sức mạnh Room
+-------------------------------------------------
+R = số Room, tối thiểu 1; Q = 1 cho lính, Q = 10 cho trùm.
+Điểm neo A = 650.000 / 15.600 = 41,6666666667.
+
+Room 1–50:
+S(R) = A^((R - 1)/49).
+
+Room 51 trở đi:
+d = R - 50.
+S(R) = A × [1 + 0,015 × d + 0,05 × floor(d / 10)].
+
+HP = max(10; round(min(Number.MAX_VALUE / 1024; 1.000 × Q × S(R)))).
+ATK = floor(0,10 × HP).
+Power_đơn_vị = HP + 2 × ATK.
+Power_Room = 3 × Power_lính + Power_trùm.
+
+- Room 1: mỗi lính HP 1.000 / ATK 100, trùm HP 10.000 / ATK 1.000; Power Room 15.600.
+- Room 50: mỗi lính HP 41.667 / ATK 4.166, trùm HP 416.667 / ATK 41.666; Power Room 649.996, nằm trong mục tiêu 600K–700K.
+- Room 60: hệ số tăng tiếp ×1,20 so với điểm neo Room 50; khoảng 780K Power.
+- Room 100: hệ số ×2 so với điểm neo Room 50; khoảng 1,30M Power.
+- Dùng kiểu đường cong Tower hiện hành: lũy thừa mở đầu, tuyến tính nhẹ sau điểm neo. Không sửa công thức Tower tầng 100 ở mục 3.5. HP luôn lớn hơn ATK; không giới hạn Room ở 50 hoặc 100.
+
+Bộ sinh đội Normal Time Trial:
+- Pool lấy từ ALL_CARDS, loại thẻ có unlockRequirement và Griffith đúng như bộ sinh Tower; thẻ thưởng Champion không được tự đưa vào pool đối thủ.
+- Room thường: lính từ Common/Rare/Epic/Legendary; trùm từ Legendary/Mythic/Secret. Nếu pool vai trò rỗng, dùng pool còn lại theo fallback của Tower.
+- Room chia hết cho 10: cả bốn vị trí dùng pool Elite Mythic/Secret; nếu hết pool Elite, fallback sang Legendary trở lên, sau đó pool còn lại.
+- Chọn vai trò theo chỉ số vị trí: 0–2 là lính, vị trí 3 là trùm. Khi gặp ID đã chọn, gọi cùng bộ sinh với các ID đã dùng bị loại ra; không lặp thử vô hạn. Pool hiện tại đủ để có bốn ID khác nhau; pool tùy chỉnh dưới bốn thẻ có thể dùng lại ID theo fallback.
+- Gọi buildOpponents, không gọi getOpponents: Time Trial không kế thừa khóa retry của Tower. Mỗi Start tạo đối tượng runtime mới và phép rút ngẫu nhiên mới, giữ dữ liệu thẻ gốc bất biến.
+- Power 649.996 tại Room 50 là tổng chỉ số nền trước passive vào trận. Passive thực của đối thủ có thể buff chỉ số, hồi sinh hoặc gọi thêm đơn vị trong combat; thắng chỉ khi không còn đối thủ sống trong toàn bộ hàng đợi. Chỉ bốn đối thủ gốc mang cờ nhận Shards, đơn vị được triệu hồi không thêm nguồn Shards.
+
+3.14.3. Shards
+---------------
+K(R) = 1 + floor((R - 1)/10).
+Minion: số nguyên ngẫu nhiên đều từ K đến 2 × K.
+Boss: số nguyên ngẫu nhiên đều từ 2 × K đến 5 × K.
+Tổng một Room đủ 4 đối thủ: 5 × K đến 11 × K Shards.
+
+- Room 1–10: lính 1–2, trùm 2–5, cả Room 5–11.
+- Room 11–20: lính 2–4, trùm 4–10, cả Room 10–22.
+- Room 21–30: lính 3–6, trùm 6–15, cả Room 15–33.
+- Room 41–50: lính 5–10, trùm 10–25, cả Room 25–55.
+- Room 91–100: lính 10–20, trùm 20–50, cả Room 50–110.
+
+Mỗi khối 10 Room cộng 100% mức gốc, tức ×1, ×2, ×3…, không nhân đôi lãi kép. Shards cấp khi đối thủ gốc chết, một lần mỗi đối thủ. Không cấp cho clone/đơn vị chuyển hóa đồng đội. Thua giữ Shards đã nhận, chỉ reset số Room. Số dư có trần số học Number.MAX_SAFE_INTEGER; không nhân Reward Bonus, Aqua, Nami, Hakari hay potion lên Shards.
+
+3.14.4. EXP Time Trial
+-----------------------
+Vé: exp_time_trial_ticket, tiêu đúng 1 khi Start thành công; không tiêu khi đội chưa hợp lệ hoặc không ghi được lượt thử.
+HP_quái = max(1; floor(0,10 × Max_HP_runtime_thẻ_đã_chọn)).
+ATK_quái = 0, kể cả sau helper chuẩn hóa.
+
+Sau khi hạ quái, tính từ thông số level hiện tại của ID thẻ đã chọn:
+r = 0,001 + 0,009 × U, với U = Math.random() trong [0; 1).
+EXP_exact = EXP_required(level hiện tại) × r.
+Tổng_credit = EXP_exact + xpCarry[cardId] trước đó.
+EXP_nguyên_cấp_thẻ = floor(Tổng_credit).
+xpCarry_mới = Tổng_credit - EXP_nguyên_cấp_thẻ, luôn trong [0; 1).
+
+EXP nguyên đi qua cơ chế level đang có; EXP lẻ lưu theo card ID để không mất giá trị tại cấp thấp và được cộng vào thanh tiến độ hiển thị. Ví dụ thẻ cần 100 EXP, mỗi kill r = 0,0055: kill đầu credit 0,55 EXP; sau 2 kill tổng 1,10 EXP, cấp 1 điểm nguyên và giữ 0,10 điểm lẻ. Phần lẻ đi theo save/reload và các lần thử sau, không được cấp lại thành điểm nguyên hai lần.
+
+Tổng_%_kết_quả = tổng(r_i × 100) của các kill có thể nhận EXP.
+Tổng_EXP_nguyên = tổng các điểm nguyên đã cấp trong lần thử.
+
+% kết quả là tổng phần cấp tương đương, với mẫu số cấp hiện tại ở từng kill, không phải chênh lệch thanh EXP trước/sau sau khi thanh đã quay về 0 khi level-up. Kết quả hiện riêng số quái, +Y% Level Progress, EXP nguyên và số lần lên cấp. Level tối đa 999 giữ quy tắc cũ: tiếp tục đếm quái nhưng không cấp EXP vượt trần.
+
+Không nhân EXP Potion, nâng cấp EXP hoặc passive thưởng vào các giá trị này; đảm bảo mỗi phép thử đúng 0,1%–1,0%. Buff combat, mutation, clone, crit và khống chế vẫn xử lý trong engine. Không gọi pipeline nhận VNĐ, Shards, vật phẩm, pity hoặc Drop Chance của Arena/Tower.
+
+Quái tiếp theo sinh sau bước resolve hiện tại; không tạo vòng lặp chém quái tức thì trong cùng callback. Các hiệu ứng vào trận có thể cấp một kill ban đầu theo passive cũ (ví dụ Trapper); quái đã bị hạ này không bị thay mất trước khi trả thưởng. Lượt hai bên vẫn luân phiên 2 giây. Ví dụ thẻ starter-common one-shot quái, RNG r = 0,0055, không passive đánh thêm theo lượt: 75 kill trong 300 giây, +41,25% credit, 41 EXP nguyên và 0,25 EXP lẻ; bước tại đúng giây 300 bị chặn bởi deadline.
+
+3.14.5. Thành tựu và Luck
+-------------------------
+Mốc: 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 Room đã vượt.
+ID: timetrial_10 đến timetrial_100 theo đúng danh sách.
+Mỗi mốc: +0,1 Luck vĩnh viễn, không VNĐ.
+L_TimeTrial = 0,1 × số mốc đã nhận; tối đa 1,0.
+M_Luck = (1 + 0,25 × cấp_nâng_cấp_Luck + L_TimeTrial) × hệ_số_Lucky_Potion.
+
+bestRoom lưu mốc đã vượt cao nhất; room lưu Room kế tiếp của run hiện tại. Reset run không giảm bestRoom hoặc Luck đã nhận. Thành tựu dùng biên nhận chống claim lặp hiện hành; không cộng Luck theo mỗi lần retry/nhận lại cùng mốc.
+
+3.15. Đường dẫn 11 artwork Champion và vị trí nút passive
+==========================================================
+
+Các thuộc tính image chính xác trong cards.js:
+- tower-champion-normal / Equinox: assets/cards/equinox.png
+- tower-champion-raining / Aqua: assets/cards/aqua.png
+- tower-champion-snowing / Ice King: assets/cards/iceking.png
+- tower-champion-sunny / Charizard Mega X: assets/cards/charizardx.png
+- tower-champion-sugar / Majin Buu: assets/cards/buu.png
+- tower-champion-reaper / Aizen Beyond: assets/cards/aizenbeyond.png
+- tower-champion-eclipse / Wonder Of You: assets/cards/wou.png
+- tower-champion-malevolent / Thukuna: assets/cards/thukuna.png
+- tower-champion-tsukuyomi / Naruto x Sasuke: assets/cards/narutosasuke.png
+- tower-champion-heavenly / The Judgement: assets/cards/judgement.png
+- tower-champion-shadow / Kamen Rider Dark Decade: assets/cards/krdarkdecade.png
+
+Đường dẫn phân biệt chữ hoa/thường trên máy chủ có phân biệt case. Đặt đúng các file PNG thật vào thư mục assets/cards/ bên cạnh bộ nguồn game. Các PNG này chưa có trong đầu vào hiện tại, nên không được đưa vào ZIP nguồn. Hành vi dự phòng khi thiếu ảnh vẫn hoạt động; việc kiểm tra đường dẫn không đồng nghĩa đã có nội dung artwork.
+
+Parent của phần passive dùng position: relative, chừa khoảng 44 px bên phải và chiều cao tối thiểu phù hợp. Nút + dùng position: absolute; bottom: 8px; right: 8px; z-index: 2. Nút không tham gia chiều cao dòng; chữ dài có thể thu gọn trong ô và đọc hết trong modal. Khi thẻ được scale bằng CSS, tọa độ hiển thị cùng scale với container, vẫn giữ neo tương đối 8 px trong layout gốc.
+
 4. Cấu Trúc Module & File
 =========================
 
@@ -619,6 +986,7 @@ Thư mục game/
     app.js
     inventory.js
     tower.js
+    timetrial.js
     achievements.js
     cards.js
     passives.js
@@ -626,14 +994,15 @@ Thư mục game/
     README.txt
 
 - File: index.html; Trách nhiệm: Bố cục, thanh điều hướng, các modal và thứ tự nạp script.
-- File: styles.css; Trách nhiệm: Giao diện chung, thẻ, mutation, battle, responsive, kho vật phẩm, thành tựu và chuyển save.
+- File: styles.css; Trách nhiệm: Giao diện chung, thẻ, mutation, battle, responsive, kho vật phẩm, thành tựu, chuyển save, nút + và modal passive có cuộn.
 - File: passives.css; Trách nhiệm: Trình bày trạng thái, badge và thông tin passive.
-- File: app.js; Trách nhiệm: Điều phối EXP Arena theo từng ID, trả VNĐ Tower từ bộ đếm damage, Auto Continue, timer kết quả, menu điều hướng, lựa chọn lưu bền, RNG, đồng hồ/thời tiết, kho thẻ, level/EXP, UI, chiến đấu, cấp thưởng, gói save/HMAC/Base64, kiểm tra cooldown, khóa chuyển save và import có khôi phục khi lỗi.
+- File: app.js; Trách nhiệm: Điều phối Arena/Time Trial, UI countdown/kết quả/shop, ghi EXP từng thẻ và bundle store mới vào save; Khóa pool Champion theo mở khóa + thời tiết, chọn buff Aqua, modal đọc passive nhiều dòng và xác thực bản thiết kế trong import; điều phối EXP Arena theo từng ID, trả VNĐ Tower từ bộ đếm damage, Auto Continue, timer kết quả, menu điều hướng, lựa chọn lưu bền, RNG, đồng hồ/thời tiết, kho thẻ, level/EXP, UI, chiến đấu, cấp thưởng, gói save/HMAC/Base64, kiểm tra cooldown, khóa chuyển save và import có khôi phục khi lỗi.
 - File: inventory.js; Trách nhiệm: Định nghĩa và lưu vật phẩm, chuyển đổi save cũ, stack, tiêu thụ potion, buff/timer, drop potion và giao diện kho.
-- File: tower.js; Trách nhiệm: Đường cong HP chung, giới hạn ATK/HP, bảo vệ chỉ số đối thủ, công thức xu Elite nhẹ, quy đổi damage sang VNĐ; Tiến độ từng Tower, lọc thời tiết, tạo đối thủ, chỉ số theo tầng, Tower Coins, danh mục cửa hàng và thông tin yêu cầu thưởng.
-- File: achievements.js; Trách nhiệm: Định nghĩa mốc, theo dõi tiến độ, lưu cờ nhận/mở khóa, xử lý nhận thưởng và giao diện thành tựu.
+- File: tower.js; Trách nhiệm: Đường cong HP chung, giới hạn ATK/HP, bảo vệ chỉ số đối thủ, công thức xu Elite nhẹ, quy đổi damage sang VNĐ; Tiến độ từng Tower, bản thiết kế đối thủ có lưu bền đến khi vượt tầng, lọc thời tiết, tạo đối thủ, chỉ số theo tầng, Tower Coins, danh mục cửa hàng và thông tin yêu cầu thưởng.
+- File: timetrial.js; Trách nhiệm: Tiến độ Room, Shards, EXP lẻ, hạn giờ tuyệt đối; dùng bộ sinh Tower để rút đội thẻ thật không trùng, áp dụng chỉ số Room; tạo quái EXP 0 ATK, nhận thưởng theo kill, reset khi thua, vé vào EXP Trial, giá/shop và xác thực store Time Trial. Không đổi luật Tower hoặc gacha. app.js và index.html điều phối một nút mở modal chọn hai loại Time Trial.
+- File: achievements.js; Trách nhiệm: Mốc Room 10–100 và tổng Luck từ biên nhận đã nhận;  Định nghĩa mốc, theo dõi tiến độ, lưu cờ nhận/mở khóa, xử lý nhận thưởng và giao diện thành tựu.
 - File: cards.js; Trách nhiệm: Cơ sở dữ liệu 111 thẻ, thông số/tỷ lệ/ảnh, điều kiện thời tiết và cấu hình 11 thẻ thưởng Tower.
-- File: passives.js; Trách nhiệm: Áp dụng trần Tower trước/sau passive và cho clone, giữ bookkeeping buff tạm; quan sát damage HP thực mất từng đội; kiểm tra toàn bộ reserve Tower, giữ tuyến đầu khi chèn clone; Xử lý passive trong trận, trạng thái, hồi máu, hồi sinh, hook chiến đấu và điều chỉnh thưởng theo passive.
+- File: passives.js; Trách nhiệm: Bảo đảm EXP Monster không gây đòn/không bị ép ATK 1, cập nhật bookkeeping buff khi thẻ lên cấp trong EXP Trial; Hook riêng cho 11 Champion (dạng, kẹo, clone, bảo vệ, mode, hồi sinh, Heresy, Crown và thưởng Aqua), giữ tách biệt với switch passive cũ; Tính khiên Weather Report theo Max HP runtime; áp dụng trần Tower trước/sau passive và cho clone, giữ bookkeeping buff tạm; quan sát damage HP thực mất từng đội; kiểm tra toàn bộ reserve Tower, giữ tuyến đầu khi chèn clone; Xử lý passive trong trận, trạng thái, hồi máu, hồi sinh, hook chiến đấu và điều chỉnh thưởng theo passive.
 - File: weathers.js; Trách nhiệm: Cấu hình nhịp thời tiết, nhóm xác suất, mutation, hệ số và alias.
 - File: README.txt; Trách nhiệm: Nhật ký cập nhật, thông số, công thức và tài liệu cấu trúc bằng tiếng Việt.
 
@@ -644,17 +1013,19 @@ Thứ tự nạp script hiện hành:
 3. passives.js
 4. inventory.js
 5. tower.js
-6. achievements.js
-7. app.js
+6. timetrial.js
+7. achievements.js
+8. app.js
 
-Game sử dụng JavaScript thuần và không yêu cầu bước build. Có thể mở index.html trong trình duyệt. Đường dẫn ảnh nguồn được giữ nguyên; nếu ảnh không có hoặc tải thất bại, game dùng cơ chế hình dự phòng. Các thẻ Champion dùng ảnh nguồn hiện có, không kèm bộ ảnh mới trong bản mở rộng.
+Game sử dụng JavaScript thuần và không yêu cầu bước build. Có thể mở index.html trong trình duyệt. Ảnh 100 thẻ cũ giữ nguyên; 11 Champion dùng đúng đường dẫn tại mục 3.15. Nếu ảnh không có hoặc tải thất bại, game dùng cơ chế hình dự phòng. Gói nguồn này không chứa 11 PNG chưa được cung cấp; cần đặt ảnh thật trong assets/cards cạnh index.html. Không tạo ảnh giả hoặc đổi sang ảnh thẻ khác.
 
 4.2. Các store lưu dữ liệu
 ==========================
 
 - Khóa localStorage: anime_card_rng_save_v1; Phiên bản dữ liệu hiện hành: schemaVersion: 7; Nội dung: Roll, VNĐ, EXP, collection, mutation, kho biến thể, level, trang bị, nâng cấp, thời tiết và biên nhận thưởng thành tựu.
 - Khóa localStorage: anime_card_rng_items_v1; Phiên bản dữ liệu hiện hành: version: 2; Nội dung: Vật phẩm, số lượng, metadata, thời điểm hết hạn buff và số lần thắng chưa rơi potion.
-- Khóa localStorage: anime_card_rng_tower_v1; Phiên bản dữ liệu hiện hành: version: 1; Nội dung: Tower Coins, tầng đã vượt từng loại và tổng lượt vượt tầng hợp lệ.
+- Khóa localStorage: anime_card_rng_tower_v1; Phiên bản dữ liệu hiện hành: version: 1; Nội dung: Tower Coins, tầng đã vượt từng loại, tổng lượt vượt tầng hợp lệ và encounters tùy chọn lưu đội hình gốc của tầng chưa vượt.
+- Khóa localStorage: anime_card_rng_timetrial_v1; Phiên bản: 1; Nội dung: shards, room kế tiếp, bestRoom đã vượt, xpCarry theo ID thẻ và activeAttempt metadata. Khi mở lại một trận chưa hoàn tất, đánh dấu kết thúc; Normal về Room 1, vé EXP đã tiêu không hoàn lại.
 - Khóa localStorage: anime_card_rng_achievements_v1; Phiên bản dữ liệu hiện hành: version: 1; Nội dung: Thống kê thành tựu, tiến độ Tower, cờ nhận và yêu cầu mở khóa vĩnh viễn.
 - Khóa localStorage: save_cooldown_export; Phiên bản dữ liệu hiện hành: Timestamp mili giây; Nội dung: Lịch sử xuất; được kèm trong save bảo vệ khi có.
 - Khóa localStorage: save_cooldown_import; Phiên bản dữ liệu hiện hành: Timestamp mili giây; Nội dung: Lịch sử nhập; được bảo toàn/hợp nhất khi chuyển save.
@@ -670,6 +1041,9 @@ Dữ liệu localStorage phụ thuộc trình duyệt và origin; hành vi với
 - Sau mỗi lần thêm tính năng, sửa cân bằng hoặc sửa lỗi, cập nhật README.txt tiếng Việt với hành vi thực tế, thông số, công thức và module liên quan.
 - Phân biệt rõ thay đổi mới, cơ chế kế thừa và việc chỉ sửa tài liệu; không mô tả một hằng số chưa được dùng như hành vi gameplay.
 - Giữ logic vật phẩm trong inventory.js, Tower trong tower.js, thành tựu trong achievements.js; không dồn các hệ thống này vào app.js.
-- Bản phát hành đầy đủ theo quy ước mới chỉ gồm 11 file sản xuất ở mục 4.1. Không kèm script kiểm thử, runner .cjs, báo cáo xác minh, log hoặc file tạm.
-- Những kiểm tra phát hành đã thực hiện gồm cú pháp module, mốc 470.400, đường cong tuyến tính, tỷ lệ đối thủ qua tầng rất sâu và passive, xu Elite 100–110 ở tầng 110, damage hai đội/Burn/Bleed/finisher, 0 EXP Tower có bonus, EXP Arena và chống cấp trùng ID, hàng đợi Tower bảy vị trí, Metal Cooler/Doflamingo/Frieza, timer Auto Continue và các đường thoát, giao diện từ 320 đến 1.440 px, RNG/auto-roll, lọc Weather Tower, thưởng tầng 100, chống nhận trùng, xác thực file .acrsave, mốc cooldown 7 ngày, rollback lỗi ghi và chuyển save ở phiên trình duyệt riêng. Đây là các kịch bản kiểm tra đại diện, không phải bảo đảm đã thử mọi tổ hợp passive hoặc chơi thủ công mọi tầng.
-- Bản cập nhật hiện tại gồm 10 file nguồn và README này, tổng cộng 11 file sản xuất. Không đưa script kiểm thử, log hoặc file trung gian vào ZIP; lớp bảo vệ save không thay đổi phân tách module gameplay.
+- Bản phát hành đầy đủ theo quy ước mới chỉ gồm 12 file sản xuất ở mục 4.1. Không kèm script kiểm thử, runner .cjs, báo cáo xác minh, log hoặc file tạm.
+- Kiểm tra đợt tinh chỉnh Time Trial: 200 phép sinh đội Room 1 cho 200 đội khác nhau, mỗi đội bốn ID riêng; pool thường/Elite và chỉ số Room 10/20/50/100/134/1.000; Room 50 vẫn 649.996 sức mạnh nền; bản ghi đội Tower và định nghĩa thẻ không đổi. Trình duyệt xác nhận một nút Time Trial, modal hai loại, đóng Escape giữ Arena, chọn cùng loại giữ đội, thắng qua Room mới, thua/hết 180 giây reset Room 1, không bỏ đối thủ còn sống trong hàng đợi, vé EXP đúng một, quái 0 ATK/10% HP, cấp EXP và kết thúc đúng 300 giây, lượt 2 giây có potion. Chạy 24 lượt thử với 54 loại thẻ đối thủ, tổng 1.315 lượt combat, gồm đội có đơn vị triệu hồi; không ghi nhận lỗi JavaScript. Modal không tràn tại 320/390/768/1.280 px. Mã save/cooldown, 11 Champion, passive, inventory, Tower, achievements và weather giữ nguyên trong phạm vi bản vá; CSS vị trí nút + không đổi.
+- Kiểm tra bản Time Trial: 8 module JS nạp và chạy; hai mode Arena; Room 50 Power 649.996; Shards/không VNĐ/không EXP/không drop; reset loss/180 giây; vé/shop và 300 giây EXP với 0 ATK; 2 giây bất kể Speed Battle Potion; credit EXP lẻ và summary; Auto Continue tiêu đúng vé; Luck +0,1 chỉ claim một lần; reload/ngắt trận; bundle .acrsave store mới, import save cũ và dữ liệu sai; nút + và layout 320–1.440 px; bẫy vào trận, level-up/runtime HP, phản ứng lỗi ghi vé và chặn kết quả sau deadline. Rà lại Tower/EXP Arena/Auto Continue/auto-roll và so sánh 111 cặp combat cùng RNG cho kết quả cũ không đổi.
+- Kiểm tra bản Champion: đối chiếu đủ 11 bộ HP/ATK/chance, 11 khóa thời tiết, đăng ký hook đầy đủ; nhánh dạng/kẹo/clone/mode/chuyển hóa/bảo vệ/Heresy/hồi sinh/Crown và Aqua; so sánh 100 cặp thẻ cũ với cùng RNG cho kết quả combat trùng bản trước. Kiểm tra trình duyệt gồm nút +/xuống dòng/Escape, chọn Aqua, retry/reload, thưởng tầng 100 một lần, Auto Continue đúng 1,5 giây giữ lựa chọn Aqua, 0 EXP Tower kể cả bonus Aqua, VNĐ theo damage và hàng đợi bảy đối thủ, export/import .acrsave có cooldown, potion battle 1 giây và modal responsive 320–1.440 px.
+- Các kiểm tra đã thực hiện trong những đợt kế thừa gồm cú pháp module, giữ đội hình khi thua/đổi đội/reload/chuyển save, không còn nút/API reset riêng và qua tầng mới, Weather Report theo Max HP level/mutation/buff và Snail hai lượt, mốc 470.400, đường cong tuyến tính, tỷ lệ đối thủ qua tầng rất sâu và passive, xu Elite 100–110 ở tầng 110, damage hai đội/Burn/Bleed/finisher, 0 EXP Tower có bonus, EXP Arena và chống cấp trùng ID, hàng đợi Tower bảy vị trí, Metal Cooler/Doflamingo/Frieza, timer Auto Continue và các đường thoát, giao diện từ 320 đến 1.440 px, RNG/auto-roll, lọc Weather Tower, thưởng tầng 100, chống nhận trùng, xác thực file .acrsave, mốc cooldown 7 ngày, rollback lỗi ghi và chuyển save ở phiên trình duyệt riêng. Đây là các kịch bản kiểm tra đại diện, không phải bảo đảm đã thử mọi tổ hợp passive hoặc chơi thủ công mọi tầng.
+- Bản cập nhật hiện tại gồm 11 file nguồn và README này, tổng cộng 12 file sản xuất. Không đưa script kiểm thử, log hoặc file trung gian vào ZIP; lớp bảo vệ save không thay đổi phân tách module gameplay.

@@ -4301,3 +4301,36 @@ body {
   .top-actions > .nav-button { min-width: 46px; justify-content: center; }
   .top-actions > .nav-button .nav-icon { display: grid; }
 }
+
+/* Full passive descriptions are plain text with explicit line breaks. */
+.passive-expand-button { display: inline-grid; place-items: center; min-width: 28px; min-height: 28px; padding: 3px 7px; border: 1px solid #71638e; border-radius: 8px; background: #262138; color: #e6eaff; cursor: pointer; font-weight: 900; }
+.passive-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
+#passiveDetailModal { z-index: 10000; }
+.passive-detail-modal { width: min(700px, 94vw); display: flex; flex-direction: column; }
+.passive-detail-text { overflow-y: auto; max-height: 65dvh; padding: 20px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; color: #d8e1f2; }
+.aqua-battle-choice { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px; margin: 10px 0; border: 1px solid #4b5272; border-radius: 10px; color: #cde3ff; font-size: 12px; }
+
+/* Lock expansion to its own skill container; never participate in text flow. */
+.passive-box, .collection-passive-mini, .battle-passive-status { position: relative; }
+.passive-box { padding-right: 44px; min-height: 46px; }
+.collection-passive-mini, .battle-passive-status { padding-right: 44px; min-height: 44px; }
+.collection-passive-mini { display: block; }
+.battle-card-info .battle-passive-status { min-height: 44px; }
+.passive-expand-button { position: absolute; bottom: 8px; right: 8px; z-index: 2; margin: 0; }
+.battle-mode-picker { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.time-trial-controls { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; border: 1px solid #435b7f; border-radius: 12px; background: #111d31; }
+.time-trial-controls p { flex: 1 1 100%; margin: 0; color: #b6cae8; font-size: 12px; line-height: 1.6; }
+.trial-timer { font-variant-numeric: tabular-nums; color: #b6eaff; font-size: 13px; white-space: nowrap; }
+.trial-timer.is-urgent { color: #ff827e; }
+.time-trial-summary { margin: 14px 0; padding: 16px; border: 1px solid #527298; border-radius: 12px; color: #d8ecff; line-height: 1.8; white-space: pre-wrap; }
+.battle-arena__header { flex-wrap: wrap; gap: 8px; }
+#battleModePicker { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+#timeTrialShopModal:not(.hidden) { z-index: 7000 !important; }
+#timeTrialModeModal:not(.hidden) { z-index: 7000 !important; }
+.time-trial-mode-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 20px; }
+.time-trial-mode-options .battle-mode-option { min-width: 0; padding: 18px; text-align: left; }
+.time-trial-mode-options .battle-mode-option strong { font-size: 14px; letter-spacing: .02em; }
+.time-trial-mode-options .battle-mode-option span { white-space: normal; line-height: 1.7; font-size: 12px; }
+@media (max-width: 560px) {
+  .time-trial-mode-options { grid-template-columns: 1fr; }
+}

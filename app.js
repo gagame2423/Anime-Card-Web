@@ -261,6 +261,7 @@ const els = {
   battleResultCash: document.getElementById("battleResultCash"),
   battleResultExp: document.getElementById("battleResultExp"),
   battleResultDropRate: document.getElementById("battleResultDropRate"),
+  battleResultLossStatus: document.getElementById("battleResultLossStatus"),
   battleAutoAgainButton: document.getElementById("battle-again-btn"),
   autoContinueBattleToggle: document.getElementById("autoContinueBattleToggle"),
   battleCloseResultButton: document.getElementById("close-battle-result-btn"),
@@ -329,7 +330,7 @@ function getCardLevelInfo(cardOrId) {
   const cardId = normalizeCardId(card?.id ?? cardOrId);
   const source = state?.cardProgress?.[cardId];
   const level = Math.min(CARD_LEVEL_MAX, Math.max(1, Math.floor(Number(source?.level) || 1)));
-  const exp = Math.max(0, Math.floor(Number(source?.exp) || 0));
+  const exp = Math.max(0, Math.floor(Number(source?.exp) || 0)) + (level < CARD_LEVEL_MAX ? window.TimeTrialSystem?.getXpCarry(cardId) || 0 : 0);
   const required = getCardLevelExpRequired(card || cardId, level);
   return { cardId, level, exp, required, progress: Math.min(1, required > 0 ? exp / required : 0) };
 }
@@ -1023,7 +1024,7 @@ function loadGame() {
 // ============================================================
 
 function getLuckMultiplier() {
-  return (1 + state.upgrades.luck * LUCK_FACTOR) * (window.InventorySystem?.multiplier("luck") || 1);
+  return (1 + state.upgrades.luck * LUCK_FACTOR + (window.AchievementSystem?.getLuckBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("luck") || 1);
 }
 
 function getCooldownMs() {
@@ -1352,9 +1353,14 @@ function isCardRollUnlocked(card) {
   return !card.unlockRequirement || window.AchievementSystem?.isUnlocked(card.unlockRequirement) || state.achievementRewardReceipts?.[card.unlockRequirement] === true;
 }
 
+function isCardWeatherAvailable(card) {
+  if (card.towerType === 'normal' && card.unlockRequirement) return getActiveWeatherDefinitions().length === 0;
+  const weather = card.requiredWeathers || (card.requiredWeather ? [card.requiredWeather] : []);
+  return !weather.length || weather.some(name => isWeatherActive(name === 'Mangekyo' ? 'Tsukuyomi' : name));
+}
 function getSortedCardsForRolling() {
   return [...ALL_CARDS]
-    .filter(card => isCardRollUnlocked(card) && (card.requiredWeather == null || isWeatherActive(card.requiredWeather)))
+    .filter(card => isCardRollUnlocked(card) && isCardWeatherAvailable(card))
     .sort((a, b) => b.chance - a.chance);
 }
 
@@ -1658,8 +1664,8 @@ function showResult(card, effectiveChance, mutations = []) {
   if (els.resultChance) els.resultChance.textContent = card.chance.toLocaleString("en-US");
   if (els.resultHp) els.resultHp.textContent = display.hp.toLocaleString("en-US");
   if (els.resultAtk) els.resultAtk.textContent = display.atk.toLocaleString("en-US");
-  if (els.resultPassiveName) els.resultPassiveName.textContent = card.passive?.name || "No passive";
-  if (els.resultPassiveDescription) els.resultPassiveDescription.textContent = card.passive?.description || "This fighter uses its base HP and ATK without an additional combat passive.";
+  if (els.resultPassiveName) els.resultPassiveName.textContent = getCardPassiveCopy(card).name || "No passive";
+  if (els.resultPassiveDescription) renderPassiveCopy(els.resultPassiveDescription, getCardPassiveCopy(card).name, getCardPassiveCopy(card).description);
 
   renderMutationBadges(els.resultMutationBadges, mutations);
   applyCardMutationVisual(els.resultCard, mutations);
@@ -1948,7 +1954,7 @@ function getFilteredCards() {
 
 function getAvailableRollPool() {
   return [...ALL_CARDS]
-    .filter(card => isCardRollUnlocked(card) && (card.requiredWeather == null || isWeatherActive(card.requiredWeather)))
+    .filter(card => isCardRollUnlocked(card) && isCardWeatherAvailable(card))
     .sort((a, b) => b.chance - a.chance);
 }
 
@@ -2125,8 +2131,9 @@ function renderCollection() {
       meta.className = "collection-mini__meta";
       const passiveMini = document.createElement("div");
       passiveMini.className = "collection-passive-mini";
-      passiveMini.textContent = String(card?.passive?.name || "Passive");
-      passiveMini.title = String(card?.passive?.description || "");
+      passiveMini.textContent = getCardPassiveCopy(card).name;
+      passiveMini.title = normalizePassiveText(getCardPassiveCopy(card).description);
+      passiveMini.appendChild(createPassiveExpandButton(getCardPassiveCopy(card).name, getCardPassiveCopy(card).description));
       const rate = document.createElement("span");
       rate.className = "collection-mini__rate";
       rate.textContent = `1 in ${chance.toLocaleString("en-US")}`;
@@ -2134,7 +2141,7 @@ function renderCollection() {
 
       if (card?.requiredWeather) {
         const requirement = document.createElement("span");
-        requirement.className = `weather-requirement ${isWeatherActive(card.requiredWeather) ? "active" : ""}`;
+        requirement.className = `weather-requirement ${isCardWeatherAvailable(card) ? "active" : ""}`;
         requirement.textContent = `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}`;
         meta.appendChild(requirement);
       }
@@ -2199,7 +2206,7 @@ function renderCollection() {
       levelLabel.textContent = owned ? `Lv. ${levelInfo.level}` : "Lv. —";
       const expText = document.createElement("span");
       expText.className = "card-level-mini__exp";
-      expText.textContent = owned ? `${levelInfo.exp}/${levelInfo.required} EXP` : "";
+      expText.textContent = owned ? `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP` : "";
       const expTrack = document.createElement("div");
       expTrack.className = "card-level-mini__track";
       const expFill = document.createElement("div");
@@ -2436,7 +2443,7 @@ function renderPreview() {
   const display = getDisplayCard(card, variant.mutations);
   const levelInfo = getCardLevelInfo(card);
   if (els.previewLevel) els.previewLevel.textContent = `Lv. ${levelInfo.level}`;
-  if (els.previewExpText) els.previewExpText.textContent = `${levelInfo.exp}/${levelInfo.required} EXP`;
+  if (els.previewExpText) els.previewExpText.textContent = `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP`;
   if (els.previewExpBar) els.previewExpBar.style.width = `${Math.round(levelInfo.progress * 100)}%`;
   if (els.previewSalvageButton) els.previewSalvageButton.disabled = variant.count <= 0;
   if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = !getPreviewVariants(card.id).some(entry => entry.count > 1);
@@ -2445,8 +2452,8 @@ function renderPreview() {
   els.previewVariantCount.textContent = `${variant.count}×`;
   els.previewHp.textContent = display.hp.toLocaleString("en-US");
   els.previewAtk.textContent = display.atk.toLocaleString("en-US");
-  els.previewPassiveName.textContent = card.passive?.name || "No passive";
-  els.previewPassiveDescription.textContent = card.passive?.description || "This fighter uses its base HP and ATK without an additional combat passive.";
+  els.previewPassiveName.textContent = getCardPassiveCopy(card).name || "No passive";
+  renderPassiveCopy(els.previewPassiveDescription, getCardPassiveCopy(card).name, getCardPassiveCopy(card).description);
   const previewMutations = normalizeMutationObjects(variant.mutations);
   els.previewVariantLabel.textContent = previewMutations.length
     ? previewMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")
@@ -2692,23 +2699,25 @@ function getEnemyDisplayCard(card, mutations = [], enemyLevel = 1) {
 }
 
 function getBattleMode() {
-  return battleState?.mode === '1v1' ? '1v1' : battleState?.mode === 'tower' ? 'tower' : '4v4';
+  return ['1v1', 'tower', 'time-trial', 'exp-time-trial'].includes(battleState?.mode) ? battleState.mode : '4v4';
 }
 
 function getBattleTeamSize() {
-  return getBattleMode() === '1v1' ? 1 : BATTLE_TEAM_SIZE;
+  return isOneVsOneBattle() ? 1 : BATTLE_TEAM_SIZE;
 }
 
 function isOneVsOneBattle() {
-  return getBattleMode() === '1v1';
+  return getBattleMode() === '1v1' || window.TimeTrialSystem?.isExp(getBattleMode());
 }
 
 function isTowerBattle() { return getBattleMode() === 'tower'; }
 function getTowerWeatherMode() { return String(els.towerWeatherSelect?.value || 'normal'); }
 
-function getBattleTurnMs() { return window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
+function isTimeTrialBattle() { return Boolean(window.TimeTrialSystem?.isMode(getBattleMode())); }
+function getBattleTurnMs() { return isTimeTrialBattle() ? window.TimeTrialSystem.TURN_MS : window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
 function getBattleModeLabel() {
   const timing = `${getBattleTurnMs() / 1000}s TURNS`;
+  if (isTimeTrialBattle()) return `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP TIME TRIAL • 1V1' : `TIME TRIAL • ROOM ${battleState?.trial?.room || window.TimeTrialSystem.room} • 4V4`} • ${timing}`;
   return isTowerBattle() ? `TOWER ${battleState?.towerFloor || window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1} • 4V4 • ${timing}` : `${isOneVsOneBattle() ? '1V1' : '4V4'} • ${timing}`;
 }
 
@@ -2842,6 +2851,7 @@ function isBattleSetupValid(team = getBattleSetupTeam()) {
 }
 
 function renderBattleTeamSlots() {
+  document.getElementById('aquaBattleChoice')?.classList.toggle('hidden', !getBattleSetupTeam().some(slot => slot?.cardId === 'tower-champion-raining'));
   const container = els.battleTeamSlots;
   if (!container) return;
   container.innerHTML = '';
@@ -3071,7 +3081,7 @@ function renderBattleFighterVariants() {
   });
 
   const valid = isBattleSetupValid();
-  if (els.battleStartButton) els.battleStartButton.disabled = !valid || (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode()));
+  if (els.battleStartButton) els.battleStartButton.disabled = !valid || (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) || (isTimeTrialBattle() && !window.TimeTrialSystem.canEnter(getBattleMode()));
 }
 
 function renderBattleSelectionPreview() {
@@ -3111,14 +3121,15 @@ function renderBattleSelectionPreview() {
   const passive = document.createElement('span');
   passive.className = 'collection-passive-mini';
   passive.textContent = String(card?.passive?.name || 'Passive');
-  passive.title = String(card?.passive?.description || '');
+  passive.title = normalizePassiveText(getCardPassiveCopy(card).description);
+  passive.appendChild(createPassiveExpandButton(getCardPassiveCopy(card).name, getCardPassiveCopy(card).description));
   const badgeWrap = document.createElement('div');
   badgeWrap.className = 'battle-selection-preview__badges';
   renderMutationBadges(badgeWrap, entry.mutations);
   info.append(name, stats, passive, badgeWrap);
   preview.append(media, info);
 
-  if (els.battleStartButton) els.battleStartButton.disabled = !isBattleSetupValid() || (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode()));
+  if (els.battleStartButton) els.battleStartButton.disabled = !isBattleSetupValid() || (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) || (isTimeTrialBattle() && !window.TimeTrialSystem.canEnter(getBattleMode()));
 }
 
 function renderBattleModePicker() {
@@ -3130,16 +3141,24 @@ function renderBattleModePicker() {
       button.setAttribute('aria-pressed', String(selected));
     });
   }
+  const trialButton = document.getElementById('timeTrialOpenButton');
+  trialButton?.classList.toggle('is-selected', isTimeTrialBattle());
+  trialButton?.setAttribute('aria-pressed', String(isTimeTrialBattle()));
+  document.getElementById('timeTrialModeHint').textContent = isTimeTrialBattle()
+    ? window.TimeTrialSystem.isExp(activeMode) ? 'EXP • 1v1 • 5 minutes' : 'Normal • 4v4 • 3 minutes'
+    : 'Choose Normal or EXP';
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   renderTowerControls();
+  renderTimeTrialControls();
   if (els.battleStartButton) {
-    els.battleStartButton.textContent = isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+    els.battleStartButton.textContent = isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start Time Trial Room ${window.TimeTrialSystem.room}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
   }
 }
 
 function setBattleMode(mode) {
+  window.TimeTrialSystem?.abort(battleState, 'mode-change');
   clearAutoContinueBattleTimer();
-  const nextMode = mode === '1v1' ? '1v1' : mode === 'tower' ? 'tower' : '4v4';
+  const nextMode = ['1v1', 'tower', 'time-trial', 'exp-time-trial'].includes(mode) ? mode : '4v4';
   clearBattleTurnTimer();
   battleState = { mode: nextMode, setup: { team: [], activeIndex: 0 } };
   renderBattleModePicker();
@@ -3147,10 +3166,13 @@ function setBattleMode(mode) {
 }
 
 function resetBattleView(mode = '4v4') {
+  window.TimeTrialSystem?.abort(battleState, 'view-reset');
   clearAutoContinueBattleTimer();
   clearBattleTurnTimer();
   clearBattleAnimationTimers();
-  battleState = { mode: mode === '1v1' ? '1v1' : mode === 'tower' ? 'tower' : '4v4', setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
+  battleState = { mode: ['1v1', 'tower', 'time-trial', 'exp-time-trial'].includes(mode) ? mode : '4v4', setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
+  document.getElementById('timeTrialSummary')?.classList.add('hidden');
+  document.getElementById('timeTrialResultShopButton')?.classList.add('hidden');
   setBattleModalLock(false);
   els.battleSetup?.classList.remove('hidden');
   els.battleArena?.classList.add('hidden');
@@ -3478,7 +3500,7 @@ function renderBattleCombatant(side, unit) {
   if (levelEl) levelEl.textContent = `Lv. ${levelInfo.level}`;
   if (expTextEl) expTextEl.textContent = side === 'enemy'
     ? `NPC • ${levelInfo.required.toLocaleString('en-US')} EXP base`
-    : `${levelInfo.exp}/${levelInfo.required} EXP`;
+    : `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP`;
   if (expBarEl) expBarEl.style.width = `${Math.round((levelInfo.progress || 0) * 100)}%`;
 
   renderMutationBadges(mutationBadges, unit?.mutations);
@@ -3514,6 +3536,7 @@ function renderBattleCombatant(side, unit) {
     baseLabel.textContent = passiveTooltip.name;
     baseBadge.append(baseIcon, baseLabel);
     passiveStatus.appendChild(baseBadge);
+    passiveStatus.appendChild(createPassiveExpandButton(passiveTooltip.name, passiveTooltip.description));
 
     statuses.forEach(status => {
       const badge = document.createElement('span');
@@ -3698,7 +3721,7 @@ function scheduleNextBattleTurn() {
   if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${turnMs / 1000}s`;
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   const autoNote = document.getElementById('battleAutoNote');
-  if (autoNote) autoNote.textContent = `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
+  if (autoNote) autoNote.textContent = isTimeTrialBattle() ? 'Time Trial • Fixed 2-second turns • Speed Battle Potion ignored • Timer keeps running while reading' : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
   battleTurnTimer = window.setTimeout(() => {
     battleTurnTimer = null;
     executeBattleTurn();
@@ -3706,6 +3729,7 @@ function scheduleNextBattleTurn() {
 }
 
 function canReplayBattleTeam() {
+  if (isTimeTrialBattle() && !window.TimeTrialSystem.canEnter(getBattleMode())) return false;
   if (!battleState?.setup?.team || battleState.setup.team.length !== getBattleTeamSize()) return false;
   const usage = new Map();
   for (const slot of battleState.setup.team) {
@@ -3725,6 +3749,7 @@ function getBattleDefeatNotice() {
 
 function finishBattle(playerWon) {
   if (!battleState || battleState.finished) return;
+  if (isTimeTrialBattle()) { finishTimeTrialBattle(playerWon); return; }
   // Even callers using endBattle() must wait for Tower's complete enemy queue.
   if (playerWon && battleState.mode === 'tower' && window.PassiveSystem?.checkBattleWinner?.(battleState) !== 'player') return;
   clearAutoContinueBattleTimer();
@@ -3868,10 +3893,11 @@ function startBattle(useExistingSetup = true) {
   const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
   if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
   if (!Array.isArray(setupTeam) || setupTeam.length !== getBattleTeamSize() || !isBattleSetupValid(setupTeam)) return;
+  if (isTimeTrialBattle() && !window.TimeTrialSystem.canEnter(getBattleMode())) return;
   if (isTowerBattle() && setupTeam.some(slot => !window.TowerSystem?.eligiblePlayerCard(getCardById(slot.cardId), getVariantEntries(slot.cardId).find(entry => entry.key === slot.variantKey), getTowerWeatherMode(), WEATHERS))) return;
 
-  // A new encounter must never reuse a prior opponent object. Clear the
-  // transient battle encounter before generating a fresh opponent/team.
+  // Each attempt uses new unit objects. Tower preserves its floor blueprint
+  // while Arena continues to select a fresh random opponent/team.
   clearBattleTurnTimer();
   clearBattleAnimationTimers();
   battleState = {
@@ -3901,7 +3927,7 @@ function startBattle(useExistingSetup = true) {
   if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
   const towerFloor = isTowerBattle() ? window.TowerSystem.nextFloor(getTowerWeatherMode()) : null;
   const towerWeather = isTowerBattle() ? getTowerWeatherMode() : null;
-  const enemyTeam = isTowerBattle() ? window.TowerSystem.buildOpponents(ALL_CARDS, towerFloor, towerWeather, WEATHERS) : chooseBattleEnemyTeam(playerTeam);
+  const enemyTeam = isTimeTrialBattle() ? window.TimeTrialSystem.enemies(getBattleMode(), playerTeam[0]) : isTowerBattle() ? window.TowerSystem.getOpponents(ALL_CARDS, towerFloor, towerWeather, WEATHERS) : chooseBattleEnemyTeam(playerTeam);
   if (enemyTeam.length !== playerTeam.length) return;
   const playerPower = calculateBattleTeamPower(playerTeam);
   const enemyPower = calculateBattleTeamPower(enemyTeam);
@@ -3911,6 +3937,7 @@ function startBattle(useExistingSetup = true) {
 
   battleState = {
     mode,
+    championChoices: { aqua: document.querySelector('input[name="aquaBattleMode"]:checked')?.value || 'hp' },
     towerFloor, towerWeather,
     currentOpponent: enemyTeam[0] || null,
     setup: { team: setupTeam.map(slot => ({ ...slot })), activeIndex: 0 },
@@ -3933,7 +3960,16 @@ function startBattle(useExistingSetup = true) {
     enemy: enemyTeam[0]
   };
 
+  if (isTimeTrialBattle()) {
+    try { window.TimeTrialSystem.start(battleState); }
+    catch (error) {
+      battleState.isBattling = false; window.alert(error.message); renderBattleSelection(); return;
+    }
+  }
   window.PassiveSystem?.beginBattle?.(battleState);
+  if (isTimeTrialBattle()) window.TimeTrialSystem.prepareAfterEntry(battleState);
+  document.getElementById('timeTrialSummary')?.classList.add('hidden');
+  document.getElementById('timeTrialResultShopButton')?.classList.add('hidden');
   battleState.playerPower = calculateBattleTeamPower(battleState.playerTeam);
   battleState.enemyPower = calculateBattleTeamPower(battleState.enemyTeam);
 
@@ -3945,8 +3981,8 @@ function startBattle(useExistingSetup = true) {
   if (els.battleLog) els.battleLog.innerHTML = '';
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
-  appendBattleLog(isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
-  appendBattleLog(isTowerBattle() ? `Tower weather-themed enemy appearances are weighted at 75%, not exclusive.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
+  appendBattleLog(isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.LIMITS[mode] / 1000}s limit • Speed Battle Potion ignored.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
+  if (!isTimeTrialBattle()) appendBattleLog(isTowerBattle() ? `Tower weather-themed enemy appearances are weighted at 75%, not exclusive.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
   appendBattleLog(`First strike begins in ${getBattleTurnMs() / 1000} seconds. ${teamSize} fighter${teamSize === 1 ? '' : 's'} per side.`, 'player');
   renderBattleStats();
   scheduleNextBattleTurn();
@@ -3954,11 +3990,14 @@ function startBattle(useExistingSetup = true) {
 
 function executeBattleTurn() {
   if (!battleState || battleState.finished || !battleState.playerTeam || !battleState.enemyTeam) return;
+  if (isTimeTrialBattle() && window.TimeTrialSystem.expired(battleState)) { window.TimeTrialSystem.checkDeadline(); return; }
 
   try {
     battleState.currentTurn = Math.max(0, Number(battleState.currentTurn) || 0) + 1;
     appendBattleLog(`TURN ${battleState.currentTurn} • ${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} ATTACK`, battleState.turn === 'player' ? 'player' : 'enemy');
-    const resolution = window.PassiveSystem?.resolveTurn?.(battleState) || { ended: false, winner: null };
+    const actedSide = battleState.turn;
+    let resolution = window.PassiveSystem?.resolveTurn?.(battleState) || { ended: false, winner: null };
+    if (isTimeTrialBattle()) resolution = window.TimeTrialSystem.afterTurn(battleState, resolution, actedSide);
 
     battleState.playerPower = calculateBattleTeamPower(battleState.playerTeam);
     battleState.enemyPower = calculateBattleTeamPower(battleState.enemyTeam);
@@ -3973,6 +4012,7 @@ function executeBattleTurn() {
     scheduleNextBattleTurn();
   } catch (error) {
     console.error('Battle turn failed safely:', error);
+    if (isTimeTrialBattle()) { finishTimeTrialBattle(false, 'save-error'); return; }
     appendBattleLog('Battle turn encountered a recoverable error. The turn was skipped.', 'defeat');
     if (battleState?.turn) {
       battleState.turn = battleState.turn === 'player' ? 'enemy' : 'player';
@@ -3987,6 +4027,100 @@ function executeBattleTurn() {
 // Only UI binding and coordination live here. All mechanics and storage are
 // implemented in inventory.js and tower.js.
 // ============================================================
+function grantTimeTrialExperience(cardId, amount, owner) {
+  const before = JSON.parse(JSON.stringify(state));
+  const oldMultiplier = getCardLevelStatMultiplier(cardId);
+  const info = getCardLevelInfo(cardId);
+  if (!amount || info.level >= CARD_LEVEL_MAX) return { gained: 0, level: info.level, levelUps: 0 };
+  const result = grantCardExperience(cardId, amount);
+  state.experience += result.gained;
+  if (!saveState()) { state = before; return null; }
+  const ratio = getCardLevelStatMultiplier(cardId) / oldMultiplier;
+  window.PassiveSystem?.applyRuntimeLevelGrowth(owner, ratio);
+  return result;
+}
+
+function renderTimeTrialControls() {
+  const trial = window.TimeTrialSystem;
+  if (!trial) return;
+  const mode = getBattleMode(), active = trial.isMode(mode), exp = trial.isExp(mode);
+  const controls = document.getElementById('timeTrialControls');
+  controls?.classList.toggle('hidden', !active);
+  document.getElementById('timeTrialProgress').textContent = exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`;
+  document.getElementById('timeTrialBalance').textContent = `${trial.shards.toLocaleString('en-US')} Shards`;
+  document.getElementById('timeTrialRules').textContent = exp
+    ? '1 Ticket per attempt • 300s • 0 ATK EXP Monsters • 0.1%–1.0% current-level EXP per kill • No VNĐ, Shards or items. Auto Continue uses another Ticket. Reward buffs do not change Time Trial payouts.'
+    : '180s per room • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. Reward buffs do not change Time Trial payouts.';
+  const timer = document.getElementById('timeTrialTimer');
+  timer.classList.toggle('hidden', !active || !battleState?.trial || battleState.finished);
+  if (active && battleState?.trial) {
+    const seconds = Math.ceil(trial.remaining(battleState) / 1000);
+    timer.textContent = `TIME LEFT ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}${exp ? ` • ${battleState.trial.monsters} defeats` : ''}`;
+    timer.classList.toggle('is-urgent', seconds <= 30);
+  }
+  if (active && !battleState?.isBattling && els.battleStartButton) {
+    els.battleStartButton.disabled = !isBattleSetupValid() || !trial.canEnter(mode);
+  }
+}
+
+function renderTimeTrialShop() {
+  const trial = window.TimeTrialSystem;
+  document.getElementById('timeTrialShopBalance').textContent = `${trial.shards.toLocaleString('en-US')} Shards • Potions / Ticket: 50 • Speed Battle Potion: 200`;
+  trial.renderShop(document.getElementById('timeTrialShopGrid'), () => {
+    renderTimeTrialShop(); renderTimeTrialControls(); renderPotionInventory();
+    if (battleState && !battleState.isBattling) renderBattleSelection();
+    if (battleState?.finished && isTimeTrialBattle()) {
+      const replayable = canReplayBattleTeam();
+      els.battleAutoAgainButton.disabled = !replayable;
+      els.battleAutoAgainButton.textContent = trial.isExp(getBattleMode()) ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : `Continue • Room ${trial.room}`;
+    }
+  });
+}
+
+function finishTimeTrialBattle(won, reason = '') {
+  if (!battleState?.trial || battleState.finished) return;
+  const trial = window.TimeTrialSystem;
+  if (won && !trial.isExp(battleState.mode) && window.PassiveSystem.checkBattleWinner(battleState) !== 'player') return;
+  let summary;
+  try { summary = trial.finish(battleState, won, reason); }
+  catch (error) {
+    const run = battleState.trial;
+    summary = { won: false, exp: trial.isExp(battleState.mode), room: run.room, nextRoom: trial.room,
+      shards: run.shardsEarned, monsters: run.monsters, experience: run.experience,
+      progressPercent: run.progressPercent, levelUps: run.levelUps, reason: 'save-error' };
+    appendBattleLog(error.message, 'defeat');
+  }
+  if (!summary) return;
+  clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
+  battleState.finished = true; battleState.isBattling = false;
+  battleState.outcome = summary.won ? 'victory' : 'defeat';
+  refreshAchievements(); saveState(); updateStats(); renderCollection(); renderTimeTrialControls();
+  const body = document.getElementById('timeTrialSummary');
+  body.textContent = summary.exp
+    ? `EXP Monsters Defeated: ${summary.monsters}\nTotal EXP Gained: +${summary.progressPercent.toFixed(2)}% Level Progress\n+${summary.experience.toLocaleString('en-US')} whole EXP • ${summary.levelUps} level-ups\nNo Shards • No VNĐ • No items`
+    : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • No item drops`;
+  body.classList.remove('hidden');
+  document.getElementById('timeTrialResultShopButton').classList.remove('hidden');
+  els.battleResultTitle.textContent = summary.won ? '🏆 TIME TRIAL COMPLETE' : '⏱ TIME TRIAL ENDED';
+  els.battleResultText.textContent = summary.reason === 'time-limit' ? 'Time limit reached.' : summary.won ? 'All room enemies defeated.' : 'Attempt ended. Your collection is preserved.';
+  els.battleResultPower.textContent = `${getBattleModeLabel()} • ${Math.min(trial.LIMITS[battleState.mode] / 1000, (Date.now() - battleState.trial.startedAt) / 1000).toFixed(1)}s`;
+  for (const [id, text] of Object.entries({ battleResultBaseLabel: summary.exp ? 'EXP Monsters' : 'Shards earned',
+    battleResultTimeLabel: 'Time limit', battleResultLevelLabel: 'Turn interval' })) document.getElementById(id).textContent = text;
+  els.battleResultBaseValue.textContent = String(summary.exp ? summary.monsters : summary.shards);
+  els.battleResultTimeBonus.textContent = `${trial.LIMITS[battleState.mode] / 1000}s`;
+  els.battleResultLevelDiff.textContent = '2s • fixed'; els.battleResultCash.textContent = '0 VNĐ';
+  els.battleResultExp.textContent = summary.exp ? `+${summary.experience} EXP` : '0 EXP';
+  els.battleResultDropRate.textContent = '+0.00%'; els.battleResultLossStatus.textContent = 'NONE — COLLECTION PRESERVED';
+  const replayable = canReplayBattleTeam();
+  els.battleAutoAgainButton.disabled = !replayable;
+  els.battleAutoAgainButton.textContent = summary.exp ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : `Continue • Room ${trial.room}`;
+  els.battleArena.classList.add('hidden'); setBattleModalLock(false);
+  els.battleVictory.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
+  els.battleVictory.classList.add(summary.won ? 'battle-result--victory' : 'battle-result--defeat');
+  els.battleVictory.setAttribute('aria-hidden', 'false');
+  if (summary.won && replayable) scheduleAutoContinueBattle();
+}
+
 function renderPotionInventory() {
   const inventory = window.InventorySystem;
   if (!inventory) return;
@@ -4011,7 +4145,7 @@ function renderPotionInventory() {
     search: document.getElementById('inventorySearch')?.value || '', category: category?.value || 'all',
     onUse: id => {
       updateStats(); renderUpgradeShop(); renderPotionInventory();
-      if (id === 'speed_battle_potion' && battleState?.isBattling && !battleState.finished) scheduleNextBattleTurn();
+      if (id === 'speed_battle_potion' && battleState?.isBattling && !battleState.finished && !isTimeTrialBattle()) scheduleNextBattleTurn();
     }
   });
 }
@@ -4183,7 +4317,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4191,7 +4325,7 @@ function setSaveTransferStatus(message, failed = false) {
 }
 function buildGameSaveExport() {
   syncGameClockToNow(); refreshAchievements(); window.InventorySystem?.tick();
-  if (![window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
+  if (![window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
   if (!saveState()) throw new Error('Your progress could not be saved. Please try again.');
   const storage = {};
   for (const key of getGameSaveKeys()) {
@@ -4279,6 +4413,15 @@ function validateSaveRecord(key, value) {
     if ('coins' in value) number(value.coins, 'Tower Coins');
     if ('victories' in value) number(value.victories, 'Tower victories');
     ensure(object(value.cleared), 'cleared floors must be an object.'); counts(value.cleared, 'cleared floors');
+    if ('encounters' in value) {
+      ensure(object(value.encounters), 'Tower encounters must be an object.');
+      for (const [mode, record] of Object.entries(value.encounters)) {
+        ensure(window.TowerSystem.validMode(mode) && window.TowerSystem.isEncounterRecord(record), 'invalid locked Tower lineup.');
+        ensure(record.floor === (Number(value.cleared[mode]) || 0) + 1, 'locked lineup must match the next uncleared floor.');
+      }
+    }
+  } else if (key === window.TimeTrialSystem.KEY) {
+    ensure(window.TimeTrialSystem.validSave(value), 'invalid Time Trial progression, fractional EXP or active attempt.');
   } else if (key === window.AchievementSystem.KEY) {
     if ('version' in value) ensure(value.version === 1, 'unsupported achievement save version.');
     ensure(object(value.stats), 'achievement stats must be an object.'); counts(value.stats, 'achievement stats');
@@ -4351,6 +4494,7 @@ async function importGameSave(input) {
     if (els.autoRollToggle) els.autoRollToggle.checked = false;
     if (globalTickTimer !== null) { window.clearInterval(globalTickTimer); globalTickTimer = null; }
     clearCooldownExpiryTimer(); clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
+    window.TimeTrialSystem.detach();
     setSaveTransferStatus('Đã nhập save bảo vệ. Đang tải lại game…');
     // Existing saveState/pagehide/visibility guards protect restored stores.
     window.location.reload();
@@ -4363,7 +4507,7 @@ async function importGameSave(input) {
 // ============================================================
 function getAchievementSnapshot() {
   return { uniqueCards: getUniqueCount(), totalRolls: state.totalRolls, currency: state.currency,
-    knownBattleWins: window.TowerSystem?.victories || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {} };
+    knownBattleWins: window.TowerSystem?.victories || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {}, timeTrialRoom: window.TimeTrialSystem?.bestRoom || 0 };
 }
 function applyAchievementReward(achievement) {
   state.achievementRewardReceipts ||= {};
@@ -4429,6 +4573,8 @@ function globalTick() {
   const weatherChanged = clockChange.weatherChanged || clockChange.expired || beforeWeatherSignature !== afterWeatherSignature;
 
   window.InventorySystem?.tick(now);
+  window.TimeTrialSystem?.checkDeadline();
+  renderTimeTrialControls();
   renderPotionInventory();
   completeCooldown(false);
   renderClockAndWeather(false);
@@ -4503,12 +4649,23 @@ function openModal(id) {
   if (id === "inventoryModal") renderPotionInventory();
   if (id === "achievementModal") { refreshAchievements(); renderAchievements(); }
   if (id === "towerShopModal") renderTowerShop();
+  if (id === "timeTrialShopModal") renderTimeTrialShop();
+  if (id === "timeTrialModeModal") {
+    modal.querySelectorAll('[data-time-trial-type]').forEach(button => {
+      const selected = button.dataset.timeTrialType === getBattleMode();
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    document.getElementById('timeTrialModeTickets').textContent = `${window.InventorySystem.quantity(window.TimeTrialSystem.TICKET_ID)} EXP Time Trial Tickets in Storage • Select a type, then choose your lineup in Arena.`;
+    modal.querySelector('[data-time-trial-type]')?.focus();
+  }
   if (id === "saveManagerModal") renderSaveTransferCooldowns();
   if (id === "cardPreviewModal") renderPreview();
   if (id === "battleModal") resetBattleView();
 }
 
 function returnToLobby() {
+  window.TimeTrialSystem?.abort(battleState, 'exit');
   clearAutoContinueBattleTimer();
   try {
     clearBattleTurnTimer();
@@ -4538,6 +4695,7 @@ function returnToLobby() {
 }
 
 function surrenderBattle() {
+  window.TimeTrialSystem?.abort(battleState, 'surrender');
   clearAutoContinueBattleTimer();
   if (!battleState) {
     closeModal('battleModal');
@@ -4601,14 +4759,14 @@ function closeModal(id) {
 }
 
 function resetGame() {
-  const confirmed = window.confirm("Reset rolls, 💵 upgrades, collection, mutations, weather, equipment, items, achievements, and Tower progress? This cannot be undone.");
+  const confirmed = window.confirm("Reset rolls, 💵 upgrades, collection, mutations, weather, equipment, items, achievements, Tower and Time Trial progress? This cannot be undone.");
   if (!confirmed) return;
   clearAutoContinueBattleTimer();
   autoContinueBattleEnabled = false;
   try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
   renderAutoContinueBattleToggle();
   returnToLobby();
-  window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.AchievementSystem?.reset();
+  window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.AchievementSystem?.reset();
 
   clearCooldownExpiryTimer();
   clearBattleTurnTimer();
@@ -4638,6 +4796,36 @@ function resetGame() {
   applyCardMutationVisual(els.resultCard, []);
   renderCooldownUI(Date.now());
 }
+
+function getCardPassiveCopy(card) {
+  const value = card?.passives || card?.passive;
+  return Array.isArray(value) ? { name: value.map(section => section.name || 'Passive').join(' + '), description: value } : value || { name: 'No passive', description: '' };
+}
+function normalizePassiveText(value) {
+  if (Array.isArray(value)) return value.map(section => typeof section === 'object' ? `${section.name || ''}\n${normalizePassiveText(section.description)}` : normalizePassiveText(section)).join('\n\n');
+  return String(value || 'No additional combat passive.').replace(/<br\s*\/?\s*>/gi, '\n').replace(/\\n/g, '\n');
+}
+function createPassiveExpandButton(name, description) {
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'passive-expand-button';
+  button.textContent = '+'; button.setAttribute('aria-label', 'Read full passive'); button.dataset.passiveExpand = 'true';
+  button.dataset.passiveName = name || 'Passive'; button.dataset.passiveDescription = normalizePassiveText(description);
+  button.addEventListener('click', event => { event.stopPropagation(); openPassiveDetails(button); }); return button;
+}
+function renderPassiveCopy(node, name, description) {
+  if (!node) return; node.textContent = normalizePassiveText(description); node.classList.add('passive-copy');
+  node.parentElement?.querySelector('.passive-expand-button')?.remove();
+  if (description) node.after(createPassiveExpandButton(name, description));
+}
+function openPassiveDetails(button) {
+  document.getElementById('passiveDetailTitle').textContent = button.dataset.passiveName;
+  document.getElementById('passiveDetailText').textContent = normalizePassiveText(button.dataset.passiveDescription);
+  openModal('passiveDetailModal'); document.querySelector('#passiveDetailModal .modal-close')?.focus();
+}
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !document.getElementById('passiveDetailModal')?.classList.contains('hidden')) {
+    event.preventDefault(); event.stopImmediatePropagation(); closeModal('passiveDetailModal');
+  }
+}, true);
 
 function escapeHtml(value) {
   return String(value)
@@ -4815,6 +5003,23 @@ els.battleStartButton?.addEventListener("click", () => startBattle(true));
 els.battleModePicker?.querySelectorAll("[data-battle-mode]").forEach(button => {
   button.addEventListener("click", () => setBattleMode(button.dataset.battleMode));
 });
+document.getElementById('timeTrialOpenButton')?.addEventListener('click', () => {
+  if (!isBattleMatchActive()) openModal('timeTrialModeModal');
+});
+document.querySelectorAll('[data-time-trial-type]').forEach(button => {
+  button.addEventListener('click', () => {
+    if (isBattleMatchActive()) return;
+    if (getBattleMode() !== button.dataset.timeTrialType) setBattleMode(button.dataset.timeTrialType);
+    closeModal('timeTrialModeModal');
+    document.getElementById('timeTrialOpenButton')?.focus();
+  });
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || document.getElementById('timeTrialModeModal').classList.contains('hidden')) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  closeModal('timeTrialModeModal');
+  document.getElementById('timeTrialOpenButton')?.focus();
+}, true);
 els.cardSearchInput?.addEventListener("input", () => populateBattleFighterSelect());
 els.cardSortSelect?.addEventListener("change", () => populateBattleFighterSelect());
 els.battleAutoAgainButton?.addEventListener("click", () => {
@@ -4932,6 +5137,9 @@ els.towerWeatherSelect?.addEventListener('change', () => {
   renderBattleModePicker(); populateBattleFighterSelect();
 });
 
+document.getElementById('timeTrialShopOpenButton')?.addEventListener('click', () => openModal('timeTrialShopModal'));
+document.getElementById('timeTrialResultShopButton')?.addEventListener('click', () => openModal('timeTrialShopModal'));
+
 document.getElementById('achievementOpenButton')?.addEventListener('click', () => openModal('achievementModal'));
 document.getElementById('achievementCategory')?.addEventListener('change', renderAchievements);
 document.getElementById('saveManagerOpenButton')?.addEventListener('click', () => openModal('saveManagerModal'));
@@ -4967,6 +5175,7 @@ els.battleVictory?.classList.add('hidden');
 els.battleVictory?.setAttribute('aria-hidden', 'true');
 els.battleSetup?.classList.remove('hidden');
 
+window.TimeTrialSystem?.configure({ getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
 refreshAchievements();
 recoverElapsedRealTime();

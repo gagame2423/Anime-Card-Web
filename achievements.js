@@ -7,13 +7,14 @@
     battles: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000]),
     currency: Object.freeze([1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000, 1000000000000, 10000000000000, 100000000000000]),
     rolls: Object.freeze([1000, 10000, 100000, 1000000, 10000000, 100000000]),
-    tower: Object.freeze([10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 1000000])
+    tower: Object.freeze([10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 1000000]),
+    timetrial: Object.freeze([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
   });
-  const CATEGORIES = Object.freeze({ collection: 'Collection', battles: 'Battle wins', currency: 'VNĐ milestones', rolls: 'Total rolls', tower: 'Tower progress' });
+  const CATEGORIES = Object.freeze({ collection: 'Collection', battles: 'Battle wins', currency: 'VNĐ milestones', rolls: 'Total rolls', tower: 'Tower progress', timetrial: 'Time Trial rooms' });
   const count = value => Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Number(value)))) : 0;
   const record = value => value && typeof value === 'object' && !Array.isArray(value);
   const safeKey = id => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id);
-  function fresh() { return { version: 1, stats: { collection: 0, battles: 0, currencyEarned: 0, peakCurrency: 0, rolls: 0, tower: 0 }, towerProgress: {}, claimed: {}, unlockedRequirements: {} }; }
+  function fresh() { return { version: 1, stats: { collection: 0, battles: 0, currencyEarned: 0, peakCurrency: 0, rolls: 0, tower: 0, timetrial: 0 }, towerProgress: {}, claimed: {}, unlockedRequirements: {} }; }
   function load() {
     let raw; try { raw = JSON.parse(host.localStorage?.getItem(KEY) || 'null'); } catch (_) { raw = null; }
     const result = fresh();
@@ -38,6 +39,10 @@
     for (const [category, tiers] of Object.entries({ ...TIERS, collection: collectionTiers })) {
       tiers.forEach(target => {
         const id = `${category}_${target}`;
+        if (category === 'timetrial') {
+          result.push(Object.freeze({ id, category, target, title: `Clear Time Trial Room ${target}`, reward: Object.freeze({ luckBonus: .1 }), automatic: false }));
+          return;
+        }
         const title = category === 'collection' ? `Own ${compact(target)} unique cards` : category === 'battles' ? `Win ${compact(target)} battles` : category === 'currency' ? `Earn or own ${compact(target)} VNĐ` : category === 'rolls' ? `Complete ${compact(target)} rolls` : `Clear Floor ${compact(target)} in any Tower`;
         const currency = category === 'currency' ? Math.max(100, Math.floor(target * .05)) : category === 'battles' ? target * 500 : category === 'rolls' ? target : target * 100;
         result.push(Object.freeze({ id, category, target, title, reward: Object.freeze({ currency }), automatic: false }));
@@ -79,6 +84,7 @@
       data.stats.collection = Math.max(data.stats.collection, count(snapshot.uniqueCards));
       data.stats.rolls = Math.max(data.stats.rolls, count(snapshot.totalRolls));
       data.stats.battles = Math.max(data.stats.battles, count(snapshot.knownBattleWins));
+      data.stats.timetrial = Math.max(data.stats.timetrial, count(snapshot.timeTrialRoom));
       data.stats.peakCurrency = Math.max(data.stats.peakCurrency, count(snapshot.currency));
       // Old saves have no lifetime-earnings history. The known balance is the
       // migration baseline; subsequent awards are recorded explicitly.
@@ -116,7 +122,7 @@
       const categoryLabel = doc.createElement('span'); categoryLabel.textContent = CATEGORIES[item.category];
       const status = doc.createElement('span'); status.textContent = item.claimed ? 'CLAIMED' : item.complete ? 'READY' : 'IN PROGRESS'; head.append(categoryLabel, status);
       const title = doc.createElement('strong'); title.textContent = item.title;
-      const detail = doc.createElement('p'); detail.textContent = item.reward.cardId ? `Reward: ${item.reward.cardName} • Normal version • Permanent roll unlock` : `Reward: ${compact(item.reward.currency)} VNĐ`;
+      const detail = doc.createElement('p'); detail.textContent = item.reward.luckBonus ? `Reward: +${item.reward.luckBonus.toFixed(1)} permanent Luck` : item.reward.cardId ? `Reward: ${item.reward.cardName} • Normal version • Permanent roll unlock` : `Reward: ${compact(item.reward.currency)} VNĐ`;
       const bar = doc.createElement('div'); bar.className = 'achievement-progress'; bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-label', item.title); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(item.target)); bar.setAttribute('aria-valuenow', String(Math.min(item.value, item.target)));
       const fill = doc.createElement('span'); fill.style.width = `${Math.min(100, item.value / item.target * 100)}%`; bar.append(fill);
       const numbers = doc.createElement('small'); numbers.textContent = `${compact(Math.min(item.value, item.target))} / ${compact(item.target)}`; numbers.title = `${item.value.toLocaleString('en-US')} / ${item.target.toLocaleString('en-US')}`;
@@ -126,5 +132,8 @@
     }
   }
   function reset() { data = fresh(); persist(); }
-  host.AchievementSystem = Object.freeze({ KEY, TIERS, CATEGORIES, configure, sync, list, claim, render, compact, recordBattleWin, recordCurrencyEarned, reset, flush: persist, isUnlocked: requirement => data.unlockedRequirements[requirement] === true, getStats: () => ({ ...data.stats }), requirementLabel: requirement => definitions.find(def => def.requirement === requirement)?.title || String(requirement).replaceAll('_', ' ') });
+  function getLuckBonus(receipts = {}) {
+    return Number(definitions.filter(def => def.reward.luckBonus && (data.claimed[def.id] || receipts[def.id] === true)).reduce((sum, def) => sum + def.reward.luckBonus, 0).toFixed(1));
+  }
+  host.AchievementSystem = Object.freeze({ KEY, TIERS, CATEGORIES, configure, sync, list, claim, render, compact, getLuckBonus, recordBattleWin, recordCurrencyEarned, reset, flush: persist, isUnlocked: requirement => data.unlockedRequirements[requirement] === true, getStats: () => ({ ...data.stats }), requirementLabel: requirement => definitions.find(def => def.requirement === requirement)?.title || String(requirement).replaceAll('_', ' ') });
 })(window);

@@ -8,7 +8,7 @@
     speed_potion: { name: 'Speed Potion', icon: '⚡', description: '+10% Roll Speed for 10 minutes', stat: 'speed', bonus: .10 },
     rich_potion: { name: 'Rich Potion', icon: '💵', description: '+25% VNĐ earned for 10 minutes', stat: 'rich', bonus: .25 },
     exp_potion: { name: 'EXP Potion', icon: '✨', description: '+25% EXP earned for 10 minutes', stat: 'exp', bonus: .25 },
-    speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes. Tower Shop exclusive.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'tower_shop' }
+    speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes outside Time Trial. Tower / Time Trial shops only.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'shop' }
   }).map(([id, item]) => [id, Object.freeze({ id, type: 'potion', tier: 'rare', ...item })])));
   // Preserve the original four-potion battle pool; exclusive items never enter it.
   const BATTLE_DROP_IDS = Object.freeze(['lucky_potion', 'speed_potion', 'rich_potion', 'exp_potion']);
@@ -61,12 +61,17 @@
     if (!safeId(id) || !Number.isFinite(Number(count)) || Number(count) < 1) return false;
     if (definition && !hasOwn(POTIONS, id)) registerItem({ ...definition, id });
     if (!hasOwn(data.items, id)) data.items[id] = normalizeItem(id);
-    data.items[id].quantity = Math.min(Number.MAX_SAFE_INTEGER, quantity(id) + countOf(count)); persist(); return true;
+    const before = quantity(id);
+    data.items[id].quantity = Math.min(Number.MAX_SAFE_INTEGER, before + countOf(count));
+    if (persist()) return true;
+    data.items[id].quantity = before; return false;
   }
   function remove(id, count = 1) {
     const amount = countOf(count);
     if (amount < 1 || quantity(id) < amount) return false;
-    data.items[id].quantity -= amount; persist(); return true;
+    data.items[id].quantity -= amount;
+    if (persist()) return true;
+    data.items[id].quantity += amount; return false;
   }
   function use(id) {
     if (!Object.prototype.hasOwnProperty.call(POTIONS, id) || quantity(id) < 1) return false;

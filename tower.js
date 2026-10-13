@@ -42,7 +42,20 @@
   }
   const DAMAGE_PER_VND = 10;
   const MAX_COINS = Number.MAX_SAFE_INTEGER;
-  function fresh() { return { version: 1, coins: 0, cleared: {}, victories: 0 }; }
+  function fresh() { return { version: 1, coins: 0, cleared: {}, victories: 0, encounters: {} }; }
+  function validMode(id) {
+    return typeof id === 'string' && /^[a-z][a-z0-9-]*$/.test(id) && !['constructor', 'prototype', '__proto__'].includes(id);
+  }
+  function isEncounterRecord(record) {
+    const cards = host.ALL_CARDS || host.CARDS || [];
+    return Boolean(record && typeof record === 'object' && !Array.isArray(record) &&
+      Number.isSafeInteger(record.floor) && record.floor >= 1 && Array.isArray(record.lineup) && record.lineup.length === 4 &&
+      record.lineup.every(slot => slot && typeof slot === 'object' && !Array.isArray(slot) &&
+        typeof slot.cardId === 'string' && cards.some(card => card.id === slot.cardId && !card.unlockRequirement && card.id !== 'griffith') &&
+        Array.isArray(slot.mutationIds) && slot.mutationIds.length <= 2 &&
+        new Set(slot.mutationIds).size === slot.mutationIds.length &&
+        slot.mutationIds.every(id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(host.MUTATION_BY_ID || {}, id))));
+  }
   function load() {
     let raw;
     try { raw = JSON.parse(host.localStorage?.getItem(KEY) || 'null'); } catch (_) { raw = null; }
@@ -53,6 +66,13 @@
       if (raw.cleared && typeof raw.cleared === 'object') {
         for (const [id, n] of Object.entries(raw.cleared)) {
           if (/^(normal|[a-z][a-z0-9-]*)$/.test(id)) result.cleared[id] = Number.isFinite(Number(n)) ? Math.max(0, Math.floor(Number(n))) : 0;
+        }
+      }
+    }
+    if (raw?.encounters && typeof raw.encounters === 'object' && !Array.isArray(raw.encounters)) {
+      for (const [id, record] of Object.entries(raw.encounters)) {
+        if (validMode(id) && isEncounterRecord(record) && record.floor === (result.cleared[id] || 0) + 1) {
+          result.encounters[id] = { floor: record.floor, lineup: record.lineup.map(slot => ({ cardId: slot.cardId, mutationIds: [...slot.mutationIds] })) };
         }
       }
     }
@@ -143,6 +163,30 @@
     }
     return result;
   }
+  function getOpponents(cards, floor, mode = 'normal', weathers = [], random = Math.random) {
+    const id = weatherId(mode), f = floorNumber(floor);
+    if (!validMode(id)) return [];
+    if (f !== nextFloor(id)) return buildOpponents(cards, f, id, weathers, random);
+    let record = data.encounters[id];
+    if (!record || record.floor !== f || !isEncounterRecord(record) || record.lineup.some(slot => !cards.some(card => card.id === slot.cardId))) {
+      const generated = buildOpponents(cards, f, id, weathers, random);
+      if (generated.length !== 4) return generated;
+      record = { floor: f, lineup: generated.map(unit => ({ cardId: unit.card.id, mutationIds: unit.mutations.map(mutation => mutation.id) })) };
+      data.encounters[id] = record;
+      persist();
+    }
+    // Persist only composition. Every attempt receives clean unit objects,
+    // full baseline HP and no previous damage, statuses, revivals or clones.
+    return record.lineup.map((slot, index) => {
+      const card = cards.find(candidate => candidate.id === slot.cardId);
+      const mutations = slot.mutationIds.map(mutationId => ({ ...host.MUTATION_BY_ID[mutationId] }));
+      const stats = floorStats(f, index === 3);
+      return protectEnemyUnit({ card, mutations,
+        display: { name: card.name, image: card.image, hp: stats.hp, atk: stats.atk, rarity: card.rarity },
+        hp: stats.hp, maxHp: stats.hp, atk: stats.atk, defeated: false,
+        level: f, towerRole: index === 3 ? 'boss' : 'minion', isTowerEnemy: true });
+    });
+  }
   function previewRewards(floor) {
     const f = floorNumber(floor);
     let min, max;
@@ -166,7 +210,8 @@
     const rewards = previewRewards(floor);
     const coins = rewards.min + Math.floor(random() * (rewards.max - rewards.min + 1));
     const granted = Math.min(coins, Math.max(0, MAX_COINS - data.coins));
-    data.coins += granted; data.cleared[id] = floor; data.victories += 1; persist();
+    data.coins += granted; data.cleared[id] = floor; data.victories += 1;
+    delete data.encounters[id]; persist();
     return { awarded: true, coins: granted, unlockRequirement: floor >= 100 ? rewardRequirement(id) : null, nextFloor: nextFloor(id), completed: completed(id), elite: isElite(floor) };
   }
   function purchasePotion(id, inventory) {
@@ -181,5 +226,5 @@
     return (cards || []).filter(card => card?.unlockRequirement === rewardRequirement(mode));
   }
   function reset() { data = fresh(); persist(); }
-  host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, SCALING, protectEnemyUnit, limitEnemyAttack, DAMAGE_PER_VND, damageSummary, battleCurrency, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });
+  host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, SCALING, protectEnemyUnit, limitEnemyAttack, DAMAGE_PER_VND, damageSummary, battleCurrency, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, getOpponents, isEncounterRecord, validMode, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });
 })(window);

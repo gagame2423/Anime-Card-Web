@@ -355,7 +355,7 @@
     <section class="modal-panel module-modal achievement-modal">
       <header class="modal-header"><div><p class="eyebrow">YOUR JOURNEY</p><h2 id="achievementModalTitle">🏆 Achievements</h2></div><button data-close-modal="achievementModal" class="modal-close" type="button" aria-label="Close achievements">×</button></header>
       <p class="module-description">Milestones keep your best progress after spending or salvage. Floor 100 Champion cards are awarded automatically and unlock permanently for future rolls.</p>
-      <div class="achievement-toolbar"><span id="achievementSummary" aria-live="polite"></span><label><span class="sr-only">Achievement category</span><select id="achievementCategory"><option value="all">All milestones</option><option value="collection">Collection</option><option value="battles">Battle wins</option><option value="currency">VNĐ milestones</option><option value="rolls">Total rolls</option><option value="tower">Tower progress</option></select></label></div>
+      <div class="achievement-toolbar"><span id="achievementSummary" aria-live="polite"></span><label><span class="sr-only">Achievement category</span><select id="achievementCategory"><option value="all">All milestones</option><option value="collection">Collection</option><option value="battles">Battle wins</option><option value="currency">VNĐ milestones</option><option value="rolls">Total rolls</option><option value="tower">Tower progress</option><option value="timetrial">Time Trial rooms</option></select></label></div>
       <div id="achievementList" class="achievement-grid" aria-label="Achievements and rewards"></div>
     </section>
   </div>
@@ -430,6 +430,12 @@
               <span>Adaptive enemy • anti-inflation scaling</span>
             </button>
             <button type="button" class="battle-mode-option" data-battle-mode="tower" aria-pressed="false"><strong>🏰 TOWER</strong><span>Infinite floors • 4v4 • Tower Coins</span></button>
+            <button id="timeTrialOpenButton" type="button" class="battle-mode-option" aria-pressed="false" aria-haspopup="dialog" aria-controls="timeTrialModeModal"><strong>⏱ TIME TRIAL</strong><span id="timeTrialModeHint">Choose Normal or EXP</span></button>
+          </div>
+          <div id="timeTrialControls" class="time-trial-controls hidden">
+            <strong id="timeTrialProgress">Room 1</strong><span id="timeTrialBalance">0 Shards</span>
+            <button id="timeTrialShopOpenButton" class="tower-shop-button" type="button">◆ Time Trial Shop</button>
+            <p id="timeTrialRules"></p>
           </div>
           <div id="towerBattleControls" class="tower-controls hidden">
             <label for="towerWeatherSelect">Tower type</label>
@@ -439,6 +445,10 @@
             <button id="towerShopOpenButton" class="tower-shop-button" type="button">🪙 Tower Shop</button>
           </div>
 
+          <fieldset id="aquaBattleChoice" class="aqua-battle-choice hidden"><legend>Aqua • Useless</legend>
+            <label><input type="radio" name="aquaBattleMode" value="hp" checked /> +50% team HP</label>
+            <label><input type="radio" name="aquaBattleMode" value="rewards" /> +50% drop reward bonus</label>
+          </fieldset>
           <div class="battle-team-builder">
             <div class="battle-team-builder__head">
               <span class="battle-field-label">TEAM LINEUP</span>
@@ -492,6 +502,7 @@
             <span class="eyebrow">ANIME CARD CLASH</span>
             <h3>Standoff</h3>
           </div>
+          <strong id="timeTrialTimer" class="trial-timer hidden" aria-live="off"></strong>
           <div id="battleStatus" class="battle-status" aria-live="polite">PLAYER STRIKE IN 3s</div>
         </div>
 
@@ -605,7 +616,9 @@
             <strong id="battleResultLossStatus">None</strong>
           </div>
         </div>
+        <div id="timeTrialSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div class="battle-result__actions">
+          <button id="timeTrialResultShopButton" class="ghost-button hidden" type="button">◆ Time Trial Shop</button>
           <button id="battle-again-btn" class="battle-primary-button" type="button">⚔️ Battle Again</button>
           <button id="battleChangeFighterButton" class="ghost-button" type="button">Change Fighter</button>
           <button id="close-battle-result-btn" class="ghost-button" type="button">↩ Return to Lobby</button>
@@ -710,11 +723,29 @@
     </section>
   </div>
 
+  <div id="timeTrialModeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="timeTrialModeTitle">
+    <section class="modal-panel module-modal">
+      <header class="modal-header"><div><p class="eyebrow">CHOOSE YOUR CHALLENGE</p><h2 id="timeTrialModeTitle">⏱ Time Trial</h2></div><button class="modal-close" data-close-modal="timeTrialModeModal" type="button" aria-label="Close Time Trial selector">×</button></header>
+      <p class="module-description">Fixed 2-second turns • Speed Battle Potion does not apply</p>
+      <div class="time-trial-mode-options" role="group" aria-label="Time Trial type">
+        <button class="battle-mode-option" type="button" data-time-trial-type="time-trial" aria-pressed="false"><strong>⏱ Normal Time Trial</strong><span>4v4 • 3 minutes per room<br>3 random Minions + 1 Boss • Time Trial Shards<br>Defeat or timeout resets to Room 1</span></button>
+        <button class="battle-mode-option" type="button" data-time-trial-type="exp-time-trial" aria-pressed="false"><strong>✨ EXP Time Trial</strong><span>1v1 • 5 minutes<br>0 ATK EXP Monsters • Costs 1 EXP Time Trial Ticket<br>Ticket is consumed when the battle starts</span></button>
+      </div>
+      <p id="timeTrialModeTickets" class="module-description"></p>
+    </section>
+  </div>
+  <div id="timeTrialShopModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="timeTrialShopTitle">
+    <section class="modal-panel module-modal"><header class="modal-header"><h2 id="timeTrialShopTitle">◆ Time Trial Shop</h2><button class="modal-close" data-close-modal="timeTrialShopModal" type="button" aria-label="Close Time Trial shop">×</button></header><p id="timeTrialShopBalance" class="module-description"></p><div id="timeTrialShopGrid" class="module-grid"></div></section>
+  </div>
+  <div id="passiveDetailModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="passiveDetailTitle">
+    <section class="modal-panel passive-detail-modal"><header class="modal-header"><h2 id="passiveDetailTitle">Passive</h2><button class="modal-close" data-close-modal="passiveDetailModal" type="button" aria-label="Close passive details">×</button></header><div id="passiveDetailText" class="passive-detail-text"></div></section>
+  </div>
   <script src="weathers.js"></script>
   <script src="cards.js"></script>
   <script src="passives.js"></script>
   <script src="inventory.js"></script>
   <script src="tower.js"></script>
+  <script src="timetrial.js"></script>
   <script src="achievements.js"></script>
   <script src="app.js"></script>
 </body>
