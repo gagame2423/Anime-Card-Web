@@ -4326,6 +4326,15 @@ body {
 .battle-arena__header { flex-wrap: wrap; gap: 8px; }
 #battleModePicker { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 #timeTrialShopModal:not(.hidden) { z-index: 7000 !important; }
+#raidShopModal:not(.hidden) { z-index: 7000 !important; }
+.raid-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px; border: 1px solid #526a88; border-radius: 12px; background: #111d31; }
+.raid-controls > p { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.7; color: #c7d9ef; }
+.raid-difficulty { display: flex; flex: 1 1 260px; flex-wrap: wrap; gap: 8px; font-size: 12px; }
+.raid-difficulty output { margin-left: auto; font-variant-numeric: tabular-nums; }
+.raid-difficulty input { width: 100%; accent-color: #63c3e9; }
+.raid-enemy-preview { flex: 1 1 100%; font-size: 12px; line-height: 1.8; }
+.raid-enemy-preview summary { cursor: pointer; }
+.raid-enemy-preview ol { padding-left: 22px; max-height: 230px; overflow: auto; }
 #timeTrialModeModal:not(.hidden) { z-index: 7000 !important; }
 .time-trial-mode-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 20px; }
 .time-trial-mode-options .battle-mode-option { min-width: 0; padding: 18px; text-align: left; }

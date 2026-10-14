@@ -19,7 +19,7 @@ const CARDS = [
     stats: { hp: 100, atk: 25 },
     passive: {
       name: "First Strike",
-      description: "[SELF] Every attack made by this unit gains 10% attack boost ( stack to 100% )."
+      description: "Each attack by this card gains 10% ATK boost ( stack to 100% )."
     },
     image: "assets/cards/narutokid.png"
   },
@@ -32,7 +32,7 @@ const CARDS = [
     stats: { hp: 300, atk: 10 },
     passive: {
       name: "Lifesteal",
-      description: "[SELF] Every time this unit kills an enemy, this unit gains 10% HP."
+      description: "Whenever this card kills an enemy, this card gains 10% HP."
     },
     image: "assets/cards/normaldemon.png"
   },
@@ -45,7 +45,7 @@ const CARDS = [
     stats: { hp: 275, atk: 12 },
     passive: {
       name: "Chidori",
-      description: "[SELF] On the third attack made by this unit strike x2.5 atk damage."
+      description: "On the third attack made by this card strike x2.5 ATK damage."
     },
     image: "assets/cards/sasukekid.png"
   },
@@ -58,7 +58,7 @@ const CARDS = [
     stats: { hp: 500, atk: 10 },
     passive: {
       name: "What can i get you sir",
-      description: "[SELF] Every attack made by this unit has 20% chance to heal 20% HP."
+      description: "Each attack by this card has 20% chance to heal 20% HP."
     },
     image: "assets/cards/dekumcdonald.png"
   },
@@ -71,7 +71,7 @@ const CARDS = [
     stats: { hp: 240, atk: 75 },
     passive: {
       name: "Afterimage",
-      description: "[SELF] Has 5% chance to evade the next incoming hit."
+      description: "Has 5% chance to evade the next incoming hit."
     },
     image: "assets/cards/ichigobase.png"
   },
@@ -84,7 +84,7 @@ const CARDS = [
     stats: { hp: 500, atk: 50 },
     passive: {
       name: "Rock",
-      description: "[SELF] First attack has 33% to strike double damage."
+      description: "First attack has 33% to strike double damage."
     },
     image: "assets/cards/gonkid.png"
   },
@@ -97,7 +97,7 @@ const CARDS = [
     stats: { hp: 400, atk: 100 },
     passive: {
       name: "Rock",
-      description: "[SELF] At the start of battle, this unit gains 25% bonus HP"
+      description: "At the start of battle, this card gains 25% bonus HP"
     },
     image: "assets/cards/tanjiro.png"
   },
@@ -110,7 +110,7 @@ const CARDS = [
     stats: { hp: 420, atk: 150 },
     passive: {
       name: "GOMU NO MU NO PISTOL",
-      description: "[SELF] Every two attacks made by this unit launch a puch with more 50% atk."
+      description: "Every two attacks made by this card launch a puch with more 50% ATK."
     },
     image: "assets/cards/luffykid.png"
   },
@@ -123,7 +123,7 @@ const CARDS = [
     stats: { hp: 676, atk: 67 },
     passive: {
       name: "SIX SEVEN",
-      description: "[SELF] First entry stun the enemy for the next 3 turn."
+      description: "First entry stun the enemy for the next 3 turn."
     },
     image: "assets/cards/sixseven.png"
   },
@@ -136,7 +136,7 @@ const CARDS = [
     stats: { hp: 600, atk: 100 },
     passive: {
       name: "GHOUL",
-      description: "[SELF] Every third attack made by this unit steals blood and heals this unit for 25% of the enemy's current HP"
+      description: "Every third attack made by this card steals blood and heals this card for 25% of the enemy's current HP"
     },
     image: "assets/cards/kaneki.png"
   },
@@ -149,7 +149,7 @@ const CARDS = [
     stats: { hp: 500, atk: 100 },
     passive: {
       name: "Trap",
-      description: "[SELF] When enem entry has 50% chance to get strike x5 atk damage."
+      description: "When enem entry has 50% chance to get strike x5 ATK damage."
     },
     image: "assets/cards/thetrapper.png"
   },
@@ -162,7 +162,7 @@ const CARDS = [
     stats: { hp: 600, atk: 150 },
     passive: {
       name: "Bleed",
-      description: "[SELF] When this unit attacks, it inflicts [ Bleed ] for 2 turn , [ Bleed ] drain hp enemy equal to 5% of Nezuko atk every turn."
+      description: "When this card attacks, it inflicts [ Bleed ] for 2 turn , [ Bleed ] drain HP enemy equal to 5% of Nezuko ATK every turn."
     },
     image: "assets/cards/nezuko.png"
   },
@@ -175,7 +175,7 @@ const CARDS = [
     stats: { hp: 600, atk: 110 },
     passive: {
       name: "Chop Chop",
-      description: "[SELF] This unit has a 33% chance to dodge an incoming attack; a successful dodge does not trigger an out-of-turn counterattack."
+      description: "This unit has a 33% chance to dodge an incoming attack; a successful dodge does not trigger an out-of-turn counterattack."
     },
     image: "assets/cards/buggy.png"
   },
@@ -188,7 +188,7 @@ const CARDS = [
     stats: { hp: 500, atk: 100 },
     passive: {
       name: "BOUNTY",
-      description: "[SELF] Every time this unit kills an enemy, gain money equal to enemy hp."
+      description: "Whenever this card kills an enemy, gain money equal to enemy HP."
     },
     image: "assets/cards/bountyhunter.png"
   },
@@ -201,7 +201,7 @@ const CARDS = [
     stats: { hp: 750, atk: 300 },
     passive: {
       name: "Ora Ora",
-      description: "[SELF] Every attack made by this unit has 50% chance to follow up a next attack , and 25% chance to follow up the follow up , the follow up attack have 40% attack damage."
+      description: "Each attack by this card has 50% chance to follow up a next attack , and 25% chance to follow up the follow up , the follow up attack have 40% attack damage."
     },
     image: "assets/cards/jotarokujo.png"
   },
@@ -214,7 +214,7 @@ const CARDS = [
     stats: { hp: 777, atk: 377 },
     passive: {
       name: "Lucky Train",
-      description: "[SELF] On the seventh attack made by this unit has 7% chance strike x77 atk damage."
+      description: "On the seventh attack made by this card has 7% chance strike x77 ATK damage."
     },
     image: "assets/cards/hakari.png"
   },
@@ -227,7 +227,7 @@ const CARDS = [
     stats: { hp: 800, atk: 400 },
     passive: {
       name: "EXCALIBUR!!!",
-      description: "[SELF] On the eighth attack made by this unit strike x8 attack damage."
+      description: "On the eighth attack made by this card strike x8 attack damage."
     },
     image: "assets/cards/saber.png"
   },
@@ -240,7 +240,7 @@ const CARDS = [
     stats: { hp: 1000, atk: 350 },
     passive: {
       name: "HAMONNN",
-      description: "[SELF] On the ninth attack made by this unit gain 900% bonus atk damage for the rest of the match."
+      description: "On the ninth attack made by this card gain 900% bonus ATK damage for the rest of the match."
     },
     image: "assets/cards/jonathanjoestar.png"
   },
@@ -253,7 +253,7 @@ const CARDS = [
     stats: { hp: 1250, atk: 400 },
     passive: {
       name: "Kamehameha",
-      description: "[SELF] Every fifth attack made by this unit , do 10% attack damage to enemy constantly for 10 times."
+      description: "Every fifth attack made by this card , do 10% attack damage to enemy constantly for 10 times."
     },
     image: "assets/cards/songoku.png"
   },
@@ -266,7 +266,7 @@ const CARDS = [
     stats: { hp: 1000, atk: 440 },
     passive: {
       name: "Super Vegeta",
-      description: "[SELF] When this unit's HP falls below 25%, this unit gains 100% ATK damage."
+      description: "When this card's HP falls below 25%, this card gains 100% ATK damage."
     },
     image: "assets/cards/vegeta.png"
   },
@@ -279,7 +279,7 @@ const CARDS = [
     stats: { hp: 2000, atk: 505 },
     passive: {
       name: "Kamui",
-      description: "[SELF] This unit has a 22% chance to dodge an incoming attack; a successful dodge does not trigger an out-of-turn counterattack."
+      description: "This unit has a 22% chance to dodge an incoming attack; a successful dodge does not trigger an out-of-turn counterattack."
     },
     image: "assets/cards/kakashi.png"
   },
@@ -292,7 +292,7 @@ const CARDS = [
     stats: { hp: 12500, atk: 2500 },
     passive: {
       name: "KUUGA",
-      description: "[SELF] Every third attack made by this unit change form : Blue , Green , Purple : + Blue : Gain 20% critical chance ,+ Green : Gain 50% critical damage , + Purple : Gain 30% more hp."
+      description: "Every third attack made by this card change form : Blue , Green , Purple : + Blue : Gain 20% critical chance ,+ Green : Gain 50% critical damage , + Purple : Gain 30% more HP."
     },
     image: "assets/cards/krkuuga.png"
   },
@@ -305,7 +305,7 @@ const CARDS = [
     stats: { hp: 3080, atk: 100 },
     passive: {
       name: "WISH",
-      description: "[SELF + ALLY SUPPORT] At the start of each turn, if this unit is not the attacker, this unit has a 10% chance to grant the attacker +30% ATK damage on that attack."
+      description: "Team support. At the start of each turn, if this card is not the attacker, this card has a 10% chance to grant the attacker +30% ATK damage on that attack."
     },
     image: "assets/cards/bulma.png"
   },
@@ -318,7 +318,7 @@ const CARDS = [
     stats: { hp: 3333, atk: 333 },
     passive: {
       name: "POCHITA",
-      description: "[SELF] Every attack made by this unit has 33% chance to follow the next attack , the follow up attack can follow up again."
+      description: "Each attack by this card has 33% chance to follow the next attack , the follow up attack can follow up again."
     },
     image: "assets/cards/denji.png"
   },
@@ -331,7 +331,7 @@ const CARDS = [
     stats: { hp: 2550, atk: 450 },
     passive: {
       name: "Amaterasu",
-      description: "[SELF] Every attack made by this unit has a 30% chance to inflict [Burn] and immediately trigger a follow-up attack; [Burn] deals damage equal to 5% of this unit's ATK each turn for 3 turns"
+      description: "Each attack by this card has a 30% chance to inflict [Burn] and immediately trigger a follow-up attack; [Burn] deals damage equal to 5% of this card's ATK each turn for 3 turns"
     },
     image: "assets/cards/uchihaitachi.png"
   },
@@ -344,7 +344,7 @@ const CARDS = [
     stats: { hp: 10101, atk: 101 },
     passive: {
       name: "Madness",
-      description: "[SELF] Every second attack made by this unit has a 40% chance to lower the enemy's ATK by 5%"
+      description: "Every second attack made by this card has a 40% chance to lower the enemy's ATK by 5%"
     },
     image: "assets/cards/madnessdoctor.png"
   },
@@ -357,7 +357,7 @@ const CARDS = [
     stats: { hp: 2550, atk: 450 },
     passive: {
       name: "MAGIC ARMOR",
-      description: "[SELF] If this unit's HP falls below 50% immune to every passive."
+      description: "If this card's HP falls below 50% immune to every passive."
     },
     image: "assets/cards/erza.png"
   },
@@ -370,7 +370,7 @@ const CARDS = [
     stats: { hp: 4000, atk: 600 },
     passive: {
       name: "BLACK FLASH",
-      description: "[SELF] Every attack made by this unit has a 33% chance to deal ×3 ATK damage"
+      description: "Each attack by this card has a 33% chance to deal x3 ATK damage"
     },
     image: "assets/cards/yujiitadori.png"
   },
@@ -383,7 +383,7 @@ const CARDS = [
     stats: { hp: 8000, atk: 800 },
     passive: {
       name: "OUTRAGE",
-      description: "[SELF] This unit has a 33% chance to enter Berserker mode; while in Berserker mode, attacks made by this unit inflict [Bleed] for 2 turns, and [Bleed] drains enemy HP each turn equal to 10% of this unit's ATK"
+      description: "This unit has a 33% chance to enter Berserker mode; while in Berserker mode, attacks made by this card inflict [Bleed] for 2 turns, and [Bleed] drains enemy HP each turn equal to 10% of this card's ATK"
     },
     image: "assets/cards/guts.png"
   },
@@ -396,7 +396,7 @@ const CARDS = [
     stats: { hp: 10000, atk: 1000 },
     passive: {
       name: "SILVER CHARIOT",
-      description: "[SELF] When this unit's HP falls below 25%, this unit gains 100% ATK damage"
+      description: "When this card's HP falls below 25%, this card gains 100% ATK damage"
     },
     image: "assets/cards/polnareff.png"
   },
@@ -409,7 +409,7 @@ const CARDS = [
     stats: { hp: 5200, atk: 2500 },
     passive: {
       name: "FLASH",
-      description: "[SELF] This unit has a 60% chance to dodge incoming attacks; after more than 3 consecutive successful dodges, this unit is defeated by the documented heart-attack effect"
+      description: "This unit has a 60% chance to dodge incoming attacks; after more than 3 consecutive successful dodges, this card is defeated by the documented heart-attack effect"
     },
     image: "assets/cards/theflash.png"
   },
@@ -422,7 +422,7 @@ const CARDS = [
     stats: { hp: 8120, atk: 2008 },
     passive: {
       name: "SLIME",
-      description: "[SELF] Every time this unit kills an enemy, this unit gains 1 Slime point; each Slime point can prevent one fatality and grants +30% ATK damage and +20% HP; each prevented fatality consumes 1 Slime point"
+      description: "Whenever this card kills an enemy, this card gains 1 Slime point; each Slime point can prevent one fatality and grants +30% ATK damage and +20% HP; each prevented fatality consumes 1 Slime point"
     },
     image: "assets/cards/rimuru.png"
   },
@@ -435,7 +435,7 @@ const CARDS = [
     stats: { hp: 10000, atk: 2000 },
     passive: {
       name: "Omniscience",
-      description: "[SELF] Immune to every passive of opponent."
+      description: "Immune to every passive of opponent."
     },
     image: "assets/cards/thetruth.png"
   },
@@ -448,7 +448,7 @@ const CARDS = [
     stats: { hp: 20000, atk: 2222 },
     passive: {
       name: "PUNCH",
-      description: "[SELF] Every third attack made by this unit has 33% chance to deal bonus 222% atk damage."
+      description: "Every third attack made by this card has 33% chance to deal bonus 222% ATK damage."
     },
     image: "assets/cards/viltrumite.png"
   },
@@ -461,7 +461,7 @@ const CARDS = [
     stats: { hp: 1927, atk: 792 },
     passive: {
       name: "Idle Transfiguration",
-      description: "[SELF] If this unit kills an enemy whose HP is below 10%, this unit gains 1 Soul; each Soul clears one debuff inflicted on this unit"
+      description: "If this card kills an enemy whose HP is below 10%, this card gains 1 Soul; each Soul clears one debuff inflicted on this card"
     },
     image: "assets/cards/mahito.png"
   },
@@ -474,7 +474,7 @@ const CARDS = [
     stats: { hp: 8000, atk: 800 },
     passive: {
       name: "Liberation",
-      description: "[SELF] Kill enemy gain 25% of their ATK damage."
+      description: "Kill enemy gain 25% of their ATK damage."
     },
     image: "assets/cards/blackbeard.png"
   },
@@ -487,7 +487,7 @@ const CARDS = [
     stats: { hp: 10000, atk: 1500 },
     passive: {
       name: "Fist of Love",
-      description: "[SELF] On the third attack made by this unit, stun the enemy for 2 turns; if an enemy dies before this unit's third attack, this unit's next enemy takes ×2 ATK damage once this match"
+      description: "On the third attack made by this card, stun the enemy for 2 turns; if an enemy dies before this card's third attack, this card's next enemy takes x2 ATK damage once this match"
     },
     image: "assets/cards/garp.png"
   },
@@ -500,7 +500,7 @@ const CARDS = [
     stats: { hp: 17555, atk: 75 },
     passive: {
       name: "CAPTAIN",
-      description: "[ALLY SUPPORT] When this unit enters first, all teammates gain 100% ATK damage for the rest of the battle."
+      description: "Team support. When this card enters first, all teammates gain 100% ATK damage for the rest of the battle."
     },
     image: "assets/cards/erwin.png"
   },
@@ -513,7 +513,7 @@ const CARDS = [
     stats: { hp: 6969, atk: 1069 },
     passive: {
       name: "Mero Mero",
-      description: "[SELF] Every two attacks made by this unit have a 69% chance to freeze the enemy for 1 turn; when this unit attacks a frozen enemy, it deals ×1.5 ATK damage"
+      description: "Every two attacks made by this card have a 69% chance to freeze the enemy for 1 turn; when this card attacks a frozen enemy, it deals x1.5 ATK damage"
     },
     image: "assets/cards/boahancock.png"
   },
@@ -526,7 +526,7 @@ const CARDS = [
     stats: { hp: 1550, atk: 55 },
     passive: {
       name: "Chemistry",
-      description: "[SELF + ALLY EFFECT] [ALLY SUPPORT] At the start of each turn when this unit is not the attacker, all teammates recover 2.5% of their Max HP (blocked by Bleed)"
+      description: "Teammate effect. Team support. At the start of each turn when this card is not the attacker, all teammates recover 2.5% of their Max HP (blocked by Bleed)"
     },
     image: "assets/cards/senku.png"
   },
@@ -539,7 +539,7 @@ const CARDS = [
     stats: { hp: 6500, atk: 1065 },
     passive: {
       name: "Gran Rey Cero",
-      description: "[SELF] On the fifth attack made by this unit blasting all enemies with x2 ATK damage."
+      description: "On the fifth attack made by this card blasting all enemies with x2 ATK damage."
     },
     image: "assets/cards/grimmjaw.png"
   },
@@ -552,7 +552,7 @@ const CARDS = [
     stats: { hp: 100000, atk: 1000 },
     passive: {
       name: "Scam",
-      description: "[SELF + ALLY EFFECT] When entry choose random one teammate to steal their passive, if Reigen is the last one boost 200% ATK damage and 100% HP with no passive."
+      description: "Teammate effect. When entry choose random one teammate to steal their passive, if Reigen is the last one boost 200% ATK damage and 100% HP with no passive."
     },
     image: "assets/cards/reigen.png"
   },
@@ -565,7 +565,7 @@ const CARDS = [
     stats: { hp: 5000, atk: 3700 },
     passive: {
       name: "CLOCK UP",
-      description: "[SELF] Every attack made by this unit has a 10% chance to trigger another attack; follow-up attacks can chain again. A follow-up attack inflicts 1-turn Stun, and when this unit attacks a Stunned enemy, this unit heals 5% HP"
+      description: "Each attack by this card has a 10% chance to trigger another attack; follow-up attacks can chain again. A follow-up attack inflicts 1-turn Stun, and when this card attacks a Stunned enemy, this card heals 5% HP"
     },
     image: "assets/cards/krkabuto.png"
   },
@@ -578,7 +578,7 @@ const CARDS = [
     stats: { hp: 74000, atk: 5000 },
     passive: {
       name: "Aura Synthesis",
-      description: "[SELF] Each time this unit is attacked, this unit gains 1 Aura stack (max 5). Upon first reaching 5/5 Aura, this unit heals for 5% Max HP (blocked by Bleed); each stack grants +10% critical damage"
+      description: "Each time this card is attacked, this card gains 1 Aura stack (max 5). Upon first reaching 5/5 Aura, this card heals for 5% Max HP (blocked by Bleed); each stack grants +10% critical damage"
     },
     image: "assets/cards/meruem.png"
   },
@@ -591,7 +591,7 @@ const CARDS = [
     stats: { hp: 6090, atk: 3060 },
     passive: {
       name: "Telekinesis",
-      description: "[SELF] On this unit's entry, sort the opponent team from weakest to strongest by ATK so this unit faces the weakest enemy"
+      description: "On this card's entry, sort the opponent team from weakest to strongest by ATK so this card faces the weakest enemy"
     },
     image: "assets/cards/frieza.png"
   },
@@ -604,7 +604,7 @@ const CARDS = [
     stats: { hp: 2697, atk: 440 },
     passive: {
       name: "Champion of Light",
-      description: "[SELF] Every attack made by this unit has a 20% chance to Stun the enemy for 1 turn; after the Stun ends, that enemy deals 18% less ATK damage"
+      description: "Each attack by this card has a 20% chance to Stun the enemy for 1 turn; after the Stun ends, that enemy deals 18% less ATK damage"
     },
     image: "assets/cards/adamfrancis.png"
   },
@@ -617,7 +617,7 @@ const CARDS = [
     stats: { hp: 27000, atk: 2700 },
     passive: {
       name: "MOCHI",
-      description: "[SELF] Every attack made by this unit has a 27% chance to reduce the enemy's ATK by 10% and heal this unit for 10%; this unit also has a 7% chance to dodge incoming attacks"
+      description: "Each attack by this card has a 27% chance to reduce the enemy's ATK by 10% and heal this card for 10%; this card also has a 7% chance to dodge incoming attacks"
     },
     image: "assets/cards/katakuri.png"
   },
@@ -630,7 +630,7 @@ const CARDS = [
     stats: { hp: 50000, atk: 5000 },
     passive: {
       name: "Quake Hermit",
-      description: "[SELF] On the fourth attack made by this unit, strike the 2 closest enemies for ×3 ATK damage and Stun them for 2 turns"
+      description: "On the fourth attack made by this card, strike the 2 closest enemies for x3 ATK damage and Stun them for 2 turns"
     },
     image: "assets/cards/whitebeard.png"
   },
@@ -643,7 +643,7 @@ const CARDS = [
     stats: { hp: 1450, atk: 145 },
     passive: {
       name: "FROG",
-      description: "[SELF] Each time this unit is attacked, it has a 20% chance to gain a +20% ATK damage stack (2000% max); stacks persist across enemies in the same battle but not across battles"
+      description: "Each time this card is attacked, it has a 20% chance to gain a +20% ATK damage stack (2000% max); stacks persist across enemies in the same battle but not across battles"
     },
     image: "assets/cards/dopio.png"
   },
@@ -656,7 +656,7 @@ const CARDS = [
     stats: { hp: 4740, atk: 2474 },
     passive: {
       name: "HAKI",
-      description: "[SELF] This unit has a 30% chance to dodge incoming attacks; each successful dodge grants +25% ATK damage to this unit's next attack"
+      description: "This unit has a 30% chance to dodge incoming attacks; each successful dodge grants +25% ATK damage to this card's next attack"
     },
     image: "assets/cards/shanks.png"
   },
@@ -669,7 +669,7 @@ const CARDS = [
     stats: { hp: 8008, atk: 3232 },
     passive: {
       name: "CLONE",
-      description: "[SELF + ALLY EFFECT] If teammate gets fatal attack, instantly make a clone of them with their passive but with Metal Cooler 50% stats (clone doesn't count as teammate)."
+      description: "Teammate effect. When an original teammate is about to take a fatal hit, Metal Cooler creates a Clone with 50% of that teammate's current max HP and ATK and keeps that teammate's passive. The Clone enters directly behind Metal Cooler. There is no numeric creation cap; generated units cannot create more companions or trigger this cloning effect."
     },
     image: "assets/cards/metalcooler.png"
   },
@@ -682,7 +682,7 @@ const CARDS = [
     stats: { hp: 8008, atk: 3232 },
     passive: {
       name: "MASENKO",
-      description: "[SELF] This unit deals ×2 ATK damage to the strongest enemy in the opponent team"
+      description: "This unit deals x2 ATK damage to the strongest enemy in the opponent team"
     },
     image: "assets/cards/gohan.png"
   },
@@ -695,7 +695,7 @@ const CARDS = [
     stats: { hp: 23000, atk: 4260 },
     passive: {
       name: "Zephyr Bow",
-      description: "[SELF] Every attack made by this unit has a 45% chance to pierce the next enemy; a successful pierce has a 15% chance to pierce the next enemy again; each piercing attack deals 100% of this unit's ATK damage"
+      description: "Each attack by this card has a 45% chance to pierce the next enemy; a successful pierce has a 15% chance to pierce the next enemy again; each piercing attack deals 100% of this card's ATK damage"
     },
     image: "assets/cards/yuno.png"
   },
@@ -708,7 +708,7 @@ const CARDS = [
     stats: { hp: 33000, atk: 3333 },
     passive: {
       name: "ANTI MAGIC",
-      description: "[SELF] Has 50% chance to turn the enemy passive attack back to the enemy with 50% efficiency."
+      description: "Has 50% chance to turn the enemy passive attack back to the enemy with 50% efficiency."
     },
     image: "assets/cards/asta.png"
   },
@@ -721,7 +721,7 @@ const CARDS = [
     stats: { hp: 333000, atk: 9999 },
     passive: {
       name: "ANTI MAGIC BOOK",
-      description: "[SELF] Each turn, randomly choose Demon Slayer or Demon Dweller for the full turn. - Demon Slayer: Deal 165% atk damage with a 75% chance to stun the enemy for 1 turn, and has 25% chance to reflect incoming damage. - Demon Dweller: Deal 150% atk damage plus 35% of the last hit received, and reduce incoming damage by 15%."
+      description: "Each turn, randomly choose Demon Slayer or Demon Dweller for the full turn. - Demon Slayer: Deal 165% ATK damage with a 75% chance to stun the enemy for 1 turn, and has 25% chance to reflect incoming damage. - Demon Dweller: Deal 150% ATK damage plus 35% of the last hit received, and reduce incoming damage by 15%."
     },
     image: "assets/cards/astademon.png"
   },
@@ -735,7 +735,7 @@ const CARDS = [
     stats: { hp: 50, atk: 10 },
     passive: {
       name: "Greedy",
-      description: "[SELF] If Nami is on this unit's team, winning the battle grants this unit/team 100% bonus rewards"
+      description: "If Nami is on this card's team, winning the battle grants this card/team 100% bonus rewards"
     },
     image: "assets/cards/nami.png"
   },
@@ -748,7 +748,7 @@ const CARDS = [
     stats: { hp: 620, atk: 109 },
     passive: {
       name: "Dead Calm",
-      description: "[SELF] On the fifth attack made by this unit, Stun the enemy for 1 turn; for the next 3 turns, this unit is immune to incoming attacks"
+      description: "On the fifth attack made by this card, Stun the enemy for 1 turn; for the next 3 turns, this card is immune to incoming attacks"
     },
     image: "assets/cards/giyutomioka.png"
   },
@@ -761,7 +761,7 @@ const CARDS = [
     stats: { hp: 2000, atk: 200 },
     passive: {
       name: "Big Fish",
-      description: "[ALLY SUPPORT] When an enemy attacks a teammate, this unit intercepts and takes that damage for the teammate."
+      description: "Team support. When an enemy attacks a teammate, this card intercepts and takes that damage for the teammate."
     },
     image: "assets/cards/seabeast.png"
   },
@@ -774,7 +774,7 @@ const CARDS = [
     stats: { hp: 2400, atk: 240 },
     passive: {
       name: "ZAWATER",
-      description: "[SELF] Enemies facing this unit have a 24% chance to miss their attacks"
+      description: "Enemies facing this card have a 24% chance to miss their attacks"
     },
     image: "assets/cards/arlong.png"
   },
@@ -787,7 +787,7 @@ const CARDS = [
     stats: { hp: 4444, atk: 222 },
     passive: {
       name: "AQUARIUM",
-      description: "[SELF] If the current weather is Raining, this unit gains 50% incoming damage reduction"
+      description: "If the current weather is Raining, this card gains 50% incoming damage reduction"
     },
     image: "assets/cards/aquaman.png"
   },
@@ -800,7 +800,7 @@ const CARDS = [
     stats: { hp: 40000, atk: 2000 },
     passive: {
       name: "Tsunami Water",
-      description: "[SELF] On this unit's entry, summon a tsunami that deals damage equal to 100% of this unit's ATK to all enemies; if at least one enemy dies to the tsunami, this unit gains a Water Shield equal to 100% Max HP"
+      description: "On this card's entry, summon a tsunami that deals damage equal to 100% of this card's ATK to all enemies; if at least one enemy dies to the tsunami, this card gains a Water Shield equal to 100% Max HP"
     },
     image: "assets/cards/noellesilva.png"
   },
@@ -813,7 +813,7 @@ const CARDS = [
     stats: { hp: 50000, atk: 222 },
     passive: {
       name: "BUBBLE CONTROL",
-      description: "[SELF] Every 3 turns, this unit gains a Weather Shield equal to 30% of this unit's current Max HP (including level, mutations and buffs) for 1 turn; if an enemy destroys the shield, that enemy is transformed into a Snail for 2 turns"
+      description: "Every 3 turns, this card gains a Weather Shield equal to 30% of this card's current Max HP (including level, mutations and buffs) for 1 turn; if an enemy destroys the shield, that enemy is transformed into a Snail for 2 turns"
     },
     image: "assets/cards/weatherreaport.png"
   },
@@ -826,7 +826,7 @@ const CARDS = [
     stats: { hp: 80000, atk: 5000 },
     passive: {
       name: "AURA FARMER",
-      description: "[SELF] For each turn when this unit does not attack, this unit gains a 10% ATK damage stack (no cap); this unit loses 1 stack when it attacks"
+      description: "For each turn when this card does not attack, this card gains a 10% ATK damage stack (no cap); this card loses 1 stack when it attacks"
     },
     image: "assets/cards/picolo.png"
   },
@@ -839,7 +839,7 @@ const CARDS = [
     stats: { hp: 1000, atk: 100 },
     passive: {
       name: "Plant",
-      description: "[SELF] When this unit's HP falls below 30%, this unit heals 5% HP each turn"
+      description: "When this card's HP falls below 30%, this card heals 5% HP each turn"
     },
     image: "assets/cards/peashooter.png"
   },
@@ -852,7 +852,7 @@ const CARDS = [
     stats: { hp: 2020, atk: 400 },
     passive: {
       name: "Fire Burst",
-      description: "[SELF] Attacks made by this unit inflict [Burn], and [Burn] deals 50% additional damage based on this unit's ATK"
+      description: "Attacks made by this card inflict [Burn], and [Burn] deals 50% additional damage based on this card's ATK"
     },
     image: "assets/cards/hutao.png"
   },
@@ -865,7 +865,7 @@ const CARDS = [
     stats: { hp: 2770, atk: 690 },
     passive: {
       name: "SUNNY",
-      description: "[SELF] If the weather is Sunny, this unit's ATK damage is doubled"
+      description: "If the weather is Sunny, this card's ATK damage is doubled"
     },
     image: "assets/cards/escanor.png"
   },
@@ -878,7 +878,7 @@ const CARDS = [
     stats: { hp: 5000, atk: 5000 },
     passive: {
       name: "DEVELOPER",
-      description: "[SELF] Each turn, this unit stores 10% of the enemy's ATK in Roblox Tower power; if the enemy is defeated while this unit is alive, all stored power is converted into this unit's HP"
+      description: "Each turn, this card stores 10% of the enemy's ATK in Roblox Tower power; if the enemy is defeated while this card is alive, all stored power is converted into this card's HP"
     },
     image: "assets/cards/builderman.png"
   },
@@ -891,7 +891,7 @@ const CARDS = [
     stats: { hp: 6666, atk: 666 },
     passive: {
       name: "WORLD ENDER",
-      description: "[SELF] Every attack made by this unit heals this unit for 5% HP"
+      description: "Each attack by this card heals this card for 5% HP"
     },
     image: "assets/cards/aatrox.png"
   },
@@ -904,7 +904,7 @@ const CARDS = [
     stats: { hp: 9999, atk: 666 },
     passive: {
       name: "ECLIPSED",
-      description: "[SELF + ALLY EFFECT] When entry sacrifice all teammate for 100% atk damage boost per teammate alive."
+      description: "Teammate effect. When entry sacrifice all teammate for 100% ATK damage boost per teammate alive."
     },
     image: "assets/cards/griffith.png"
   },
@@ -917,7 +917,7 @@ const CARDS = [
     stats: { hp: 10000, atk: 1000 },
     passive: {
       name: "M@!L%#TH",
-      description: "[SELF + ALLY EFFECT] When an enemy is defeated by a fatality attack, this unit revives one teammate with Dante's stats while preserving that teammate's passive (once per match)"
+      description: "Teammate effect. When an enemy is defeated by a fatality attack, this card revives one teammate with Dante's stats while preserving that teammate's passive (once per match)"
     },
     image: "assets/cards/dantelimbus.png"
   },
@@ -930,7 +930,7 @@ const CARDS = [
     stats: { hp: 250000, atk: 2500 },
     passive: {
       name: "END!!!",
-      description: "[SELF] Every attack made by this unit has a 25% chance to deal ×4 ATK damage; when this unit's HP falls below 10%, the chance increases to 50% and the damage becomes ×6 ATK"
+      description: "Each attack by this card has a 25% chance to deal x4 ATK damage; when this card's HP falls below 10%, the chance increases to 50% and the damage becomes x6 ATK"
     },
     image: "assets/cards/adultgon.png"
   },
@@ -943,7 +943,7 @@ const CARDS = [
     stats: { hp: 1350, atk: 300 },
     passive: {
       name: "Freeze",
-      description: "[SELF] Every attack made by this unit has a 10% chance to Freeze the enemy for 1 turn; when this unit attacks a Frozen enemy, it deals +35% ATK damage"
+      description: "Each attack by this card has a 10% chance to Freeze the enemy for 1 turn; when this card attacks a Frozen enemy, it deals +35% ATK damage"
     },
     image: "assets/cards/rukia.png"
   },
@@ -956,7 +956,7 @@ const CARDS = [
     stats: { hp: 3000, atk: 1000 },
     passive: {
       name: "Ice Age",
-      description: "[SELF] Has 33% chance to freeze an enemy after landing a critical hit."
+      description: "Has 33% chance to freeze an enemy after landing a critical hit."
     },
     image: "assets/cards/iceadmiral.png"
   },
@@ -969,7 +969,7 @@ const CARDS = [
     stats: { hp: 4600, atk: 2050 },
     passive: {
       name: "Absolute Zero",
-      description: "[SELF] Has 67% chance to freeze an enemy after landing a critical hit."
+      description: "Has 67% chance to freeze an enemy after landing a critical hit."
     },
     image: "assets/cards/esdeath.png"
   },
@@ -982,7 +982,7 @@ const CARDS = [
     stats: { hp: 10000, atk: 2000 },
     passive: {
       name: "Absolute Zero",
-      description: "[SELF] On the fifth battle turn, this unit gains +50% ATK; from then on, every attack made by this unit has a 50% chance to Stun the enemy for 1 turn"
+      description: "On the fifth battle turn, this card gains +50% ATK; from then on, every attack made by this card has a 50% chance to Stun the enemy for 1 turn"
     },
     image: "assets/cards/toshiro.png"
   },
@@ -995,7 +995,7 @@ const CARDS = [
     stats: { hp: 20000, atk: 3000 },
     passive: {
       name: "Sweet Destruction",
-      description: "[SELF] When this unit kills an enemy, this unit heals for 30% of the target's Max HP and gains +20% stats for 2 turns; if an enemy survives longer than 3 turns while facing this unit, this unit absorbs 50% of that enemy's base ATK and that enemy can no longer dodge this unit's attacks"
+      description: "When this card kills an enemy, this card heals for 30% of the target's Max HP and gains +20% stats for 2 turns; if an enemy survives longer than 3 turns while facing this card, this card absorbs 50% of that enemy's base ATK and that enemy can no longer dodge this card's attacks"
     },
     image: "assets/cards/android21.png"
   },
@@ -1008,7 +1008,7 @@ const CARDS = [
     stats: { hp: 19100, atk: 2022 },
     passive: {
       name: "Cursed Love",
-      description: "[SELF] Can survive fatality attack , if heal below 50% instantly heal 25% hp back and gain 50% atk damage ( once per match )."
+      description: "Can survive fatality attack , if heal below 50% instantly heal 25% HP back and gain 50% ATK damage ( once per match )."
     },
     image: "assets/cards/yutaokkotsu.png"
   },
@@ -1022,7 +1022,7 @@ const CARDS = [
     stats: { hp: 5000, atk: 1000 },
     passive: {
       name: "ENHANCE",
-      description: "[SELF] Each time this unit is attacked, this unit absorbs the damage and returns 50% of the original damage to the enemy"
+      description: "Each time this card is attacked, this card absorbs the damage and returns 50% of the original damage to the enemy"
     },
     image: "assets/cards/luffynightmare.png"
   },
@@ -1035,7 +1035,7 @@ const CARDS = [
     stats: { hp: 6400, atk: 3200 },
     passive: {
       name: "SHADOW KNIGHT",
-      description: "[SELF + ALLY SUPPORT] When this unit attacks, it has a 30% chance to call a teammate to make one follow-up attack."
+      description: "Team support. When this card attacks, it has a 30% chance to call a teammate to make one follow-up attack."
     },
     image: "assets/cards/igris.png"
   },
@@ -1048,7 +1048,7 @@ const CARDS = [
     stats: { hp: 6400, atk: 3200 },
     passive: {
       name: "I AM ATMOIC !!!",
-      description: "[SELF] Every 10th attack made by this unit strikes all enemies for ×100 ATK damage"
+      description: "Every 10th attack made by this card strikes all enemies for x100 ATK damage"
     },
     image: "assets/cards/cidatomic.png"
   },
@@ -1061,7 +1061,7 @@ const CARDS = [
     stats: { hp: 9999, atk: 999 },
     passive: {
       name: "PEARL",
-      description: "[SELF] Survive one fatality attack"
+      description: "Survive one fatality attack"
     },
     image: "assets/cards/enderman.png"
   },
@@ -1074,7 +1074,7 @@ const CARDS = [
     stats: { hp: 20008, atk: 1990 },
     passive: {
       name: "Time Manipulation",
-      description: "[SELF + ALLY SUPPORT] When a heal brings this unit or a teammate from below 60% HP to at least 60% HP, this unit freezes an enemy for 5 turns (once per battle)"
+      description: "Team support. When a heal brings this card or a teammate from below 60% HP to at least 60% HP, this card freezes an enemy for 5 turns (once per battle)"
     },
     image: "assets/cards/homura.png"
   },
@@ -1087,7 +1087,7 @@ const CARDS = [
     stats: { hp: 15000, atk: 5000 },
     passive: {
       name: "Rider Card",
-      description: "[SELF] On this unit's entry, this unit shape-shifts into an enemy card with the same passive while keeping this unit's own stats"
+      description: "On this card's entry, this card shape-shifts into an enemy card with the same passive while keeping this card's own stats"
     },
     image: "assets/cards/krdecade.png"
   },
@@ -1100,7 +1100,7 @@ const CARDS = [
     stats: { hp: 40000, atk: 5500 },
     passive: {
       name: "Storm Susano",
-      description: "[SELF] Every attack made by this unit has a 15% chance to trigger a follow-up attack; follow-up attacks made by this unit inflict [Burn] for 3 turns, and [Burn] deals damage equal to 25% of this unit's ATK each turn. When this unit's HP falls below 40%, this unit gains +60% ATK and 30% incoming damage reduction for 6 turns"
+      description: "Each attack by this card has a 15% chance to trigger a follow-up attack; follow-up attacks made by this card inflict [Burn] for 3 turns, and [Burn] deals damage equal to 25% of this card's ATK each turn. When this card's HP falls below 40%, this card gains +60% ATK and 30% incoming damage reduction for 6 turns"
     },
     image: "assets/cards/uchihasasuke.png"
   },    
@@ -1113,7 +1113,7 @@ const CARDS = [
     stats: { hp: 5000, atk: 1000 },
     passive: {
       name: "Light Speed",
-      description: "[SELF] This unit has a 20% chance to dodge incoming attacks; when a dodge succeeds, the enemy is Stunned for the next turn"
+      description: "This unit has a 20% chance to dodge incoming attacks; when a dodge succeeds, the enemy is Stunned for the next turn"
     },
     image: "assets/cards/kizaru.png"
   }, 
@@ -1126,7 +1126,7 @@ const CARDS = [
     stats: { hp: 8888, atk: 888 },
     passive: {
       name: "Infinity",
-      description: "[SELF] This unit has an 88% chance to dodge incoming attacks, but cannot dodge passive attacks"
+      description: "This unit has an 88% chance to dodge incoming attacks, but cannot dodge passive attacks"
     },
     image: "assets/cards/gojoyoung.png"
   }, 
@@ -1139,7 +1139,7 @@ const CARDS = [
     stats: { hp: 8200, atk: 4100 },
     passive: {
       name: "Ascension",
-      description: "[SELF] Radiant Energy converts each perfect roll into bonus power for this unit"
+      description: "Radiant Energy converts each perfect roll into bonus power for this card"
     },
     image: "assets/cards/adamror.png"
   },
@@ -1152,7 +1152,7 @@ const CARDS = [
     stats: { hp: 7007, atk: 7007 },
     passive: {
       name: "Moon Manipulation",
-      description: "[SELF] After this unit wins a 1v1 battle, it has a 20% chance to add one random Common-Uncommon Weather for 3 minutes"
+      description: "After this card wins a 1v1 battle, it has a 20% chance to add one random Common-Uncommon Weather for 3 minutes"
     },
     image: "assets/cards/sailormoon.png"
   },
@@ -1165,7 +1165,7 @@ const CARDS = [
     stats: { hp: 20000, atk: 7200 },
     passive: {
       name: "72 Magic Spell",
-      description: "[SELF + ALLY EFFECT] If a teammate dies, this unit creates a clone with Jin Mori stats and that teammate's passive (up to 3 times per match)"
+      description: "Teammate effect. If a teammate dies, this card creates a clone with Jin Mori stats and that teammate's passive (up to x3 per match)"
     },
     image: "assets/cards/jinmori.png"
   },
@@ -1178,7 +1178,7 @@ const CARDS = [
     stats: { hp: 15000, atk: 1500 },
     passive: {
       name: "Heavenly Blessing",
-      description: "[SELF + ALLY EFFECT] While this unit is in the party, all allies gain 150% Max HP"
+      description: "Teammate effect. While this card is in the party, all allies gain 150% Max HP"
     },
     image: "assets/cards/wish.png"
   },
@@ -1191,7 +1191,7 @@ const CARDS = [
     stats: { hp: 8800, atk: 4700 },
     passive: {
       name: "TSUKUYOMI",
-      description: "[SELF] This unit has a 35% chance to dodge incoming attacks; when a dodge succeeds, the attacker is Stunned for 3 turns"
+      description: "This unit has a 35% chance to dodge incoming attacks; when a dodge succeeds, the attacker is Stunned for 3 turns"
     },
     image: "assets/cards/shisui.png"
   },
@@ -1204,7 +1204,7 @@ const CARDS = [
     stats: { hp: 60000, atk: 6000 },
     passive: {
       name: "EPITAH",
-      description: "[SELF] This unit has a 35% chance to dodge incoming attacks; when a dodge succeeds, the attacker is Stunned for 3 turns"
+      description: "This unit has a 35% chance to dodge incoming attacks; when a dodge succeeds, the attacker is Stunned for 3 turns"
     },
     image: "assets/cards/diavolo.png"
   },
@@ -1217,7 +1217,7 @@ const CARDS = [
     stats: { hp: 66000, atk: 9999 },
     passive: {
       name: "Dimensional Domain",
-      description: "[SELF + ALLY EFFECT] On this unit's entry, this unit creates a domain lasting 3 turns. When activated, the domain disables attacks for all enemies and teammates for 1 turn; enemies inside take Burn damage each turn equal to 100% of this unit's ATK"
+      description: "Teammate effect. On this card's entry, this card creates a domain lasting 3 turns. When activated, the domain disables attacks for all enemies and teammates for 1 turn; enemies inside take Burn damage each turn equal to 100% of this card's ATK"
     },
     image: "assets/cards/kaguya.png"
   },
@@ -1230,7 +1230,7 @@ const CARDS = [
     stats: { hp: 7000, atk: 3500 },
     passive: {
       name: "Last Breath",
-      description: "[SELF] After this unit deals critical damage, this unit can finish an enemy with a spectral silver edge"
+      description: "After this card deals critical damage, this card can finish an enemy with a spectral silver edge"
     },
     image: "assets/cards/vastolord.png"
   },
@@ -1243,7 +1243,7 @@ const CARDS = [
     stats: { hp: 10000, atk: 1000 },
     passive: {
       name: "Return By Death",
-      description: "[SELF] After this unit suffers its first fatality, this unit revives at 90% Max HP; later fatality hits have a 65% chance to revive this unit at 50% Max HP. Each revival grants +20% ATK damage and 15% dodge chance"
+      description: "After this card suffers its first fatality, this card revives at 90% Max HP; later fatality hits have a 65% chance to revive this card at 50% Max HP. Each revival grants +20% ATK damage and 15% dodge chance"
     },
     image: "assets/cards/subaru.png"
   },
@@ -1256,7 +1256,7 @@ const CARDS = [
     stats: { hp: 666, atk: 333 },
     passive: {
       name: "WGRYYYY",
-      description: "[SELF] An attack made by this unit has a 20% chance to Freeze the enemy for 2 turns; when the Freeze succeeds, this unit heals for 20% HP"
+      description: "An attack made by this card has a 20% chance to Freeze the enemy for 2 turns; when the Freeze succeeds, this card heals for 20% HP"
     },
     image: "assets/cards/diobrando.png"
   },
@@ -1269,7 +1269,7 @@ const CARDS = [
     stats: { hp: 11000, atk: 4500 },
     passive: {
       name: "Malevolent Kitchen",
-      description: "[SELF] On the fifth attack made by this unit, repeatedly slash the enemy until the enemy's HP falls below 50%"
+      description: "On the fifth attack made by this card, repeatedly slash the enemy until the enemy's HP falls below 50%"
     },
     image: "assets/cards/sukuna.png"
   },
@@ -1282,7 +1282,7 @@ const CARDS = [
     stats: { hp: 16000, atk: 4020 },
     passive: {
       name: "STRING ARMY",
-      description: "[SELF + ALLY EFFECT] Every time this unit kills an enemy, this unit has a 30% chance to turn that defeated enemy into a teammate once per match"
+      description: "Teammate effect. Whenever this card kills an enemy, this card has a 30% chance to turn that defeated enemy into a teammate. This original unit can repeat the 30% conversion chance after each eligible kill; generated teammates cannot create further units"
     },
     image: "assets/cards/doflamingo.png"
   },
@@ -1295,7 +1295,7 @@ const CARDS = [
     stats: { hp: 77777, atk: 7777 },
     passive: {
       name: "JACKPOT",
-      description: "[SELF] While this unit is in the team, Victory Battle grants 100% more rewards. If this unit enters first, it becomes Invincible for 7 turns; otherwise, it gains either +77% ATK damage or +77% HP"
+      description: "While this card is in the team, Victory Battle grants 100% more rewards. If this card enters first, it becomes Invincible for 7 turns; otherwise, it gains either +77% ATK damage or +77% HP"
     },
     image: "assets/cards/hakarijackpot.png"
   },
@@ -1308,7 +1308,7 @@ const CARDS = [
     stats: { hp: 80000, atk: 8000 },
     passive: {
       name: "ADAPTION",
-      description: "[SELF] Each time this unit is attacked, it has a 25% chance to Adapt that attack and gain 25% incoming damage reduction; the adaptation resets when facing a new enemy. Each time this unit kills an enemy, this unit heals 50% HP"
+      description: "Each time this card is attacked, it has a 25% chance to Adapt that attack and gain 25% incoming damage reduction; the adaptation resets when facing a new enemy. Each time this card kills an enemy, this card heals 50% HP"
     },
     image: "assets/cards/mahoraga.png"
   }
@@ -1316,19 +1316,30 @@ const CARDS = [
 
 // Champions retain the existing reward IDs/receipts; exact level-1 Normal specs.
 const TOWER_REWARD_CARDS = [
-  {"id": "tower-champion-normal", "image": "assets/cards/equinox.png", "towerType": "normal", "unlockRequirement": "tower_floor_100_normal", "sourceId": "starter-common", "name": "Equinox", "chance": 2500025, "requiredWeather": "Normal", "nativeWeather": null, "stats": {"hp": 250000, "atk": 25000}, "passive": {"name": "Emotional Meter", "description": "Starts at 50% positive / 50% negative. Attacking gains 10–20% positive; being attacked gains 10–20% negative.\nPositive 100%: team +100% HP / +25% ATK; meter locks.\nNegative 100%: blasts all enemies for 25× ATK, then dies permanently; cannot be revived."}},
-  {"id": "tower-champion-raining", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 222222, "atk": 2222}, "passive": {"name": "Useless", "description": "Choose at battle start: +50% team HP OR +50% drop reward bonus.\nOn turns Aqua does not attack, heal the attacking teammate for 10% Max HP and grant +2.2% ATK."}},
-  {"id": "tower-champion-snowing", "image": "assets/cards/iceking.png", "towerType": "snowing", "unlockRequirement": "tower_floor_100_snowing", "sourceId": "toshiro", "name": "Ice King", "chance": 1058000, "requiredWeather": "Snowing", "nativeWeather": "snowing", "stats": {"hp": 104600, "atk": 46000}, "passive": {"name": "Ice Manipulation", "description": "Being attacked: 20% chance to freeze the attacker for 2 turns. Frozen targets take +50% attack damage.\nOn fatal damage, revives for 5 turns then dies permanently. 58% chance to give a random teammate the Ice King Crown (+10% chance to freeze enemies for 3 turns). No revival from other sources."}},
-  {"id": "tower-champion-sunny", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 78000, "atk": 13000}, "passive": {"name": "Solar Claw", "description": "33% critical chance. Critical hits inflict Burn for 3 turns at 33% current ATK per turn.\nA critical hit triggers one guaranteed critical follow-up dealing 3× damage."}},
-  {"id": "tower-champion-sugar", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 76000, "atk": 7600}, "passive": {"name": "Candy Eater", "description": "Every attack gains 1–3 candies. Form bonuses do not stack.\nForm 1 (0–10): +25% attack damage and +1 candy per attack.\nForm 2 (11–25): +50% Max HP; spending 1 candy when hit heals 3% Max HP.\nForm 3 (26–50): summon a Ghost after each attack (HP = damage dealt; ATK = 10% current ATK).\nForm 4 (51–75): 76% dodge; a dodge skips the next attack, gains 5 candies and heals 7.6% Max HP.\nForm 5 (76–99): every third attack hits 3 random enemies for 50% ATK.\nFinal (100): attacks the entire enemy team, spending candies until 0, then returns to Form 1 and self-stuns 5 turns. Cannot transform while reverting."}},
-  {"id": "tower-champion-reaper", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 100000, "atk": 60000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every second attack blasts all enemies for 60% of each target's current ATK.\n6% chance to counter an incoming attack for 50% damage.\nRevives once at 100% Max HP with +50% ATK after fatal damage. Cannot be cloned or revived by teammates."}},
-  {"id": "tower-champion-eclipse", "image": "assets/cards/wou.png", "towerType": "eclipse", "unlockRequirement": "tower_floor_100_eclipse", "sourceId": "weather-eclipse-harvester", "name": "Wonder Of You", "chance": 8000000, "requiredWeather": "Eclipse", "nativeWeather": "eclipse", "stats": {"hp": 800000, "atk": 8}, "passive": {"name": "Calamity", "description": "Protect a random teammate at battle start; replace the target if it dies.\nProtected teammate takes 50% damage; the other 50% is redirected here. 8% chance to reflect redirected damage back to the attacker.\nWhen the protected teammate kills, heal this card for 80% Max HP.\nIf this card dies while protecting, 8% chance to instantly kill the attacker."}},
-  {"id": "tower-champion-malevolent", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 66666, "atk": 9999}, "passive": {"name": "Malevolent Kitchen", "description": "After 5 attacks, every turn hits the full enemy team for 25% current ATK.\nWhen hit, 66% chance to heal 6% Max HP and gain +9% ATK, with no stack cap."}},
-  {"id": "tower-champion-tsukuyomi", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 200000, "atk": 20000}, "passive": {"name": "Datebayo", "description": "When a new enemy enters, choose Naruto or Sasuke mode until it dies.\nNaruto: every third attack deals 3× damage and creates a 10%-stat clone; clones follow up. A clone death heals the owner for 10% Max HP. Switching to Sasuke removes all clones.\nSasuke: every second attack hits all enemies for 50% current ATK; 20% dodge. A dodge applies Burn (25% ATK for 5 turns), shields incoming damage for 3 turns, and stuns the enemy for 1 turn when Burn ends. Switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
-  {"id": "tower-champion-heavenly", "image": "assets/cards/judgement.png", "towerType": "heavenly", "unlockRequirement": "tower_floor_100_heavenly", "sourceId": "weather-heavenly-seraph", "name": "The Judgement", "chance": 300300, "requiredWeather": "Heavenly", "nativeWeather": "heavenly", "stats": {"hp": 40000, "atk": 5000}, "passive": {"name": "Divine Light", "description": "Every second attack: 33% chance to beam all enemies for 50% current ATK; each hit has 66% chance of Heresy for 1–3 turns.\nWhile an enemy has Heresy: Zealous beam chance/damage = 66%/66%, Heresy chance = 33%.\nHeresy: -9% damage and 3% chance to miss."}},
-  {"id": "tower-champion-shadow", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 102000, "atk": 28000}, "passive": {"name": "Dark Aurora", "description": "On a kill: 29% chance to convert the enemy into a frontline teammate using this card's current HP/ATK, and steal its passive.\nA converted teammate that dies revives at the back with this card's stats and the stolen passive, up to 2 revivals."}},
+  {"id": "tower-champion-normal", "image": "assets/cards/equinox.png", "towerType": "normal", "unlockRequirement": "tower_floor_100_normal", "sourceId": "starter-common", "name": "Equinox", "chance": 2500025, "requiredWeather": "Normal", "nativeWeather": null, "stats": {"hp": 250000, "atk": 25000}, "passive": {"name": "Emotional Meter", "description": "At the start of the match, the Emotional Meter is 50% positive and 50% negative. The two sides always add up to 100%.\nEach primary attack moves a random 10–20 percentage points toward positive. Each incoming hit moves a random 10–20 percentage points toward negative. Moving toward one side reduces the other by the same amount.\nAt 100% positive, every living teammate, including Equinox, gains 100% additional max HP and 25% additional ATK. The meter then locks and cannot trigger again.\nAt 100% negative, Equinox deals damage equal to x25 its current ATK to every living enemy, then dies permanently. This death cannot be reversed by revival or cloning."}},
+  {"id": "tower-champion-raining", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 222222, "atk": 2222}, "passive": {"name": "Useless", "description": "Before the battle starts, choose one of two team benefits: 50% additional max HP for the whole team, including Aqua, or a 50% bonus to eligible battle rewards.\nThe HP choice is applied once per team, even if the lineup contains multiple Aquas. The reward choice increases eligible battle currency, battle experience and Reward Bonus; it does not increase Tower Coins, independent potion drop chances or Time Trial payouts. Tower still gives no experience.\nAt the start of an allied combat turn, if another living teammate is the active attacker and Aqua is alive, Aqua heals that teammate for 10% of the teammate's current max HP and increases the teammate's current ATK by 2.2%. This support also occurs if the teammate later loses the attack to stun or freeze.\nAqua does not heal the enemy team or herself through this support trigger. Follow-up attacks in the same turn do not trigger extra support."}},
+  {"id": "tower-champion-snowing", "image": "assets/cards/iceking.png", "towerType": "snowing", "unlockRequirement": "tower_floor_100_snowing", "sourceId": "toshiro", "name": "Ice King", "chance": 1058000, "requiredWeather": "Snowing", "nativeWeather": "snowing", "stats": {"hp": 104600, "atk": 46000}, "passive": {"name": "Ice Manipulation", "description": "When Ice King is hit, it has a 20% chance to freeze the attacker for two of that attacker's turns. Ice King's primary attacks deal 50% additional damage to targets that are already frozen.\nThe first eligible fatal hit revives Ice King at full max HP and starts a five-combat-turn afterlife. Both teams' combat turns count toward this timer. Further fatal hits during the afterlife do not restart it or grant another revival.\nWhen the five turns end, Ice King dies permanently. Other cards cannot revive Ice King, and this passive can start its afterlife only once per match.\nOn permanent death, Ice King has a 58% chance to give one random living teammate the Ice King Crown. The Crown adds a separate 10% chance on each successful primary attack to freeze that attack's target for three turns. It does not change Ice King's own two-turn freeze effect."}},
+  {"id": "tower-champion-sunny", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 78000, "atk": 13000}, "passive": {"name": "Solar Claw", "description": "Charizard Mega X has a base 33% critical-hit chance. Every attack still rolls for a critical hit normally.\nThe first successful critical hit in the match inflicts Burn on its surviving target for 3 of the target's turns. Each Burn tick deals 33% of Charizard's current ATK when the effect is applied. A fully blocked critical hit does not consume this first-crit trigger.\nAfter that first successful critical hit, each later critical hit applies x3 to its attack damage before the normal critical-damage multiplier. A non-critical hit remains normal. These later critical hits do not reapply Solar Claw Burn.\nSolar Claw never creates a free follow-up attack and never guarantees the next critical hit. Existing critical buffs, defenses and status immunity still apply."}},
+  {"id": "tower-champion-sugar", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 76000, "atk": 7600}, "passive": {"name": "Candy Eater", "description": "Majin Buu starts with zero candies. Each primary attack gains a random one to three candies before its damage is resolved. Candy count determines the active form; only that form's bonuses apply, and bonuses from earlier forms do not stay active.\nForm 1 — 0–10 candies: primary attack damage is increased by 25%, and each attack gains one extra candy in addition to the normal random gain.\nForm 2 — 11–25 candies: max HP is increased by 50% while this form is active. When Buu is hit and still alive, it spends one candy to heal for 3% of its current max HP.\nForm 3 — 26–50 candies: after a primary attack deals damage, Buu summons one Ghost. The Ghost's max HP equals the damage actually dealt by that attack, and its ATK equals 10% of Buu's current ATK. Ghosts cannot create more summons.\nForm 4 — 51–75 candies: Buu has a 76% chance to dodge. A successful dodge skips its next attack, adds five candies and heals 7.6% of its current max HP.\nForm 5 — 76–99 candies: every third primary attack also hits up to three different randomly selected living enemies, each for 50% of Buu's current ATK.\nFinal Form — 100 candies: each primary attack also hits the remaining living enemy team with Buu's current ATK. Each attack spends one candy; this form stays active until all candies are spent.\nAt zero candies, Buu returns to Form 1 and is stunned for five of its turns. It cannot gain candies or change forms during this reversion. Healing follows the normal anti-healing rules. A cloned or summoned Buu keeps its other effects but cannot summon Ghosts."}},
+  {"id": "tower-champion-reaper", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 100000, "atk": 60000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every second primary attack, Aizen Beyond additionally strikes every living enemy. Each enemy takes damage equal to 60% of that enemy's own current ATK, rather than 60% of Aizen's ATK.\nAfter taking damage, Aizen has a 6% chance to counter the attacker for 50% of the damage Aizen actually received. This counter does not trigger another Aizen counter in response.\nThe first eligible fatal hit in a match revives Aizen at 100% of its current max HP and increases its current ATK by 50%. This self-revival can occur only once per match and follows the game's anti-revival rules.\nAizen cannot be cloned or revived by another teammate."}},
+  {"id": "tower-champion-eclipse", "image": "assets/cards/wou.png", "towerType": "eclipse", "unlockRequirement": "tower_floor_100_eclipse", "sourceId": "weather-eclipse-harvester", "name": "Wonder Of You", "chance": 8000000, "requiredWeather": "Eclipse", "nativeWeather": "eclipse", "stats": {"hp": 800000, "atk": 8}, "passive": {"name": "Calamity", "description": "At battle start, Wonder Of You randomly selects one other living teammate to protect. If that teammate dies, it selects another living teammate. With no other living teammate, there is no protection target.\nWhen the protected teammate takes damage, its shield and normal damage reduction are applied first. The remaining damage is split: the teammate keeps 50%, and Wonder Of You absorbs the other 50% directly without changing either unit's position or the active frontline.\nWonder Of You has an 8% chance to send the shared half back to the original attacker instead of absorbing it. The teammate still takes its own half. Shared or reflected damage cannot trigger another Calamity redirection; the receiving unit's normal defenses still apply. For odd damage, the extra point stays on the protected teammate.\nWhen the protected teammate defeats an enemy, Wonder Of You heals for 80% of its current max HP, subject to normal anti-healing rules.\nIf Wonder Of You dies while it has a protection target, it has an 8% chance to execute the attacker. The execution respects existing passive immunity and fatal-hit survival effects."}},
+  {"id": "tower-champion-malevolent", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 66666, "atk": 9999}, "passive": {"name": "Malevolent Kitchen", "description": "Count Thukuna's primary attacks. After it has made five, every subsequent combat turn, including enemy turns, additionally hits every living enemy for 25% of Thukuna's current ATK while Thukuna is alive.\nWhenever Thukuna is hit and survives, it has a 66% chance to heal for 6% of its current max HP and increase its current ATK by 9%.\nThe attack-power increases have no stack limit and remain for the match. Each new increase uses the ATK at that moment. Healing follows normal anti-healing rules; Tower enemy attack limits still apply."}},
+  {"id": "tower-champion-tsukuyomi", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 200000, "atk": 20000}, "passive": {"name": "Datebayo", "description": "Whenever a new enemy becomes the active opponent, Naruto x Sasuke randomly chooses Naruto mode or Sasuke mode with equal chances. The chosen mode remains until that opponent dies; a new opponent starts a new mode attack counter.\nNaruto mode: every third primary attack deals x3 its normal damage and summons one Clone. Each Clone starts with 10% of this card's current max HP and ATK. Living Clones make a follow-up hit after their owner's primary attack. The original card has no Clone count limit, but Clones cannot create more Clones or other summons.\nWhen a Naruto Clone dies while its owner is alive, the owner heals for 10% of its current max HP. Switching to Sasuke removes all Naruto Clones without granting this death heal.\nSasuke mode: every second primary attack also hits every living enemy for 50% of this card's current ATK. Sasuke has a 20% dodge chance.\nOn a successful Sasuke dodge, the attacker receives Burn for five of its turns, dealing 25% of this card's ATK at application per turn. Sasuke gains a shield equal to the incoming damage it avoided; the shield lasts three combat turns. When that Burn naturally ends, its victim is stunned for one turn.\nSwitching to Naruto removes Sasuke's shield. Healing, shields and status effects follow the existing battle rules. A cloned or summoned copy keeps the other mode effects but cannot summon Clones."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
+  {"id": "tower-champion-heavenly", "image": "assets/cards/judgement.png", "towerType": "heavenly", "unlockRequirement": "tower_floor_100_heavenly", "sourceId": "weather-heavenly-seraph", "name": "The Judgement", "chance": 300300, "requiredWeather": "Heavenly", "nativeWeather": "heavenly", "stats": {"hp": 40000, "atk": 5000}, "passive": {"name": "Divine Light", "description": "Every second primary attack, The Judgement has a 33% chance to fire a light beam at every living enemy. Each beam hit deals damage equal to 50% of this card's current ATK.\nAn enemy damaged by the beam has a 66% chance to receive Heresy for a random one to three of that enemy's turns.\nWhile at least one living enemy has Heresy, The Judgement uses Zealous mode: the beam chance becomes 66%, beam damage becomes 66% of current ATK, and each damaged enemy's chance to receive Heresy becomes 33%.\nAn enemy with Heresy deals 9% less attack and skill damage and has a separate 3% chance to miss a primary attack. When no living enemy has Heresy, the normal beam values return. Existing defenses and status immunity still apply."}},
+  {"id": "tower-champion-shadow", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 102000, "atk": 28000}, "passive": {"name": "Dark Aurora", "description": "Whenever the original Dark Decade defeats an enemy, it has a 29% chance to convert that enemy into a teammate and steal the enemy's passive. Uncloneable enemies and existing clones or summons cannot be converted.\nThe converted teammate enters the active frontline with max HP and ATK copied from Dark Decade's current stats. It keeps the defeated enemy's passive; Dark Decade also begins using that stolen passive.\nIf the converted teammate dies while Dark Decade is alive, it can revive at the back of the lineup with Dark Decade's current max HP and ATK, keeping its stolen passive. Each converted teammate can revive at most twice per match, subject to anti-revival rules.\nConverted teammates cannot create further clones, summons or converted units, even when their inherited passive normally creates companions. A cloned or summoned Dark Decade cannot convert enemies. These limits do not remove ordinary attacks or non-summoning effects of the stolen passive."}},
 ].map(reward => Object.freeze({ ...reward, towerFloor: 100, rarity: 'Secret', image: reward.image, description: `Clear Floor 100 of ${reward.towerType} Tower. Future rolls require the matching weather.` }));
 CARDS.push(...TOWER_REWARD_CARDS);
+// Raid-only secrets never enter RNG pools, including after their first unlock.
+const RAID_SECRET_CARDS = [
+  { id: 'raid-secret-mihawk', name: 'Mihawk', rarity: 'Secret', chance: 0, stats: { hp: 100000, atk: 5000 }, image: 'assets/cards/mihawk.png',
+    passive: { name: 'Hawkeye', description: 'Mihawk has a 50% chance to dodge an incoming attack. On a successful dodge, it counters the attacker for 500% of its current ATK.\nEach primary attack pierces the living enemy lineup. Every successful damaging hit applies x0.75 to the damage used for the next target. If the first target dodges or blocks all damage with a shield, the attack still pierces the other enemies without consuming a damage-falloff step.\nAt the start of every combat turn while Mihawk is alive, it has a 25% chance to enter Haki for 2 combat turns: +250% current ATK and 25% incoming damage reduction. Reapplying Haki refreshes its duration without stacking the same buff. Other defense and status rules still apply.' } },
+  { id: 'raid-secret-ace', name: 'Ace', rarity: 'Secret', chance: 0, stats: { hp: 10000, atk: 1000 }, image: 'assets/cards/ace.png',
+    passive: { name: 'Mera Mera', description: 'Each successful attack has a 10% chance to inflict Burn for 3 of the target\'s turns. Each Burn tick deals 100% of Ace\'s current ATK when the effect is applied.\nOn Ace\'s death, every other living teammate gains Brother Soul for the rest of the match. Each successful attack by an affected teammate has a separate 10% chance to inflict Burn for 1 of the target\'s turns, dealing 100% of that teammate\'s current ATK.\nBrother Soul Burn stacks with Burn from the teammate\'s own passive. Multiple Ace deaths do not multiply the Brother Soul trigger chance. Status immunity and normal Burn rules still apply.' } },
+  { id: 'raid-secret-marco', name: 'Marco', rarity: 'Secret', chance: 0, stats: { hp: 500000, atk: 10000 }, image: 'assets/cards/marco.png',
+    passive: { name: 'Phoenix Inferno', description: 'While Marco is alive, each attack directed at another teammate has a 10% chance to be blocked completely. Marco then counters the attacker for 200% of Marco\'s current ATK without moving either teammate.\nOnce per match, if a living teammate falls below 10% of its current max HP, Marco swaps lineup positions with that teammate and attempts to restore the teammate to max HP. This rescue is checked after damage and at the start of combat turns; it cannot revive a teammate that has already died. Normal anti-healing rules still apply.\nMarco has a 10% dodge chance. Each successful dodge grants every living teammate, including Marco, +10% current max HP for the rest of the match. These HP bonuses stack.' } }
+].map(card => Object.freeze({ ...card, requiredWeather: null, raidOnly: true, raidType: 'marine_fort', unlockRequirement: `raid_secret_${card.name.toLowerCase()}`, description: 'Exclusive Marine Fort Raid drop. Never available from normal rolls.' }));
+CARDS.push(...RAID_SECRET_CARDS);
+if (typeof window !== 'undefined') window.RAID_SECRET_CARDS = RAID_SECRET_CARDS;
 if (typeof window !== 'undefined') window.TOWER_REWARD_CARDS = TOWER_REWARD_CARDS;
 
 // The base card database is immutable at the array level. Gameplay code must

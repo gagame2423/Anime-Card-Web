@@ -199,6 +199,14 @@
     return Boolean(unit && !unit.defeated && Number(unit.hp) > 0);
   }
 
+  function isGeneratedUnit(unit) {
+    return Boolean(unit && (unit.isClone || unit.isSummoned || unit.isTemporaryAlly || unit.championSummonType));
+  }
+
+  function canCreateCompanion(unit) {
+    return Boolean(unit && !isGeneratedUnit(unit));
+  }
+
   function aliveUnits(team) {
     return Array.isArray(team) ? team.filter(isAlive) : [];
   }
@@ -287,9 +295,9 @@
       return result;
     }
     function summon(bs, owner, hp, attack, kind, victim = null) {
-      if (victim && (uncloneable(victim) || (!isAlive(victim) && noExternalRevive(victim)))) return null;
+      if (!canCreateCompanion(owner) || (victim && (isGeneratedUnit(victim) || uncloneable(victim) || (!isAlive(victim) && noExternalRevive(victim))))) return null;
       const card = victim?.card || { id: `champion-${kind}-summon`, name: kind === 'ghost' ? 'Ghost' : 'Naruto Clone', passive: null, stats: { hp, atk: attack }, image: owner.card?.image };
-      const unit = { card, mutations: [...(owner.mutations || [])], display: { name: victim ? `${victim.display?.name || card.name} • Dark Aurora` : card.name, hp, atk: attack }, hp: Math.max(1, Math.floor(hp)), maxHp: Math.max(1, Math.floor(hp)), atk: Math.max(1, Math.floor(attack)), defeated: false, isClone: kind !== 'converted', isTemporaryAlly: true, championSummonType: kind, championOwner: owner, level: owner.level || 1 };
+      const unit = { card, mutations: [...(owner.mutations || [])], display: { name: victim ? `${victim.display?.name || card.name} • Dark Aurora` : card.name, hp, atk: attack }, hp: Math.max(1, Math.floor(hp)), maxHp: Math.max(1, Math.floor(hp)), atk: Math.max(1, Math.floor(attack)), defeated: false, isClone: kind !== 'converted', isSummoned: true, isTemporaryAlly: true, championSummonType: kind, championOwner: owner, level: owner.level || 1 };
       if (bs.mode === 'tower' && bs.enemyTeam.includes(owner)) window.TowerSystem?.protectEnemyUnit(unit);
       ensureRuntime(unit).effectivePassiveId = victim ? getEffectivePassiveCardId(victim) : null;
       teamOf(bs, owner).push(unit); refreshUnitDisplay(unit); return unit;
@@ -297,13 +305,14 @@
     function hit(bs, source, target, damage, options = {}) {
       if (!isAlive(target) || !(damage > 0)) return { damage: 0, killed: false };
       const amount = Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1)));
+      if (raidSecrets.block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       if (!options.championCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) {
         const reflected = damageUnit(bs, target, source, Math.max(1, Math.floor(getBaseAtk(source) * .50)), { passiveAttack: true, championCounter: true });
         if (reflected.killed) { onKill(bs, target, source); onTeammateDeath(bs, source); }
         return { damage: 0, killed: false, reflected: true };
       }
-      if (amount >= target.hp && onFatalityAttempt(bs, target, source, amount, options)) return { damage: 0, killed: false };
-      const result = damageUnit(bs, source, target, amount, { passiveAttack: true, championSkill: true, ...options });
+      if (amount >= target.hp && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, amount, options)) return { damage: 0, killed: false };
+      const result = damageUnit(bs, source, target, amount, { passiveAttack: true, championSkill: true, ...options, raidBlockChecked: true });
       onHitTaken(bs, target, source, { hit: true, damage: result.damage, championCounter: options.championCounter });
       if (result.killed) { onKill(bs, source, target); onTeammateDeath(bs, target); }
       return result;
@@ -377,6 +386,7 @@
     function multiplier(unit, target, options) {
       if (options.isFollowUp) return 1;
       const c = state(unit), code = id(unit);
+      if (code === 'sunny' && options.critical && c.solarFirstCritLanded) return 3;
       if (code === 'sugar' && c.form === 1 && !c.reverting) return 1.25;
       if (code === 'tsukuyomi' && c.mode === 'naruto' && c.modeAttacks % 3 === 0) return 3;
       if (code === 'snowing' && ensureRuntime(target).freezeTurns > 0) return 1.50;
@@ -396,9 +406,9 @@
     }
     function afterAttack(bs, unit, target, outcome, options) {
       const c = state(unit), code = id(unit);
-      if (code === 'sunny' && outcome.critical) {
+      if (code === 'sunny' && outcome.critical && outcome.hit && outcome.damage > 0 && !c.solarFirstCritLanded) {
+        c.solarFirstCritLanded = true;
         if (isAlive(target) && sourcePassiveAllowed(target, unit)) addDot(target, 'burn', 3, Math.max(1, Math.floor(atk(unit) * .33)), unit);
-        if (!options.championFollowup && isAlive(unit) && isAlive(target)) performAttack(bs, unit, target, { isFollowUp: true, championFollowup: true, forceCritical: true, damageMultiplier: 3, chainDepth: (options.chainDepth || 0) + 1 });
       }
       if (options.isFollowUp || options.isCounter || !isAlive(unit)) return;
       if (c.iceCrown && outcome.hit && Math.random() < .10 && isAlive(target) && sourcePassiveAllowed(target, unit)) setStatus(target, 'freezeTurns', 3, unit);
@@ -442,6 +452,7 @@
     }
     function death(bs, unit, attacker) {
       if (isAlive(unit)) return false;
+      raidSecrets.death(bs, unit);
       const c = state(unit); if (c.deathHandled) return false; c.deathHandled = true;
       const owner = unit.championOwner;
       if (!unit.championDismissed && unit.championSummonType === 'duo' && isAlive(owner)) heal(owner, owner.maxHp * .10, 'NARUTO CLONE', bs, owner);
@@ -459,7 +470,7 @@
     function kill(bs, unit, victim) {
       const c = state(unit);
       for (const ally of alliesOf(bs, unit)) if (id(ally) === 'eclipse' && state(ally).protected === unit) heal(ally, ally.maxHp * .80, 'CALAMITY', bs, ally);
-      if ((id(unit) === 'shadow' || cardIdOf(unit) === prefix + 'shadow') && isAlive(unit) && Math.random() < .29 && !uncloneable(victim) && !noExternalRevive(victim)) {
+      if (canCreateCompanion(unit) && !isGeneratedUnit(victim) && (id(unit) === 'shadow' || cardIdOf(unit) === prefix + 'shadow') && isAlive(unit) && Math.random() < .29 && !uncloneable(victim) && !noExternalRevive(victim)) {
         const stolen = getEffectivePassiveCardId(victim), converted = summon(bs, unit, unit.maxHp, unit.atk, 'converted', victim);
         if (converted) {
           if (c.formHp) {
@@ -484,14 +495,33 @@
         }
       }
     }
+    function guardianFor(bs, target) {
+      return alliesOf(bs, target, false).find(v => id(v) === 'eclipse' && state(v).protected === target) || null;
+    }
     function redirect(bs, target, attacker, amount, meta) {
       if (meta.championRedirect || amount <= 0) return amount;
-      const guardian = alliesOf(bs, target, false).find(v => id(v) === 'eclipse' && state(v).protected === target);
+      const guardian = guardianFor(bs, target);
       if (!guardian) return amount;
-      const redirected = amount * .50;
+      // Split damage in place: neither target selection nor lineup indices change.
+      // Keep the odd point on the protected unit so integer damage is conserved.
+      const redirected = Math.floor(amount * .50);
+      if (!redirected) return amount;
       const reflected = Math.random() < .08;
-      hit(bs, reflected ? guardian : attacker, reflected ? attacker : guardian, redirected, { championRedirect: true, championCounter: true });
-      return amount * .50;
+      const receiver = reflected ? attacker : guardian;
+      const source = reflected ? guardian : attacker;
+      if (isAlive(receiver)) {
+        const before = receiver.hp;
+        const prevented = redirected >= before && onFatalityAttempt(bs, receiver, source, redirected, meta);
+        if (prevented) recordBattleDamage(bs, source, receiver, before);
+        else {
+          const result = damageUnit(bs, source, receiver, redirected, { championRedirect: true, championCounter: true, passiveAttack: true });
+          onHitTaken(bs, receiver, source, { hit: true, damage: result.damage, championCounter: true });
+          host.showBattleFloatingText?.(receiver, `-${result.damage}`, 'damage');
+          if (result.killed) { onKill(bs, source, receiver); onTeammateDeath(bs, receiver); }
+        }
+      }
+      log(guardian, reflected ? 'Calamity reflected the shared damage; positions unchanged' : 'Calamity absorbed half the damage; positions unchanged');
+      return amount - redirected;
     }
     function turn(bs, attacker) {
       for (const unit of allUnits(bs).filter(isAlive)) {
@@ -525,7 +555,93 @@
       if (c.heresy) add(`HERESY ${c.heresy}t`); if (c.iceCrown) add('ICE KING CROWN'); if (c.iceTurns) add(`AFTERLIFE ${c.iceTurns}t`);
       return rows;
     }
-    return { id, state, entry, beforeAttack, incoming, multiplier, dodgeChance, dodge, afterAttack, hitTaken, fatal, death, kill, redirect, turn, endTurn, rewards, badges, uncloneable, noExternalRevive, describe };
+    return { id, state, entry, beforeAttack, incoming, multiplier, dodgeChance, dodge, afterAttack, hitTaken, fatal, death, kill, guardianFor, redirect, turn, endTurn, rewards, badges, uncloneable, noExternalRevive, describe };
+  })();
+
+  // Raid-exclusive hooks are also available to legitimately inherited passives.
+  const raidSecrets = (() => {
+    const id = unit => getEffectivePassiveCardId(unit);
+    const state = unit => ensureRuntime(unit).raidSecret ||= {};
+    const atk = unit => computeWeakenedAtk(unit);
+    function burn(bs, unit, target, outcome) {
+      if (!outcome.hit || !(outcome.damage > 0) || !isAlive(target) || !sourcePassiveAllowed(target, unit)) return;
+      if (id(unit) === 'raid-secret-ace' && Math.random() < .10) addDot(target, 'burn', 3, Math.max(1, Math.floor(atk(unit))), unit);
+      if (ensureRuntime(unit).brotherSoul && Math.random() < .10) addDot(target, 'burn', 1, Math.max(1, Math.floor(atk(unit))), unit);
+    }
+    function hit(bs, source, target, amount, options = {}) {
+      if (!isAlive(source) || !isAlive(target) || !(amount > 0)) return { damage: 0, killed: false };
+      if (block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
+      const heresyFactor = options.raidCounter && champions.state(source).heresy > 0 ? .91 : 1;
+      const value = Math.max(1, Math.floor(amount * heresyFactor)), before = target.hp;
+      if (!options.raidCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) return hit(bs, target, source, getBaseAtk(source) * .50, { raidCounter: true });
+      if (value >= before && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, value, options)) { recordBattleDamage(bs, source, target, before); return { damage: 0, killed: false }; }
+      const result = damageUnit(bs, source, target, value, { passiveAttack: true, raidSkill: true, ...options, raidBlockChecked: true });
+      if (result.raidBlocked) return result;
+      onHitTaken(bs, target, source, { hit: true, damage: result.damage, championCounter: Boolean(options.raidCounter) });
+      burn(bs, source, target, { ...result, hit: true });
+      if (result.killed) { onKill(bs, source, target); onTeammateDeath(bs, target); }
+      return result;
+    }
+    function block(bs, attacker, target, meta) {
+      if (meta.raidBlockChecked || meta.raidCounter || meta.championRedirect || !isAlive(attacker)) return false;
+      const marco = alliesOf(bs, target, false).find(unit => id(unit) === 'raid-secret-marco');
+      if (!marco || Math.random() >= .10) return false;
+      safeLog(`[PASSIVE] ${marco.display?.name || 'Marco'} blocked the teammate's attack and counters for 200% ATK.`, 'passive');
+      hit(bs, marco, attacker, atk(marco) * 2, { raidCounter: true });
+      return true;
+    }
+    function rescue(bs, target) {
+      if (!isAlive(target) || target.hp >= target.maxHp * .10) return;
+      const marco = alliesOf(bs, target, false).find(unit => id(unit) === 'raid-secret-marco' && !state(unit).rescued);
+      if (!marco) return;
+      const team = teamOf(bs, target), at = team.indexOf(target), from = team.indexOf(marco);
+      if (at < 0 || from < 0) return;
+      state(marco).rescued = true;
+      [team[at], team[from]] = [team[from], team[at]];
+      heal(target, target.maxHp, 'PHOENIX RESCUE', bs, marco);
+      safeLog(`[PASSIVE] Marco swapped positions with ${target.display?.name || target.card.name} and restored its HP once this match.`, 'passive');
+      refreshUnitDisplay(target);
+    }
+    function dodge(bs, unit, attacker) {
+      if (id(unit) === 'raid-secret-mihawk') hit(bs, unit, attacker, atk(unit) * 5, { raidCounter: true });
+      if (id(unit) === 'raid-secret-marco') for (const ally of alliesOf(bs, unit)) applyMaxHpBonus(ally, .10);
+    }
+    function afterAttack(bs, unit, target, outcome, options) {
+      burn(bs, unit, target, outcome);
+      if (id(unit) !== 'raid-secret-mihawk' || options.isFollowUp || options.isCounter || !(outcome.attackDamage > 0)) return;
+      let offset = outcome.hit && outcome.damage > 0 ? 1 : 0;
+      for (const enemy of enemiesOf(bs, unit).filter(enemy => enemy !== target)) {
+        const result = hit(bs, unit, enemy, outcome.attackDamage * Math.pow(.75, offset));
+        if (result.damage > 0) offset++;
+      }
+    }
+    function death(bs, unit) {
+      if (id(unit) !== 'raid-secret-ace' || isAlive(unit) || state(unit).soulGranted) return;
+      state(unit).soulGranted = true;
+      for (const ally of alliesOf(bs, unit, false)) { ensureRuntime(ally).brotherSoul = true; addActiveTag(ally, 'BROTHER SOUL'); }
+      safeLog('[PASSIVE] Ace granted Brother Soul: 10% Burn chance, 1 turn, 100% ally ATK.', 'passive');
+    }
+    function turn(bs) {
+      for (const unit of allUnits(bs).filter(isAlive)) {
+        rescue(bs, unit);
+        if (id(unit) !== 'raid-secret-mihawk' || Math.random() >= .25) continue;
+        const c = state(unit), runtime = ensureRuntime(unit);
+        if (!c.hakiTurns) { runtime.atkBonusPct += 2.50; runtime.displayAtkBonusPct += 2.50; }
+        c.hakiTurns = 2; runtime.raidHakiReduction = .25; addActiveTag(unit, 'HAKI +250% ATK / 25% REDUCTION');
+      }
+    }
+    function endTurn(bs) {
+      for (const unit of allUnits(bs)) {
+        const c = state(unit), runtime = ensureRuntime(unit);
+        if (c.hakiTurns > 0 && --c.hakiTurns === 0) {
+          runtime.atkBonusPct = Math.max(0, runtime.atkBonusPct - 2.50); runtime.displayAtkBonusPct = Math.max(0, runtime.displayAtkBonusPct - 2.50);
+          runtime.raidHakiReduction = 0; removeActiveTag(unit, 'HAKI +250% ATK / 25% REDUCTION');
+        }
+        rescue(bs, unit);
+      }
+    }
+    function dodgeChance(unit) { return id(unit) === 'raid-secret-mihawk' ? .50 : id(unit) === 'raid-secret-marco' ? .10 : 0; }
+    return { block, rescue, dodge, afterAttack, death, turn, endTurn, dodgeChance };
   })();
 
   function isTeamDefeated(team, includeReserves = false) {
@@ -765,7 +881,7 @@
       case 'diavolo': chance = 0.35; break;
       default: break;
     }
-    chance = Math.max(chance, champions.dodgeChance(unit));
+    chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit));
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0);
     if (getEffectivePassiveCardId(unit) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0 || runtime.noDodgeAgainstUnit) chance = 0;
@@ -812,7 +928,7 @@
       currentHp,
       maxHp,
       dodgePct: getDisplayDodgeChance(unit),
-      damageReductionPct: Math.max(0, Number(runtime.damageReductionPct) || 0) * 100,
+      damageReductionPct: clamp((Number(runtime.damageReductionPct) || 0) + (Number(runtime.raidHakiReduction) || 0), 0, .95) * 100,
       shield,
       shieldPct: Math.min(100, (shield / maxHp) * 100),
       effects
@@ -851,7 +967,7 @@
       case 'diavolo': chance = 0.35; break;
       default: break;
     }
-    chance = Math.max(chance, champions.dodgeChance(target));
+    chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target));
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0);
     if (cardIdOf(target) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0) chance = 0;
@@ -1011,8 +1127,13 @@
     battleState.damageTotals[side] = Math.min(limit, Math.max(0, Number(battleState.damageTotals[side]) || 0) + damage);
   }
 
+  function deferFatality(battleState, target) {
+    return Boolean(champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+  }
+
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
     if (!target || !isAlive(target)) return { damage: 0, killed: false, reflected: false };
+    if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
     const targetRuntime = ensureRuntime(target);
     const source = attacker || null;
 
@@ -1032,23 +1153,30 @@
     remaining = absorbShieldDamage(target, remaining, battleState, source);
 
     const reduction = clamp(
-      Number(targetRuntime.damageReductionPct) +
+      Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) +
       (cardIdOf(target) === 'aquaman' && host.isWeatherActive?.('Raining') ? 0.50 : 0),
       0,
       0.95
     );
     remaining *= (1 - reduction);
+    const calamityProtected = !meta.championRedirect && Boolean(champions.guardianFor(battleState, target));
     remaining = champions.redirect(battleState, target, attacker, remaining, meta);
 
     targetRuntime.lastDamageTaken = remaining;
     targetRuntime.lastHitReceived = remaining;
 
     const before = Math.max(0, Number(target.hp) || 0);
+    // A protected ally's survival/clone triggers see only its own damage share.
+    if ((calamityProtected || Number(targetRuntime.raidHakiReduction) > 0) && remaining >= before && onFatalityAttempt(battleState, target, attacker, remaining, meta)) {
+      recordBattleDamage(battleState, attacker, target, before);
+      return { damage: 0, killed: false, preventedFatality: true };
+    }
     if (remaining >= before && !isBleeding(target) && champions.fatal(battleState, target)) return { damage: 0, killed: false, preventedFatality: true };
     target.hp = Math.max(0, before - Math.floor(remaining));
     recordBattleDamage(battleState, attacker, target, before);
     const killed = target.hp <= 0;
     if (killed) { target.defeated = true; champions.death(battleState, target, attacker); }
+    else raidSecrets.rescue(battleState, target);
     refreshUnitDisplay(target);
 
     return {
@@ -1109,7 +1237,7 @@
         const target = firstLiving(enemyTeam, 0);
         if (target && Math.random() < 0.50 && sourcePassiveAllowed(target, unit)) {
           const result = damageUnit(battleState, unit, target, calculateBaseDamage(unit) * 5, { passiveBypass: true, passiveAttack: true });
-          safeLog(`[PASSIVE] ${unit.display?.name || 'The Trapper'} sprung a 5× ATK trap${result.killed ? ' and defeated the target' : ''}.`, 'passive');
+          safeLog(`[PASSIVE] ${unit.display?.name || 'The Trapper'} sprung a x5 ATK trap${result.killed ? ' and defeated the target' : ''}.`, 'passive');
         }
         break;
       }
@@ -1706,7 +1834,7 @@
             const hitTarget = result?.target;
             if (hitTarget && sourcePassiveAllowed(hitTarget, attacker)) setStatus(hitTarget, 'stunTurns', 2, attacker);
           }
-          safeLog(`[PASSIVE] ${attacker.display?.name || 'WhiteBeard'} struck the two closest enemies for 3× ATK and stunned them.`, 'passive');
+          safeLog(`[PASSIVE] ${attacker.display?.name || 'WhiteBeard'} struck the two closest enemies for x3 ATK and stunned them.`, 'passive');
         }
         break;
 
@@ -1714,7 +1842,7 @@
         if (getCardAttackCount(attacker) === 5) {
           const targets = enemiesOf(battleState, attacker);
           applyAreaAttack(battleState, attacker, targets, 2, { chainDepth: outcome.chainDepth });
-          safeLog(`[PASSIVE] ${attacker.display?.name || 'Grimmjaw'} blasted all enemies for 2× ATK.`, 'passive');
+          safeLog(`[PASSIVE] ${attacker.display?.name || 'Grimmjaw'} blasted all enemies for x2 ATK.`, 'passive');
         }
         break;
 
@@ -1722,7 +1850,7 @@
         if (getCardAttackCount(attacker) % 10 === 0) {
           const targets = enemiesOf(battleState, attacker);
           applyAreaAttack(battleState, attacker, targets, 100, { chainDepth: outcome.chainDepth });
-          safeLog(`[PASSIVE] ${attacker.display?.name || 'Cid Atomic'} struck all enemies for 100× ATK.`, 'passive');
+          safeLog(`[PASSIVE] ${attacker.display?.name || 'Cid Atomic'} struck all enemies for x100 ATK.`, 'passive');
         }
         break;
 
@@ -1855,6 +1983,7 @@
     if (!defender || !attacker) return;
     const id = getEffectivePassiveCardId(defender);
     champions.dodge(battleState, defender, attacker, outcome);
+    raidSecrets.dodge(battleState, defender, attacker);
     const runtime = ensureRuntime(defender);
     runtime.dodgeStreak += 1;
     runtime.lastDodge = true;
@@ -1972,9 +2101,9 @@
     if (!battleState || !victim) return;
     if (champions.death(battleState, victim, null) || isAlive(victim) || champions.uncloneable(victim)) return;
     const team = teamOf(battleState, victim);
-    const jinUnits = aliveUnits(team).filter(unit => getEffectivePassiveCardId(unit) === 'jin-mori');
+    if (isGeneratedUnit(victim)) return;
+    const jinUnits = aliveUnits(team).filter(unit => canCreateCompanion(unit) && getEffectivePassiveCardId(unit) === 'jin-mori');
     for (const jin of jinUnits) {
-      if (ensureRuntime(jin).cloneCount >= 3) continue;
       createJinMoriCloneForDeadTeammate(battleState, jin, victim);
     }
   }
@@ -2087,8 +2216,7 @@
         break;
 
       case 'doflamingo':
-        if (!runtime.stringArmyUsed && Math.random() < 0.30) {
-          runtime.stringArmyUsed = true;
+        if (canCreateCompanion(killer) && !isGeneratedUnit(victim) && Math.random() < 0.30) {
           const clone = cloneAsTemporaryAlly(victim, killer, battleState, 1);
           if (clone) {
             // The transformed enemy joins as a temporary reserve fighter.
@@ -2187,11 +2315,10 @@
     // with the defeated teammate's passive. The clone does not count as a
     // teammate for subsequent triggers.
     const metalCooler = aliveUnits(teamOf(battleState, target))
-      .find(ally => getEffectivePassiveCardId(ally) === 'metal-cooler');
-    if (metalCooler && target !== metalCooler && !target.isClone && !champions.uncloneable(target) && incomingDamage >= Math.max(1, Number(target.hp) || 0)) {
+      .find(ally => canCreateCompanion(ally) && getEffectivePassiveCardId(ally) === 'metal-cooler');
+    if (metalCooler && target !== metalCooler && !isGeneratedUnit(target) && !champions.uncloneable(target) && incomingDamage >= Math.max(1, Number(target.hp) || 0)) {
       const mr = ensureRuntime(metalCooler);
-      const cloneCount = Math.max(0, Number(mr.cloneCount) || 0);
-      if (cloneCount < 1) {
+      if (canCreateCompanion(metalCooler)) {
         const clone = cloneAsTemporaryAlly(target, metalCooler, battleState, 0.50);
         if (clone) {
           clone.side = target.side;
@@ -2337,6 +2464,7 @@
       if (champions.state(attacker).heresy > 0) incomingDamage *= .91;
       onDodge(battleState, target, attacker, { chainDepth: options.chainDepth || 0, incomingDamage });
       champions.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
+      raidSecrets.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false, attackDamage: incomingDamage }, options);
       return { hit: false, dodged: true, killed: false, damage: 0 };
     }
 
@@ -2359,9 +2487,10 @@
       setStatus(target, 'stunTurns', 1, attacker);
     }
 
-    multiplier *= champions.multiplier(attacker, target, options);
+    multiplier *= champions.multiplier(attacker, target, { ...options, critical });
     if (champions.state(attacker).heresy > 0) multiplier *= .91;
     let rawDamage = Math.max(1, Math.floor(baseAttack * multiplier));
+    const attackDamage = rawDamage;
     const damageReduction = clamp(ensureRuntime(target).damageReductionPct, 0, 0.95);
     rawDamage = Math.max(1, Math.floor(rawDamage * (1 - damageReduction)));
 
@@ -2369,12 +2498,13 @@
     target.hpBeforeDeath = previousHp;
 
     let result = { damage: 0, killed: false };
-    const fatalityPrevented = previousHp > 0 && rawDamage >= previousHp
+    if (raidSecrets.block(battleState, attacker, target, options)) { ensureCurrentIndices(battleState); return { hit: false, damage: 0, killed: false, raidBlocked: true, target, attacker }; }
+    const fatalityPrevented = previousHp > 0 && rawDamage >= previousHp && !deferFatality(battleState, target)
       ? onFatalityAttempt(battleState, target, attacker, rawDamage, options)
       : false;
 
     if (!fatalityPrevented) {
-      result = damageUnit(battleState, attacker, target, rawDamage, { passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass) });
+      result = damageUnit(battleState, attacker, target, rawDamage, { passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true });
       result.critical = critical;
       result.hit = true;
     } else {
@@ -2383,6 +2513,8 @@
       recordBattleDamage(battleState, attacker, target, previousHp);
       result = { damage: 0, killed: false, preventedFatality: true, critical, hit: true };
     }
+
+    if (result.raidBlocked) { ensureCurrentIndices(battleState); return { ...result, hit: false, target, attacker }; }
 
     ensureRuntime(attacker).lastCrit = critical;
 
@@ -2401,6 +2533,7 @@
     applyHitEffects(battleState, attacker, target, { ...result, critical, hit: true, isFollowUp: Boolean(options.isFollowUp), chainDepth: Number(options.chainDepth) || 0 });
     if (livingBeforeHitEffects && !isAlive(target)) result.killed = true;
     champions.afterAttack(battleState, attacker, target, { ...result, critical, hit: true }, options);
+    raidSecrets.afterAttack(battleState, attacker, target, { ...result, critical, hit: true, attackDamage }, options);
 
     if (result.killed) {
       onKill(battleState, attacker, target, { fatality: previousHp > 0 && rawDamage >= previousHp });
@@ -2571,7 +2704,7 @@
   }
 
   function checkBattleWinner(battleState) {
-    const includeReserves = battleState?.mode === 'tower' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
+    const includeReserves = battleState?.mode === 'tower' || battleState?.mode === 'raid' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
     if (isTeamDefeated(battleState?.enemyTeam, includeReserves)) return 'player';
     if (isTeamDefeated(battleState?.playerTeam, includeReserves)) return 'enemy';
     return null;
@@ -2599,6 +2732,7 @@
     }
 
     champions.turn(battleState, attacker);
+    raidSecrets.turn(battleState);
     resolvePassiveTurnEffects(battleState, attacker);
     const control = resolveActiveTurnControl(battleState, attacker);
     if (control.skipped) {
@@ -2650,6 +2784,7 @@
     const actor = battleState.turn === 'player' ? battleState.player : battleState.enemy;
     const resolution = resolveBaseTurn(battleState);
     champions.endTurn(battleState, actor);
+    raidSecrets.endTurn(battleState);
     ensureCurrentIndices(battleState);
     const winner = checkBattleWinner(battleState);
     return winner ? { ended: true, winner } : { ended: false, winner: null };
@@ -2667,7 +2802,7 @@
     if (atkDisplayPct > 0) badges.push({ icon: '⚔', label: `+${atkDisplayPct}% ATK`, tone: 'buff', category: 'buff', status: 'Active' });
     if (flatAtkDisplay > 0) badges.push({ icon: '⚔', label: `+${flatAtkDisplay.toLocaleString('en-US')} ATK`, tone: 'buff', category: 'buff', status: 'Active' });
     if (hpDisplayPct > 0) badges.push({ icon: '❤', label: `+${hpDisplayPct}% MAX HP`, tone: 'buff', category: 'buff', status: 'Active' });
-    if (runtime.nextAttackMultiplier > 1) badges.push({ icon: '⚡', label: `NEXT ×${Number(runtime.nextAttackMultiplier).toFixed(2)}`, tone: 'buff', category: 'buff', status: 'Triggered' });
+    if (runtime.nextAttackMultiplier > 1) badges.push({ icon: '⚡', label: `NEXT x${Number(runtime.nextAttackMultiplier).toFixed(2)}`, tone: 'buff', category: 'buff', status: 'Triggered' });
     if (runtime.nextAttackIsBuffed) badges.push({ icon: '✦', label: 'NEXT +30% ATK', tone: 'buff', category: 'buff', status: 'Active' });
     if (runtime.nextAttackBonus > 0) badges.push({ icon: '✦', label: `NEXT +${Math.round(runtime.nextAttackBonus * 100)}%`, tone: 'buff', category: 'buff', status: 'Active' });
 
@@ -2756,7 +2891,7 @@
   }
 
   function cloneAsTemporaryAlly(victim, source, battleState, statFactor = 0.5) {
-    if (!victim || !source || champions.uncloneable(victim) || (!isAlive(victim) && champions.noExternalRevive(victim))) return null;
+    if (!victim || !canCreateCompanion(source) || isGeneratedUnit(victim) || champions.uncloneable(victim) || (!isAlive(victim) && champions.noExternalRevive(victim))) return null;
     const factor = Math.max(0.01, Number(statFactor) || 0.5);
     const clone = {
       card: victim.card,
@@ -2769,7 +2904,8 @@
       maxHp: Math.max(1, Math.round((Number(victim.maxHp) || 1) * factor)),
       atk: Math.max(1, Math.round((Number(victim.atk) || 1) * factor)),
       defeated: false,
-      isClone: true
+      isClone: true,
+      isSummoned: true
     };
     if (battleState?.mode === 'tower' && battleState.enemyTeam?.includes(source)) window.TowerSystem?.protectEnemyUnit?.(clone);
     ensureRuntime(clone);
@@ -2800,9 +2936,8 @@
   }
 
   function createJinMoriCloneForDeadTeammate(battleState, jinUnit, victim) {
-    if (!jinUnit || !victim || champions.uncloneable(victim) || champions.noExternalRevive(victim)) return null;
+    if (!battleState || !canCreateCompanion(jinUnit) || !victim || isGeneratedUnit(victim) || champions.uncloneable(victim) || champions.noExternalRevive(victim)) return null;
     const runtime = ensureRuntime(jinUnit);
-    if (runtime.cloneCount >= 3) return null;
 
     const jinCard = host.getCardById?.('jin-mori') || cardOf(jinUnit);
     const originalPassiveId = cardIdOf(victim);
@@ -2821,6 +2956,7 @@
       atk: Math.max(1, Number(jinUnit.atk) || Number(jinCard?.stats?.atk) || 1),
       defeated: false,
       isClone: true,
+      isSummoned: true,
       side: jinUnit.side
     };
 
@@ -2911,13 +3047,13 @@
       parts.push(`CRIT DMG ${delta >= 0 ? '+' : ''}${delta}%`);
     }
     if (Math.abs(after.shield - before.shield) > 0.0001) parts.push(`SHIELD ${signedNumber(after.shield - before.shield)}`);
-    if (after.burnCount !== before.burnCount) parts.push(`BURN ×${after.burnCount}`);
-    if (after.bleedCount !== before.bleedCount) parts.push(`BLEED ×${after.bleedCount}`);
+    if (after.burnCount !== before.burnCount) parts.push(`BURN x${after.burnCount}`);
+    if (after.bleedCount !== before.bleedCount) parts.push(`BLEED x${after.bleedCount}`);
     if (after.stunTurns !== before.stunTurns) parts.push(`STUN ${after.stunTurns}t`);
     if (after.freezeTurns !== before.freezeTurns) parts.push(`FREEZE ${after.freezeTurns}t`);
     if (after.snailTurns !== before.snailTurns) parts.push(`SNAIL ${after.snailTurns}t`);
     if (Math.abs(after.weakenAttackPct - before.weakenAttackPct) > 0.0001) parts.push(`ENEMY ATK -${Math.round(after.weakenAttackPct * 100)}%`);
-    if (after.nextAttackMultiplier !== before.nextAttackMultiplier && after.nextAttackMultiplier > 1) parts.push(`NEXT ×${Number(after.nextAttackMultiplier).toFixed(2)} DMG`);
+    if (after.nextAttackMultiplier !== before.nextAttackMultiplier && after.nextAttackMultiplier > 1) parts.push(`NEXT x${Number(after.nextAttackMultiplier).toFixed(2)} DMG`);
     if (after.nextAttackBonus !== before.nextAttackBonus && after.nextAttackBonus > 0) parts.push(`NEXT +${Math.round(after.nextAttackBonus * 100)}% ATK`);
     if (after.nextAttackIsBuffed !== before.nextAttackIsBuffed && after.nextAttackIsBuffed) parts.push('NEXT +30% ATK');
     if (after.auraStacks !== before.auraStacks) parts.push(`AURA ${after.auraStacks} stacks`);
@@ -3209,14 +3345,14 @@
     const withPassive = list.filter(card => card?.passive?.name);
     const missing = withPassive
       .map(card => String(card.id || ''))
-      .filter(id => !PASSIVE_HANDLERS[id] && !id.startsWith('tower-champion-'));
+      .filter(id => !PASSIVE_HANDLERS[id] && !id.startsWith('tower-champion-') && !id.startsWith('raid-secret-'));
     const unclassified = withPassive
       .map(card => String(card.id || ''))
-      .filter(id => !PASSIVE_TRIGGER_CLASSIFICATION[id] && !id.startsWith('tower-champion-'));
+      .filter(id => !PASSIVE_TRIGGER_CLASSIFICATION[id] && !id.startsWith('tower-champion-') && !id.startsWith('raid-secret-'));
     return {
       totalCardsWithPassives: withPassive.length,
-      registered: withPassive.filter(card => (PASSIVE_HANDLERS[String(card.id || '')] || String(card.id).startsWith('tower-champion-'))).length,
-      classified: withPassive.filter(card => (PASSIVE_TRIGGER_CLASSIFICATION[String(card.id || '')] || String(card.id).startsWith('tower-champion-'))).length,
+      registered: withPassive.filter(card => (PASSIVE_HANDLERS[String(card.id || '')] || /^(tower-champion-|raid-secret-)/.test(String(card.id)))).length,
+      classified: withPassive.filter(card => (PASSIVE_TRIGGER_CLASSIFICATION[String(card.id || '')] || /^(tower-champion-|raid-secret-)/.test(String(card.id)))).length,
       missing,
       unclassified
     };
@@ -3264,10 +3400,15 @@
     getPassiveName,
     getPassiveDescription(unit) {
       const passive = champions.describe(unit) || getPassive(unit);
-      return {
+      const description = {
         name: String(passive?.name || 'Passive'),
         description: String(passive?.description || '')
       };
+      if (ensureRuntime(unit)?.brotherSoul) {
+        description.name += ' + Brother Soul';
+        description.description += '\n\nBrother Soul\nEach successful attack has a separate 10% chance to apply Burn for 1 target turn, dealing 100% of this card\'s current ATK. Brother Soul lasts for the match; each Burn lasts 1 target turn and stacks with this card\'s other Burn effects.';
+      }
+      return description;
     },
     getPassiveDefinition(cardId) {
       const id = String(cardId || '').trim();
@@ -3277,6 +3418,7 @@
     getPassiveTriggerClassification(cardId) {
       const id = String(cardId || '').trim();
       if (id.startsWith('tower-champion-')) return ['CHAMPION_ISOLATED_HOOKS'];
+      if (id.startsWith('raid-secret-')) return ['RAID_SECRET_ISOLATED_HOOKS'];
       return Array.isArray(PASSIVE_TRIGGER_CLASSIFICATION[id]) ? [...PASSIVE_TRIGGER_CLASSIFICATION[id]] : [];
     },
     getPassiveDefinitions() {
