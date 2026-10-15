@@ -264,7 +264,8 @@
     const id = weatherId(mode), expected = nextFloor(id);
     if (!Number.isInteger(floor) || floor !== expected) return { awarded: false, coins: 0 };
     const rewards = previewRewards(floor);
-    const coins = rewards.min + Math.floor(random() * (rewards.max - rewards.min + 1));
+    const baseCoins = rewards.min + Math.floor(random() * (rewards.max - rewards.min + 1));
+    const coins = host.InventorySystem.scaleDrop(baseCoins, random);
     const granted = Math.min(coins, Math.max(0, MAX_COINS - data.coins));
     data.coins += granted; data.cleared[id] = floor; data.victories += 1;
     delete data.encounters[id]; persist();

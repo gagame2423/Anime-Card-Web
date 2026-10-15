@@ -987,7 +987,8 @@
 
   function isUnitStunned(unit) {
     const runtime = ensureRuntime(unit);
-    return runtime.stunTurns > 0 || runtime.freezeTurns > 0 || runtime.snailTurns > 0 || runtime.passiveDisabled === true;
+    // Disabling a passive (Reigen's solo form) never disables basic attacks.
+    return runtime.stunTurns > 0 || runtime.freezeTurns > 0 || runtime.snailTurns > 0;
   }
 
   function tickStatusEffects(battleState, unit) {

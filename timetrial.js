@@ -129,7 +129,8 @@
       if (isExp(battle.mode) && unit.isExpMonster) {
         const info = bridge.getLevelInfo?.(run.cardId);
         if (!info) throw new Error('Không tìm thấy thông số EXP của thẻ đang luyện.');
-        const rate = .001 + .009 * Math.max(0, Math.min(1, Number(random()) || 0));
+        const baseRate = .001 + .009 * Math.max(0, Math.min(1, Number(random()) || 0));
+        const rate = baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1);
         if (info.level < 999) {
           const exact = info.required * rate + (data.xpCarry[run.cardId] || 0);
           const amount = Math.floor(exact), carry = exact - amount;
@@ -141,7 +142,8 @@
         run.monsters++;
       } else if (!isExp(battle.mode) && unit.isTrialRoomEnemy) {
         const range = shardRange(run.room, unit.trialBoss);
-        const value = range.min + Math.min(range.max - range.min, Math.floor(random() * (range.max - range.min + 1)));
+        const baseValue = range.min + Math.min(range.max - range.min, Math.floor(random() * (range.max - range.min + 1)));
+        const value = host.InventorySystem.scaleDrop(baseValue, random);
         const granted = Math.min(value, Number.MAX_SAFE_INTEGER - data.shards);
         data.shards += granted; run.shardsEarned += granted;
       } else continue;

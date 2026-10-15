@@ -421,7 +421,7 @@ function grantCardExperience(cardId, amount) {
 
 function getDuplicateCardRollExperience(cardOrId) {
   const info = getCardLevelInfo(cardOrId);
-  return Math.max(1, Math.floor(info.required * 0.50 * (window.InventorySystem?.multiplier("exp") || 1)));
+  return Math.max(1, Math.floor(info.required * 0.50 * (window.InventorySystem?.multiplier("exp") || 1) * (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0))));
 }
 
 function calculateCardRollExperience(card, mutations = []) {
@@ -2562,12 +2562,12 @@ function closeVariantMenu() {
 
 function getExpMultiplier() {
   const level = Math.max(0, Math.floor(Number(state?.upgrades?.expMulti) || 0));
-  return (1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE)) * (window.InventorySystem?.multiplier("exp") || 1);
+  return (1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE) + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("exp") || 1);
 }
 
 function getCoinMultiplier() {
   const level = Math.max(0, Math.floor(Number(state?.upgrades?.coinMulti) || 0));
-  return (1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE)) * (window.InventorySystem?.multiplier("rich") || 1);
+  return (1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE) + (window.AchievementSystem?.getCoinBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("rich") || 1);
 }
 
 function getProgressionUpgradeCost(type, level) {
@@ -3783,19 +3783,20 @@ function animateBattlePromotion(side) {
   card.classList.add('battle-promote');
 }
 
-function scheduleNextBattleTurn() {
+function scheduleNextBattleTurn(remainingMs) {
   clearBattleTurnTimer();
   if (!battleState || battleState.finished) return;
   const turnMs = getBattleTurnMs();
-  battleState.nextTurnAt = Date.now() + turnMs;
-  if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${turnMs / 1000}s`;
+  const delay = Number.isFinite(remainingMs) ? Math.max(0, Math.min(turnMs, remainingMs)) : turnMs;
+  battleState.nextTurnAt = Date.now() + delay;
+  if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${Math.ceil(delay / 1000)}s`;
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   const autoNote = document.getElementById('battleAutoNote');
   if (autoNote) autoNote.textContent = isTimeTrialBattle() ? 'Time Trial • Fixed 2-second turns • Speed Battle Potion ignored • Timer keeps running while reading' : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
   battleTurnTimer = window.setTimeout(() => {
     battleTurnTimer = null;
     executeBattleTurn();
-  }, turnMs);
+  }, delay);
 }
 
 function canReplayBattleTeam() {
@@ -3857,11 +3858,12 @@ function finishBattle(playerWon) {
       // Independent player stat: neither Reward Bonus nor money multipliers are read by the potion RNG.
       state.dropChance = Math.max(0, Math.min(20, (Number(state.dropChance) || 0) + Math.max(0, Number(baseRewardProfile.dropRateBonus) || 0))); // unmodified by Reward Bonus passives
       const potionDrop = window.InventorySystem?.rollVictoryDrop(state.dropChance);
+      const previousKeys = window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id);
       const raidKeyDropped = window.RaidSystem?.rollKey(battleState.mode);
-      if (raidKeyDropped) appendBattleLog('Marine Fort Raid Key +1 • 10% regular-battle drop.', 'victory');
+      if (raidKeyDropped) appendBattleLog(`Marine Fort Raid Key +${window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id) - previousKeys} • 10% regular-battle drop • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}.`, 'victory');
       const towerPrize = battleState.mode === 'tower' ? window.TowerSystem?.recordVictory(battleState.towerWeather, battleState.towerFloor) : null;
       refreshAchievements();
-      if (potionDrop?.dropped) appendBattleLog(`🧪 Potion drop: ${potionDrop.name} (${Math.round(potionDrop.chance * 100)}% roll).`, 'victory');
+      if (potionDrop?.dropped) appendBattleLog(`🧪 Potion drop: ${potionDrop.name} x${potionDrop.quantity || 1} (${Math.round(potionDrop.chance * 100)}% roll).`, 'victory');
       else if (potionDrop) appendBattleLog(`🧪 No potion (${Math.round(potionDrop.chance * 100)}% chance) • Pity increased for next win.`, 'status');
       if (towerPrize?.awarded) appendBattleLog(`🏰 Floor ${battleState.towerFloor} cleared! +${towerPrize.coins} Tower Coins${towerPrize.elite ? ' • ELITE BONUS' : ''}.`, 'victory');
       renderPotionInventory(); renderTowerShop();
@@ -3892,7 +3894,7 @@ function finishBattle(playerWon) {
         : `Base ${formatCurrency(baseRewardProfile.baseValue)} • Time +${baseRewardProfile.timeBonusPercent}% • Level x${baseRewardProfile.levelDiffMultiplier.toFixed(2)} • Earned ${formatCurrency(reward)} • Progressive EXP awarded once per unique lineup card.`;
       appendBattleLog(`Victory! ${earningSummary}${levelNote}`, 'victory');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
-      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. ${towerPrize?.awarded ? `Tower Floor ${battleState.towerFloor}: +${towerPrize.coins} 🪙. ` : ''}${potionDrop?.dropped ? `Potion: ${potionDrop.name}. ` : ''}${earningSummary}`;
+      if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. ${towerPrize?.awarded ? `Tower Floor ${battleState.towerFloor}: +${towerPrize.coins} 🪙. ` : ''}${potionDrop?.dropped ? `Potion: ${potionDrop.name} x${potionDrop.quantity || 1}. ` : ''}${earningSummary}`;
       if (els.battleResultPower) {
         els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')} • ${baseRewardProfile.durationSeconds.toFixed(1)}s battle`;
       }
@@ -4182,7 +4184,7 @@ function finishRaidBattle(won) {
   const secret = summary.secret ? getCardById(summary.secret.cardId) : null;
   const mutationLabel = summary.secret?.mutationIds.length ? ` [${summary.secret.mutationIds.map(id => MUTATION_BY_ID[id]?.name || id).join(' + ')}]` : '';
   const body = document.getElementById('raidSummary');
-  body.textContent = `Marine Fort Raid • Difficulty ${summary.difficulty}\nRaid Coins: +${summary.coins}\n${secret ? `Exclusive card: ${secret.name}${mutationLabel}\n` : ''}No VNĐ • No EXP • No ordinary drops${summary.error ? `\n${summary.error}` : ''}`; body.classList.remove('hidden');
+  body.textContent = `Marine Fort Raid • Difficulty ${summary.difficulty}\nRaid Coins: +${summary.coins} • Drop x${(summary.dropMultiplier || 1).toFixed(2)}\n${secret ? `Exclusive card: ${secret.name}${mutationLabel}\n` : ''}No VNĐ • No EXP • No ordinary drops${summary.error ? `\n${summary.error}` : ''}`; body.classList.remove('hidden');
   document.getElementById('raidResultShopButton').classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '⚓ RAID COMPLETE' : '⚓ RAID ENDED';
   els.battleResultText.textContent = summary.error || (summary.won ? 'The entire boss lineup and all remaining enemies were defeated.' : 'Your collection is preserved. A new entry costs another Key.');
@@ -4255,7 +4257,7 @@ function finishTimeTrialBattle(won, reason = '') {
   const body = document.getElementById('timeTrialSummary');
   body.textContent = summary.exp
     ? `EXP Monsters Defeated: ${summary.monsters}\nTotal EXP Gained: +${summary.progressPercent.toFixed(2)}% Level Progress\n+${summary.experience.toLocaleString('en-US')} whole EXP • ${summary.levelUps} level-ups\nNo Shards • No VNĐ • No items`
-    : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • No item drops`;
+    : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • No item drops`;
   body.classList.remove('hidden');
   document.getElementById('timeTrialResultShopButton').classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '🏆 TIME TRIAL COMPLETE' : '⏱ TIME TRIAL ENDED';
@@ -4282,7 +4284,7 @@ function renderPotionInventory() {
   const inventory = window.InventorySystem;
   if (!inventory) return;
   const chance = inventory.dropChance(state.dropChance || 0);
-  if (els.dropChanceDisplay) els.dropChanceDisplay.textContent = `Drop Chance stat: +${Number(state.dropChance || 0).toFixed(2)}% • Next potion chance: ${Math.round(chance * 100)}% • Pity: ${inventory.getPity()} misses`;
+  if (els.dropChanceDisplay) els.dropChanceDisplay.textContent = `Drop Chance stat: +${Number(state.dropChance || 0).toFixed(2)}% • Next potion chance: ${Math.round(chance * 100)}% • Pity: ${inventory.getPity()} misses • Item amounts x${inventory.getDropMultiplier().toFixed(2)}`;
   const grid = els.potionInventoryList;
   if (!grid || document.getElementById('inventoryModal')?.classList.contains('hidden')) return;
   const category = document.getElementById('inventoryCategory');
@@ -4670,7 +4672,7 @@ async function importGameSave(input) {
 // ============================================================
 function getAchievementSnapshot() {
   return { uniqueCards: getUniqueCount(), totalRolls: state.totalRolls, currency: state.currency,
-    knownBattleWins: window.TowerSystem?.victories || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {}, timeTrialRoom: window.TimeTrialSystem?.bestRoom || 0 };
+    knownBattleWins: window.TowerSystem?.victories || 0, knownRaidWins: window.RaidSystem?.totalWins() || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {}, timeTrialRoom: window.TimeTrialSystem?.bestRoom || 0 };
 }
 function applyAchievementReward(achievement) {
   state.achievementRewardReceipts ||= {};
@@ -4709,7 +4711,7 @@ function renderAchievements() {
   const category = document.getElementById('achievementCategory')?.value || 'all';
   const items = achievements.list();
   const summary = document.getElementById('achievementSummary');
-  if (summary) summary.textContent = `${items.filter(item => item.claimed).length} claimed • ${items.filter(item => item.complete && !item.claimed && !item.automatic).length} ready • ${items.length} milestones`;
+  if (summary) summary.textContent = `${items.filter(item => item.claimed).length} claimed • ${items.filter(item => item.complete && !item.claimed && !item.automatic).length} ready • ${items.length} milestones • EXP +${achievements.getExpBonus(state.achievementRewardReceipts).toFixed(1)} • VNĐ +${achievements.getCoinBonus(state.achievementRewardReceipts).toFixed(1)} • Drops x${achievements.getDropMultiplier(state.achievementRewardReceipts).toFixed(2)}`;
   achievements.render(document.getElementById('achievementList'), category, () => {
     saveState(); updateStats(); renderUpgradeShop(); renderAvailableCards(); renderCollection(); refreshAchievements();
   });
@@ -5284,13 +5286,25 @@ document.addEventListener("keydown", event => {
   });
 });
 
+function resumeGameRuntime() {
+  if (isImportingSave) return;
+  recoverElapsedRealTime();
+  window.InventorySystem.tick(Date.now());
+  window.TimeTrialSystem.checkDeadline();
+  completeCooldown(false);
+  renderClockAndWeather(true); renderCooldownUI(Date.now()); renderPotionInventory();
+  startGlobalLoop(); // Clears the old interval before replacing it.
+  if (isBattleMatchActive()) {
+    const dueAt = Number(battleState.nextTurnAt);
+    scheduleNextBattleTurn(Number.isFinite(dueAt) ? Math.max(0, dueAt - Date.now()) : undefined);
+  }
+}
+
 // Recover real time on background/foreground and before the page unloads.
 document.addEventListener("visibilitychange", () => {
   if (isImportingSave) return;
   if (document.visibilityState === "visible") {
-    recoverElapsedRealTime();
-    renderClockAndWeather(true);
-    renderCooldownUI(Date.now());
+    resumeGameRuntime();
   } else {
     syncGameClockToNow();
     saveState();
@@ -5359,8 +5373,10 @@ els.battleVictory?.classList.add('hidden');
 els.battleVictory?.setAttribute('aria-hidden', 'true');
 els.battleSetup?.classList.remove('hidden');
 
+window.InventorySystem.configure({ getDropMultiplier: () => window.AchievementSystem?.getDropMultiplier(state.achievementRewardReceipts) || 1 });
+window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreeze: () => { if (!isImportingSave) { syncGameClockToNow(); saveState(); } } });
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
-window.TimeTrialSystem?.configure({ getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
+window.TimeTrialSystem?.configure({ getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => 1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
 refreshAchievements();
 recoverElapsedRealTime();

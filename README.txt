@@ -1,118 +1,115 @@
 NHẬT KÝ CẬP NHẬT 15/10/2026
-HỆ NGUYÊN TỐ, HUY HIỆU THẺ VÀ BỘ CHỌN ĐỐI THỦ TOWER
+AUDIO NỀN, SỬA REIGEN VÀ THÀNH TỰU HỆ SỐ EXP/VNĐ/DROP
 
-1. HỆ NGUYÊN TỐ VÀ CÔNG THỨC SÁT THƯƠNG
+1. AUDIO NỀN VÀ KHÔI PHỤC VÒNG LẶP
 
-- Thêm thuộc tính element riêng trong từng đối tượng của đủ 114 thẻ tại cards.js. Sáu giá trị hợp lệ: Fire, Water, Nature, Electric, Dark và Holy.
-- Thêm elements.js để quản lý ma trận khắc chế, đường dẫn icon và hiển thị huy hiệu dùng chung. Nguyên tố không cấp passive mới, không tăng trực tiếp chỉ số HP hoặc ATK và không thay đổi tỷ lệ roll của thẻ.
-- Vòng khắc chế: Fire > Nature > Electric > Water > Fire.
-- Fire đánh Nature, Nature đánh Electric, Electric đánh Water hoặc Water đánh Fire: sát thương x3.
-- Khi đánh ngược chiều một quan hệ khắc chế: sát thương còn 1/3. Ví dụ Fire đánh Water chỉ gây 1/3 sát thương.
-- Holy đánh Dark gây x3; Dark đánh Holy cũng gây x3. Hai chiều đều có lợi thế, không áp dụng nhánh bất lợi 1/3 cho cặp này.
-- Cùng nguyên tố hoặc không có quan hệ khắc chế: 100% sát thương. Ví dụ Fire đánh Fire, Electric đánh Fire, Dark đánh Dark và Holy đánh Holy đều có hệ số 1.
-- Công thức: sát thương sau nguyên tố = sát thương trước nguyên tố x E; E thuộc {3; 1/3; 1}. Tiếp theo vẫn áp dụng các bước khiên, giảm sát thương và làm tròn hiện có của từng luồng chiến đấu.
-- Đòn đánh chính, đòn đánh thêm, kỹ năng diện rộng, phản công và các tick Burn/Bleed đều xét nguyên tố của nguồn sát thương và mục tiêu thực tế. Đòn diện rộng xét riêng từng mục tiêu, không lấy hệ của mục tiêu đầu tiên áp cho cả đội.
-- Mỗi gói sát thương chỉ nhân hệ số nguyên tố 1 lần. Calamity chia đôi sát thương đã tính hệ của mục tiêu được bảo vệ; phần Wonder Of You hấp thụ hoặc phản xạ không nhân nguyên tố lần thứ hai.
-- Kiểm tra đòn đánh gây tử vong và kích hoạt sống sót/hồi sinh được thực hiện với lượng sát thương đã xét nguyên tố, tránh hồi sinh nhầm khi đòn bất lợi chưa đủ gây tử vong.
-- Không nhân hệ số nguyên tố lên hồi máu, tăng max HP, chi phí tự mất HP hoặc quyết định kết liễu tức thì. Các hiệu ứng này tiếp tục tuân theo quy tắc riêng đã có.
-- Mutation, double mutation, lên cấp và đánh cắp passive không đổi element gốc của thẻ. Clone dùng nguyên tố của thẻ mà nó thực sự đại diện; Ghost/Naruto Clone tạm thời do Champion tạo ra kế thừa nguyên tố của chủ sở hữu.
-- EXP Monster là đơn vị luyện tập phát sinh trong trận, ngoài danh sách 114 thẻ; không có nguyên tố khắc chế và vẫn giữ ATK = 0.
+- Thêm module background.js dùng Web Audio API, khởi tạo sau lần nhấn phím, bấm hoặc chạm đầu tiên của người chơi.
+- Chỉ tạo 1 AudioContext và 1 AudioBufferSourceNode chạy loop. Buffer có 1 kênh, dài 1 giây theo sampleRate của thiết bị, toàn bộ mẫu bằng 0; GainNode có gain = 0. Vòng audio hoàn toàn im lặng và không tải tệp âm thanh ngoài.
+- Những tương tác tiếp theo dùng lại context đang chạy. Khi context bị suspend, thử resume khi có tương tác mới hoặc trang được khôi phục.
+- Hỗ trợ visibilitychange, freeze/resume và pageshow/pagehide. Context được suspend khi trang vào back/forward cache và đóng khi rời trang thật sự; tránh tạo thêm graph sau mỗi lần bấm.
+- Khi trang hoạt động lại, đồng bộ đồng hồ, thời tiết, potion và cooldown bằng Date.now(). Khoảng thời gian thực đã trôi qua không bị bỏ mất hoặc cộng hai lần.
+- Vòng lặp toàn cục vẫn có đúng 1 lịch 1 giây. Trước khi khôi phục lịch, game xóa interval cũ; lịch lượt chiến đấu cũng được thay thế, không tạo hai timeout cùng đánh một lượt.
+- Giữ thời điểm dự kiến của lượt đang chờ. Nếu lượt đã quá hạn, thực hiện tối đa 1 lượt ngay khi lịch chạy lại, rồi tiếp tục đúng khoảng lượt thông thường. Không phát sinh hàng loạt lượt đánh hoặc roll bù cho thời gian trang bị đình chỉ.
+- Kiểm tra deadline Time Trial trước khi khôi phục lượt đánh: không cho farm EXP hoặc tiếp tục phòng đã hết giờ. Các mốc 180 giây, 300 giây và lượt Time Trial 2 giây được giữ nguyên.
+- Nếu trình duyệt thiếu Web Audio API hoặc từ chối resume, game tiếp tục hoạt động và vẫn dùng cơ chế khôi phục thời gian; không làm hỏng vòng game.
 
-2. DANH SÁCH GÁN NGUYÊN TỐ CHO 114 THẺ
+GIỚI HẠN THỰC TẾ CỦA TRÌNH DUYỆT
 
-Theo lựa chọn đã xác nhận: Saber = Water; Luffy Kid và Garp = Nature; Metal Cooler = Electric. Tên Vasto Lorde trong yêu cầu tương ứng với thẻ Vasto Lord hiện có, ID weather-reaper-hollow.
+Audio im lặng không phải cách bảo đảm vượt qua chính sách tiết kiệm tài nguyên. Chrome nêu rõ track im lặng không được tính là âm thanh để miễn timer throttling. Trình duyệt hoặc hệ điều hành vẫn có thể freeze/discard tab, nhất là trên thiết bị di động. Bản vá cung cấp vòng audio theo yêu cầu và cơ chế phục hồi an toàn; không tuyên bố mọi trình duyệt đều chạy nền liên tục hoặc có thể farm khi tab đã bị đóng/discard.
 
-FIRE — 17 thẻ
-Kaneki; Nezuko; Denji; Uchiha Itachi; Yuji Itadori; Erwin; Boa Hancock; Shanks; Hutao; Escanor; Dante Limbus; Dio Brando; Malevolent King; Charizard Mega X; Thukuna; Vasto Lord; Ace.
+Tài liệu kỹ thuật: https://developer.chrome.com/blog/timer-throttling-in-chrome-88
 
-WATER — 20 thẻ
-Tanjiro; Buggy; Saber; Vegeta; Rimuru; Grimmjaw; Reigen; Nami; Giyu Tomioka; Sea Beast; Arlong; Aquaman; Noelle Silva; Rukia; Ice Admiral; Esdeath; Toshiro; Aqua; Ice King; Marco.
+2. SỬA REIGEN KHÔNG ĐÁNH THƯỜNG
 
-NATURE — 23 thẻ
-Naruto Kid; Powerless Guy; Gon Kid; Bounty Hunter; Jotaro Kujo; Hakari; Kamen Rider Kuuga; Bulma; Polnareff; Meruem; Katakuri; Senku; Yuno; Weather Report; Piccolo; Peashooter; Uchiha Shisui; Doflamingo; Hakari Jackpot; Naruto x Sasuke; Mihawk; Luffy Kid; Garp.
+- Nguyên nhân: cờ passiveDisabled của trạng thái solo bị hàm kiểm tra mất lượt xử lý như Stun/Freeze, khiến Reigen không thể tấn công.
+- Tách việc tắt passive khỏi việc chặn hành động. Reigen có thể đánh chính bình thường kể cả khi passive đang tắt.
+- Giữ nguyên Scam: khi vào trận có đồng đội sống khác, chọn ngẫu nhiên một đồng đội để sử dụng passive; khi vào trận một mình, tăng +200% ATK và +100% max HP, đồng thời tắt passive.
+- +200% ATK tương đương ATK x3 so với ngay trước buff. Không thêm lượt đánh miễn phí hoặc thay đổi tỷ lệ crit.
+- Stun, Freeze, Snail và các điều kiện kiểm soát lượt hợp lệ vẫn chặn hành động như trước.
+- Cập nhật mô tả Scam để nói rõ trạng thái tắt passive không vô hiệu hóa đòn đánh thường. Không đổi HP gốc, ATK gốc, element, artwork hoặc tỷ lệ roll của Reigen.
 
-ELECTRIC — 15 thẻ
-Sasuke Kid; Jonathan Joestar; Son Goku; Kakashi; Madness Doctor; The Flash; Frieza; Gohan; Android 21; Light Admiral; Gojo Young; Uchiha Sasuke; Equinox; Majin Buu; Metal Cooler.
+3. THÀNH TỰU TIME TRIAL: EXP VÀ VNĐ
 
-DARK — 22 thẻ
-Normal Demon; Six Seven; The Trapper; Guts; Mahito; BlackBeard; WhiteBeard; Asta; Demon Asta; Aatrox; Griffith; Adult Gon; Luffy Nightmare; Igris; Cid Atomic; Enderman; Homura Akemi; Kamen Rider Decade; Diavolo; Subaru; Wonder Of You; Kamen Rider Dark Decade.
+- Dùng thành tích phòng Normal Time Trial đã vượt cao nhất, không mất khi thất bại và quay về Room 1.
+- Room 110: +0,1 EXP Multiplier vĩnh viễn.
+- Room 120: +0,1 EXP Multiplier vĩnh viễn.
+- Room 130: +0,1 EXP Multiplier vĩnh viễn.
+- Room 140: +0,1 EXP Multiplier vĩnh viễn.
+- Room 150: +0,1 EXP Multiplier vĩnh viễn.
+- Room 160: +0,1 VNĐ Multiplier vĩnh viễn.
+- Room 170: +0,1 VNĐ Multiplier vĩnh viễn.
+- Room 180: +0,1 VNĐ Multiplier vĩnh viễn.
+- Room 190: +0,1 VNĐ Multiplier vĩnh viễn.
+- Room 200: +0,1 VNĐ Multiplier vĩnh viễn.
+- Mỗi mốc hoàn thành khi vượt phòng tương ứng. Vào Achievements, chọn Time Trial rooms và bấm Claim reward để nhận từng tier, theo luồng nhận thưởng đang có.
+- Tổng bonus của 5 mốc EXP là +0,5; tổng bonus của 5 mốc VNĐ là +0,5. Các mốc Luck Room 10–100 được giữ nguyên.
+- Save cũ đã vượt các phòng này tự nhận diện mốc đủ điều kiện; không bắt người chơi farm lại. Phần thưởng chưa claim vẫn chờ trong Achievements.
 
-HOLY — 17 thẻ
-Ichigo Young; Erza; The Truth; Viltrumite; Kamen Rider Kabuto; Adam Francis; Doppio; Builderman; Yuta Okkotsu; The First Human; Sailor Moon; Jin Mori; Wish; Kaguya; Mahoraga; Aizen Beyond; The Judgement.
+CÔNG THỨC TÍCH HỢP EXP/VNĐ
 
-Tổng cộng: 17 + 20 + 23 + 15 + 22 + 17 = 114 thẻ. Mọi chỉ số, tên passive, mô tả passive và điều kiện roll hiện có được giữ nguyên trong bản cập nhật này.
+Gọi Aexp và Avnd là tổng bonus thành tựu đã claim; mỗi giá trị từ 0 đến 0,5. Gọi n là cấp nâng cấp tương ứng trong shop.
 
-3. HUY HIỆU NGUYÊN TỐ VÀ BIỂU ĐỒ ARENA
+- Hệ số EXP chung = (1 + 0,12n + 0,03 x n^1,15 + Aexp) x Pexp.
+- Hệ số VNĐ chung = (1 + 0,15n + 0,02 x n^1,20 + Avnd) x Prich.
+- Pexp = 1,25 khi EXP Potion hoạt động, ngược lại bằng 1; Prich = 1,25 khi Rich Potion hoạt động, ngược lại bằng 1.
+- Bonus cộng vào hệ số gốc trước potion, không nhân thêm một lần sau toàn bộ nâng cấp. Ví dụ n = 0, Aexp = 0,5, không có potion: EXP x1,5; có EXP Potion: EXP x1,875.
+- Áp dụng hệ số chung vào những luồng EXP/VNĐ đã dùng hệ số này, gồm EXP trận thường, EXP roll thẻ mới, VNĐ trận thường/Tower và salvage.
+- EXP roll trùng giữ quy tắc riêng: floor(50% EXP cần lên cấp x Pexp x (1 + Aexp)).
+- EXP Time Trial: tỷ lệ cơ bản mỗi EXP Monster vẫn từ 0,1% đến 1,0% EXP cần cho cấp hiện tại; nay nhân thêm (1 + Aexp). Khi nhận đủ 5 mốc, khoảng thưởng trở thành 0,15% đến 1,5% mỗi monster. EXP lẻ được giữ trong xpCarry; số % trong tổng kết phản ánh tỷ lệ đã tăng.
+- EXP Time Trial vẫn không nhận thêm hệ số shop/potion EXP; bonus thành tựu mới là phần bổ sung riêng. Speed Battle Potion vẫn không đổi được lượt 2 giây của Time Trial.
+- Các phần thưởng VNĐ cố định từ claim thành tựu giữ nguyên giá trị niêm yết. Normal Time Trial vẫn không cho EXP/VNĐ; Raid vẫn không cho EXP/VNĐ; Tower vẫn không cho EXP.
 
-- Hiển thị huy hiệu nguyên tố trên header thẻ kết quả roll và thẻ preview; bổ sung icon ở Collection, danh sách roll khả dụng, danh sách chọn đấu sĩ, đội hình đã chọn, preview lựa chọn, thẻ đang chiến đấu và hàng chờ hai bên.
-- Dùng đúng 6 ảnh: assets/fire.png, assets/water.png, assets/nature.png, assets/electric.png, assets/dark.png và assets/holy.png.
-- Biểu đồ assets/elemental.png xuất hiện ở góc trên bên phải panel Arena. Có thể bấm để mở bản lớn cùng chú thích x3, 1/3 và 100%.
-- Đóng biểu đồ bằng nút đóng hoặc Escape chỉ đóng biểu đồ, không thoát hoặc reset trận đang diễn ra.
-- Huy hiệu có kích thước riêng, nhãn truy cập và chú thích tên nguyên tố. Header lớn dành chỗ giữa tên thẻ và thông tin variant/drop chance; icon ở ô chọn đấu sĩ được neo vào góc trên bên phải.
-- Bố cục biểu đồ và bộ lọc co giãn theo desktop/mobile. Nút mở rộng passive tiếp tục nằm trong góc dưới bên phải vùng passive.
-- Gói nguồn kèm đủ 7 PNG nguyên tố đã cung cấp. Hai ảnh chụp giao diện tham chiếu không được đưa vào gói game.
+4. THÀNH TỰU TỔNG SỐ TRẬN THẮNG RAID
 
-4. BỘ LỌC VÀ SẮP XẾP NGUYÊN TỐ
+- Mốc: 1; 10; 100; 1.000; 10.000; 100.000; 1.000.000; 10.000.000; 100.000.000 trận thắng.
+- Mỗi tier đã claim cộng +0,05 Drop Multiplier vĩnh viễn. Có 9 tier, tổng bonus tối đa +0,45, tương đương Drop x1,45.
+- Tổng số thắng là tổng trường wins của tất cả loại Raid, không khóa riêng Marine Fort. Thêm bộ lọc Total Raid wins trong Achievements.
+- Dữ liệu thắng của các ví Raid hiện có được cộng lại khi nạp game, nên save cũ không mất tiến độ. Đồng bộ nhiều lần không làm tăng lặp số trận thắng.
+- Chỉ tính chiến thắng đã commit thành công. Thua trận hoặc chưa lưu được phần thưởng không cộng một chiến thắng mới.
+- Mỗi tier nhận thưởng 1 lần qua Claim reward. Claim lại, reload hoặc import không cộng lặp bonus; dùng hợp nhất cờ claimed và biên nhận thưởng trong save chính.
 
-- Collection có bộ lọc All Elements hoặc từng hệ Fire, Water, Nature, Electric, Dark, Holy.
-- Bộ chọn đấu sĩ trong Arena có bộ lọc nguyên tố tương tự, kết hợp với tìm kiếm tên và các kiểu sắp xếp sẵn có.
-- Thêm kiểu sắp xếp theo nguyên tố cho cả Collection và danh sách chọn đội hình. Thứ tự nhóm: Fire, Water, Nature, Electric, Dark, Holy; trong cùng nhóm sắp theo tên.
-- Bộ lọc chỉ thay đổi danh sách hiển thị, không tự gỡ các thẻ đã chọn khỏi đội hình và không thay thế điều kiện vào Weather Tower.
-- Storage vật phẩm vẫn dùng cho potion, vé, chìa khóa và vật liệu; bộ lọc nguyên tố dành cho kho thẻ và danh sách thẻ chiến đấu.
+5. PHẠM VI VÀ CÁCH TÍNH DROP MULTIPLIER
 
-5. BỘ CHỌN ĐỐI THỦ TOWER THEO TẦNG
+Theo lựa chọn đã xác nhận, Drop Multiplier tăng số lượng vật phẩm thường; không tăng tỷ lệ thẻ Secret Raid.
 
-- Nguồn ứng viên Tower mới bao gồm toàn bộ 114 thẻ, kể cả Tower Champion chưa mở khóa và các thẻ Raid có chance = 0. Điều này chỉ cho phép đối thủ dùng thẻ, không mở khóa sở hữu hoặc đưa thẻ Raid vào RNG thường của người chơi.
-- Với thẻ roll được: Q = mẫu số chance hiện có của thẻ.
-- Với thẻ 1 trên 0: Q là số nguyên được lấy ngẫu nhiên đều từ 100.000 đến 10.000.000, dùng riêng cho việc sinh đối thủ.
-- Ngưỡng chất lượng tối thiểu theo tầng, xét trên Q:
-  Tầng 1–25: 0, cho phép mọi ứng viên của hệ phù hợp.
-  Tầng 26–50: 100.
-  Tầng 51–75: 1.000.
-  Tầng 76–100: 10.000.
-  Tầng 101–200: 100.000.
-  Tầng 201–300: 500.000.
-  Tầng 301–500: 1.000.000.
-  Tầng 501 trở đi: 2.000.000.
-- Nếu một tập ứng viên theo hệ không có thẻ nào đạt ngưỡng, lấy ứng viên mạnh nhất theo Q trong chính hệ đó. Không nới khóa nguyên tố để lấp chỗ trống.
-- Sau lọc chất lượng, vẫn ưu tiên nhóm vai trò hiện có: minion thường đến Legendary; boss từ Legendary; phòng Elite ưu tiên Mythic/Secret. Nếu một nhóm vai trò rỗng, dùng tập đã lọc theo hệ và chất lượng.
-- Trong tập cuối, trọng số chọn thẻ là 1/Q; xác suất tương đối của thẻ i là (1/Qi) chia cho tổng (1/Qj) của các ứng viên trong tập đó. Đây là xác suất chọn đối thủ, không phải tỷ lệ gacha hay tỷ lệ rơi thẻ.
-- Vẫn sinh 3 minion và 1 boss. Không đổi công thức HP/ATK theo tầng, quy tắc HP > ATK, Tower Coins hoặc VNĐ từ tổng sát thương.
+- Áp dụng vào Time Trial Shards, Raid Coins, Tower Coins, Marine Fort Raid Key và các potion rơi từ chiến thắng.
+- Không áp dụng vào VNĐ, EXP, thẻ gacha, thưởng thẻ Champion cố định hoặc thẻ Secret Raid. Không tự nhân số lượng hàng mua trong shop.
+- Xác suất cơ bản rơi key vẫn là 10% mỗi trận thắng 1v1/4v4; xác suất potion và pity không đổi. Chỉ lượng nhận được khi rơi mới được nhân.
+- Secret Raid giữ nguyên tỷ lệ theo độ khó từ 1% đến 10%, phân bố Ace 55%, Marco 35%, Mihawk 10% và quy tắc không rơi lại thẻ đã sở hữu/nhận.
+- Speed Battle Potion vẫn không nằm trong nhóm potion rơi từ trận thường.
 
-6. KHÓA NGUYÊN TỐ THEO LOẠI TOWER
+Công thức số lượng:
+  M = 1 + 0,05 x số tier Raid đã claim.
+  q = số lượng rơi cơ bản.
+  s = q x M.
+  k = floor(s).
+  f = s - k.
+  Nhận k + 1 với xác suất f; ngược lại nhận k.
 
-- Normal: không khóa một hệ chung; lấy từ toàn bộ 114 thẻ trước bước lọc chất lượng và vai trò.
-- Raining: Water.
-- Snowing: chọn Water hoặc Nature.
-- Sunny: Fire.
-- Sugar: Electric.
-- Reaper: chọn Dark hoặc Holy.
-- Eclipse: chọn Dark hoặc Fire.
-- Malevolent: chọn Fire hoặc Nature.
-- Tsukuyomi/Mangekyo: Dark.
-- Heavenly: Holy.
-- Shadow: chọn Dark hoặc Electric.
+- Làm tròn xác suất giúp bonus nhỏ vẫn có tác dụng khi q = 1. Với M = 1,05: 95% nhận 1 và 5% nhận 2 khi món đó đã rơi. Với M = 1,45: 55% nhận 1 và 45% nhận 2.
+- Nếu s là số nguyên thì nhận đúng s, không bốc thêm số ngẫu nhiên. Ở M = 1, chuỗi RNG nhận vật phẩm vẫn giống bản trước.
+- Ví dụ 100 Raid Coins cơ bản ở M = 1,45 cho đúng 145 Raid Coins. Độ khó 1 vẫn có 1 coin cơ bản; khi có bonus có thể nhận 1 hoặc 2 bằng quy tắc trên.
+- Giá shop, phí key/vé vào trận và số lượng mỗi lượt mua vẫn giữ nguyên. Mua 1 potion vẫn nhận đúng 1 potion.
+- Log chiến đấu, tổng kết Raid/Time Trial, bảng thành tựu và Storage hiển thị bonus hoặc số lượng nhận thực tế.
 
-Ở loại có 2 hệ, chọn 1 hệ cho cả tầng với xác suất 50% mỗi hệ. Cả 4 đối thủ của tầng mới đều phải mang đúng hệ đã chọn; không chọn riêng từng hệ cho từng vị trí. Mutation thời tiết của đối thủ không thay đổi hệ thẻ.
+6. LƯU PHẦN THƯỞNG VÀ CHUYỂN SAVE
 
-7. ĐỘI HÌNH KHÓA VÀ TƯƠNG THÍCH SAVE
+- Phần thưởng Raid đang chờ lưu bổ sung baseCoins, dropMultiplier và coins đã nhân/làm tròn. Khi khôi phục pendingReward, dùng nguyên lượng đã lưu, không bốc lại phần lẻ hoặc nhân Drop lần thứ hai.
+- Bộ kiểm tra import hỗ trợ pendingReward cũ và mới; dữ liệu mới phải có số coin cơ bản đúng khoảng theo độ khó, hệ số từ 1 đến 1,45 và coin cuối đúng khoảng làm tròn.
+- Sau khi commit phần thưởng, cộng wins trong cùng dữ liệu Raid. Thành tựu đọc tổng đã commit, tránh cộng thắng hai lần khi reload giữa bước phát thưởng.
+- Bonus EXP/VNĐ/Drop được suy ra từ các tier đã nhận và biên nhận lưu bền, không tăng trực tiếp mỗi lần mở game.
+- Giữ nguyên định dạng .acrsave, mã kiểm tra toàn vẹn, cooldown nhập/xuất độc lập 7 ngày và cờ migration Lv.10 hiện có.
 
-- Bản ghi đối thủ Tower mới lưu selectionVersion = 2, element của tầng, 4 ID thẻ, mutationIds và selectionChance của mỗi vị trí.
-- Sau thất bại, thử lại giữ nguyên thành phần, nguyên tố, mutation và Q đã lấy cho tầng đó. Mỗi lượt thử tạo lại đơn vị đầy HP, không mang trạng thái, hồi sinh hoặc summon từ lượt thử trước.
-- Tải lại và chuyển .acrsave bảo toàn bản ghi mới, kể cả thẻ 1 trên 0. Kiểm tra import xác thực cả khóa hệ lẫn dữ liệu Q của các bản ghi phiên bản mới.
-- Để giữ lời hứa khóa đối thủ của save cũ, đội hình đã khóa từ bản trước được giữ nguyên đến khi vượt tầng. Các khóa hệ và lọc chất lượng mới áp dụng từ đội hình được sinh mới tiếp theo.
-- Quy tắc đội người chơi không đổi: Normal nhận mọi thẻ sở hữu; Weather Tower tiếp tục xét thời tiết gốc hoặc mutation/double mutation phù hợp, không đổi thành điều kiện nguyên tố.
-- Bộ sinh đối thủ Time Trial được tách thành profile riêng giữ đúng quy tắc chọn đội trước bản cập nhật; các giới hạn thời gian, vé, thưởng và miễn Speed Battle Potion không đổi. Sát thương nguyên tố vẫn hoạt động khi thẻ chiến đấu trong chế độ này.
-- Giữ nguyên cơ chế bảo vệ .acrsave, checksum, cooldown nhập/xuất độc lập 7 ngày và cờ migration Lv.10 đã có.
+7. CÁC FILE ĐƯỢC ĐIỀU CHỈNH
 
-8. CÁC FILE CỦA BẢN CẬP NHẬT
-
-- cards.js: khai báo element rõ ràng cho toàn bộ 114 thẻ.
-- elements.js: module mới cho 6 hệ, ma trận sát thương và huy hiệu UI.
-- passives.js: nối hệ số nguyên tố vào các luồng sát thương hiện có, không thêm passive nguyên tố.
-- tower.js: lọc chất lượng theo tầng, pool thẻ 1 trên 0, khóa hệ theo loại và lưu đội hình.
-- timetrial.js: gọi profile sinh đối thủ riêng để giữ hành vi chọn đội trước đó.
-- app.js: renderer huy hiệu, lọc/sắp xếp và tích hợp biểu đồ, kiểm tra bản ghi Tower khi import.
-- index.html, styles.css: biểu đồ Arena, bộ lọc và bố cục huy hiệu thích ứng.
-- assets/: 6 icon nguyên tố và elemental.png.
-- README.txt: chỉ chứa changelog của bản cập nhật nguyên tố và Tower này.
+- background.js: module mới cho audio im lặng và sự kiện vòng đời trang.
+- passives.js: tách cờ tắt passive khỏi trạng thái mất lượt để sửa Reigen.
+- cards.js: làm rõ mô tả Scam của Reigen; không đổi chỉ số thẻ.
+- achievements.js: 10 mốc Time Trial mới, 9 mốc Raid và các getter bonus vĩnh viễn.
+- inventory.js: tính số lượng drop theo hệ số, dùng làm tròn xác suất.
+- raid.js: tổng thắng mọi loại Raid, lượng key/coin và pendingReward đã nhân.
+- tower.js: áp dụng Drop Multiplier vào Tower Coins được cấp.
+- timetrial.js: nhân Shards và bonus EXP thành tựu riêng cho EXP Monster.
+- app.js: phối hợp bonus, đối soát thành tựu, nhãn UI và khôi phục lịch khi trang tiếp tục.
+- index.html: nối background.js và thêm bộ lọc thành tựu Raid.
+- README.txt: chỉ ghi nội dung bản cập nhật này. Không kèm script test, ảnh kiểm tra hoặc log xác nhận trong gói nguồn.

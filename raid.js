@@ -36,7 +36,11 @@
     if (p === null) return true;
     if (!validAttempt(p) || !v.activeAttempt || p.id !== v.activeAttempt.id || p.type !== v.activeAttempt.type || p.difficulty !== v.activeAttempt.difficulty || p.startedAt !== v.activeAttempt.startedAt) return false;
     const range = coinRange(p.difficulty);
-    if (!integer(p.coins, range.min, range.max)) return false;
+    if ('baseCoins' in p || 'dropMultiplier' in p) {
+      if (!integer(p.baseCoins, range.min, range.max) || typeof p.dropMultiplier !== 'number' || !Number.isFinite(p.dropMultiplier) || p.dropMultiplier < 1 || p.dropMultiplier > 1.45) return false;
+      const exact = p.baseCoins * p.dropMultiplier;
+      if (!integer(p.coins, Math.floor(exact), Math.ceil(exact))) return false;
+    } else if (!integer(p.coins, range.min, range.max)) return false;
     return p.secret === null || (object(p.secret) && SECRET_IDS.includes(p.secret.cardId) && Array.isArray(p.secret.mutationIds) && p.secret.mutationIds.length <= 2 && new Set(p.secret.mutationIds).size === p.secret.mutationIds.length && p.secret.mutationIds.every(id => typeof id === 'string' && Object.hasOwn(host.MUTATION_BY_ID || {}, id)));
   }
   function load() { try { const v = JSON.parse(host.localStorage.getItem(KEY) || 'null'); return validSave(v) ? v : fresh(); } catch (_) { return fresh(); } }
@@ -56,7 +60,7 @@
     if (p.secret) data.claimedSecrets[p.secret.cardId] = true;
     data.pendingReward = null; data.activeAttempt = null;
     if (!persist()) { data = previous; throw new Error('Chưa thể lưu Raid Coins. Phần thưởng đang chờ khôi phục.'); }
-    return { won: true, coins: granted, secret: p.secret, type: p.type, difficulty: p.difficulty };
+    return { won: true, coins: granted, secret: p.secret, type: p.type, difficulty: p.difficulty, dropMultiplier: p.dropMultiplier || 1 };
   }
   function configure(options = {}) {
     bridge = options;
@@ -114,14 +118,15 @@
     if (!data.activeAttempt || data.activeAttempt.id !== run.id) return null;
     if (!won) { const previous = data.activeAttempt; data.activeAttempt = null; if (!persist()) { data.activeAttempt = previous; throw new Error('Không thể lưu kết quả Raid.'); } run.completed = true; return { won: false, coins: 0, secret: null, type: run.type, difficulty: run.difficulty }; }
     const range = coinRange(run.difficulty);
-    data.pendingReward = { ...data.activeAttempt, coins: range.min + Math.floor(randomUnit(random) * (range.max - range.min + 1)), secret: rollSecret(run.difficulty, random) };
+    const baseCoins = range.min + Math.floor(randomUnit(random) * (range.max - range.min + 1));
+    data.pendingReward = { ...data.activeAttempt, baseCoins, dropMultiplier: host.InventorySystem.getDropMultiplier(), coins: host.InventorySystem.scaleDrop(baseCoins, random), secret: rollSecret(run.difficulty, random) };
     if (!persist()) { data.pendingReward = null; throw new Error('Không thể lưu phần thưởng Raid.'); }
     const result = commitPending(); run.completed = true; return result;
   }
   function abort(battle) { if (battle?.raid && !battle.raid.completed && !data.pendingReward) { try { finish(battle, false); } catch (e) { console.warn(e.message); } } }
   function rollKey(mode, random = Math.random) {
     if (!['1v1', '4v4'].includes(mode) || randomUnit(random) >= .10) return false;
-    return host.InventorySystem.grant(KEY_ITEM.id, 1);
+    return host.InventorySystem.grant(KEY_ITEM.id, host.InventorySystem.scaleDrop(1, random));
   }
   function purchase(type, id) {
     const offer = SHOP.find(item => item.id === id), entry = data.types[type];
@@ -137,6 +142,7 @@
     if (persist()) return true; entry.coins += cost; entry.upgradeLevel--; return false;
   }
   function snapshot(type = 'marine_fort') { return { ...data.types[type] }; }
+  function totalWins() { return Object.values(data.types).reduce((sum, entry) => Math.min(Number.MAX_SAFE_INTEGER, sum + entry.wins), 0); }
   function renderShop(grid, type, onChange = () => {}) {
     if (!grid || !validType(type)) return; grid.replaceChildren(); const doc = grid.ownerDocument, entry = data.types[type];
     for (const offer of SHOP) {
@@ -153,5 +159,5 @@
     button.addEventListener('click', () => { if (upgrade(type)) onChange(); else host.alert('Không thể nâng cấp đội Raid.'); }); box.append(name, text, button); grid.append(box);
   }
   function reset() { data = fresh(); registerKey(); persist(); }
-  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, SECRET_IDS, TYPES, SHOP, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, renderShop, reset, flush: persist });
+  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, SECRET_IDS, TYPES, SHOP, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, totalWins, renderShop, reset, flush: persist });
 })(window);

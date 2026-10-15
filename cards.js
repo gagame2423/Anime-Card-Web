@@ -594,7 +594,7 @@ const CARDS = [
     stats: { hp: 100000, atk: 1000 },
     passive: {
       name: "Scam",
-      description: "Teammate effect. When entry choose random one teammate to steal their passive, if Reigen is the last one boost 200% ATK damage and 100% HP with no passive."
+      description: "On entry, if another living teammate is available, Reigen chooses one at random and uses that teammate's passive. If Reigen enters with no other living teammate, it gains +200% ATK and +100% max HP, and its passive is disabled.\nDisabling this passive does not stop Reigen from making normal primary attacks. Stun, Freeze and other normal turn-control effects still apply."
     },
     image: "assets/cards/reigen.png"
   },

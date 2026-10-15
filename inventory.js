@@ -26,6 +26,18 @@
     return { ...saved, items, buffs };
   }
   const countOf = n => Number.isFinite(Number(n)) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(Number(n)))) : 0;
+  let bridge = {};
+  function getDropMultiplier() {
+    const value = Number(bridge.getDropMultiplier?.());
+    return Number.isFinite(value) ? Math.max(1, value) : 1;
+  }
+  function scaleDrop(amount, random = Math.random) {
+    const exact = Number(Math.min(Number.MAX_SAFE_INTEGER, countOf(amount) * getDropMultiplier()).toFixed(8));
+    const whole = Math.floor(exact), fraction = Number((exact - whole).toFixed(8));
+    // Stochastic rounding preserves small bonuses for a base drop of 1.
+    // No extra RNG call at x1 or when the scaled amount is already integral.
+    return whole + (fraction > 0 && Math.max(0, Math.min(1, Number(random()) || 0)) < fraction ? 1 : 0);
+  }
   function normalizeItem(id, raw = {}) {
     const entry = raw && typeof raw === 'object' ? raw : {}, base = definitions.get(id) || {};
     return { id, name: String(base.name ?? entry.name ?? id), description: String(base.description ?? entry.description ?? ''),
@@ -106,8 +118,8 @@
     const chance = dropChance(dropChancePercent);
     if (random() < chance) {
       const index = Math.max(0, Math.min(BATTLE_DROP_IDS.length - 1, Math.floor(random() * BATTLE_DROP_IDS.length)));
-      const id = BATTLE_DROP_IDS[index]; grant(id, 1); data.misses = 0; persist();
-      return { dropped: true, id, name: POTIONS[id].name, chance, pity: 0 };
+      const id = BATTLE_DROP_IDS[index], quantity = scaleDrop(1, random); grant(id, quantity); data.misses = 0; persist();
+      return { dropped: true, id, name: POTIONS[id].name, quantity, chance, pity: 0 };
     }
     data.misses = Math.min(10, data.misses + 1); persist(); return { dropped: false, id: null, chance, pity: data.misses };
   }
@@ -159,5 +171,5 @@
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, flush: persist, configure: options => { bridge = options || {}; }, getDropMultiplier, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);
