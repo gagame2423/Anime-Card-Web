@@ -13,7 +13,8 @@ const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
   "animeCardRngSave_v1"
 ]);
-const SAVE_SCHEMA_VERSION = 8;
+const SAVE_SCHEMA_VERSION = 9;
+const LEVEL_CAP_MIGRATION = 'level_cap_10_20261015';
 const GLOBAL_TICK_MS = 1000;
 const BASE_COOLDOWN_MS = 1500;
 const SPEED_BASE_COST = 100;
@@ -62,6 +63,7 @@ const defaultState = {
   battleDropRateBonus: 0,
   dropChance: 0, // percent points; potion drop logic reads ONLY this stat and pity
   cardProgress: {},
+  migrations: { [LEVEL_CAP_MIGRATION]: true },
   achievementRewardReceipts: {},
   unlocked: {},
   mutations: {},
@@ -280,6 +282,7 @@ function cloneDefaultState() {
     experience: 0,
     battleDropRateBonus: 0,
     cardProgress: {},
+    migrations: { [LEVEL_CAP_MIGRATION]: true },
     achievementRewardReceipts: {},
     unlocked: {},
     mutations: {},
@@ -317,12 +320,47 @@ function normalizeCardProgressRecords(rawProgress) {
   for (const [rawId, rawRecord] of Object.entries(rawProgress)) {
     const cardId = normalizeCardId(rawId);
     if (!cardId || !getCardById(cardId)) continue;
-    const source = rawRecord && typeof rawRecord === "object" ? rawRecord : {};
+    const source = rawRecord && typeof rawRecord === "object" ? rawRecord : { level: rawRecord };
     const level = Math.min(CARD_LEVEL_MAX, Math.max(1, Math.floor(Number(source.level) || 1)));
     const exp = Math.max(0, Math.floor(Number(source.exp) || 0));
     output[cardId] = { level, exp };
   }
   return output;
+}
+
+function migratePlayerCardLevels(parsed, progress) {
+  if (parsed.migrations?.[LEVEL_CAP_MIGRATION] === true) return progress;
+  const capped = new Set();
+  const resolveId = raw => {
+    const id = normalizeCardId(raw);
+    return getCardById(id) ? id : parseVariantKey(id)?.cardId || '';
+  };
+  const record = (rawId, rawLevel, rawExp = 0) => {
+    const id = resolveId(rawId), level = Math.floor(Number(rawLevel));
+    if (!id || !getCardById(id) || !Number.isFinite(level) || level < 1) return;
+    if (level > 10) capped.add(id);
+    // Canonical shared progress wins over embedded legacy copies; cap any
+    // offending copy of that same card ID, including mutation variants.
+    if (!progress[id]) progress[id] = { level: Math.min(10, level), exp: Math.max(0, Math.floor(Number(rawExp) || 0)) };
+  };
+  for (const field of ['cardProgress', 'cardLevels', 'levels']) {
+    for (const [id, entry] of Object.entries(parsed[field] || {})) {
+      record(id, typeof entry === 'object' && entry ? entry.level : entry, entry?.exp);
+    }
+  }
+  function scan(value, inheritedId = '', depth = 0) {
+    if (!value || typeof value !== 'object' || depth > 40) return;
+    const id = resolveId(value.cardId ?? value.id ?? value.card?.id ?? value.variantKey ?? inheritedId);
+    if ('level' in value) record(id, value.level, value.exp);
+    for (const [key, entry] of Object.entries(value)) {
+      if (entry && typeof entry === 'object') scan(entry, resolveId(key) || id, depth + 1);
+    }
+  }
+  // Only player-card containers: enemy levels, Raid difficulty, item counts
+  // and upgrade levels are deliberately outside the migration's scope.
+  for (const field of ['inventory', 'lineup', 'lineups', 'storage', 'collection', 'cards', 'unlockedCards', 'equipment']) scan(parsed[field]);
+  for (const id of capped) progress[id] = { level: 10, exp: 0 };
+  return progress;
 }
 
 function getCardLevelInfo(cardOrId) {
@@ -773,7 +811,9 @@ function normalizeState(parsed = {}) {
   normalized.achievementRewardReceipts = Object.fromEntries(
     Object.entries(parsed.achievementRewardReceipts || {}).filter(([id, claimed]) => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && claimed === true)
   );
-  normalized.cardProgress = normalizeCardProgressRecords(parsed.cardProgress || parsed.cardLevels || parsed.levels);
+  normalized.cardProgress = migratePlayerCardLevels(parsed, normalizeCardProgressRecords(parsed.cardProgress || parsed.cardLevels || parsed.levels));
+  normalized.migrations = Object.fromEntries(Object.entries(parsed.migrations || {}).filter(([id, done]) => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && typeof done === 'boolean'));
+  normalized.migrations[LEVEL_CAP_MIGRATION] = true;
 
   const rawUnlockedSource = (
     parsed.unlocked &&
@@ -2653,9 +2693,9 @@ function purchaseUpgrade(type) {
 // 4v4 BATTLE ARENA - VISUAL + AUTOMATED, ISOLATED FROM RNG/TICKER
 // ============================================================
 
-const BATTLE_EXP_RANGES = Object.freeze({
-  '4v4': Object.freeze({ min: 0.04, max: 0.10 }),
-  '1v1': Object.freeze({ min: 0.01, max: 0.05 })
+const BATTLE_EXP_BASE = Object.freeze({
+  '4v4': Object.freeze({ min: 6, max: 10 }),
+  '1v1': Object.freeze({ min: 2, max: 5 })
 });
 const BATTLE_TURN_MS = 3000;
 const AUTO_CONTINUE_DELAY_MS = 1500;
@@ -3412,17 +3452,18 @@ function getBattleEnemySalvageBase() {
 }
 
 function getBattleCardExperienceRewards(mode, random = Math.random) {
-  const range = BATTLE_EXP_RANGES[mode];
-  if (!range) return { rate: 0, cards: [] }; // Tower grants no EXP at any stage.
-  const rate = range.min + (range.max - range.min) * Math.max(0, Math.min(1, Number(random()) || 0));
+  const range = BATTLE_EXP_BASE[mode];
+  if (!range) return { cards: [] }; // Tower grants no EXP at any stage.
+  const baseRoll = range.min + (range.max - range.min) * Math.max(0, Math.min(1, Number(random()) || 0));
   // Shared card levels receive one reward per original ID, never per clone/copy.
   const ids = [...new Set((battleState?.setup?.team || []).map(slot => normalizeCardId(slot?.cardId)).filter(Boolean))];
   const cards = ids.filter(id => getCardById(id) && getOwnedCardCount(id) > 0 && getCardLevelInfo(id).level < CARD_LEVEL_MAX).map(cardId => {
-    const required = getCardLevelInfo(cardId).required;
-    const baseExperience = Math.floor(required * rate + 1e-9);
-    return { cardId, required, baseExperience, experience: getScaledExpReward(baseExperience) };
+    const { required, level } = getCardLevelInfo(cardId);
+    // EXP grows sublinearly; required EXP retains its existing linear curve.
+    const baseExperience = Math.max(1, Math.floor(baseRoll * getCardLevelRarityMultiplier(cardId) * Math.sqrt(level)));
+    return { cardId, required, level, baseExperience, experience: getScaledExpReward(baseExperience) };
   });
-  return { rate, cards };
+  return { cards };
 }
 
 function getBattleRewardProfile(playerPower, enemyPower) {
@@ -3441,7 +3482,7 @@ function getBattleRewardProfile(playerPower, enemyPower) {
   const reward = getScaledCoinReward(Math.floor(rawCoins));
   return {
     mode, reward, experience: cardExperience.cards.reduce((sum, card) => sum + card.experience, 0),
-    cardExperienceRewards: cardExperience.cards, experienceRate: cardExperience.rate,
+    cardExperienceRewards: cardExperience.cards,
     damage, dropRateBonus, baseValue, durationSeconds,
     timeMultiplier: damage ? 1 : timeMultiplier, timeBonusPercent: damage ? 0 : timeBonusPercent,
     playerLevel, enemyLevel, levelDiffMultiplier: damage ? 1 : levelDiffMultiplier,
@@ -3817,7 +3858,7 @@ function finishBattle(playerWon) {
       const levelUps = [];
       for (const entry of cardExperienceRewards) {
         const result = grantCardExperience(entry.cardId, entry.experience);
-        appendBattleLog(`EXP: ${getCardById(entry.cardId)?.name || entry.cardId} +${entry.experience.toLocaleString('en-US')} (${(baseRewardProfile.experienceRate * 100).toFixed(2)}% of ${entry.required.toLocaleString('en-US')} required EXP before bonuses).`, 'victory');
+        appendBattleLog(`EXP: ${getCardById(entry.cardId)?.name || entry.cardId} +${entry.experience.toLocaleString('en-US')} (base ${entry.baseExperience.toLocaleString('en-US')} at Lv.${entry.level}; progressive EXP before bonuses).`, 'victory');
         if (result.levelUps > 0) levelUps.push(`${getCardById(entry.cardId)?.name || entry.cardId} Lv.${result.level}`);
       }
       saveState();
@@ -3832,7 +3873,7 @@ function finishBattle(playerWon) {
 
       const earningSummary = baseRewardProfile.damage
         ? `Combined damage ${baseRewardProfile.damage.total.toLocaleString('en-US')} (Player ${baseRewardProfile.damage.player.toLocaleString('en-US')} + Enemy ${baseRewardProfile.damage.enemy.toLocaleString('en-US')}) • 10 damage / VNĐ • Earned ${formatCurrency(reward)} • No Tower EXP.`
-        : `Base ${formatCurrency(baseRewardProfile.baseValue)} • Time +${baseRewardProfile.timeBonusPercent}% • Level x${baseRewardProfile.levelDiffMultiplier.toFixed(2)} • Earned ${formatCurrency(reward)} • ${(baseRewardProfile.experienceRate * 100).toFixed(2)}% EXP per unique lineup card before bonuses.`;
+        : `Base ${formatCurrency(baseRewardProfile.baseValue)} • Time +${baseRewardProfile.timeBonusPercent}% • Level x${baseRewardProfile.levelDiffMultiplier.toFixed(2)} • Earned ${formatCurrency(reward)} • Progressive EXP awarded once per unique lineup card.`;
       appendBattleLog(`Victory! ${earningSummary}${levelNote}`, 'victory');
       if (els.battleResultTitle) els.battleResultTitle.textContent = '🏆 VICTORY!';
       if (els.battleResultText) els.battleResultText.textContent = `${modeLabel} cleared. ${towerPrize?.awarded ? `Tower Floor ${battleState.towerFloor}: +${towerPrize.coins} 🪙. ` : ''}${potionDrop?.dropped ? `Potion: ${potionDrop.name}. ` : ''}${earningSummary}`;
@@ -4489,6 +4530,7 @@ function validateSaveRecord(key, value) {
     if ('upgrades' in value) counts(value.upgrades, 'upgrades');
     if ('equipment' in value) ensure(Array.isArray(value.equipment), 'equipment must be an array.');
     if ('achievementRewardReceipts' in value) flags(value.achievementRewardReceipts, 'reward receipts');
+    if ('migrations' in value) flags(value.migrations, 'save migrations');
     if ('weather' in value) {
       ensure(object(value.weather), 'weather must be an object.');
       for (const field of ['gameSeconds', 'lastRealTimestamp', 'lastSchedulerSecond', 'gameMinutes', 'lastSchedulerMinute']) if (field in value.weather) number(value.weather[field], field, false);
@@ -4559,6 +4601,9 @@ function parseGameSaveImport(text) {
   for (const [key, entry] of Object.entries(storage)) result[key] = JSON.stringify(validateSaveRecord(key, entry));
   // Use the existing migration/ownership sanitizer for the authoritative card save.
   result[STORAGE_KEY] = JSON.stringify(normalizeState(JSON.parse(result[STORAGE_KEY])));
+  for (const legacyKey of LEGACY_STORAGE_KEYS) if (result[legacyKey]) result[legacyKey] = JSON.stringify(normalizeState(JSON.parse(result[legacyKey])));
+  const itemKey = window.InventorySystem.KEY;
+  result[itemKey] = JSON.stringify(window.InventorySystem.sanitizeSave(JSON.parse(result[itemKey])));
   return result;
 }
 async function importGameSave(input) {

@@ -8,14 +8,23 @@
     speed_potion: { name: 'Speed Potion', icon: '⚡', description: '+10% Roll Speed for 10 minutes', stat: 'speed', bonus: .10 },
     rich_potion: { name: 'Rich Potion', icon: '💵', description: '+25% VNĐ earned for 10 minutes', stat: 'rich', bonus: .25 },
     exp_potion: { name: 'EXP Potion', icon: '✨', description: '+25% EXP earned for 10 minutes', stat: 'exp', bonus: .25 },
-    vnd_potion: { name: 'VNĐ Potion', icon: '💴', description: '+25% VNĐ earned for 10 minutes. Shares the Rich Potion effect; no additive stacking. Raid Shop only.', stat: 'rich', bonus: .25, source: 'shop' },
     speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes outside Time Trial. Tower / Time Trial / Raid shops only.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'shop' }
   }).map(([id, item]) => [id, Object.freeze({ id, type: 'potion', tier: 'rare', ...item })])));
   // Preserve the original four-potion battle pool; exclusive items never enter it.
   const BATTLE_DROP_IDS = Object.freeze(['lucky_potion', 'speed_potion', 'rich_potion', 'exp_potion']);
   const definitions = new Map(Object.entries(POTIONS));
   const hasOwn = (object, id) => Object.prototype.hasOwnProperty.call(object, id);
-  const safeId = id => typeof id === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id);
+  // Retired IDs must not reappear through generic items or older imports.
+  const isRetired = id => typeof id === 'string' && id.toLowerCase() === 'vnd_potion';
+  const safeId = id => typeof id === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && !isRetired(id);
+  function sanitizeSave(saved) {
+    if (!saved || typeof saved !== 'object') return saved;
+    const items = Array.isArray(saved.items)
+      ? saved.items.filter(item => !isRetired(item?.id))
+      : Object.fromEntries(Object.entries(saved.items || {}).filter(([id, item]) => !isRetired(id) && !isRetired(item?.id)));
+    const buffs = Object.fromEntries(Object.entries(saved.buffs || {}).filter(([id]) => !isRetired(id)));
+    return { ...saved, items, buffs };
+  }
   const countOf = n => Number.isFinite(Number(n)) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(Number(n)))) : 0;
   function normalizeItem(id, raw = {}) {
     const entry = raw && typeof raw === 'object' ? raw : {}, base = definitions.get(id) || {};
@@ -29,7 +38,7 @@
   function blank() { return { version: 2, items: Object.fromEntries(Object.keys(POTIONS).map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
   function read() {
     let saved;
-    try { saved = JSON.parse(host.localStorage?.getItem(KEY) || 'null'); } catch (_) { saved = null; }
+    try { saved = sanitizeSave(JSON.parse(host.localStorage?.getItem(KEY) || 'null')); } catch (_) { saved = null; }
     const result = blank();
     if (saved && typeof saved === 'object') {
       const entries = Array.isArray(saved.items) ? saved.items.map(item => [item?.id, item]) : Object.entries(saved.items || {});
@@ -150,5 +159,5 @@
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, POTIONS, BATTLE_DROP_IDS, DURATION_MS, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, flush: persist, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

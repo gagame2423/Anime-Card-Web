@@ -446,7 +446,7 @@
       if (unit.championPermanentDeath) return false;
       if (code === 'snowing' && c.iceTurns > 0) { unit.hp = Math.min(unit.hp, 1); unit.defeated = false; return true; }
       if (isBleeding(unit)) return false;
-      if (code === 'reaper' && !c.revived) { c.revived = true; unit.hp = unit.maxHp; unit.defeated = false; applyPermanentAtkBonus(unit, .50); log(unit, 'Aizen • one full revival'); return true; }
+      if (code === 'reaper' && !c.revived) { c.revived = true; unit.hp = unit.maxHp; unit.defeated = false; applyPermanentAtkBonus(unit, 1.00); log(unit, 'Aizen • full revival +100% ATK for the match'); return true; }
       if (code === 'snowing' && !c.revived) { c.revived = true; unit.hp = unit.maxHp; unit.defeated = false; c.iceTurns = 5; c.iceStartedAt = bs.turnCount || 0; log(unit, 'Ice King • 5-turn afterlife'); return true; }
       return false;
     }
@@ -456,9 +456,16 @@
       const c = state(unit); if (c.deathHandled) return false; c.deathHandled = true;
       const owner = unit.championOwner;
       if (!unit.championDismissed && unit.championSummonType === 'duo' && isAlive(owner)) heal(owner, owner.maxHp * .10, 'NARUTO CLONE', bs, owner);
-      if (unit.championSummonType === 'converted' && isAlive(owner) && !noExternalRevive(unit) && !isBleeding(unit) && (c.darkRevives || 0) < 2) {
-        c.darkRevives = (c.darkRevives || 0) + 1; unit.maxHp = owner.maxHp; unit.hp = unit.maxHp; unit.atk = owner.atk; unit.defeated = false; c.deathHandled = false;
-        const team = teamOf(bs, owner), at = team.indexOf(unit); if (at >= 0) team.splice(at, 1); team.push(unit); refreshUnitDisplay(unit); log(owner, `Dark Aurora • reserve revival ${c.darkRevives}/2`); return true;
+      const reviver = !isGeneratedUnit(unit) && !noExternalRevive(unit) && !isBleeding(unit) && (c.darkRevives || 0) < 2
+        ? alliesOf(bs, unit, false).find(ally => canCreateCompanion(ally) && (cardIdOf(ally) === prefix + 'shadow' || id(ally) === 'shadow')) : null;
+      if (reviver) {
+        const team = teamOf(bs, unit), key = team === bs.playerTeam ? 'playerIndex' : 'enemyIndex';
+        // Capture the next living fighter before reviving/moving the victim.
+        const active = firstLiving(team, Number(bs[key]) || 0);
+        c.darkRevives = (c.darkRevives || 0) + 1; unit.maxHp = reviver.maxHp; unit.hp = unit.maxHp; unit.atk = reviver.atk; unit.defeated = false; c.deathHandled = false;
+        const at = team.indexOf(unit); if (at >= 0) team.splice(at, 1); team.push(unit);
+        bs[key] = Math.max(0, team.indexOf(active || unit));
+        refreshUnitDisplay(unit); log(reviver, `Dark Aurora • original teammate reserve revival ${c.darkRevives}/2`); return true;
       }
       if (id(unit) === 'snowing') {
         unit.championPermanentDeath = true;
@@ -487,8 +494,12 @@
           const retainedEffects = { heresy: c.heresy || 0, iceCrown: Boolean(c.iceCrown), darkRevives: c.darkRevives || 0 };
           delete ensureRuntime(unit).champion;
           Object.assign(state(unit), retainedEffects);
-          const team = teamOf(bs, unit), at = team.indexOf(unit); team.splice(team.indexOf(converted), 1); team.splice(at + 1, 0, converted);
-          const key = bs.playerTeam.includes(unit) ? 'playerIndex' : 'enemyIndex'; bs[key] = at + 1;
+          const team = teamOf(bs, unit), at = team.indexOf(unit);
+          const key = team === bs.playerTeam ? 'playerIndex' : 'enemyIndex', active = team[Number(bs[key]) || 0];
+          team.splice(team.indexOf(converted), 1); team.splice(at, 0, converted);
+          // A frontline conversion takes its owner's place; reserve kills do
+          // not displace a different fighter that is already active.
+          bs[key] = active === unit ? at : Math.max(0, team.indexOf(active));
           runOnEntry(bs, converted); entry(bs, converted);
           runOnEntry(bs, unit); entry(bs, unit);
           log(unit, 'DARK AURORA • converted frontline + stolen passive');
@@ -1174,14 +1185,15 @@
     if (remaining >= before && !isBleeding(target) && champions.fatal(battleState, target)) return { damage: 0, killed: false, preventedFatality: true };
     target.hp = Math.max(0, before - Math.floor(remaining));
     recordBattleDamage(battleState, attacker, target, before);
-    const killed = target.hp <= 0;
-    if (killed) { target.defeated = true; champions.death(battleState, target, attacker); }
+    const damage = Math.max(0, before - target.hp);
+    let revived = false;
+    if (target.hp <= 0) { target.defeated = true; revived = champions.death(battleState, target, attacker); }
     else raidSecrets.rescue(battleState, target);
     refreshUnitDisplay(target);
 
     return {
-      damage: Math.max(0, before - target.hp),
-      killed,
+      damage: revived ? damage : Math.max(0, before - target.hp),
+      killed: !isAlive(target),
       reflected: false
     };
   }
