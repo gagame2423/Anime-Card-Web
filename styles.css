@@ -4343,3 +4343,43 @@ body {
 @media (max-width: 560px) {
   .time-trial-mode-options { grid-template-columns: 1fr; }
 }
+/* Native element badges reserve their own space in card headers. */
+.element-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: 0 0 28px; margin-left: 6px; vertical-align: middle; border: 1px solid #666b8355; border-radius: 8px; background: #090d18cc; }
+.element-badge img { display: block; width: 100%; height: 100%; padding: 3px; object-fit: contain; }
+.tcg-card__header { gap: 8px; }
+.tcg-card__header .tcg-card__title-wrap { flex: 1 1 0; max-width: none; min-width: 0; }
+.tcg-card__header > .element-badge { margin-left: 0; width: 34px; height: 34px; flex-basis: 34px; }
+.tcg-card__header > .drop-rate { flex-shrink: 0; }
+.collection-toolbar { grid-template-columns: minmax(150px, 1fr) repeat(3, minmax(140px, .7fr)); }
+.collection-title-row > .element-badge { width: 23px; height: 23px; flex-basis: 23px; }
+.battle-card-picker-tools { flex-wrap: wrap; }
+#battleElementFilter { width: auto; min-width: 110px; max-width: 100%; }
+.available-card-row__name > .element-badge, .battle-fighter-option__body strong > .element-badge, .battle-team-slot__info strong > .element-badge, .battle-lineup-card__info strong > .element-badge { width: 20px; height: 20px; flex-basis: 20px; margin-left: 4px; }
+.battle-side-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.battle-side-label > .element-badge { margin-left: auto; }
+.arena-element-chart { flex: 0 0 auto; display: grid; justify-items: center; gap: 3px; width: 100px; padding: 5px; border: 1px solid #66749655; border-radius: 10px; background: #080b16; color: #c6d9f4; cursor: pointer; }
+.arena-element-chart > img { display: block; width: 88px; height: 88px; object-fit: contain; }
+.arena-element-chart > span { font-size: 8px; font-weight: 800; letter-spacing: .08em; }
+.arena-element-chart:focus-visible { outline: 2px solid #8fefff; outline-offset: 2px; }
+#elementChartModal { z-index: 10001; }
+.element-chart-modal { width: min(560px, 94vw); max-height: 94dvh; overflow-y: auto; padding-bottom: 16px; }
+.element-chart-full { display: block; width: min(100%, 420px); height: auto; margin: 10px auto; padding: 12px; background: #080b16; border-radius: 12px; }
+.element-chart-modal > p { margin: 10px 18px; color: #c6d9f4; font-size: 13px; line-height: 1.5; text-align: center; }
+@media (max-width: 900px) {
+  .arena-element-chart { width: 60px; }
+  .arena-element-chart > img { width: 48px; height: 48px; }
+  .arena-element-chart > span { font-size: 7px; letter-spacing: 0; }
+  .collection-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 540px) {
+  .arena-element-chart { width: 44px; padding: 2px; gap: 1px; }
+  .arena-element-chart > img { width: 36px; height: 36px; }
+  .arena-element-chart > span { font-size: 6px; }
+  .battle-header-controls { gap: 6px; }
+  .collection-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .tcg-card__header > .element-badge { width: 28px; height: 28px; flex-basis: 28px; }
+}
+
+.battle-fighter-option { position: relative; }
+.battle-fighter-option > .element-badge { position: absolute; top: 7px; right: 7px; width: 22px; height: 22px; }
+.battle-fighter-option__body { padding-right: 12px; }

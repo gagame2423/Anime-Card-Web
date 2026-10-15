@@ -88,13 +88,13 @@
     const cards = host.ALL_CARDS || [], tower = host.TowerSystem;
     // Use Tower's pure generator, never its persisted floor encounter.
     // This preserves rarity pools, elite rooms, exclusions, artwork and passives.
-    const lineup = tower.buildOpponents(cards, data.room, 'normal', [], random);
+    const lineup = tower.buildTrialOpponents(cards, data.room, 'normal', [], random);
     const used = new Set();
     return lineup.map((candidate, index) => {
       // A single draw from a reduced pool resolves duplicates without a retry loop.
       // The same role/elite rules still apply, including Tower's small-pool fallback.
       const unit = used.has(candidate.card.id)
-        ? tower.buildOpponents(cards.filter(card => !used.has(card.id)), data.room, 'normal', [], random)[index] || candidate
+        ? tower.buildTrialOpponents(cards.filter(card => !used.has(card.id)), data.room, 'normal', [], random)[index] || candidate
         : candidate;
       used.add(unit.card.id);
       const boss = index === 3, stats = roomStats(data.room, boss);

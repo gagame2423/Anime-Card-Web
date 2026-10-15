@@ -228,6 +228,7 @@
 
       <div class="collection-toolbar">
         <input id="searchInput" class="search-input" type="search" placeholder="Search card, passive, or mutation..." />
+        <select id="collectionElementFilter" class="select-input" aria-label="Filter collection by element"><option value="all">All Elements</option><option value="Fire">Fire</option><option value="Water">Water</option><option value="Nature">Nature</option><option value="Electric">Electric</option><option value="Dark">Dark</option><option value="Holy">Holy</option></select>
         <select id="mutationFilter" class="select-input" aria-label="Filter by mutation tier">
           <option value="all">All Mutation Tiers</option>
           <option value="normal">Normal</option>
@@ -249,6 +250,7 @@
           <option value="name">Sort: Name</option>
           <option value="atk">Sort: ATK</option>
           <option value="collected">Sort: Collected</option>
+          <option value="element">Sort: Element</option>
         </select>
       </div>
 
@@ -390,6 +392,14 @@
       <div id="towerShopItems" class="module-grid"></div>
     </section>
   </div>
+  <!-- ELEMENT RELATIONSHIPS -->
+  <div id="elementChartModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="elementChartTitle">
+    <section class="modal-panel element-chart-modal"><header class="modal-header"><div><p class="eyebrow">COMBAT GUIDE</p><h2 id="elementChartTitle">Element Damage</h2></div><button class="modal-close" data-close-modal="elementChartModal" type="button" aria-label="Close element chart">×</button></header>
+      <img class="element-chart-full" src="assets/elemental.png" width="500" height="500" alt="Fire → Nature → Electric → Water → Fire; Holy ↔ Dark">
+      <p>Advantage <strong>x3</strong> • Disadvantage <strong>1/3</strong> • Neutral / Same <strong>100%</strong></p>
+      <p>Holy → Dark <strong>x3</strong> and Dark → Holy <strong>x3</strong>. Elements do not grant passives.</p>
+    </section>
+  </div>
   <!-- SOLO BATTLE -->
   <div id="battleModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="battleModalTitle">
     <section class="modal-panel battle-modal">
@@ -406,6 +416,7 @@
             <b id="autoContinueBattleState" aria-hidden="true">OFF</b>
           </label>
           <span id="autoContinueBattleHint" class="sr-only">After a victory, continue with this lineup after 1.5 seconds. Stop on defeat or exit.</span>
+          <button id="elementChartOpenButton" class="arena-element-chart" type="button" aria-label="Open element damage chart" aria-haspopup="dialog" aria-controls="elementChartModal"><img src="assets/elemental.png" width="100" height="100" alt="Fire counters Nature; Nature counters Electric; Electric counters Water; Water counters Fire; Holy and Dark counter each other"><span>ELEMENTS ⤢</span></button>
           <button id="battleCloseButton" class="modal-close" type="button" aria-label="Exit battle and forfeit">×</button>
         </div>
       </header>
@@ -475,6 +486,7 @@
                 <span class="sr-only">Search unlocked cards</span>
                 <input id="cardSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="Search cards..." aria-label="Search unlocked cards" />
               </label>
+              <select id="battleElementFilter" class="select-input" aria-label="Filter lineup cards by element"><option value="all">All Elements</option><option value="Fire">Fire</option><option value="Water">Water</option><option value="Nature">Nature</option><option value="Electric">Electric</option><option value="Dark">Dark</option><option value="Holy">Holy</option></select>
               <label class="battle-card-sort">
                 <span class="sr-only">Sort unlocked cards</span>
                 <select id="cardSortSelect" aria-label="Sort unlocked cards">
@@ -482,6 +494,7 @@
                   <option value="hp">HP: High → Low</option>
                   <option value="name">Name: A → Z</option>
                   <option value="rarity">Rarity / Value: High → Low</option>
+                  <option value="element">Element: Fire → Holy</option>
                 </select>
               </label>
             </div>
@@ -755,6 +768,7 @@
   </div>
   <script src="weathers.js"></script>
   <script src="cards.js"></script>
+  <script src="elements.js"></script>
   <script src="passives.js"></script>
   <script src="inventory.js"></script>
   <script src="tower.js"></script>

@@ -296,7 +296,7 @@
     }
     function summon(bs, owner, hp, attack, kind, victim = null) {
       if (!canCreateCompanion(owner) || (victim && (isGeneratedUnit(victim) || uncloneable(victim) || (!isAlive(victim) && noExternalRevive(victim))))) return null;
-      const card = victim?.card || { id: `champion-${kind}-summon`, name: kind === 'ghost' ? 'Ghost' : 'Naruto Clone', passive: null, stats: { hp, atk: attack }, image: owner.card?.image };
+      const card = victim?.card || { id: `champion-${kind}-summon`, name: kind === 'ghost' ? 'Ghost' : 'Naruto Clone', element: owner.card?.element, passive: null, stats: { hp, atk: attack }, image: owner.card?.image };
       const unit = { card, mutations: [...(owner.mutations || [])], display: { name: victim ? `${victim.display?.name || card.name} • Dark Aurora` : card.name, hp, atk: attack }, hp: Math.max(1, Math.floor(hp)), maxHp: Math.max(1, Math.floor(hp)), atk: Math.max(1, Math.floor(attack)), defeated: false, isClone: kind !== 'converted', isSummoned: true, isTemporaryAlly: true, championSummonType: kind, championOwner: owner, level: owner.level || 1 };
       if (bs.mode === 'tower' && bs.enemyTeam.includes(owner)) window.TowerSystem?.protectEnemyUnit(unit);
       ensureRuntime(unit).effectivePassiveId = victim ? getEffectivePassiveCardId(victim) : null;
@@ -304,7 +304,7 @@
     }
     function hit(bs, source, target, damage, options = {}) {
       if (!isAlive(target) || !(damage > 0)) return { damage: 0, killed: false };
-      const amount = Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1)));
+      const amount = window.ElementSystem.damage(source, target, Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1))));
       if (raidSecrets.block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       if (!options.championCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) {
         const reflected = damageUnit(bs, target, source, Math.max(1, Math.floor(getBaseAtk(source) * .50)), { passiveAttack: true, championCounter: true });
@@ -312,7 +312,7 @@
         return { damage: 0, killed: false, reflected: true };
       }
       if (amount >= target.hp && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, amount, options)) return { damage: 0, killed: false };
-      const result = damageUnit(bs, source, target, amount, { passiveAttack: true, championSkill: true, ...options, raidBlockChecked: true });
+      const result = damageUnit(bs, source, target, amount, { passiveAttack: true, championSkill: true, ...options, raidBlockChecked: true, elementApplied: true });
       onHitTaken(bs, target, source, { hit: true, damage: result.damage, championCounter: options.championCounter });
       if (result.killed) { onKill(bs, source, target); onTeammateDeath(bs, target); }
       return result;
@@ -525,7 +525,7 @@
         const prevented = redirected >= before && onFatalityAttempt(bs, receiver, source, redirected, meta);
         if (prevented) recordBattleDamage(bs, source, receiver, before);
         else {
-          const result = damageUnit(bs, source, receiver, redirected, { championRedirect: true, championCounter: true, passiveAttack: true });
+          const result = damageUnit(bs, source, receiver, redirected, { championRedirect: true, championCounter: true, passiveAttack: true, elementApplied: true });
           onHitTaken(bs, receiver, source, { hit: true, damage: result.damage, championCounter: true });
           host.showBattleFloatingText?.(receiver, `-${result.damage}`, 'damage');
           if (result.killed) { onKill(bs, source, receiver); onTeammateDeath(bs, receiver); }
@@ -583,10 +583,10 @@
       if (!isAlive(source) || !isAlive(target) || !(amount > 0)) return { damage: 0, killed: false };
       if (block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       const heresyFactor = options.raidCounter && champions.state(source).heresy > 0 ? .91 : 1;
-      const value = Math.max(1, Math.floor(amount * heresyFactor)), before = target.hp;
+      const value = window.ElementSystem.damage(source, target, Math.max(1, Math.floor(amount * heresyFactor))), before = target.hp;
       if (!options.raidCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) return hit(bs, target, source, getBaseAtk(source) * .50, { raidCounter: true });
       if (value >= before && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, value, options)) { recordBattleDamage(bs, source, target, before); return { damage: 0, killed: false }; }
-      const result = damageUnit(bs, source, target, value, { passiveAttack: true, raidSkill: true, ...options, raidBlockChecked: true });
+      const result = damageUnit(bs, source, target, value, { passiveAttack: true, raidSkill: true, ...options, raidBlockChecked: true, elementApplied: true });
       if (result.raidBlocked) return result;
       onHitTaken(bs, target, source, { hit: true, damage: result.damage, championCounter: Boolean(options.raidCounter) });
       burn(bs, source, target, { ...result, hit: true });
@@ -999,7 +999,7 @@
       const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
       const remaining = [];
       for (const effect of list) {
-        const dmg = Math.max(0, Math.floor(Number(effect?.damage) || 0));
+        const dmg = Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, Number(effect?.damage) || 0)));
         if (dmg > 0 && isAlive(unit)) {
           const before = unit.hp;
           const prevented = dmg >= before && champions.fatal(battleState, unit);
@@ -1160,7 +1160,7 @@
 
     champions.incoming(battleState, target);
     if (!isAlive(target)) return { damage: 0, killed: true };
-    let remaining = Math.max(0, Number(amount) || 0);
+    let remaining = meta.elementApplied ? Math.max(0, Number(amount) || 0) : window.ElementSystem.damage(source, target, amount);
     remaining = absorbShieldDamage(target, remaining, battleState, source);
 
     const reduction = clamp(
@@ -2474,6 +2474,7 @@
       let incomingDamage = computeWeakenedAtk(attacker) * passiveAttackMultiplier(preview, target, battleState, options);
       incomingDamage *= champions.multiplier(attacker, target, options) * (Number(options.damageMultiplier) || 1);
       if (champions.state(attacker).heresy > 0) incomingDamage *= .91;
+      incomingDamage = window.ElementSystem.damage(attacker, target, incomingDamage);
       onDodge(battleState, target, attacker, { chainDepth: options.chainDepth || 0, incomingDamage });
       champions.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
       raidSecrets.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false, attackDamage: incomingDamage }, options);
@@ -2503,6 +2504,7 @@
     if (champions.state(attacker).heresy > 0) multiplier *= .91;
     let rawDamage = Math.max(1, Math.floor(baseAttack * multiplier));
     const attackDamage = rawDamage;
+    rawDamage = window.ElementSystem.damage(attacker, target, rawDamage);
     const damageReduction = clamp(ensureRuntime(target).damageReductionPct, 0, 0.95);
     rawDamage = Math.max(1, Math.floor(rawDamage * (1 - damageReduction)));
 
@@ -2516,7 +2518,7 @@
       : false;
 
     if (!fatalityPrevented) {
-      result = damageUnit(battleState, attacker, target, rawDamage, { passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true });
+      result = damageUnit(battleState, attacker, target, rawDamage, { passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true, elementApplied: true });
       result.critical = critical;
       result.hit = true;
     } else {

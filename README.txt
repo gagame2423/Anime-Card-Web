@@ -1,83 +1,118 @@
 NHẬT KÝ CẬP NHẬT 15/10/2026
-Dark Decade, Aizen Beyond, EXP thường, migration Lv.10 và loại bỏ VNĐ Potion
+HỆ NGUYÊN TỐ, HUY HIỆU THẺ VÀ BỘ CHỌN ĐỐI THỦ TOWER
 
-1. DARK DECADE: VỊ TRÍ TRIỆU HỒI VÀ PHẠM VI HỒI SINH
+1. HỆ NGUYÊN TỐ VÀ CÔNG THỨC SÁT THƯƠNG
 
-- Dark Aurora giữ nguyên xác suất 29% chuyển hóa một đối thủ vừa bị Dark Decade đánh bại. Đơn vị chuyển hóa sao chép max HP và ATK hiện tại của Dark Decade, đồng thời giữ passive của đối thủ. Dark Decade tiếp tục đánh cắp passive đó.
-- Đơn vị chuyển hóa được chèn ngay trước Dark Decade. Ví dụ: Dark Decade đang ở vị trí 1 thì đơn vị mới chiếm vị trí 1, Dark Decade lùi về vị trí 2.
-- Nếu Dark Decade đang trực tiếp chiến đấu, đơn vị chuyển hóa tiếp quản vị trí tiên phong. Nếu Dark Decade đang ở hàng chờ nhưng hạ đối thủ qua hiệu ứng kỹ năng, việc chèn đơn vị không làm đổi thẻ tiên phong khác đang chiến đấu.
-- Hồi sinh của Dark Aurora nay chỉ dành cho đồng đội gốc đã bị đánh bại khi một Dark Decade hợp lệ vẫn còn sống. Thẻ hồi sinh được đưa xuống cuối hàng chờ, nhận max HP và ATK hiện tại của Dark Decade và giữ passive của chính thẻ đó.
-- Giữ giới hạn hồi sinh hiện có: tối đa 2 lần cho mỗi đồng đội gốc trong một trận; nhiều Dark Decade không cộng thêm số lần cho cùng một thẻ.
-- Clone, summon, đồng đội tạm thời và đơn vị chuyển hóa đều không được nhận hồi sinh này. Dark Decade không tự hồi sinh bằng chính passive của mình. Các quy tắc cấm hồi sinh, tử vong vĩnh viễn và Bleed vẫn được áp dụng.
-- Giữ nguyên cơ chế ngăn clone/summon tạo thêm clone/summon. Bản cập nhật này không thêm giới hạn số lần tạo đồng đội cho thẻ gốc.
-- Điều chỉnh xử lý đòn đánh gây tử vong: sát thương thực tế được ghi nhận trước khi thẻ hồi sinh; thẻ đã hồi sinh không bị coi là đã chết hoàn toàn để kích hoạt nhầm chuyển hóa hoặc kết thúc trận.
-- Mô tả Dark Aurora được cập nhật đầy đủ, phân biệt rõ đơn vị chuyển hóa với đồng đội gốc có thể hồi sinh.
+- Thêm thuộc tính element riêng trong từng đối tượng của đủ 114 thẻ tại cards.js. Sáu giá trị hợp lệ: Fire, Water, Nature, Electric, Dark và Holy.
+- Thêm elements.js để quản lý ma trận khắc chế, đường dẫn icon và hiển thị huy hiệu dùng chung. Nguyên tố không cấp passive mới, không tăng trực tiếp chỉ số HP hoặc ATK và không thay đổi tỷ lệ roll của thẻ.
+- Vòng khắc chế: Fire > Nature > Electric > Water > Fire.
+- Fire đánh Nature, Nature đánh Electric, Electric đánh Water hoặc Water đánh Fire: sát thương x3.
+- Khi đánh ngược chiều một quan hệ khắc chế: sát thương còn 1/3. Ví dụ Fire đánh Water chỉ gây 1/3 sát thương.
+- Holy đánh Dark gây x3; Dark đánh Holy cũng gây x3. Hai chiều đều có lợi thế, không áp dụng nhánh bất lợi 1/3 cho cặp này.
+- Cùng nguyên tố hoặc không có quan hệ khắc chế: 100% sát thương. Ví dụ Fire đánh Fire, Electric đánh Fire, Dark đánh Dark và Holy đánh Holy đều có hệ số 1.
+- Công thức: sát thương sau nguyên tố = sát thương trước nguyên tố x E; E thuộc {3; 1/3; 1}. Tiếp theo vẫn áp dụng các bước khiên, giảm sát thương và làm tròn hiện có của từng luồng chiến đấu.
+- Đòn đánh chính, đòn đánh thêm, kỹ năng diện rộng, phản công và các tick Burn/Bleed đều xét nguyên tố của nguồn sát thương và mục tiêu thực tế. Đòn diện rộng xét riêng từng mục tiêu, không lấy hệ của mục tiêu đầu tiên áp cho cả đội.
+- Mỗi gói sát thương chỉ nhân hệ số nguyên tố 1 lần. Calamity chia đôi sát thương đã tính hệ của mục tiêu được bảo vệ; phần Wonder Of You hấp thụ hoặc phản xạ không nhân nguyên tố lần thứ hai.
+- Kiểm tra đòn đánh gây tử vong và kích hoạt sống sót/hồi sinh được thực hiện với lượng sát thương đã xét nguyên tố, tránh hồi sinh nhầm khi đòn bất lợi chưa đủ gây tử vong.
+- Không nhân hệ số nguyên tố lên hồi máu, tăng max HP, chi phí tự mất HP hoặc quyết định kết liễu tức thì. Các hiệu ứng này tiếp tục tuân theo quy tắc riêng đã có.
+- Mutation, double mutation, lên cấp và đánh cắp passive không đổi element gốc của thẻ. Clone dùng nguyên tố của thẻ mà nó thực sự đại diện; Ghost/Naruto Clone tạm thời do Champion tạo ra kế thừa nguyên tố của chủ sở hữu.
+- EXP Monster là đơn vị luyện tập phát sinh trong trận, ngoài danh sách 114 thẻ; không có nguyên tố khắc chế và vẫn giữ ATK = 0.
 
-2. AIZEN BEYOND: GIẢM CHỈ SỐ GỐC, TĂNG THƯỞNG HỒI SINH
+2. DANH SÁCH GÁN NGUYÊN TỐ CHO 114 THẺ
 
-- ID: tower-champion-reaper.
-- HP gốc: 60.000, thay cho 100.000.
-- ATK gốc: 30.000, thay cho 60.000.
-- Lần tự hồi sinh hợp lệ đầu tiên trong trận phục hồi 100% max HP hiện tại và tăng vĩnh viễn +100% ATK hiện tại đến hết trận, thay cho +50% ATK.
-- Công thức ATK khi hồi sinh: ATK mới = round(ATK ngay trước hồi sinh x2). Ví dụ thẻ không có modifier khác: 30.000 ATK thành 60.000 ATK.
-- Tự hồi sinh vẫn chỉ xảy ra 1 lần mỗi trận và tuân theo quy tắc cấm hồi sinh. Thẻ tiếp tục không được clone hoặc nhận hồi sinh từ đồng đội.
-- Giữ nguyên các hiệu ứng khác của Illusion Shattering Flower: sau mỗi 2 đòn đánh chính, gây sát thương lên mọi đối thủ còn sống bằng 60% ATK hiện tại của chính đối thủ đó; sau khi nhận sát thương, có 6% cơ hội phản công bằng 50% sát thương thực nhận.
-- Không đổi ID, artwork, yêu cầu mở khóa Reaper Tower tầng 100, điều kiện thời tiết Reaper và tỷ lệ roll 1 trên 6.000.000.
-- Với bản sao đối thủ trong Tower, bộ bảo vệ tỷ lệ ATK/HP của Tower vẫn có hiệu lực trong lúc tăng ATK.
+Theo lựa chọn đã xác nhận: Saber = Water; Luffy Kid và Garp = Nature; Metal Cooler = Electric. Tên Vasto Lorde trong yêu cầu tương ứng với thẻ Vasto Lord hiện có, ID weather-reaper-hollow.
 
-3. THAY CÔNG THỨC EXP TRONG TRẬN THƯỜNG 4v4 VÀ 1v1
+FIRE — 17 thẻ
+Kaneki; Nezuko; Denji; Uchiha Itachi; Yuji Itadori; Erwin; Boa Hancock; Shanks; Hutao; Escanor; Dante Limbus; Dio Brando; Malevolent King; Charizard Mega X; Thukuna; Vasto Lord; Ace.
 
-- Bỏ cách lấy một tỷ lệ cố định của EXP cần lên cấp làm phần thưởng trận thường. Công thức mới tính số EXP tuyệt đối, tăng theo căn bậc hai của cấp hiện tại.
-- Chỉ áp dụng khi thắng trận thường. Mỗi ID thẻ gốc trong đội hình nhận thưởng 1 lần; nhiều bản sao hoặc mutation của cùng ID không nhân số lượt nhận EXP.
-- Ký hiệu:
-  L = cấp hiện tại của thẻ tại thời điểm tính thưởng.
-  R = hệ số rarity của thẻ.
-  U = số ngẫu nhiên trong khoảng 0 đến dưới 1.
-  floor(x) = làm tròn xuống; sqrt(L) = căn bậc hai của L.
-- Trận 4v4: B = 6 + 4U.
-- Trận 1v1: B = 2 + 3U.
-- EXP cơ bản mỗi thẻ = max(1, floor(B x R x sqrt(L))).
-- Hệ số R giữ nguyên: Common = 1; Rare = 1,6; Epic = 2,4; Legendary = 3,6; Mythic = 5,2; Secret = 8.
-- EXP cần lên cấp giữ nguyên: max(1, floor(100 x R x L)).
-- Vì phần thưởng tăng theo sqrt(L), còn yêu cầu lên cấp tăng theo L, số trận cần lên cấp tăng dần theo cấp thay vì gần như cố định ở mọi cấp.
-- EXP cuối cùng tiếp tục áp dụng hệ số nâng cấp EXP, EXP Potion và các passive thưởng hợp lệ. Không thay đổi các hệ số nâng cấp đã có.
-- Thứ tự làm tròn: E1 = floor(EXP cơ bản x hệ số EXP chung); EXP nhận = floor(E1 x hệ số thưởng passive hợp lệ).
-- Hệ số EXP chung = (1 + 0,12n + 0,03 x n^1,15) x P, với n là cấp nâng cấp EXP; P = 1,25 khi EXP Potion hoạt động, ngược lại P = 1.
-- Ví dụ Common, U = 0,5, không có bonus:
-  Lv.1: cần 100 EXP; thắng 4v4 nhận 8 EXP, thắng 1v1 nhận 3 EXP.
-  Lv.10: cần 1.000 EXP; thắng 4v4 nhận 25 EXP, thắng 1v1 nhận 11 EXP.
-  Lv.100: cần 10.000 EXP; thắng 4v4 nhận 80 EXP, thắng 1v1 nhận 35 EXP.
-- Thẻ đạt Lv.999 không nhận thêm EXP trận thường.
-- Log và màn hình thưởng hiển thị EXP tăng tiến, bỏ thông báo tỷ lệ phần trăm cố định cũ.
-- Phạm vi thay đổi chỉ là trận thường: Tower vẫn không cho EXP; Raid vẫn không cho EXP; EXP Time Trial giữ cơ chế EXP riêng theo mỗi EXP Monster; EXP nhận từ roll trùng không đổi.
+WATER — 20 thẻ
+Tanjiro; Buggy; Saber; Vegeta; Rimuru; Grimmjaw; Reigen; Nami; Giyu Tomioka; Sea Beast; Arlong; Aquaman; Noelle Silva; Rukia; Ice Admiral; Esdeath; Toshiro; Aqua; Ice King; Marco.
 
-4. MIGRATION GIỚI HẠN Lv.10 CHẠY MỘT LẦN THEO SAVE
+NATURE — 23 thẻ
+Naruto Kid; Powerless Guy; Gon Kid; Bounty Hunter; Jotaro Kujo; Hakari; Kamen Rider Kuuga; Bulma; Polnareff; Meruem; Katakuri; Senku; Yuno; Weather Report; Piccolo; Peashooter; Uchiha Shisui; Doflamingo; Hakari Jackpot; Naruto x Sasuke; Mihawk; Luffy Kid; Garp.
 
-- Nâng schema dữ liệu người chơi lên phiên bản 9.
-- Cờ hoàn tất nằm trong dữ liệu save chính: migrations.level_cap_10_20261015 = true. Cờ này được lưu vào localStorage và đi theo gói .acrsave khi xuất save.
-- Khi nạp save cũ tại trình duyệt hoặc nhập .acrsave chưa có cờ, game quét tiến trình thẻ gốc và các bản ghi cấp thẻ trong những cấu trúc inventory, lineup, lineups, storage, collection, cards, unlockedCards và equipment cũ.
-- Hỗ trợ dữ liệu cấp cũ dạng cardProgress, cardLevels hoặc levels, gồm cả bản ghi số cấp đơn lẻ và đối tượng có level/exp.
-- Thẻ có cấp lớn hơn 10 được đưa về Lv.10, EXP đang tích lũy của thẻ đó được đặt về 0 để không lập tức tăng cấp lại từ EXP cũ. Tất cả mutation dùng chung tiến trình của cùng ID thẻ gốc.
-- Thẻ Lv.1 đến Lv.10 giữ nguyên cấp và EXP hiện có, trừ trường hợp một bản ghi khác của cùng ID thẻ có cấp vượt 10 và cần được đưa về cùng tiến trình chuẩn.
-- Cờ được đánh dấu sau khi chuẩn hóa dữ liệu; save mới cũng được đánh dấu ngay từ đầu. Sau đó người chơi có thể lên Lv.11 trở lên bình thường.
-- Khi tải lại hoặc nhập save đã có cờ hoàn tất, game không áp lại giới hạn Lv.10. Đây là migration một lần, không phải trần cấp mới.
-- Migration không hạ cấp đối thủ Tower, đối thủ Raid, độ khó Raid, nâng cấp shop hoặc số lượng vật phẩm. Trần cấp thẻ thường vẫn là Lv.999.
-- Import kiểm tra kiểu dữ liệu của cờ migration trước khi ghi. Giao dịch nhập save và khả năng khôi phục khi ghi thất bại được giữ nguyên.
+ELECTRIC — 15 thẻ
+Sasuke Kid; Jonathan Joestar; Son Goku; Kakashi; Madness Doctor; The Flash; Frieza; Gohan; Android 21; Light Admiral; Gojo Young; Uchiha Sasuke; Equinox; Majin Buu; Metal Cooler.
 
-5. LOẠI BỎ VNĐ POTION
+DARK — 22 thẻ
+Normal Demon; Six Seven; The Trapper; Guts; Mahito; BlackBeard; WhiteBeard; Asta; Demon Asta; Aatrox; Griffith; Adult Gon; Luffy Nightmare; Igris; Cid Atomic; Enderman; Homura Akemi; Kamen Rider Decade; Diavolo; Subaru; Wonder Of You; Kamen Rider Dark Decade.
 
-- Gỡ định nghĩa, mô tả, biểu tượng và mục bán VNĐ Potion khỏi game. ID vật phẩm đã nghỉ dùng: vnd_potion.
-- Gỡ VNĐ Potion khỏi Marine Fort Raid Shop. Các mục còn lại: EXP Potion, Rich Potion và Speed Potion giá 25 Marine Fort Coins; Speed Battle Potion giá 50 Marine Fort Coins.
-- Khi nạp hoặc nhập dữ liệu cũ, xóa stack VNĐ Potion và timer buff của riêng vật phẩm đó, hỗ trợ cả kho dạng mảng và dạng đối tượng.
-- Chặn ID đã nghỉ dùng ở các cổng đăng ký vật phẩm, cấp vật phẩm và sử dụng để vật phẩm không xuất hiện trở lại dưới dạng vật phẩm chung không xác định.
-- Rich Potion vẫn tồn tại riêng với hiệu ứng +25% VNĐ trong 10 phút. Không chuyển đổi hoặc hoàn tiền stack VNĐ Potion đã xóa.
-- Không đổi nhóm 4 potion rơi từ trận thường: Lucky, Speed, Rich và EXP. Speed Battle Potion tiếp tục là vật phẩm shop.
+HOLY — 17 thẻ
+Ichigo Young; Erza; The Truth; Viltrumite; Kamen Rider Kabuto; Adam Francis; Doppio; Builderman; Yuta Okkotsu; The First Human; Sailor Moon; Jin Mori; Wish; Kaguya; Mahoraga; Aizen Beyond; The Judgement.
 
-6. CÁC FILE ĐƯỢC ĐIỀU CHỈNH TRONG BẢN VÁ
+Tổng cộng: 17 + 20 + 23 + 15 + 22 + 17 = 114 thẻ. Mọi chỉ số, tên passive, mô tả passive và điều kiện roll hiện có được giữ nguyên trong bản cập nhật này.
 
-- cards.js: chỉ số và mô tả Aizen Beyond; mô tả Dark Aurora.
-- passives.js: vị trí chuyển hóa, hồi sinh đồng đội gốc, buff hồi sinh Aizen và kết quả sát thương khi hồi sinh.
-- app.js: EXP trận thường, migration Lv.10 và tích hợp chuẩn hóa dữ liệu import.
-- inventory.js: loại bỏ VNĐ Potion và dọn dữ liệu vật phẩm cũ.
-- raid.js: gỡ mục VNĐ Potion khỏi shop.
-- README.txt: chỉ ghi các thay đổi của bản cập nhật này.
+3. HUY HIỆU NGUYÊN TỐ VÀ BIỂU ĐỒ ARENA
+
+- Hiển thị huy hiệu nguyên tố trên header thẻ kết quả roll và thẻ preview; bổ sung icon ở Collection, danh sách roll khả dụng, danh sách chọn đấu sĩ, đội hình đã chọn, preview lựa chọn, thẻ đang chiến đấu và hàng chờ hai bên.
+- Dùng đúng 6 ảnh: assets/fire.png, assets/water.png, assets/nature.png, assets/electric.png, assets/dark.png và assets/holy.png.
+- Biểu đồ assets/elemental.png xuất hiện ở góc trên bên phải panel Arena. Có thể bấm để mở bản lớn cùng chú thích x3, 1/3 và 100%.
+- Đóng biểu đồ bằng nút đóng hoặc Escape chỉ đóng biểu đồ, không thoát hoặc reset trận đang diễn ra.
+- Huy hiệu có kích thước riêng, nhãn truy cập và chú thích tên nguyên tố. Header lớn dành chỗ giữa tên thẻ và thông tin variant/drop chance; icon ở ô chọn đấu sĩ được neo vào góc trên bên phải.
+- Bố cục biểu đồ và bộ lọc co giãn theo desktop/mobile. Nút mở rộng passive tiếp tục nằm trong góc dưới bên phải vùng passive.
+- Gói nguồn kèm đủ 7 PNG nguyên tố đã cung cấp. Hai ảnh chụp giao diện tham chiếu không được đưa vào gói game.
+
+4. BỘ LỌC VÀ SẮP XẾP NGUYÊN TỐ
+
+- Collection có bộ lọc All Elements hoặc từng hệ Fire, Water, Nature, Electric, Dark, Holy.
+- Bộ chọn đấu sĩ trong Arena có bộ lọc nguyên tố tương tự, kết hợp với tìm kiếm tên và các kiểu sắp xếp sẵn có.
+- Thêm kiểu sắp xếp theo nguyên tố cho cả Collection và danh sách chọn đội hình. Thứ tự nhóm: Fire, Water, Nature, Electric, Dark, Holy; trong cùng nhóm sắp theo tên.
+- Bộ lọc chỉ thay đổi danh sách hiển thị, không tự gỡ các thẻ đã chọn khỏi đội hình và không thay thế điều kiện vào Weather Tower.
+- Storage vật phẩm vẫn dùng cho potion, vé, chìa khóa và vật liệu; bộ lọc nguyên tố dành cho kho thẻ và danh sách thẻ chiến đấu.
+
+5. BỘ CHỌN ĐỐI THỦ TOWER THEO TẦNG
+
+- Nguồn ứng viên Tower mới bao gồm toàn bộ 114 thẻ, kể cả Tower Champion chưa mở khóa và các thẻ Raid có chance = 0. Điều này chỉ cho phép đối thủ dùng thẻ, không mở khóa sở hữu hoặc đưa thẻ Raid vào RNG thường của người chơi.
+- Với thẻ roll được: Q = mẫu số chance hiện có của thẻ.
+- Với thẻ 1 trên 0: Q là số nguyên được lấy ngẫu nhiên đều từ 100.000 đến 10.000.000, dùng riêng cho việc sinh đối thủ.
+- Ngưỡng chất lượng tối thiểu theo tầng, xét trên Q:
+  Tầng 1–25: 0, cho phép mọi ứng viên của hệ phù hợp.
+  Tầng 26–50: 100.
+  Tầng 51–75: 1.000.
+  Tầng 76–100: 10.000.
+  Tầng 101–200: 100.000.
+  Tầng 201–300: 500.000.
+  Tầng 301–500: 1.000.000.
+  Tầng 501 trở đi: 2.000.000.
+- Nếu một tập ứng viên theo hệ không có thẻ nào đạt ngưỡng, lấy ứng viên mạnh nhất theo Q trong chính hệ đó. Không nới khóa nguyên tố để lấp chỗ trống.
+- Sau lọc chất lượng, vẫn ưu tiên nhóm vai trò hiện có: minion thường đến Legendary; boss từ Legendary; phòng Elite ưu tiên Mythic/Secret. Nếu một nhóm vai trò rỗng, dùng tập đã lọc theo hệ và chất lượng.
+- Trong tập cuối, trọng số chọn thẻ là 1/Q; xác suất tương đối của thẻ i là (1/Qi) chia cho tổng (1/Qj) của các ứng viên trong tập đó. Đây là xác suất chọn đối thủ, không phải tỷ lệ gacha hay tỷ lệ rơi thẻ.
+- Vẫn sinh 3 minion và 1 boss. Không đổi công thức HP/ATK theo tầng, quy tắc HP > ATK, Tower Coins hoặc VNĐ từ tổng sát thương.
+
+6. KHÓA NGUYÊN TỐ THEO LOẠI TOWER
+
+- Normal: không khóa một hệ chung; lấy từ toàn bộ 114 thẻ trước bước lọc chất lượng và vai trò.
+- Raining: Water.
+- Snowing: chọn Water hoặc Nature.
+- Sunny: Fire.
+- Sugar: Electric.
+- Reaper: chọn Dark hoặc Holy.
+- Eclipse: chọn Dark hoặc Fire.
+- Malevolent: chọn Fire hoặc Nature.
+- Tsukuyomi/Mangekyo: Dark.
+- Heavenly: Holy.
+- Shadow: chọn Dark hoặc Electric.
+
+Ở loại có 2 hệ, chọn 1 hệ cho cả tầng với xác suất 50% mỗi hệ. Cả 4 đối thủ của tầng mới đều phải mang đúng hệ đã chọn; không chọn riêng từng hệ cho từng vị trí. Mutation thời tiết của đối thủ không thay đổi hệ thẻ.
+
+7. ĐỘI HÌNH KHÓA VÀ TƯƠNG THÍCH SAVE
+
+- Bản ghi đối thủ Tower mới lưu selectionVersion = 2, element của tầng, 4 ID thẻ, mutationIds và selectionChance của mỗi vị trí.
+- Sau thất bại, thử lại giữ nguyên thành phần, nguyên tố, mutation và Q đã lấy cho tầng đó. Mỗi lượt thử tạo lại đơn vị đầy HP, không mang trạng thái, hồi sinh hoặc summon từ lượt thử trước.
+- Tải lại và chuyển .acrsave bảo toàn bản ghi mới, kể cả thẻ 1 trên 0. Kiểm tra import xác thực cả khóa hệ lẫn dữ liệu Q của các bản ghi phiên bản mới.
+- Để giữ lời hứa khóa đối thủ của save cũ, đội hình đã khóa từ bản trước được giữ nguyên đến khi vượt tầng. Các khóa hệ và lọc chất lượng mới áp dụng từ đội hình được sinh mới tiếp theo.
+- Quy tắc đội người chơi không đổi: Normal nhận mọi thẻ sở hữu; Weather Tower tiếp tục xét thời tiết gốc hoặc mutation/double mutation phù hợp, không đổi thành điều kiện nguyên tố.
+- Bộ sinh đối thủ Time Trial được tách thành profile riêng giữ đúng quy tắc chọn đội trước bản cập nhật; các giới hạn thời gian, vé, thưởng và miễn Speed Battle Potion không đổi. Sát thương nguyên tố vẫn hoạt động khi thẻ chiến đấu trong chế độ này.
+- Giữ nguyên cơ chế bảo vệ .acrsave, checksum, cooldown nhập/xuất độc lập 7 ngày và cờ migration Lv.10 đã có.
+
+8. CÁC FILE CỦA BẢN CẬP NHẬT
+
+- cards.js: khai báo element rõ ràng cho toàn bộ 114 thẻ.
+- elements.js: module mới cho 6 hệ, ma trận sát thương và huy hiệu UI.
+- passives.js: nối hệ số nguyên tố vào các luồng sát thương hiện có, không thêm passive nguyên tố.
+- tower.js: lọc chất lượng theo tầng, pool thẻ 1 trên 0, khóa hệ theo loại và lưu đội hình.
+- timetrial.js: gọi profile sinh đối thủ riêng để giữ hành vi chọn đội trước đó.
+- app.js: renderer huy hiệu, lọc/sắp xếp và tích hợp biểu đồ, kiểm tra bản ghi Tower khi import.
+- index.html, styles.css: biểu đồ Arena, bộ lọc và bố cục huy hiệu thích ứng.
+- assets/: 6 icon nguyên tố và elemental.png.
+- README.txt: chỉ chứa changelog của bản cập nhật nguyên tố và Tower này.

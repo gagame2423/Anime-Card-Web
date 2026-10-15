@@ -3,6 +3,19 @@
   'use strict';
   const KEY = 'anime_card_rng_tower_v1';
   const POTION_COST = 25;
+  const SELECTION_VERSION = 2;
+  const ENEMY_ELEMENTS = Object.freeze(Object.fromEntries(Object.entries({
+    raining: ['Water'], snowing: ['Water', 'Nature'], sunny: ['Fire'], sugar: ['Electric'],
+    reaper: ['Dark', 'Holy'], eclipse: ['Dark', 'Fire'], malevolent: ['Fire', 'Nature'],
+    tsukuyomi: ['Dark'], mangekyo: ['Dark'], heavenly: ['Holy'], shadow: ['Dark', 'Electric']
+  }).map(([id, elements]) => [id, Object.freeze(elements)])));
+  const QUALITY_TIERS = Object.freeze([[1, 0], [26, 100], [51, 1000], [76, 10000], [101, 100000], [201, 500000], [301, 1000000], [501, 2000000]].map(Object.freeze));
+  function minimumEnemyChance(floor) {
+    return QUALITY_TIERS.reduce((minimum, [start, chance]) => floorNumber(floor) >= start ? chance : minimum, 0);
+  }
+  function copyEncounter(record) {
+    return { ...record, lineup: record.lineup.map(slot => ({ ...slot, mutationIds: [...slot.mutationIds] })) };
+  }
   const SHOP_ITEMS = Object.freeze([
     ...['lucky_potion', 'speed_potion', 'rich_potion', 'exp_potion'].map(id => Object.freeze({ id, cost: POTION_COST })),
     Object.freeze({ id: 'speed_battle_potion', cost: 100 })
@@ -46,15 +59,27 @@
   function validMode(id) {
     return typeof id === 'string' && /^[a-z][a-z0-9-]*$/.test(id) && !['constructor', 'prototype', '__proto__'].includes(id);
   }
-  function isEncounterRecord(record) {
+  function isEncounterRecord(record, mode = null) {
     const cards = host.ALL_CARDS || host.CARDS || [];
-    return Boolean(record && typeof record === 'object' && !Array.isArray(record) &&
+    const structural = Boolean(record && typeof record === 'object' && !Array.isArray(record) &&
       Number.isSafeInteger(record.floor) && record.floor >= 1 && Array.isArray(record.lineup) && record.lineup.length === 4 &&
       record.lineup.every(slot => slot && typeof slot === 'object' && !Array.isArray(slot) &&
-        typeof slot.cardId === 'string' && cards.some(card => card.id === slot.cardId && !card.unlockRequirement && card.id !== 'griffith') &&
+        typeof slot.cardId === 'string' && cards.some(card => card.id === slot.cardId) &&
         Array.isArray(slot.mutationIds) && slot.mutationIds.length <= 2 &&
         new Set(slot.mutationIds).size === slot.mutationIds.length &&
         slot.mutationIds.every(id => typeof id === 'string' && Object.prototype.hasOwnProperty.call(host.MUTATION_BY_ID || {}, id))));
+    if (!structural) return false;
+    // Existing locked encounters survive the update until the floor is cleared.
+    if (record.selectionVersion === undefined) return true;
+    if (record.selectionVersion !== SELECTION_VERSION) return false;
+    const allowed = mode && ENEMY_ELEMENTS[String(mode).toLowerCase()];
+    if (record.element !== null && !host.ElementSystem.TYPES.includes(record.element)) return false;
+    if (mode && (allowed ? !allowed.includes(record.element) : record.element !== null)) return false;
+    return record.lineup.every(slot => {
+      const card = cards.find(card => card.id === slot.cardId);
+      return (!record.element || card.element === record.element) && Number.isSafeInteger(slot.selectionChance) &&
+        (Number(card.chance) > 0 ? slot.selectionChance === Number(card.chance) : slot.selectionChance >= 100000 && slot.selectionChance <= 10000000);
+    });
   }
   function load() {
     let raw;
@@ -71,8 +96,8 @@
     }
     if (raw?.encounters && typeof raw.encounters === 'object' && !Array.isArray(raw.encounters)) {
       for (const [id, record] of Object.entries(raw.encounters)) {
-        if (validMode(id) && isEncounterRecord(record) && record.floor === (result.cleared[id] || 0) + 1) {
-          result.encounters[id] = { floor: record.floor, lineup: record.lineup.map(slot => ({ cardId: slot.cardId, mutationIds: [...slot.mutationIds] })) };
+        if (validMode(id) && isEncounterRecord(record, id) && record.floor === (result.cleared[id] || 0) + 1) {
+          result.encounters[id] = copyEncounter(record);
         }
       }
     }
@@ -138,7 +163,7 @@
   }
   function rarityRank(card) { return ({ Common: 0, Rare: 1, Epic: 2, Legendary: 3, Mythic: 4, Secret: 5 })[card?.rarity] ?? 0; }
   function sample(pool, random) { return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))] || null; }
-  function buildOpponents(cards, floor, mode = 'normal', weathers = [], random = Math.random) {
+  function buildTrialOpponents(cards, floor, mode = 'normal', weathers = [], random = Math.random) {
     const all = (cards || []).filter(card => card && !card.unlockRequirement && String(card.id).toLowerCase() !== 'griffith');
     if (!all.length) return [];
     const eligible = all.filter(card => matchWeather(card, [], mode, weathers));
@@ -163,15 +188,46 @@
     }
     return result;
   }
+  function buildOpponents(cards, floor, mode = 'normal', weathers = [], random = Math.random) {
+    const all = (cards || []).filter(card => card && host.ElementSystem.of(card));
+    if (!all.length) return [];
+    const allowed = ENEMY_ELEMENTS[weatherId(mode)];
+    const element = allowed ? sample(allowed, random) : null;
+    const themed = all.filter(card => !element || card.element === element);
+    if (!themed.length) return []; // Never leak another element through a fallback.
+    const candidates = themed.map(card => ({ card, chance: Number(card.chance) > 0 ? Number(card.chance)
+      : 100000 + Math.min(9900000, Math.floor(Math.max(0, random()) * 9900001)) }));
+    // If a future/small element pool cannot reach the floor threshold, use
+    // its strongest available candidates without unlocking another element.
+    const minimum = Math.min(minimumEnemyChance(floor), Math.max(...candidates.map(entry => entry.chance)));
+    const qualified = candidates.filter(entry => entry.chance >= minimum);
+    function weighted(pool) {
+      const total = pool.reduce((sum, entry) => sum + 1 / entry.chance, 0);
+      let draw = Math.max(0, Math.min(1, Number(random()) || 0)) * total;
+      for (const entry of pool) { draw -= 1 / entry.chance; if (draw < 0) return entry; }
+      return pool[pool.length - 1];
+    }
+    return Array.from({ length: 4 }, (_, slot) => {
+      const boss = slot === 3, elite = isElite(floor);
+      const rolePool = qualified.filter(entry => elite ? rarityRank(entry.card) >= 4 : boss ? rarityRank(entry.card) >= 3 : rarityRank(entry.card) <= 3);
+      const selected = weighted(rolePool.length ? rolePool : qualified), card = selected.card;
+      const matchingMutation = weatherMutation(weatherDefinition(mode, weathers));
+      const mutations = weatherId(mode) !== 'normal' && matchingMutation && random() < .75 ? [matchingMutation] : [];
+      const stats = floorStats(floor, boss);
+      return protectEnemyUnit({ card, mutations, display: { name: card.name, image: card.image, ...stats, rarity: card.rarity },
+        hp: stats.hp, maxHp: stats.hp, atk: stats.atk, defeated: false, level: floorNumber(floor),
+        towerRole: boss ? 'boss' : 'minion', isTowerEnemy: true, floorElement: element, selectionChance: selected.chance });
+    });
+  }
   function getOpponents(cards, floor, mode = 'normal', weathers = [], random = Math.random) {
     const id = weatherId(mode), f = floorNumber(floor);
     if (!validMode(id)) return [];
     if (f !== nextFloor(id)) return buildOpponents(cards, f, id, weathers, random);
     let record = data.encounters[id];
-    if (!record || record.floor !== f || !isEncounterRecord(record) || record.lineup.some(slot => !cards.some(card => card.id === slot.cardId))) {
+    if (!record || record.floor !== f || !isEncounterRecord(record, id) || record.lineup.some(slot => !cards.some(card => card.id === slot.cardId))) {
       const generated = buildOpponents(cards, f, id, weathers, random);
       if (generated.length !== 4) return generated;
-      record = { floor: f, lineup: generated.map(unit => ({ cardId: unit.card.id, mutationIds: unit.mutations.map(mutation => mutation.id) })) };
+      record = { floor: f, selectionVersion: SELECTION_VERSION, element: generated[0].floorElement, lineup: generated.map(unit => ({ cardId: unit.card.id, selectionChance: unit.selectionChance, mutationIds: unit.mutations.map(mutation => mutation.id) })) };
       data.encounters[id] = record;
       persist();
     }
@@ -184,7 +240,7 @@
       return protectEnemyUnit({ card, mutations,
         display: { name: card.name, image: card.image, hp: stats.hp, atk: stats.atk, rarity: card.rarity },
         hp: stats.hp, maxHp: stats.hp, atk: stats.atk, defeated: false,
-        level: f, towerRole: index === 3 ? 'boss' : 'minion', isTowerEnemy: true });
+        level: f, towerRole: index === 3 ? 'boss' : 'minion', isTowerEnemy: true, floorElement: record.element ?? null, selectionChance: slot.selectionChance });
     });
   }
   function previewRewards(floor) {
@@ -226,5 +282,5 @@
     return (cards || []).filter(card => card?.unlockRequirement === rewardRequirement(mode));
   }
   function reset() { data = fresh(); persist(); }
-  host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, SCALING, protectEnemyUnit, limitEnemyAttack, DAMAGE_PER_VND, damageSummary, battleCurrency, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, getOpponents, isEncounterRecord, validMode, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });
+  host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, SCALING, ENEMY_ELEMENTS, QUALITY_TIERS, SELECTION_VERSION, minimumEnemyChance, protectEnemyUnit, limitEnemyAttack, DAMAGE_PER_VND, damageSummary, battleCurrency, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, buildTrialOpponents, getOpponents, isEncounterRecord, validMode, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });
 })(window);

@@ -206,6 +206,8 @@ const els = {
   battleFighterGrid: document.getElementById("battleFighterGrid"),
   cardSearchInput: document.getElementById("cardSearchInput"),
   cardSortSelect: document.getElementById("cardSortSelect"),
+  battleElementFilter: document.getElementById("battleElementFilter"),
+  collectionElementFilter: document.getElementById("collectionElementFilter"),
   battleVariantGrid: document.getElementById("battleVariantGrid"),
   battleTeamSlots: document.getElementById("battleTeamSlots"),
   battleTeamCount: document.getElementById("battleTeamCount"),
@@ -1701,6 +1703,7 @@ function showResult(card, effectiveChance, mutations = []) {
   els.resultCard?.classList.add("pop-in");
 
   if (els.resultName) els.resultName.textContent = display.name;
+  window.ElementSystem.renderBadge(els.resultCard?.querySelector(".tcg-card__header"), card);
   if (els.resultRarity) els.resultRarity.textContent = card.rarity;
   if (els.resultChance) els.resultChance.textContent = card.chance.toLocaleString("en-US");
   if (els.resultHp) els.resultHp.textContent = display.hp.toLocaleString("en-US");
@@ -1945,7 +1948,9 @@ function getFilteredCards() {
   const filter = String(els.mutationFilter?.value || "all").toLowerCase();
   const sort = String(els.sortSelect?.value || "dropChance").toLowerCase();
 
+  const element = els.collectionElementFilter?.value || "all";
   const filteredCards = ALL_CARDS.filter(card => {
+    if (element !== "all" && card.element !== element) return false;
     try {
       const normalizedId = normalizeCardId(card?.id);
       const safeName = String(card?.name || "Unknown Card");
@@ -1978,6 +1983,7 @@ function getFilteredCards() {
       const nameA = String(a?.name || "Unknown Card");
       const nameB = String(b?.name || "Unknown Card");
 
+      if (sort === "element") return window.ElementSystem.compare(a, b) || nameA.localeCompare(nameB);
       if (sort === "name") return nameA.localeCompare(nameB);
       if (sort === "atk") return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0);
       if (sort === "collected") return getOwnedCardCount(b?.id) - getOwnedCardCount(a?.id) || nameA.localeCompare(nameB);
@@ -2064,6 +2070,7 @@ function renderAvailableCards() {
     const title = document.createElement("strong");
     title.className = "available-card-row__name";
     title.textContent = card.name;
+    window.ElementSystem.renderBadge(title, card);
 
     const meta = document.createElement("div");
     meta.className = "available-card-row__meta";
@@ -2167,6 +2174,7 @@ function renderCollection() {
       countBadge.setAttribute("aria-label", owned ? `${count} copies owned` : "");
 
       titleRow.append(title, countBadge, tier);
+      window.ElementSystem.renderBadge(titleRow, card);
 
       const meta = document.createElement("div");
       meta.className = "collection-mini__meta";
@@ -2492,6 +2500,7 @@ function renderPreview() {
   if (els.previewSalvageButton) els.previewSalvageButton.disabled = variant.count <= 0;
   if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = !getPreviewVariants(card.id).some(entry => entry.count > 1);
   els.previewName.textContent = display.name;
+  window.ElementSystem.renderBadge(els.previewCard?.querySelector(".tcg-card__header"), card);
   els.previewRarity.textContent = card.rarity;
   els.previewVariantCount.textContent = `x${variant.count}`;
   els.previewHp.textContent = display.hp.toLocaleString("en-US");
@@ -2945,6 +2954,7 @@ function renderBattleTeamSlots() {
       info.className = 'battle-team-slot__info';
       const name = document.createElement('strong');
       name.textContent = card?.name || 'Unknown';
+      window.ElementSystem.renderBadge(name, card);
       const variantLabel = document.createElement('span');
       variantLabel.textContent = variant ? getBattleVariantLabel(variant) : 'Normal';
       info.append(name, variantLabel);
@@ -2969,12 +2979,14 @@ function getBattleCardRarityValue(card) {
 function getFilteredSortedBattleCards() {
   const query = String(els.cardSearchInput?.value || '').trim().toLowerCase();
   const sortMode = String(els.cardSortSelect?.value || 'atk');
+  const element = els.battleElementFilter?.value || 'all';
   const cards = [...getUnlockedBattleCards()].filter(card => {
     const name = String(card?.name || '').toLowerCase();
-    return !query || name.includes(query);
+    return (element === 'all' || card.element === element) && (!query || name.includes(query));
   });
 
   cards.sort((a, b) => {
+    if (sortMode === 'element') return window.ElementSystem.compare(a, b) || String(a?.name || '').localeCompare(String(b?.name || ''));
     if (sortMode === 'hp') {
       return (Number(b?.stats?.hp) || 0) - (Number(a?.stats?.hp) || 0) || String(a?.name || '').localeCompare(String(b?.name || ''));
     }
@@ -3046,6 +3058,7 @@ function populateBattleFighterSelect() {
     body.className = 'battle-fighter-option__body';
     const title = document.createElement('strong');
     title.textContent = card.name;
+    window.ElementSystem.renderBadge(button, card);
     const stats = document.createElement('span');
     stats.textContent = `HP ${display.hp.toLocaleString('en-US')} • ATK ${display.atk.toLocaleString('en-US')}`;
     const variantCount = document.createElement('small');
@@ -3165,6 +3178,7 @@ function renderBattleSelectionPreview() {
   info.className = 'battle-selection-preview__info';
   const name = document.createElement('strong');
   name.textContent = `SLOT ${activeIndex + 1}: ${display.name}`;
+  window.ElementSystem.renderBadge(name, card);
   const stats = document.createElement('span');
   stats.textContent = `HP ${display.hp.toLocaleString('en-US')} • ATK ${display.atk.toLocaleString('en-US')} • ${entry.count} owned`;
   const passive = document.createElement('span');
@@ -3515,6 +3529,7 @@ function showBattleFloatingText(unit, text, tone = 'damage', duration = 1150) {
 function renderBattleCombatant(side, unit) {
   const prefix = side === 'player' ? 'battlePlayer' : 'battleEnemy';
   const cardEl = side === 'player' ? els.battlePlayerCard : els.battleEnemyCard;
+  window.ElementSystem.renderBadge(cardEl?.querySelector('.battle-side-label'), unit);
   const image = side === 'player' ? els.battlePlayerImage : els.battleEnemyImage;
   const fallback = side === 'player' ? els.battlePlayerFallback : els.battleEnemyFallback;
   const backdrop = side === 'player' ? els.battlePlayerBackdrop : els.battleEnemyBackdrop;
@@ -3716,6 +3731,7 @@ function renderBattleLineup(side, team, activeIndex) {
     info.className = 'battle-lineup-card__info';
     const name = document.createElement('strong');
     name.textContent = side === 'enemy' ? `[Lv. ${getUnitBattleLevel(unit)}] ${unit.display.name}` : unit.display.name;
+    window.ElementSystem.renderBadge(name, unit);
     const hp = document.createElement('span');
     hp.textContent = unit.defeated ? 'DEFEATED' : `${Math.max(0, unit.hp).toLocaleString('en-US')} HP`;
     info.append(name, hp);
@@ -4558,7 +4574,7 @@ function validateSaveRecord(key, value) {
     if ('encounters' in value) {
       ensure(object(value.encounters), 'Tower encounters must be an object.');
       for (const [mode, record] of Object.entries(value.encounters)) {
-        ensure(window.TowerSystem.validMode(mode) && window.TowerSystem.isEncounterRecord(record), 'invalid locked Tower lineup.');
+        ensure(window.TowerSystem.validMode(mode) && window.TowerSystem.isEncounterRecord(record, mode), 'invalid locked Tower lineup.');
         ensure(record.floor === (Number(value.cleared[mode]) || 0) + 1, 'locked lineup must match the next uncleared floor.');
       }
     }
@@ -5170,6 +5186,18 @@ document.addEventListener('keydown', event => {
   closeModal('timeTrialModeModal');
   document.getElementById('timeTrialOpenButton')?.focus();
 }, true);
+document.getElementById("elementChartOpenButton")?.addEventListener("click", () => {
+  openModal("elementChartModal");
+  document.querySelector('#elementChartModal .modal-close')?.focus();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !document.getElementById('elementChartModal')?.classList.contains('hidden')) {
+    event.preventDefault(); event.stopImmediatePropagation(); closeModal('elementChartModal');
+    document.getElementById('elementChartOpenButton')?.focus();
+  }
+}, true);
+els.collectionElementFilter?.addEventListener("change", () => renderCollection());
+els.battleElementFilter?.addEventListener("change", () => populateBattleFighterSelect());
 els.cardSearchInput?.addEventListener("input", () => populateBattleFighterSelect());
 els.cardSortSelect?.addEventListener("change", () => populateBattleFighterSelect());
 els.battleAutoAgainButton?.addEventListener("click", () => {
