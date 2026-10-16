@@ -1,0 +1,69 @@
+/* Evolution recipes, recoverable transactions and the evolution dialog. */
+(function(host) {
+  'use strict';
+  const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
+  const RECIPES = Object.freeze([
+    Object.freeze({ id:'awakened-doflamingo', baseId:'doflamingo', itemId:'web_string', level:100, name:'Awakened Doflamingo' }),
+    Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100, name:'Prime Garp' })
+  ]);
+  const MATERIALS = Object.freeze([
+    Object.freeze({ id:'web_string', name:'Web String', type:'material', icon:'🕸️', tier:'mythic', description:'Evolve Lv.100+ Doflamingo into Awakened Doflamingo. Marine Fort Raid Shop: 6,220 Coins.' }),
+    Object.freeze({ id:'cannon_ball', name:'Cannon Ball', type:'material', icon:'💣', tier:'mythic', description:'Evolve Lv.100+ Garp into Prime Garp. Marine Fort Raid Shop: 3,899 Coins.' })
+  ]);
+  let bridge = {};
+  function register() { MATERIALS.forEach(item => host.InventorySystem.registerItem(item)); }
+  function validSave(value) { return value?.version === 1 && value.pending === null; }
+  function recover() {
+    try {
+      const record = JSON.parse(host.localStorage.getItem(KEY) || 'null');
+      if (record?.pending) {
+        const p = record.pending;
+        if (record.version !== 1 || typeof p.mainBefore !== 'string' || typeof p.itemsBefore !== 'string' || !JSON.parse(p.mainBefore)?.schemaVersion || !JSON.parse(p.itemsBefore)?.items) return false;
+        host.localStorage.setItem(MAIN_KEY,p.mainBefore);
+        host.localStorage.setItem(host.InventorySystem.KEY,p.itemsBefore);
+        host.InventorySystem.reload();
+      }
+      host.localStorage.setItem(KEY,JSON.stringify({ version:1,pending:null }));
+      return true;
+    } catch (_) { return false; }
+  }
+  function evolve(id, variantKey) {
+    const recipe = RECIPES.find(r => r.id === id);
+    if (!recipe || !bridge.canAct?.() || !recover()) return {ok:false,message:'Hãy kết thúc trận và kiểm tra bộ nhớ trước khi tiến hóa.'};
+    let plan;
+    try { plan = bridge.prepare(recipe,variantKey); }
+    catch (e) { return {ok:false,message:e.message}; }
+    const pending = { mainBefore:plan.mainBefore,itemsBefore:plan.itemsBefore };
+    try {
+      host.localStorage.setItem(KEY,JSON.stringify({version:1,pending}));
+      host.localStorage.setItem(host.InventorySystem.KEY,plan.itemsAfter);
+      host.localStorage.setItem(MAIN_KEY,plan.mainAfter);
+      host.localStorage.setItem(KEY,JSON.stringify({version:1,pending:null}));
+      host.InventorySystem.reload(); bridge.onCommit?.();
+      return {ok:true,message:`Đã tiến hóa thành ${recipe.name} • Lv.1 • giữ nguyên mutation.`};
+    } catch (_) {
+      const restored = recover(); if (restored) bridge.onCommit?.();
+      return {ok:false,message:restored ? 'Không thể lưu tiến hóa. Thẻ và vật phẩm đã được khôi phục.' : 'Bộ nhớ chưa khả dụng. Hãy tải lại để khôi phục giao dịch trước khi chơi tiếp.'};
+    }
+  }
+  function render(container) {
+    if (!container) return;
+    container.replaceChildren(); const doc = container.ownerDocument;
+    for (const recipe of RECIPES) {
+      const box=doc.createElement('article');box.className='module-item evolution-recipe';
+      const title=doc.createElement('h3');title.textContent=recipe.name;
+      const item=host.InventorySystem.getItem(recipe.itemId),info=bridge.describe?.(recipe)||{};
+      const text=doc.createElement('p');text.textContent=`${info.baseName || recipe.baseId} Lv.${recipe.level}+ + 1 ${item?.name || recipe.itemId} (x${host.InventorySystem.quantity(recipe.itemId)} owned). Result: Lv.1; exact mutations inherited. One evolution per result card.`;
+      const select=doc.createElement('select'); select.className='select-input'; select.setAttribute('aria-label',`Base mutation for ${recipe.name}`);
+      for (const variant of info.variants || []) { const o=doc.createElement('option');o.value=variant.key;o.textContent=`${variant.label} • x${variant.count} • Lv.${info.level}`;select.append(o); }
+      if (!select.options.length) { const o=doc.createElement('option');o.textContent='No eligible base card';select.append(o);select.disabled=true; }
+      const button=doc.createElement('button');button.type='button';button.className='battle-primary-button';
+      button.textContent=info.completed ? 'Already evolved' : 'Evolve • consumes 1 card + 1 material';
+      button.disabled=info.completed || !info.variants?.length || info.level<recipe.level || host.InventorySystem.quantity(recipe.itemId)<1 || !bridge.canAct?.();
+      button.addEventListener('click',()=>{const result=evolve(recipe.id,select.value); const status=doc.getElementById('evolutionStatus');if(status) status.textContent=result.message;render(container);});
+      box.append(title,text,select,button);container.append(box);
+    }
+  }
+  const recovered = recover(); register();
+  host.EvolutionSystem=Object.freeze({KEY,RECIPES,MATERIALS,recovered,validSave,recover,register,evolve,render,flush:()=>{try{return validSave(JSON.parse(host.localStorage.getItem(KEY)));}catch(_){return false;}},reset:()=>{host.localStorage.removeItem(KEY);recover();register();},configure:options=>{bridge=options||{};}});
+})(window);

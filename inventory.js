@@ -171,5 +171,5 @@
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, configure: options => { bridge = options || {}; }, getDropMultiplier, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

@@ -10,7 +10,7 @@
       ['light-admiral', 2500, 700], ['garp', 7500, 300], ['boa-hancock', 2500, 500],
       ['doflamingo', 3000, 750], ['shanks', 4500, 1250], ['blackbeard', 6500, 900], ['whitebeard', 17500, 3000]
     ].map(row => Object.freeze(row))) }) });
-  const SHOP = Object.freeze(['exp_potion', 'rich_potion', 'speed_potion', 'speed_battle_potion'].map(id => Object.freeze({ id, cost: id === 'speed_battle_potion' ? 50 : 25 })));
+  const SHOP = Object.freeze([{id:'web_string',cost:6220},{id:'cannon_ball',cost:3899}, ...['exp_potion', 'rich_potion', 'speed_potion', 'speed_battle_potion'].map(id => Object.freeze({ id, cost: id === 'speed_battle_potion' ? 50 : 25 }))]);
   const LEVEL_GROWTH = .075;
   const object = v => Boolean(v && typeof v === 'object' && !Array.isArray(v));
   const integer = (v, min = 0, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(v) && v >= min && v <= max;

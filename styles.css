@@ -4383,3 +4383,18 @@ body {
 .battle-fighter-option { position: relative; }
 .battle-fighter-option > .element-badge { position: absolute; top: 7px; right: 7px; width: 22px; height: 22px; }
 .battle-fighter-option__body { padding-right: 12px; }
+
+/* Setup content scrolls, while the start action stays reachable at every size. */
+#battleSetup { overflow-y: auto; overscroll-behavior: contain; }
+#battleSetup .battle-setup-card { height: auto; min-height: 100%; overflow: visible; }
+#battleSetup .battle-setup-card > * { flex-shrink: 0; }
+#battleSetup #battleFighterGrid { min-height: 140px; max-height: 28dvh; overflow-y: auto; }
+#battleSetup #battleStartButton { position: sticky; bottom: 0; z-index: 5; min-height: 48px; margin-top: 12px; box-shadow: 0 -10px 20px #0a0d19; }
+.evolution-modal { width: min(800px,94vw); max-height: 90dvh; overflow-y: auto; padding-bottom: 18px; }
+#evolutionStatus { margin: 14px 20px; color: #c5d9ee; line-height: 1.6; }
+#evolutionGrid { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 14px; padding: 0 20px; }
+.evolution-recipe h3 { margin: 0 0 10px; color: #dfc8ff; }
+.evolution-recipe select { width: 100%; margin: 10px 0; }
+.mutation-clove { --mutation-color: #39ff14; }
+.mutation-storm { --mutation-color: #c8cdd4; }
+.mutation-stardust { --mutation-color: #ff38cf; }
