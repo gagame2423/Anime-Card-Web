@@ -14,7 +14,6 @@ const LEGACY_STORAGE_KEYS = Object.freeze([
   "animeCardRngSave_v1"
 ]);
 const SAVE_SCHEMA_VERSION = 9;
-const LEVEL_CAP_MIGRATION = 'level_cap_10_20261015';
 const GLOBAL_TICK_MS = 1000;
 const BASE_COOLDOWN_MS = 1500;
 const SPEED_BASE_COST = 100;
@@ -46,7 +45,7 @@ const CARD_RARITY_EXP_MULTIPLIERS = Object.freeze({
 });
 const CARD_LEVEL_BASE_EXP = 100;
 const CARD_LEVEL_STAT_GROWTH = 0.075; // 7.5% HP/ATK per level (requested 5–10% range)
-const CARD_LEVEL_MAX = 999;
+const CARD_LEVEL_MAX = window.CardLevelSystem.MAX_LEVEL; // Numeric precision guard, no gameplay level cap.
 
 const FALLBACK_ART_DATA_URL = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Cdefs%3E%3ClinearGradient id%3D%22g%22 x1%3D%220%22 y1%3D%220%22 x2%3D%221%22 y2%3D%221%22%3E%3Cstop stop-color%3D%22%23141a2a%22%2F%3E%3Cstop offset%3D%221%22 stop-color%3D%22%23080b14%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22url(%23g)%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%2Csans-serif%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E";
 
@@ -64,7 +63,7 @@ const defaultState = {
   battleDropRateBonus: 0,
   dropChance: 0, // percent points; potion drop logic reads ONLY this stat and pity
   cardProgress: {},
-  migrations: { [LEVEL_CAP_MIGRATION]: true },
+  migrations: {},
   achievementRewardReceipts: {},
   unlocked: {},
   mutations: {},
@@ -285,7 +284,7 @@ function cloneDefaultState() {
     experience: 0,
     battleDropRateBonus: 0,
     cardProgress: {},
-    migrations: { [LEVEL_CAP_MIGRATION]: true },
+    migrations: {},
     achievementRewardReceipts: {},
     unlocked: {},
     mutations: {},
@@ -312,8 +311,8 @@ function getCardLevelRarityMultiplier(cardOrId) {
 }
 
 function getCardLevelExpRequired(cardOrId, level = 1) {
-  const safeLevel = Math.max(1, Math.floor(Number(level) || 1));
-  return Math.max(1, Math.floor(CARD_LEVEL_BASE_EXP * getCardLevelRarityMultiplier(cardOrId) * safeLevel));
+  const card = typeof cardOrId === 'object' ? cardOrId : getCardById(cardOrId);
+  return window.CardLevelSystem.required(card, level);
 }
 
 function normalizeCardProgressRecords(rawProgress) {
@@ -331,9 +330,7 @@ function normalizeCardProgressRecords(rawProgress) {
   return output;
 }
 
-function migratePlayerCardLevels(parsed, progress) {
-  if (parsed.migrations?.[LEVEL_CAP_MIGRATION] === true) return progress;
-  const capped = new Set();
+function mergeLegacyPlayerCardProgress(parsed, progress) {
   const resolveId = raw => {
     const id = normalizeCardId(raw);
     return getCardById(id) ? id : parseVariantKey(id)?.cardId || '';
@@ -341,10 +338,8 @@ function migratePlayerCardLevels(parsed, progress) {
   const record = (rawId, rawLevel, rawExp = 0) => {
     const id = resolveId(rawId), level = Math.floor(Number(rawLevel));
     if (!id || !getCardById(id) || !Number.isFinite(level) || level < 1) return;
-    if (level > 10) capped.add(id);
-    // Canonical shared progress wins over embedded legacy copies; cap any
-    // offending copy of that same card ID, including mutation variants.
-    if (!progress[id]) progress[id] = { level: Math.min(10, level), exp: Math.max(0, Math.floor(Number(rawExp) || 0)) };
+    // Canonical progress wins; legacy containers only fill missing records.
+    if (!progress[id]) progress[id] = { level: window.CardLevelSystem.normalizeLevel(level), exp: Math.max(0, Math.floor(Number(rawExp) || 0)) };
   };
   for (const field of ['cardProgress', 'cardLevels', 'levels']) {
     for (const [id, entry] of Object.entries(parsed[field] || {})) {
@@ -362,7 +357,6 @@ function migratePlayerCardLevels(parsed, progress) {
   // Only player-card containers: enemy levels, Raid difficulty, item counts
   // and upgrade levels are deliberately outside the migration's scope.
   for (const field of ['inventory', 'lineup', 'lineups', 'storage', 'collection', 'cards', 'unlockedCards', 'equipment']) scan(parsed[field]);
-  for (const id of capped) progress[id] = { level: 10, exp: 0 };
   return progress;
 }
 
@@ -390,6 +384,7 @@ function ensureCardProgress(cardId) {
 }
 
 function grantCardExperience(cardId, amount) {
+  if (window.SandboxSystem?.active) return {gained:0,level:getCardLevelInfo(cardId).level,levelUps:0};
   const normalizedId = normalizeCardId(cardId);
   const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
   if (!normalizedId || safeAmount <= 0 || !getCardById(normalizedId)) return { gained: 0, level: getCardLevelInfo(normalizedId).level, levelUps: 0 };
@@ -397,27 +392,7 @@ function grantCardExperience(cardId, amount) {
   const progress = ensureCardProgress(normalizedId);
   if (!progress) return { gained: 0, level: 1, levelUps: 0 };
 
-  let remaining = safeAmount;
-  let levelUps = 0;
-  while (remaining > 0 && progress.level < CARD_LEVEL_MAX) {
-    const required = getCardLevelExpRequired(normalizedId, progress.level);
-    const needed = Math.max(1, required - progress.exp);
-    if (remaining < needed) {
-      progress.exp += remaining;
-      remaining = 0;
-      break;
-    }
-    remaining -= needed;
-    progress.exp = 0;
-    progress.level += 1;
-    levelUps += 1;
-  }
-
-  if (progress.level >= CARD_LEVEL_MAX) {
-    progress.level = CARD_LEVEL_MAX;
-    progress.exp = 0;
-  }
-  return { gained: safeAmount, level: progress.level, levelUps };
+  return window.CardLevelSystem.grant(progress, getCardById(normalizedId), safeAmount);
 }
 
 function getDuplicateCardRollExperience(cardOrId) {
@@ -814,9 +789,8 @@ function normalizeState(parsed = {}) {
   normalized.achievementRewardReceipts = Object.fromEntries(
     Object.entries(parsed.achievementRewardReceipts || {}).filter(([id, claimed]) => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && claimed === true)
   );
-  normalized.cardProgress = migratePlayerCardLevels(parsed, normalizeCardProgressRecords(parsed.cardProgress || parsed.cardLevels || parsed.levels));
+  normalized.cardProgress = mergeLegacyPlayerCardProgress(parsed, normalizeCardProgressRecords(parsed.cardProgress || parsed.cardLevels || parsed.levels));
   normalized.migrations = Object.fromEntries(Object.entries(parsed.migrations || {}).filter(([id, done]) => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && typeof done === 'boolean'));
-  normalized.migrations[LEVEL_CAP_MIGRATION] = true;
 
   const rawUnlockedSource = (
     parsed.unlocked &&
@@ -1043,7 +1017,7 @@ function loadState() {
 }
 
 function saveState() {
-  if (isImportingSave) return false;
+  if (isImportingSave || window.SandboxSystem?.active) return false;
   try {
     syncOwnershipRecords();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -1593,11 +1567,12 @@ function renderMutationBadges(container, mutations) {
 function rollCard(source = "manual") {
   // HARD GATE: no trigger can bypass the cooldown, including keyboard,
   // programmatic calls, or Auto Roll.
-  if (isCooldownActive) return false;
+  if (isCooldownActive || window.SandboxSystem?.active) return false;
   if (source === "auto" && !isAutoRolling) return false;
 
   // Lock immediately so a second synchronous event cannot enter.
   startCooldown();
+  window.RollViewSystem?.beginRoll?.();
 
   try {
     // Catch up any sub-second drift without making gameplay depend on clicks.
@@ -1614,6 +1589,9 @@ function rollCard(source = "manual") {
       const variantKey = getVariantKey(result.card.id, mutations);
       const cardId = normalizeCardId(result.card.id);
       const ownedBeforeRoll = getOwnedCardCount(cardId) > 0;
+      const variantOwnedBeforeRoll = getVariantEntries(cardId).some(entry => entry.key === variantKey && entry.count > 0);
+      const isNewCardOrMutation = !ownedBeforeRoll || (mutations.length > 0 && !variantOwnedBeforeRoll);
+      const revealRolledCard = (window.RollViewSystem?.cardResult?.(result.card, result.effectiveChance, mutations, isNewCardOrMutation) ?? true);
       const levelInfoBeforeRoll = getCardLevelInfo(result.card);
       const duplicateXp = ownedBeforeRoll
         ? getDuplicateCardRollExperience(result.card)
@@ -1641,9 +1619,9 @@ function rollCard(source = "manual") {
         };
       }
 
-      showResult(result.card, result.effectiveChance, mutations);
-      showRewardToast(0, mutations);
-      if (els.rewardToast) {
+      if (revealRolledCard) showResult(result.card, result.effectiveChance, mutations);
+      if (revealRolledCard) showRewardToast(0, mutations);
+      if (revealRolledCard && els.rewardToast) {
         const mutationText = normalizeMutationObjects(mutations).map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ");
         const xpLabel = ownedBeforeRoll
           ? `DUPLICATE • +${rollExp.toLocaleString("en-US")} XP (50% of Lv.${levelInfoBeforeRoll.level} requirement)`
@@ -1652,7 +1630,7 @@ function rollCard(source = "manual") {
       }
     } else {
       state.lastResultId = null;
-      showMiss(result.score);
+      if (window.RollViewSystem?.missResult?.(result.score) ?? true) showMiss(result.score);
     }
 
     if (saveState()) window.QuestSystem.record('roll', { ...questRollEvent, id: String(state.totalRolls) });
@@ -1683,7 +1661,13 @@ function attemptAutoRoll() {
 // MAIN RESULT RENDERING
 // ============================================================
 
+function setViewText(id, value) {
+  const node = document.getElementById(id);
+  if (node) node.textContent = value;
+}
+
 function showResult(card, effectiveChance, mutations = []) {
+  if (!card || !els.resultCard) return;
   const display = getDisplayCard(card, mutations);
   els.emptyState?.classList.add("hidden");
   els.missState?.classList.add("hidden");
@@ -1692,7 +1676,7 @@ function showResult(card, effectiveChance, mutations = []) {
   els.resultCard?.classList.add("pop-in");
 
   if (els.resultName) els.resultName.textContent = display.name;
-  window.ElementSystem.renderBadge(els.resultCard?.querySelector(".tcg-card__header"), card);
+  window.ElementSystem?.renderBadge?.(els.resultCard?.querySelector(".tcg-card__header"), card);
   if (els.resultRarity) els.resultRarity.textContent = card.rarity;
   if (els.resultChance) els.resultChance.textContent = card.chance.toLocaleString("en-US");
   if (els.resultHp) els.resultHp.textContent = display.hp.toLocaleString("en-US");
@@ -3201,9 +3185,9 @@ function renderBattleModePicker() {
   const trialButton = document.getElementById('timeTrialOpenButton');
   trialButton?.classList.toggle('is-selected', isTimeTrialBattle());
   trialButton?.setAttribute('aria-pressed', String(isTimeTrialBattle()));
-  document.getElementById('timeTrialModeHint').textContent = isTimeTrialBattle()
+  setViewText('timeTrialModeHint', isTimeTrialBattle()
     ? window.TimeTrialSystem.isExp(activeMode) ? 'EXP • 1v1 • 5 minutes' : 'Normal • 4v4 • 3 minutes'
-    : 'Choose Normal or EXP';
+    : 'Choose Normal or EXP');
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   renderTowerControls();
   renderTimeTrialControls(); renderRaidControls(); renderBossEventControls();
@@ -3819,6 +3803,7 @@ function getBattleDefeatNotice() {
 }
 
 function finishBattle(playerWon) {
+  if (window.SandboxSystem?.active || battleState?.sandbox || battleState?.mode === 'sandbox') return;
   if (!battleState || battleState.finished) return;
   if (isTimeTrialBattle()) { finishTimeTrialBattle(playerWon); return; }
   if (isRaidBattle()) { finishRaidBattle(playerWon); return; }
@@ -3966,7 +3951,7 @@ function endBattle(playerWon) {
 
 function startBattle(useExistingSetup = true) {
   clearAutoContinueBattleTimer();
-  if (isBattleMatchActive() || isImportingSave) return;
+  if (isBattleMatchActive() || isImportingSave || window.SandboxSystem?.active) return;
   if (isBossEventBattle()) syncGameClockToNow();
   const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
   if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
@@ -4164,20 +4149,20 @@ function renderBossEventControls() {
   if(!active)return;
   const progress=event.snapshot(type),range=event.coinRange(progress.difficulty),boss=event.enemies(type)[0];
   const entry=getActiveWeatherEntries().find(w=>w.weatherId==='eclipse');
-  document.getElementById('bossEventAvailability').textContent=progress.available?`OPEN • Eclipse/Eclipsed • ${entry?formatWeatherCountdown(getWeatherRemainingSeconds(entry)):''}`:'CLOSED • Requires Eclipse (Eclipsed) weather';
-  const slider=document.getElementById('bossEventDifficulty');slider.value=progress.difficulty;slider.disabled=isBattleMatchActive();
+  setViewText('bossEventAvailability', progress.available?`OPEN • Eclipse/Eclipsed • ${entry?formatWeatherCountdown(getWeatherRemainingSeconds(entry)):''}`:'CLOSED • Requires Eclipse (Eclipsed) weather');
+  const slider=document.getElementById('bossEventDifficulty');if (!slider) return;slider.value=progress.difficulty;slider.disabled=isBattleMatchActive();
   syncDifficultyNumber('bossEvent', progress.difficulty);
-  document.getElementById('bossEventDifficultyValue').textContent=`${progress.difficulty} • Boss Lv.${progress.difficulty}`;
-  document.getElementById('bossEventBalance').textContent=`${progress.coins.toLocaleString('en-US')} Boss Event Coins`;
-  document.getElementById('bossEventRules').textContent=`5 player cards vs 1 Alucard • Victory: ${range.min}–${range.max} Boss Event Coins • ${(event.cardChance(progress.difficulty)*100).toFixed(2)}% Alucard drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`;
-  document.getElementById('bossEventStats').textContent=`Boss HP ${boss.maxHp.toLocaleString('en-US')} • ATK ${boss.atk.toLocaleString('en-US')} • Speed Battle Potion applies. Weather is checked again before every Continue.`;
+  setViewText('bossEventDifficultyValue', `${progress.difficulty} • Boss Lv.${progress.difficulty}`);
+  setViewText('bossEventBalance', `${progress.coins.toLocaleString('en-US')} Boss Event Coins`);
+  setViewText('bossEventRules', `5 player cards vs 1 Alucard • Victory: ${range.min}–${range.max} Boss Event Coins • ${(event.cardChance(progress.difficulty)*100).toFixed(2)}% Alucard drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`);
+  setViewText('bossEventStats', `Boss HP ${boss.maxHp.toLocaleString('en-US')} • ATK ${boss.atk.toLocaleString('en-US')} • Speed Battle Potion applies. Weather is checked again before every Continue.`);
   if(!isBattleMatchActive())els.battleStartButton.disabled=!isBattleSetupValid()||!event.canEnter(type);
   if(battleState?.finished){const can=canReplayBattleTeam();els.battleAutoAgainButton.disabled=!can;els.battleAutoAgainButton.textContent=can?'Continue Alucard Event':'Requires Eclipse weather';if(!can)clearAutoContinueBattleTimer();}
 }
 function renderBossEventShop() {
   const event=window.BossEventSystem,type=getBossEventType();
-  document.getElementById('bossEventShopTitle').textContent=`${event.TYPES[type].name} Shop`;
-  document.getElementById('bossEventShopBalance').textContent=`${event.snapshot(type).coins.toLocaleString('en-US')} Boss Event Coins • No stat upgrades`;
+  setViewText('bossEventShopTitle', `${event.TYPES[type].name} Shop`);
+  setViewText('bossEventShopBalance', `${event.snapshot(type).coins.toLocaleString('en-US')} Boss Event Coins • No stat upgrades`);
   event.renderShop(document.getElementById('bossEventShopGrid'),type,()=>{renderBossEventShop();renderBossEventControls();renderPotionInventory();});
 }
 function finishBossEventBattle(won) {
@@ -4192,15 +4177,15 @@ function finishBossEventBattle(won) {
   const card=summary.card?getCardById(summary.card.cardId):null,mutations=summary.card?.mutationIds.map(id=>MUTATION_BY_ID[id]?.name||id).join(' + ');
   const body=document.getElementById('bossEventSummary');
   body.textContent=`Alucard Event • Difficulty ${summary.difficulty}\nBoss Event Coins: +${summary.coins} • Drop x${(summary.dropMultiplier||1).toFixed(2)}\n${card?`Exclusive card: ${mutations?`[${mutations}] `:''}${card.name}\n`:''}No VNĐ • No EXP • No ordinary drops${summary.error?`\n${summary.error}`:''}`;
-  body.classList.remove('hidden');document.getElementById('bossEventResultShopButton').classList.remove('hidden');
+  body.classList.remove('hidden');document.getElementById('bossEventResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent=summary.won?'🩸 BOSS DEFEATED':'🩸 EVENT ATTEMPT ENDED';
   els.battleResultText.textContent=summary.error||(summary.won?'Alucard and all remaining enemies were defeated.':'Your collection is preserved. Eclipse is required for the next attempt.');
   els.battleResultPower.textContent=getBattleModeLabel();
-  for(const [id,label]of Object.entries({battleResultBaseLabel:'Boss Event Coins',battleResultTimeLabel:'Boss level',battleResultLevelLabel:'Alucard drop chance'}))document.getElementById(id).textContent=label;
+  for(const [id,label]of Object.entries({battleResultBaseLabel:'Boss Event Coins',battleResultTimeLabel:'Boss level',battleResultLevelLabel:'Alucard drop chance'}))setViewText(id, label);
   els.battleResultBaseValue.textContent=String(summary.coins);els.battleResultTimeBonus.textContent=`Lv.${summary.difficulty}`;els.battleResultLevelDiff.textContent=`${(window.BossEventSystem.cardChance(summary.difficulty)*100).toFixed(2)}%`;
   els.battleResultCash.textContent='0 VNĐ';els.battleResultExp.textContent='0 EXP';els.battleResultDropRate.textContent='0%';els.battleResultLossStatus.textContent='NONE';
   refreshAchievements();updateStats();renderCollection();renderPotionInventory();renderBossEventControls();
-  if(!document.getElementById('bossEventShopModal').classList.contains('hidden'))renderBossEventShop();
+  if(!document.getElementById('bossEventShopModal')?.classList.contains('hidden'))renderBossEventShop();
   els.battleArena.classList.add('hidden');setBattleModalLock(false);els.battleVictory.classList.remove('hidden','battle-result--neutral','battle-result--victory','battle-result--defeat');els.battleVictory.classList.add(summary.won?'battle-result--victory':'battle-result--defeat');els.battleVictory.setAttribute('aria-hidden','false');
   if(canReplayBattleTeam())scheduleAutoContinueBattle();
 }
@@ -4238,20 +4223,20 @@ function renderRaidControls() {
   if (!raid) return;
   const controls = document.getElementById('raidControls'); controls?.classList.toggle('hidden', !isRaidBattle());
   const type = getRaidType(), progress = raid.snapshot(type), range = raid.coinRange(progress.difficulty);
-  const slider = document.getElementById('raidDifficulty'); slider.value = progress.difficulty; slider.disabled = isBattleMatchActive();
+  const slider = document.getElementById('raidDifficulty'); if (!controls || !slider) return; slider.value = progress.difficulty; slider.disabled = isBattleMatchActive();
   syncDifficultyNumber('raid', progress.difficulty);
-  document.getElementById('raidDifficultyValue').textContent = `${progress.difficulty} • Enemy Lv.${progress.difficulty}`;
-  document.getElementById('raidBalances').textContent = `${window.InventorySystem.quantity(raid.KEY_ITEM.id)} Keys • ${progress.coins.toLocaleString('en-US')} Coins • Team HP/ATK +${progress.upgradeLevel}%`;
-  document.getElementById('raidRules').textContent = `4 player cards vs 10 preset bosses • 1 Key per entry • Victory: ${range.min}–${range.max} Marine Ford Coins • ${(raid.secretChance(progress.difficulty) * 100).toFixed(2)}% secret roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`;
-  const list = document.getElementById('raidEnemyPreview'); list.replaceChildren();
+  setViewText('raidDifficultyValue', `${progress.difficulty} • Enemy Lv.${progress.difficulty}`);
+  setViewText('raidBalances', `${window.InventorySystem.quantity(raid.KEY_ITEM.id)} Keys • ${progress.coins.toLocaleString('en-US')} Coins • Team HP/ATK +${progress.upgradeLevel}%`);
+  setViewText('raidRules', `4 player cards vs 10 preset bosses • 1 Key per entry • Victory: ${range.min}–${range.max} Marine Ford Coins • ${(raid.secretChance(progress.difficulty) * 100).toFixed(2)}% secret roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`);
+  const list = document.getElementById('raidEnemyPreview'); if (!list) return; list.replaceChildren();
   for (const enemy of raid.preview(type)) { const li = document.createElement("li"); li.textContent = `${enemy.card.name} • Lv.${enemy.level} • HP ${enemy.hpMin.toLocaleString("en-US")}–${enemy.hpMax.toLocaleString("en-US")} • ATK ${enemy.atkMin.toLocaleString("en-US")}–${enemy.atkMax.toLocaleString("en-US")}`; list.append(li); }
   if (isRaidBattle() && !isBattleMatchActive()) els.battleStartButton.disabled = !isBattleSetupValid() || !raid.canEnter(type);
 }
 
 function renderRaidShop() {
   const raid = window.RaidSystem, type = getRaidType(), progress = raid.snapshot(type);
-  document.getElementById('raidShopTitle').textContent = `${raid.TYPES[type].name} Shop`;
-  document.getElementById('raidShopBalance').textContent = `${progress.coins.toLocaleString('en-US')} Marine Ford Coins • Team HP/ATK +${progress.upgradeLevel}%`;
+  setViewText('raidShopTitle', `${raid.TYPES[type].name} Shop`);
+  setViewText('raidShopBalance', `${progress.coins.toLocaleString('en-US')} Marine Ford Coins • Team HP/ATK +${progress.upgradeLevel}%`);
   raid.renderShop(document.getElementById('raidShopGrid'), type, () => {
     renderRaidShop(); renderRaidControls(); renderPotionInventory();
     if (battleState && !isBattleMatchActive()) renderBattleSelection();
@@ -4272,15 +4257,15 @@ function finishRaidBattle(won) {
   const mutationLabel = summary.secret?.mutationIds.length ? ` [${summary.secret.mutationIds.map(id => MUTATION_BY_ID[id]?.name || id).join(' + ')}]` : '';
   const body = document.getElementById('raidSummary');
   body.textContent = `Marine Ford Raid • Difficulty ${summary.difficulty}\nRaid Coins: +${summary.coins} • Drop x${(summary.dropMultiplier || 1).toFixed(2)}\n${secret ? `Exclusive card: ${secret.name}${mutationLabel}\n` : ''}No VNĐ • No EXP • No ordinary drops${summary.error ? `\n${summary.error}` : ''}`; body.classList.remove('hidden');
-  document.getElementById('raidResultShopButton').classList.remove('hidden');
+  document.getElementById('raidResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '⚓ RAID COMPLETE' : '⚓ RAID ENDED';
   els.battleResultText.textContent = summary.error || (summary.won ? 'The entire boss lineup and all remaining enemies were defeated.' : 'Your collection is preserved. A new entry costs another Key.');
   els.battleResultPower.textContent = getBattleModeLabel();
-  for (const [id, label] of Object.entries({ battleResultBaseLabel: 'Raid Coins', battleResultTimeLabel: 'Enemy Level', battleResultLevelLabel: 'Raid Team HP/ATK' })) document.getElementById(id).textContent = label;
+  for (const [id, label] of Object.entries({ battleResultBaseLabel: 'Raid Coins', battleResultTimeLabel: 'Enemy Level', battleResultLevelLabel: 'Raid Team HP/ATK' })) setViewText(id, label);
   els.battleResultBaseValue.textContent = String(summary.coins); els.battleResultTimeBonus.textContent = `Lv.${summary.difficulty}`; els.battleResultLevelDiff.textContent = `+${battleState.raid.upgradeLevel}%`;
   els.battleResultCash.textContent = '0 VNĐ'; els.battleResultExp.textContent = '0 EXP'; els.battleResultDropRate.textContent = '0%'; els.battleResultLossStatus.textContent = 'NONE';
   refreshAchievements(); updateStats(); renderCollection(); renderRaidControls(); renderPotionInventory();
-  if (!document.getElementById('raidShopModal').classList.contains('hidden')) renderRaidShop();
+  if (!document.getElementById('raidShopModal')?.classList.contains('hidden')) renderRaidShop();
   const replayable = canReplayBattleTeam(); els.battleAutoAgainButton.disabled = !replayable; els.battleAutoAgainButton.textContent = replayable ? 'Raid Again • 1 Key' : 'Need a Marine Ford Raid Key';
   els.battleArena.classList.add('hidden'); setBattleModalLock(false); els.battleVictory.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat'); els.battleVictory.classList.add(summary.won ? 'battle-result--victory' : 'battle-result--defeat'); els.battleVictory.setAttribute('aria-hidden', 'false');
   if (replayable) scheduleAutoContinueBattle();
@@ -4292,14 +4277,14 @@ function renderTimeTrialControls() {
   const mode = getBattleMode(), active = trial.isMode(mode), exp = trial.isExp(mode);
   const controls = document.getElementById('timeTrialControls');
   controls?.classList.toggle('hidden', !active);
-  document.getElementById('timeTrialProgress').textContent = exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`;
-  document.getElementById('timeTrialBalance').textContent = `${trial.shards.toLocaleString('en-US')} Shards`;
-  document.getElementById('timeTrialRules').textContent = exp
+  setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`);
+  setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
+  setViewText('timeTrialRules', exp
     ? '1 Ticket per attempt • 300s • 0 ATK EXP Monsters • 0.1%–1.0% current-level EXP per kill • No VNĐ, Shards or items. Auto Continue uses another Ticket. Reward buffs do not change Time Trial payouts.'
-    : '180s per room • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. Reward buffs do not change Time Trial payouts.';
+    : '180s per room • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. Reward buffs do not change Time Trial payouts.');
   const timer = document.getElementById('timeTrialTimer');
-  timer.classList.toggle('hidden', !active || !battleState?.trial || battleState.finished);
-  if (active && battleState?.trial) {
+  timer?.classList.toggle('hidden', !active || !battleState?.trial || battleState.finished);
+  if (timer && active && battleState?.trial) {
     const seconds = Math.ceil(trial.remaining(battleState) / 1000);
     timer.textContent = `TIME LEFT ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}${exp ? ` • ${battleState.trial.monsters} defeats` : ''}`;
     timer.classList.toggle('is-urgent', seconds <= 30);
@@ -4311,7 +4296,7 @@ function renderTimeTrialControls() {
 
 function renderTimeTrialShop() {
   const trial = window.TimeTrialSystem;
-  document.getElementById('timeTrialShopBalance').textContent = `${trial.shards.toLocaleString('en-US')} Shards • Potions / Ticket: 50 • Speed Battle Potion: 200`;
+  setViewText('timeTrialShopBalance', `${trial.shards.toLocaleString('en-US')} Shards • Potions / Ticket: 50 • Speed Battle Potion: 200`);
   trial.renderShop(document.getElementById('timeTrialShopGrid'), () => {
     renderTimeTrialShop(); renderTimeTrialControls(); renderPotionInventory();
     if (battleState && !battleState.isBattling) renderBattleSelection();
@@ -4347,12 +4332,12 @@ function finishTimeTrialBattle(won, reason = '') {
     ? `EXP Monsters Defeated: ${summary.monsters}\nTotal EXP Gained: +${summary.progressPercent.toFixed(2)}% Level Progress\n+${summary.experience.toLocaleString('en-US')} whole EXP • ${summary.levelUps} level-ups\nNo Shards • No VNĐ • No items`
     : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • No item drops`;
   body.classList.remove('hidden');
-  document.getElementById('timeTrialResultShopButton').classList.remove('hidden');
+  document.getElementById('timeTrialResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '🏆 TIME TRIAL COMPLETE' : '⏱ TIME TRIAL ENDED';
   els.battleResultText.textContent = summary.reason === 'time-limit' ? 'Time limit reached.' : summary.won ? 'All room enemies defeated.' : 'Attempt ended. Your collection is preserved.';
   els.battleResultPower.textContent = `${getBattleModeLabel()} • ${Math.min(trial.LIMITS[battleState.mode] / 1000, (Date.now() - battleState.trial.startedAt) / 1000).toFixed(1)}s`;
   for (const [id, text] of Object.entries({ battleResultBaseLabel: summary.exp ? 'EXP Monsters' : 'Shards earned',
-    battleResultTimeLabel: 'Time limit', battleResultLevelLabel: 'Turn interval' })) document.getElementById(id).textContent = text;
+    battleResultTimeLabel: 'Time limit', battleResultLevelLabel: 'Turn interval' })) setViewText(id, text);
   els.battleResultBaseValue.textContent = String(summary.exp ? summary.monsters : summary.shards);
   els.battleResultTimeBonus.textContent = `${trial.LIMITS[battleState.mode] / 1000}s`;
   els.battleResultLevelDiff.textContent = '2s • fixed'; els.battleResultCash.textContent = '0 VNĐ';
@@ -4545,6 +4530,7 @@ function setSaveTransferBusy(busy) {
   document.getElementById('saveManagerModal')?.setAttribute('aria-busy', String(busy));
 }
 async function withSaveTransfer(action, operation) {
+  if (window.SandboxSystem?.active) { setSaveTransferStatus('Thoát Sandbox trước khi chuyển save.',true); return false; }
   if (saveTransferBusy) { showSaveTransferError(new Error('Đang xử lý chuyển save. Vui lòng đợi hoàn tất.')); return false; }
   setSaveTransferBusy(true);
   try {
@@ -4564,7 +4550,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4612,7 +4598,7 @@ function validateSaveRecord(key, value) {
   const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
   const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
   if (Object.values(SAVE_COOLDOWN_KEYS).includes(key)) { number(value, 'thời điểm chuyển save'); return value; }
-  if (key === AUTO_CONTINUE_STORAGE_KEY || key === window.BackgroundActivitySystem.MUSIC_KEY) { ensure(typeof value === 'boolean', 'Auto Continue must be a boolean.'); return value; }
+  if (key === AUTO_CONTINUE_STORAGE_KEY || key === (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card') || key === window.BackgroundActivitySystem.MUSIC_KEY) { ensure(typeof value === 'boolean', 'Auto Continue must be a boolean.'); return value; }
   ensure(object(value), 'expected a JSON object.');
   if (key === STORAGE_KEY || LEGACY_STORAGE_KEYS.includes(key)) {
     ensure(Boolean(parseStoredSave(JSON.stringify(value))), 'not a recognized game save.');
@@ -4762,7 +4748,7 @@ async function importGameSave(input) {
 }
 
 // Evolution changes a cloned save first; no live ownership changes before commit.
-function canEvolveNow() { return !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
+function canEvolveNow() { return !window.SandboxSystem?.active && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
 function evolutionComplete(recipe) { return state.achievementRewardReceipts?.['evolution_' + recipe.id] === true || getOwnedCardCount(recipe.id) > 0; }
 function prepareEvolution(recipe, variantKey) {
   if (!canEvolveNow() || evolutionComplete(recipe)) throw new Error('Thẻ này đã tiến hóa hoặc game đang bận.');
@@ -4847,11 +4833,13 @@ function renderAchievements() {
 
 // Quest progress receives only fresh, completed gameplay events.
 function recordQuestBattleCompletion(battle) {
+  if (battle?.sandbox || battle?.mode === 'sandbox' || window.SandboxSystem?.active) return;
   if (!battle?.questContext || battle.questCompletionRecorded || ['surrender', 'aborted'].includes(battle.outcome)) return;
   battle.questCompletionRecorded = true;
   window.QuestSystem.record('battle', battle.questContext);
 }
 function recordQuestEnemyDefeat(battle, victim, source) {
+  if (battle?.sandbox || battle?.mode === 'sandbox' || window.SandboxSystem?.active) return;
   if (!battle?.questContext || !battle.enemyTeam.includes(victim) || !battle.playerTeam.includes(source) || victim.isClone || victim.isSummoned || victim.isTemporaryAlly) return;
   const seen = battle.questDefeatSeen ||= new WeakSet();
   if (seen.has(victim)) return;
@@ -4861,11 +4849,13 @@ function recordQuestEnemyDefeat(battle, victim, source) {
 }
 function syncDifficultyNumber(prefix, value) {
   const input = document.getElementById(prefix + 'DifficultyNumber');
+  if (!input) return;
   if (document.activeElement !== input) input.value = String(value);
   input.disabled = isBattleMatchActive();
 }
 function wireDifficultyNumber(prefix, system, getType, render) {
   const input = document.getElementById(prefix + 'DifficultyNumber');
+  if (!input || !system) return;
   const commit = () => {
     if (isBattleMatchActive()) return;
     const previous = system.snapshot(getType()).difficulty;
@@ -4876,16 +4866,16 @@ function wireDifficultyNumber(prefix, system, getType, render) {
   };
   input.addEventListener('change', commit);
   input.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); commit(); input.blur(); } });
-  document.getElementById(prefix + 'Difficulty').addEventListener('input', () => { input.value = String(system.snapshot(getType()).difficulty); });
+  document.getElementById(prefix + 'Difficulty')?.addEventListener('input', () => { input.value = String(system.snapshot(getType()).difficulty); });
 }
 wireDifficultyNumber('raid', window.RaidSystem, getRaidType, renderRaidControls);
 wireDifficultyNumber('bossEvent', window.BossEventSystem, getBossEventType, renderBossEventControls);
-document.getElementById('questOpenButton').addEventListener('click', () => { window.QuestSystem.render(document.getElementById('questGrid')); openModal('questModal'); });
-document.getElementById('questCloseButton').addEventListener('click', () => closeModal('questModal'));
+document.getElementById('questOpenButton')?.addEventListener('click', () => { window.QuestSystem.render(document.getElementById('questGrid')); openModal('questModal'); });
+document.getElementById('questCloseButton')?.addEventListener('click', () => closeModal('questModal'));
 
 
 function globalTick() {
-  if (isImportingSave) return;
+  if (isImportingSave || window.SandboxSystem?.active) return;
   if (!document.getElementById('saveManagerModal')?.classList.contains('hidden')) renderSaveTransferCooldowns();
   refreshAchievements();
   const now = Date.now();
@@ -4959,12 +4949,15 @@ function isBattleMatchActive() {
 }
 
 function setBattleModalLock(active) {
+  const sandboxButton = document.getElementById('sandboxOpenButton');
+  if (sandboxButton) sandboxButton.disabled = Boolean(active);
   const isActive = Boolean(active);
   document.body.classList.toggle('battle-lock', isActive);
   els.battleModal?.classList.toggle('battle-modal--active', isActive);
 }
 
 function openModal(id) {
+  if (window.SandboxSystem?.active && id !== 'sandboxModal') return;
   const modal = document.getElementById(id);
   if (!modal) return;
   document.getElementById('utilityMenu')?.removeAttribute('open');
@@ -4987,7 +4980,7 @@ function openModal(id) {
       button.classList.toggle('is-selected', selected);
       button.setAttribute('aria-pressed', String(selected));
     });
-    document.getElementById('timeTrialModeTickets').textContent = `${window.InventorySystem.quantity(window.TimeTrialSystem.TICKET_ID)} EXP Time Trial Tickets in Storage • Select a type, then choose your lineup in Arena.`;
+    setViewText('timeTrialModeTickets', `${window.InventorySystem.quantity(window.TimeTrialSystem.TICKET_ID)} EXP Time Trial Tickets in Storage • Select a type, then choose your lineup in Arena.`);
     modal.querySelector('[data-time-trial-type]')?.focus();
   }
   if (id === "saveManagerModal") renderSaveTransferCooldowns();
@@ -5063,6 +5056,7 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if (id === 'sandboxModal') { window.SandboxSystem?.exit?.(); return; }
   const modal = document.getElementById(id);
   if (!modal) return;
 
@@ -5101,7 +5095,7 @@ function resetGame() {
   try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
   renderAutoContinueBattleToggle();
   returnToLobby();
-  window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset();
+  window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.RollViewSystem?.reset?.();
 
   clearCooldownExpiryTimer();
   clearBattleTurnTimer();
@@ -5152,8 +5146,8 @@ function renderPassiveCopy(node, name, description) {
   if (description) node.after(createPassiveExpandButton(name, description));
 }
 function openPassiveDetails(button) {
-  document.getElementById('passiveDetailTitle').textContent = button.dataset.passiveName;
-  document.getElementById('passiveDetailText').textContent = normalizePassiveText(button.dataset.passiveDescription);
+  setViewText('passiveDetailTitle', button.dataset.passiveName);
+  setViewText('passiveDetailText', normalizePassiveText(button.dataset.passiveDescription));
   openModal('passiveDetailModal'); document.querySelector('#passiveDetailModal .modal-close')?.focus();
 }
 document.addEventListener('keydown', event => {
@@ -5351,7 +5345,7 @@ document.querySelectorAll('[data-time-trial-type]').forEach(button => {
   });
 });
 document.addEventListener('keydown', event => {
-  if (event.key !== 'Escape' || document.getElementById('timeTrialModeModal').classList.contains('hidden')) return;
+  if (event.key !== 'Escape' || (document.getElementById('timeTrialModeModal')?.classList.contains('hidden') ?? true)) return;
   event.preventDefault(); event.stopImmediatePropagation();
   closeModal('timeTrialModeModal');
   document.getElementById('timeTrialOpenButton')?.focus();
@@ -5455,7 +5449,7 @@ document.addEventListener("keydown", event => {
 });
 
 function resumeGameRuntime() {
-  if (isImportingSave) return;
+  if (isImportingSave || window.SandboxSystem?.active) return;
   recoverElapsedRealTime();
   window.InventorySystem.tick(Date.now());
   window.TimeTrialSystem.checkDeadline();
@@ -5471,7 +5465,7 @@ function resumeGameRuntime() {
 
 // Recover real time on background/foreground and before the page unloads.
 document.addEventListener("visibilitychange", () => {
-  if (isImportingSave) return;
+  if (isImportingSave || window.SandboxSystem?.active) return;
   if (document.visibilityState === "visible") {
     resumeGameRuntime();
   } else {
@@ -5481,7 +5475,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 window.addEventListener("pagehide", () => {
-  if (isImportingSave) return;
+  if (isImportingSave || window.SandboxSystem?.active) return;
   syncGameClockToNow();
   saveState();
 });
@@ -5542,9 +5536,33 @@ els.battleVictory?.classList.add('hidden');
 els.battleVictory?.setAttribute('aria-hidden', 'true');
 els.battleSetup?.classList.remove('hidden');
 
+function initializeGameViews() {
+  try {
+    window.RollViewSystem?.configure?.({ showResult, showMiss });
+  } catch (error) { window.GameStartup?.report('roll-ui', 'Roll display initialization failed.', error); }
+  try {
+    window.SandboxSystem?.configure?.({
+  canEnter: () => Boolean(els.battleModal) && !isBattleMatchActive() && !isImportingSave && !saveTransferBusy,
+  onEnter: () => {
+    clearAutoContinueBattleTimer();
+    els.battleModal?.classList.add('hidden');
+    document.body?.classList.add('modal-open');
+  },
+  onExit: () => {
+    els.battleModal?.classList.remove('hidden');
+    document.body?.classList.add('modal-open');
+    resumeGameRuntime();
+    if (battleState?.finished) scheduleAutoContinueBattle();
+    if (isAutoRolling && !isCooldownActive) attemptAutoRoll();
+  }
+});
+  } catch (error) { window.GameStartup?.report('sandbox-ui', 'Sandbox initialization failed.', error); }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeGameViews, {once:true});
+else initializeGameViews();
 window.EvolutionSystem.configure({ canAct: canEvolveNow, prepare: prepareEvolution, onCommit: onEvolutionCommitted, describe: recipe => ({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(" + ") || "Normal"}))}) });
 window.InventorySystem.configure({ getDropMultiplier: () => window.AchievementSystem?.getDropMultiplier(state.achievementRewardReceipts) || 1 });
-window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreeze: () => { if (!isImportingSave) { syncGameClockToNow(); saveState(); } } });
+window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreeze: () => { if (!isImportingSave && !window.SandboxSystem?.active) { syncGameClockToNow(); saveState(); } } });
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
 window.TimeTrialSystem?.configure({ getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (1 + getWeatherBonus("exp")), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });

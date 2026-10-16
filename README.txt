@@ -1,105 +1,39 @@
-NHẬT KÝ CẬP NHẬT — SANDBOX, ẨN THẺ ROLL, CẤP THẺ VÀ MARCO
-Ngày: 16/10/2026
+NHẬT KÝ SỬA LỖI TRIỂN KHAI WEB — 16/10/2026
 
-1. CÔNG TẮC HIDE ROLLING CARD
+1. ĐỒNG BỘ HTML, JAVASCRIPT VÀ CSS
 
-Thêm công tắc ON/OFF ngay bên dưới Cooldown, ở góc phải thanh thông số của màn hình Roll. Trạng thái được lưu khi tải lại trang và đi cùng save .acrsave.
+Đã kiểm tra tên tệp và ID: roll_view.js, sandbox.js cùng các module được tham chiếu đúng chữ hoa/thường. Không phát hiện lỗi casing trong gói nguồn được kiểm tra.
 
-Khi ON:
-- Ẩn hình thẻ và hiệu ứng kết quả trùng; hiển thị vùng thông báo nhẹ thay thế.
-- Hiện kết quả nếu nhận một thẻ chưa sở hữu, hoặc nhận một mutation/biến thể double mutation chưa sở hữu của thẻ đó.
-- Thẻ mới giữ nguyên trên màn hình đến lần roll được chấp nhận tiếp theo. Bấm khi còn cooldown không làm mất kết quả đang xem.
-- Double mutation có cùng hai thành phần được coi là cùng biến thể, dù thứ tự hai mutation đảo ngược.
-- Nếu đã sở hữu thẻ dưới dạng mutation, roll bản Normal không được tính là mutation mới.
-- Miss cũng không phát hiệu ứng hình ảnh khi đang ẩn.
+Qua HTTP, trường hợp HTML mới kết hợp app.js cũ tái hiện đúng hai lỗi: Hide Rolling Card không phản hồi và Sandbox không mở, trong khi Console không báo lỗi. Đây là một nguyên nhân đã tái hiện trong môi trường kiểm tra; không phải kết luận từ việc truy cập website đang triển khai của người chơi.
 
-Khi OFF, khôi phục cách hiển thị thông thường. Có thể xem lại kết quả gần nhất đang bị ẩn mà không roll thêm hoặc nhận thêm phần thưởng.
+Toàn bộ URL JS/CSS hiện dùng đường dẫn tương đối ./ và mã phiên bản ?v=20261016-deploy-fix-1 để tách khỏi tài nguyên URL cũ trong cache. Script dùng defer, giữ đúng thứ tự phụ thuộc và chạy khi HTML đã được phân tích. Áp dụng được cả khi game nằm ở thư mục gốc hoặc đường dẫn con của GitHub Pages.
 
-Việc xét sở hữu được thực hiện trước khi cộng thẻ vừa roll. RNG, cooldown, Auto Roll, bộ đếm roll, cộng thẻ, EXP và các sự kiện nhiệm vụ vẫn đi qua luồng xử lý thông thường; công tắc chỉ điều khiển phần trình bày.
+2. SỬA HIDE ROLLING CARD
 
-2. BỎ GIỚI HẠN CẤP CŨ
+Binding chờ DOM sẵn sàng và có thể khởi tạo lại mà không gắn trùng listener. Khi ON, kết quả trùng được ẩn bằng hidden, class hidden và display:none !important trực tiếp; không còn phụ thuộc riêng vào stylesheet đang được cache.
 
-Bỏ giới hạn gameplay Lv.999 và các kiểm tra tương ứng trong hệ thống cấp thẻ, chiến đấu và EXP Time Trial. Thẻ tiếp tục tăng cấp qua Lv.100, Lv.999 và Lv.1.000.
+Thẻ chưa sở hữu hoặc mutation/double mutation mới vẫn hiện đến lần roll được chấp nhận tiếp theo. Double mutation đảo thứ tự thành phần vẫn là cùng biến thể. Khi OFF, có thể xem lại kết quả đang ẩn mà không phát sinh roll hoặc nhận thêm thẻ.
 
-Bỏ thao tác migration cũ tự hạ thẻ về Lv.10 khi save chưa có cờ migration. Các bản ghi cấp hợp lệ trong save mới/cũ được giữ nguyên; dữ liệu cardProgress chính được ưu tiên, dữ liệu cấp trong các kho cũ chỉ bổ sung bản ghi còn thiếu. Cờ migration lịch sử không kích hoạt lại thao tác hạ cấp.
+Giữ nguyên RNG, cộng thẻ, EXP, quest và bộ đếm. Nếu module trình bày không tải được, luồng roll chính vẫn có thể hoạt động và giao diện báo lỗi tải. Nếu trình duyệt chặn ghi tùy chọn vào localStorage, công tắc vẫn hoạt động trong phiên hiện tại; tooltip thông báo không lưu được tùy chọn.
 
-Công thức hiện hành được giữ nguyên:
-- Hệ số HP và ATK theo cấp L: 1 + 0,075 x (L - 1).
-- EXP để lên cấp từ L: floor(100 x hệ số độ hiếm x L).
-- Hệ số độ hiếm: Common = 1; Rare = 1,6; Epic = 2,4; Legendary = 3,6; Mythic = 5,2; Secret = 8.
-- EXP để tăng liên tiếp n cấp từ L: 100 x hệ số độ hiếm x n x (L + (n - 1) / 2).
-- Tìm số cấp đủ EXP bằng tìm kiếm nhị phân, tránh vòng lặp kéo dài khi nhận lượng EXP lớn.
+3. SỬA KHỞI TẠO VÀ LỐI VÀO SANDBOX
 
-Chỉ giữ ranh giới số nguyên an toàn của JavaScript (Number.MAX_SAFE_INTEGER = 9.007.199.254.740.991), không dùng Lv.100 hoặc Lv.999 làm trần gameplay.
+Kiểm tra thành phần DOM, dữ liệu thẻ, module mutation/cấp/element/passive và cầu nối với app.js trước khi mở. Chuẩn bị đội hình trước khi chuyển khỏi Arena; lỗi mở không để trạng thái Sandbox bị kẹt đang hoạt động.
 
-Điều kiện Evolution yêu cầu Lv.100 trở lên và khoảng độ khó Raid/Boss Event 1–1.000 vẫn giữ nguyên, vì đây không phải giới hạn cấp thẻ người chơi.
+Bổ sung kiểm tra null cho các phần tùy chọn, listener và thao tác render. Khởi tạo nhiều lần không nhân đôi listener, danh sách thời tiết hoặc lượt chiến đấu. Lỗi bắt đầu/chạy trận được hiển thị, đồng thời dừng timer an toàn.
 
-3. SỬA PHOENIX INFERNO CỦA MARCO
+Giữ đầy đủ chọn thẻ Index cho hai đội, mutation, Level/HP/ATK, timer, preset, Start, Pause, Step và Exit. Runtime, RNG, thẻ và nhật ký Sandbox vẫn độc lập. Trận thử không ghi quest, achievement, EXP, VNĐ, vật phẩm, tiến trình hoặc đội hình thật.
 
-Lượt cứu đồng đội một lần/trận hoạt động như cơ chế ngăn tử vong:
-- Khi một đồng đội khác nhận đòn chí tử, hoặc lượng HP sau sát thương sẽ xuống dưới 10% max HP, Marco còn sống và dùng được nội tại sẽ cứu đồng đội đó.
-- Ngăn tử vong trước khi chạy các xử lý chết, hạ gục hoặc hồi sinh riêng của nạn nhân; không yêu cầu nạn nhân phải còn HP sau đòn chí tử.
-- Đổi vị trí Marco với đồng đội được cứu, rồi hồi đồng đội lên max HP.
-- Đánh dấu đã dùng lượt cứu trước các callback để tránh kích hoạt lặp.
-- Bleed vẫn chặn hồi HP. Nếu được cứu khỏi đòn chí tử trong lúc Bleed, đồng đội còn ít nhất 1 HP.
-- Đòn bị shield hấp thụ hết không tiêu tốn lượt cứu khi đồng đội chưa rơi vào ngưỡng nguy hiểm.
-- Áp dụng cho sát thương thường, sát thương nội tại và Burn/Bleed. Marco đã chết hoặc bị khóa nội tại không thể cứu.
-- Sát thương thực sự đã trừ HP được ghi nhận trước bước hồi máu, tránh mất số liệu sát thương của trận.
+4. THÔNG BÁO LỖI TRIỂN KHAI
 
-Không đổi chỉ số gốc, tỷ lệ chặn đòn/counter hoặc cơ chế dodge tăng HP của Marco.
+Thêm startup.js để hiển thị thông báo khi module không tải, script không khởi tạo được hoặc giao diện tính năng chưa sẵn sàng. Nút tính năng chưa khởi tạo được sẽ bị vô hiệu hóa kèm hướng dẫn, thay cho nút bấm không phản hồi.
 
-4. SANDBOX MODE — KHU VỰC THỬ NGHIỆM ĐỘC LẬP
+app.js bổ sung kiểm tra null cho binding, cập nhật chữ và các điều khiển Arena liên quan. Phần trình bày roll và Sandbox được khởi tạo độc lập; lỗi một phần không tự động bỏ qua khởi tạo phần còn lại.
 
-Lối vào: nút SANDBOX MODE bên cạnh tiêu đề Battle Arena. Chỉ mở khi không có trận thật hoặc thao tác chuyển save đang diễn ra.
+5. KIỂM TRA VÀ CÁCH ÁP DỤNG
 
-Cấu hình hai đội:
-- Cả đội người chơi và đối thủ đều chọn được toàn bộ 129 thẻ trong Index, bao gồm thẻ khóa, chưa sở hữu, Quest, Evolution và Secret.
-- Thêm/xóa tối đa 10 vị trí cấu hình ban đầu cho mỗi bên. Giới hạn vị trí cấu hình này không đặt thêm giới hạn lên clone/summon phát sinh từ nội tại.
-- Mỗi vị trí chọn được tối đa hai mutation khác nhau, cấp, max HP và ATK. ATK tùy chỉnh có thể bằng 0.
-- Khi đổi thẻ, cấp hoặc mutation, HP/ATK mặc định được tính lại. Giá trị HP/ATK nhập tay là chỉ số đầu trận cuối cùng, không nhân mutation/cấp lần thứ hai.
-- Công thức mặc định: làm tròn(chỉ số Lv.1 x hệ số cấp x hệ số mutation tương ứng). Double mutation nhân các hệ số thành phần.
-- Nội tại vẫn có thể tăng/giảm các chỉ số này sau khi bắt đầu trận.
-- Nút Lv.1000 Preset là cấu hình thử nhanh, không phải cấp tối đa. Có thể nhập cấp cao hơn trực tiếp.
-- Reset Default Stats đưa các vị trí về Lv.1, không mutation và chỉ số mặc định; Clear Team xóa cả đội; Add Slot thêm vị trí mới.
+Đã kiểm tra bằng Chromium qua máy chủ HTTP phân biệt hoa/thường: đường dẫn con, tài nguyên có phiên bản, thẻ mới/trùng/mutation mới, CSS xung đột, tùy chọn lưu qua reload, khởi tạo lặp, Sandbox thắng trận/timer/Exit, module 404 và DOM thiếu. So sánh trước/sau trận thử xác nhận localStorage, quest, achievement, tiến trình chính, Arena và dữ liệu thẻ gốc không thay đổi.
 
-Thiết lập và điều khiển trận:
-- Turn Duration nhập trực tiếp từ 0,1 đến 60 giây, mặc định 2 giây. Có thể đổi trong trận; potion của save thật không điều khiển timer Sandbox.
-- Có RNG seed riêng để lặp lại thử nghiệm với cùng đội hình và cấu hình. Sandbox không tiêu thụ chuỗi RNG của chế độ thật.
-- Có lựa chọn thời tiết thử nghiệm và lựa chọn nội tại của Aqua, không thay đổi thời tiết hay phần thưởng của save thật.
-- Start Sandbox khởi tạo trận mới; Pause/Resume tạm dừng/tiếp tục; Step Turn chạy một lượt khi tạm dừng; Stop Battle dừng thử nghiệm.
-- Hiển thị từng đơn vị, HP/ATK hiện tại, shield, trạng thái, nội tại, số lượt và tổng sát thương hai bên. Nhật ký giữ tối đa 150 sự kiện gần nhất.
-- Chỉ kết thúc khi toàn bộ hàng đợi đơn vị của một bên bị hạ, bao gồm đơn vị được tạo thêm.
-- Exit Sandbox, phím Escape hoặc bấm nền ngoài cửa sổ đưa về Arena thật. Thoát giữa trận hủy timer và runtime thử nghiệm.
+Khi triển khai, giải nén và cập nhật đồng bộ toàn bộ 23 tệp trong ZIP vào thư mục phục vụ game. Giữ nguyên tên tệp và đường dẫn tương đối; bảo đảm startup.js, levels.js, roll_view.js và sandbox.js cùng nằm cạnh index.html. Sau khi bản triển khai hoàn tất, tải lại trang; có thể dùng Ctrl+F5 để làm mới HTML cũ đang cache.
 
-Cách ly tiến trình:
-- Dùng một runtime PassiveSystem riêng với RNG, bộ đếm, trạng thái và callback nhật ký riêng.
-- Thẻ và mutation tham gia thử nghiệm là bản sao; không dùng đơn vị hay đội hình chiến đấu thật.
-- Không gọi callback nhận thưởng, hạ địch cho nhiệm vụ, đổi thời tiết thật hoặc lưu tiến trình.
-- Thắng, thua, giết địch, sát thương, số lượt và thẻ sử dụng trong Sandbox không tăng nhiệm vụ, achievement, chỉ số người chơi, roll, EXP, VNĐ, tiền chế độ, vật phẩm hoặc tiến trình thẻ.
-- Có chốt chặn bổ sung ở luồng Quest, Achievement, cộng EXP, roll, lưu save và kết thúc trận thật khi Sandbox đang mở.
-- Auto Roll thật tạm ngừng nhưng giữ trạng thái bật; tiếp tục khi thoát nếu đủ cooldown. Auto Continue Battle được tạm ngừng và khôi phục việc lên lịch khi quay lại kết quả trận thật.
-- Không xuất/nhập save trong Sandbox. Không lưu cấu hình hoặc kết quả Sandbox vào localStorage hay .acrsave; tải lại trang sẽ mất phiên thử nghiệm.
-- Đồng hồ thời tiết và thời hạn potion thật vẫn dựa trên thời gian thực; khi thoát, giao diện thật đồng bộ lại thời gian đã trôi qua.
-
-5. CẤU TRÚC THAY ĐỔI TRONG BẢN NÀY
-
-Module mới:
-- levels.js: tính cấp, EXP và hệ số chỉ số; không tự ghi save.
-- roll_view.js: công tắc ẩn kết quả roll và trạng thái trình bày gần nhất.
-- sandbox.js: cấu hình đội, RNG riêng, timer, runtime chiến đấu độc lập và giao diện Sandbox.
-
-Module tích hợp:
-- app.js: điều phối roll, cấp thẻ, cầu nối mở/thoát Sandbox, chặn tiến trình thật và bổ sung tùy chọn ẩn roll vào save.
-- passives.js: tạo runtime độc lập dùng lại cùng bộ luật chiến đấu; sửa cơ chế cứu chí tử của Marco.
-- cards.js: mô tả Marco khớp cơ chế mới.
-- achievements.js và quest.js: chặn tracking/claim trong Sandbox.
-- timetrial.js: bỏ kiểm tra trần Lv.999 trong luồng cấp EXP.
-- index.html và styles.css: công tắc dưới Cooldown, lối vào Sandbox, màn hình cấu hình và bố cục responsive.
-
-6. KIỂM TRA VÀ BÀN GIAO
-
-Đã kiểm tra cú pháp, khởi động trình duyệt, trạng thái mới/trùng của thẻ và mutation, cấp vượt 100/999, các trường hợp cứu chí tử của Marco, cách ly localStorage/tiến trình Sandbox, timer và thao tác thoát. Đã đối chiếu các trận xác định bằng seed cho 128 thẻ ngoài Marco với bản trước.
-
-Luồng bảo vệ .acrsave và hai cooldown 7 ngày độc lập được giữ nguyên; đã kiểm tra vòng đóng gói/giải mã/đọc save và từ chối dữ liệu bị sửa. Tower, Raid, Boss Event, Evolution, Element và thông số phần thưởng không được cân bằng lại trong bản cập nhật này.
-
-Gói bàn giao chứa mã nguồn game đầy đủ và README.txt này. Không kèm Excel, script kiểm thử, log xác thực hoặc tài nguyên ảnh/âm thanh mới. Tiếp tục dùng các tài nguyên đã có của dự án.
+Giữ các tài nguyên ảnh/âm thanh hiện có của dự án. Bản này không đổi cân bằng, nội tại chiến đấu, checksum .acrsave hoặc cooldown 7 ngày. Gói bàn giao chỉ gồm mã nguồn và README.txt; không có Excel, asset mới, script kiểm thử hay log.

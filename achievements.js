@@ -75,6 +75,7 @@
     return count(data.stats[def.category]);
   }
   function claim(id) {
+    if (host.SandboxSystem?.active) return false;
     const def = definitions.find(item => item.id === id);
     if (!def || data.claimed[id] || progress(def) < def.target || typeof bridge.applyReward !== 'function') return false;
     try {
@@ -88,7 +89,7 @@
     } catch (error) { console.warn('Achievement reward could not be claimed', error); return false; }
   }
   function sync(snapshot = bridge.getSnapshot?.() || {}) {
-    if (reconciling) return false;
+    if (reconciling || host.SandboxSystem?.active) return false;
     reconciling = true;
     const before = JSON.stringify(data);
     try {
@@ -118,8 +119,8 @@
       return changed;
     } finally { reconciling = false; }
   }
-  function recordBattleWin() { data.stats.battles = count(data.stats.battles + 1); persist(); }
-  function recordCurrencyEarned(amount) { data.stats.currencyEarned = count(data.stats.currencyEarned + count(amount)); persist(); }
+  function recordBattleWin() { if (host.SandboxSystem?.active) return; data.stats.battles = count(data.stats.battles + 1); persist(); }
+  function recordCurrencyEarned(amount) { if (host.SandboxSystem?.active) return; data.stats.currencyEarned = count(data.stats.currencyEarned + count(amount)); persist(); }
   function configure(options = {}) { bridge = options; definitions = buildDefinitions(options.cards || host.ALL_CARDS || [], options.towerTypes || []); sync(); persist(); }
   function list(category = 'all') {
     return definitions.filter(def => category === 'all' || def.category === category).map(def => ({ ...def, value: progress(def), complete: progress(def) >= def.target, claimed: data.claimed[def.id] === true }));
