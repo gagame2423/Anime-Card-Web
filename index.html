@@ -64,6 +64,7 @@
             <button id="inventoryOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🧪</span><span><small>STORAGE</small><strong>Items</strong></span></button>
             <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
             <button id="saveManagerOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Export or import save"><span class="nav-icon">⇄</span><span><small>BACKUP</small><strong>Save</strong></span></button>
+            <button id="questOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">?</span><span><small>DISCOVER</small><strong>Quest Cards</strong></span></button>
             <button id="evolutionOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">✧</span><span><small>TRANSFORM</small><strong>Evolution</strong></span></button>
             <button id="musicToggleButton" class="ghost-button" type="button" aria-pressed="false">♫ Music ON</button>
             <button id="resetButton" class="ghost-button" type="button">Reset</button>
@@ -360,7 +361,7 @@
     <section class="modal-panel module-modal achievement-modal">
       <header class="modal-header"><div><p class="eyebrow">YOUR JOURNEY</p><h2 id="achievementModalTitle">🏆 Achievements</h2></div><button data-close-modal="achievementModal" class="modal-close" type="button" aria-label="Close achievements">×</button></header>
       <p class="module-description">Milestones keep your best progress after spending or salvage. Floor 100 Champion cards are awarded automatically and unlock permanently for future rolls.</p>
-      <div class="achievement-toolbar"><span id="achievementSummary" aria-live="polite"></span><label><span class="sr-only">Achievement category</span><select id="achievementCategory"><option value="all">All milestones</option><option value="collection">Collection</option><option value="battles">Battle wins</option><option value="currency">VNĐ milestones</option><option value="rolls">Total rolls</option><option value="tower">Tower progress</option><option value="timetrial">Time Trial rooms</option><option value="raid">Total Raid wins</option></select></label></div>
+      <div class="achievement-toolbar"><span id="achievementSummary" aria-live="polite"></span><label><span class="sr-only">Achievement category</span><select id="achievementCategory"><option value="all">All milestones</option><option value="collection">Collection</option><option value="battles">Battle wins</option><option value="currency">VNĐ milestones</option><option value="rolls">Total rolls</option><option value="tower">Tower progress</option><option value="timetrial">Time Trial rooms</option><option value="raid">Total Raid wins</option><option value="boss">Total Boss Event clears</option></select></label></div>
       <div id="achievementList" class="achievement-grid" aria-label="Achievements and rewards"></div>
     </section>
   </div>
@@ -451,7 +452,8 @@
           <div id="bossEventControls" class="boss-event-controls hidden">
             <label for="bossEventTypeSelect">Boss Event</label><select id="bossEventTypeSelect" class="select-input"><option value="alucard">Alucard Event</option></select>
             <strong id="bossEventAvailability" role="status"></strong>
-            <label class="raid-difficulty" for="bossEventDifficulty">Difficulty <output id="bossEventDifficultyValue">1 • Boss Lv.1</output><input id="bossEventDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
+            <label class="raid-difficulty" for="bossEventDifficulty">Difficulty <output id="bossEventDifficultyValue">1 • Boss Lv.1</output><input id="bossEventDifficultyNumber" class="difficulty-number" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" aria-label="Exact difficulty (1 to 1000)">
+              <input id="bossEventDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
             <strong id="bossEventBalance"></strong><button id="bossEventShopOpenButton" class="tower-shop-button" type="button">🩸 Event Shop</button>
             <p id="bossEventRules"></p><p id="bossEventStats"></p>
           </div>
@@ -462,7 +464,8 @@
           </div>
           <div id="raidControls" class="raid-controls hidden">
             <label for="raidTypeSelect">Raid type</label><select id="raidTypeSelect" class="select-input"><option value="marine_fort">Marine Ford Raid</option></select>
-            <label class="raid-difficulty" for="raidDifficulty">Difficulty <output id="raidDifficultyValue">1 • Enemy Lv.1</output><input id="raidDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
+            <label class="raid-difficulty" for="raidDifficulty">Difficulty <output id="raidDifficultyValue">1 • Enemy Lv.1</output><input id="raidDifficultyNumber" class="difficulty-number" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" aria-label="Exact difficulty (1 to 1000)">
+              <input id="raidDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
             <strong id="raidBalances"></strong><button id="raidShopOpenButton" class="tower-shop-button" type="button">⚓ Raid Shop</button>
             <p id="raidRules"></p>
             <details class="raid-enemy-preview"><summary>Preset boss lineup • 10 opponents</summary><ol id="raidEnemyPreview"></ol></details>
@@ -779,6 +782,7 @@
   <div id="passiveDetailModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="passiveDetailTitle">
     <section class="modal-panel passive-detail-modal"><header class="modal-header"><h2 id="passiveDetailTitle">Passive</h2><button class="modal-close" data-close-modal="passiveDetailModal" type="button" aria-label="Close passive details">×</button></header><div id="passiveDetailText" class="passive-detail-text"></div></section>
   </div>
+  <div id="questModal" class="modal-backdrop hidden"><section class="modal-panel module-modal quest-modal" role="dialog" aria-modal="true" aria-labelledby="questTitle"><header class="modal-header"><h2 id="questTitle">? Quest Cards</h2><button type="button" id="questCloseButton" class="modal-close" aria-label="Close quests">×</button></header><p>Accept a quest to start. Steps count in order; existing collection and old battles never count.</p><div id="questGrid" class="module-shop-grid"></div></section></div>
   <div id="evolutionModal" class="modal-backdrop hidden"><section class="modal-panel module-modal evolution-modal" role="dialog" aria-modal="true" aria-labelledby="evolutionTitle"><header class="modal-header"><h2 id="evolutionTitle">✧ Evolution</h2><button type="button" id="evolutionCloseButton" class="modal-close" aria-label="Close evolution">×</button></header><p id="evolutionStatus" role="status">Choose the exact mutation variant to sacrifice.</p><div id="evolutionGrid" class="module-shop-grid"></div></section></div>
 
   <div id="bossEventShopModal" class="modal-backdrop hidden">
@@ -797,6 +801,7 @@
   <script src="boss_event.js"></script>
   <script src="achievements.js"></script>
   <script src="evolution.js"></script>
+  <script src="quest.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

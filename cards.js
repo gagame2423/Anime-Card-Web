@@ -1640,6 +1640,87 @@ const BOSS_EVENT_CARDS = [{
 }];
 CARDS.push(...BOSS_EVENT_CARDS);
 window.BOSS_EVENT_CARDS = BOSS_EVENT_CARDS;
+// Quest rewards and the Mangekyo Floor 200 milestone.
+const QUEST_UPDATE_CARDS = [
+  {
+    "id": "madara-lubu",
+    "name": "Madara Lubu",
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 10000000,
+    "requiredWeather": "Tsukuyomi",
+    "towerType": "tsukuyomi",
+    "towerFloor": 200,
+    "unlockRequirement": "tower_floor_200_tsukuyomi",
+    "stats": {
+      "hp": 500000,
+      "atk": 100000
+    },
+    "image": "assets/cards/madaralubu.png",
+    "passive": {
+      "name": "Divine Steed",
+      "description": "10% dodge against standard and passive attacks; a dodge disables the attacker’s passive for 5 turns. 50% chance to resist each Stun.\nFrom attack 5, each attack has a 50% chance to chain a follow-up (100% current ATK; Bleed for 3 turns at 25% ATK/turn).\nEach attack has a 20% chance to call a teammate for a follow-up.\nLast survivor: once per match, summon 3 Clones with 50% current stats, a random fallen teammate’s passive each, and a shield equal to 50% of Madara’s max HP."
+    }
+  },
+  {
+    "id": "sung-jin-woo",
+    "name": "Sung Jin Woo",
+    "element": "Water",
+    "rarity": "Secret",
+    "chance": 2023000,
+    "requiredWeather": "Shadow",
+    "questOnly": true,
+    "unlockRequirement": "quest_card_sung-jin-woo",
+    "stats": {
+      "hp": 223000,
+      "atk": 22300
+    },
+    "image": "assets/cards/sungjinwoo.png",
+    "passive": {
+      "name": "Systems Stats",
+      "description": "Each kill summons a Shadow with 50% of the defeated enemy’s HP/ATK.\nChoose one non-stacking bonus at battle start and after each kill: +15% ATK, +20% max HP, or heal 1.5% max HP per attack. Keep it until the next kill.\nEach attack randomly uses Hunter Slash (120% ATK), Shadow Attack (call a Shadow or backline teammate), or Fang Strike (60% ATK to the 2 front enemies)."
+    }
+  },
+  {
+    "id": "frieren",
+    "name": "Frieren",
+    "element": "Holy",
+    "rarity": "Secret",
+    "chance": 2500000,
+    "requiredWeather": "Heavenly",
+    "questOnly": true,
+    "unlockRequirement": "quest_card_frieren",
+    "stats": {
+      "hp": 200000,
+      "atk": 25000
+    },
+    "image": "assets/cards/frieren.png",
+    "passive": {
+      "name": "Endless Mana",
+      "description": "Taking HP damage grants 3.5% Mana. Each 1% Mana adds +0.5% damage. At 100%, heal 35% max HP, cast Zoltraak (175% current ATK), then reset Mana.\nOnce per match, surviving below 25% HP immediately casts Zoltraak and grants 30% Mana.\nNormal attacks randomly become Vollzanbel (40% ATK to all enemies), Time Dilation (Stun all enemies for 1 turn, then disable passives for 1 turn), or Healing (heal all allies for 25% max HP)."
+    }
+  },
+  {
+    "id": "alexander-anderson",
+    "name": "Alexander Anderson",
+    "element": "Water",
+    "rarity": "Mythic",
+    "chance": 777000,
+    "requiredWeather": null,
+    "questOnly": true,
+    "unlockRequirement": "quest_card_alexander-anderson",
+    "stats": {
+      "hp": 77700,
+      "atk": 7700
+    },
+    "image": "assets/cards/alexanderanderson.png",
+    "passive": {
+      "name": "Pray to God",
+      "description": "Each attack has a 77% chance to chain a follow-up for 77% current ATK. Each follow-up applies Bleed for its chain count in turns (7% ATK/turn).\nOnce per match, while alive below 7% max HP: heal to 77% max HP, gain +300% attack damage, and stop follow-ups. Gain Crucifix: +150% damage against Dark enemies. Cannot be revived."
+    }
+  }
+];
+CARDS.push(...QUEST_UPDATE_CARDS);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

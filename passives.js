@@ -283,7 +283,7 @@
     const pick = list => list[Math.min(list.length - 1, Math.floor(Math.random() * list.length))];
     const rand = (min, max) => min + Math.min(max - min, Math.floor(Math.random() * (max - min + 1)));
     const uncloneable = unit => ([prefix + 'reaper','boss-event-alucard'].includes(cardIdOf(unit)) || id(unit) === 'reaper' || getEffectivePassiveCardId(unit) === 'boss-event-alucard') || Boolean(unit?.championPermanentDeath);
-    const noExternalRevive = unit => ([prefix + 'reaper', prefix + 'snowing'].includes(cardIdOf(unit)) || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath);
+    const noExternalRevive = unit => ([prefix + 'reaper', prefix + 'snowing', 'alexander-anderson'].includes(cardIdOf(unit)) || ensureRuntime(unit).effectivePassiveId === 'alexander-anderson' || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath);
     function log(unit, text) { ensureRuntime(unit).lastPassiveTrigger = text; safeLog(`[CHAMPION] ${unit.display?.name || unit.card?.name}: ${text}`, 'passive'); }
     function describe(unit) {
       if (!unit) return null;
@@ -477,6 +477,8 @@
         refreshUnitDisplay(unit); log(reviver, `Dark Aurora • original teammate reserve revival ${c.darkRevives}/2`); return true;
       }
       expansion.death(bs, unit, attacker);
+      host.onUnitDefeated?.(bs, unit, attacker);
+      questSkills.turn(bs);
       if (id(unit) === 'snowing') {
         unit.championPermanentDeath = true;
         if (!c.crownGiven) { c.crownGiven = true; if (Math.random() < .58) { const recipient = pick(alliesOf(bs, unit, false)); if (recipient) { state(recipient).iceCrown = true; log(recipient, 'ICE KING CROWN • 10% freeze for 3 turns'); } } }
@@ -705,7 +707,7 @@
     function cleanse(unit) {
       const r = ensureRuntime(unit);
       for (const key of ['stunTurns','freezeTurns','snailTurns','weakenAttackTurns','weakenAttackPct','noDodgeTurns','passiveSuppressionTurns','hypnosisTurns','incomingVulnerabilityTurns','incomingVulnerabilityPct']) r[key] = 0;
-      r.noDodgeAgainstUnit = false; r.burn = []; r.bleed = [];
+      r.noDodgeAgainstUnit = false; r.burn = []; r.bleed = []; r.timeDilationPending = false;
       if (r.champion) r.champion.heresy = 0;
       // Cooldown timers are distinct from attack counters and buff durations.
       for (const key of Object.keys(r)) if (/cooldown(?:Turns)?$/i.test(key) && Number.isFinite(r[key])) r[key] = Math.max(0, r[key] - 4);
@@ -889,6 +891,161 @@
     return {ID,active,state,linked,attack,applyBleed,revive,bleedMultiplier};
   })();
 
+  // Isolated hooks for the Floor 200 reward and accepted-quest cards.
+  const questSkills = (() => {
+    const ids = new Set(['madara-lubu','sung-jin-woo','frieren','alexander-anderson']);
+    const id = unit => getEffectivePassiveCardId(unit);
+    const state = unit => ensureRuntime(unit).questSkill ||= { mana:0, lowHpUsed:false, clones:[], bonus:'', hpDelta:0 };
+    const pick = list => list.length ? list[Math.min(list.length-1,Math.floor(Math.random()*list.length))] : null;
+    const chains = new WeakMap();
+    const isMadara = unit => id(unit)==='madara-lubu';
+    const activeChain = unit => isMadara(unit)||id(unit)==='alexander-anderson';
+    function suppress(bs,target,turns) {
+      const r=ensureRuntime(target); r.passiveSuppressionTurns=Math.max(r.passiveSuppressionTurns||0,turns); r.suppressionAppliedTurn=bs.turnCount;
+    }
+    function dodge(bs,unit,source) { if(isMadara(unit)&&isAlive(source)&&sourcePassiveAllowed(source,unit)) suppress(bs,source,5); }
+    function passiveDodge(bs,unit,source,meta) {
+      if(!isMadara(unit)||!meta.passiveAttack||meta.dodgeChecked||meta.championRedirect||!isAlive(source))return false;
+      if(Math.random()>=getDodgeChance(unit,source,bs,meta))return false;
+      onDodge(bs,unit,source,{incomingDamage:0});safeLog('[PASSIVE] Divine Steed dodged a passive attack.','dodge');return true;
+    }
+    function rerollBonus(bs,unit) {
+      const c=state(unit),r=ensureRuntime(unit);
+      if(c.bonus==='atk'){r.atkBonusPct=Math.max(0,r.atkBonusPct-.15);r.displayAtkBonusPct-=.15;}
+      if(c.hpDelta){unit.maxHp=Math.max(1,Math.round(unit.maxHp/1.2));unit.hp=Math.min(unit.hp,unit.maxHp);r.displayHpBonusPct-=.20;c.hpDelta=0;}
+      c.bonus=pick(['atk','hp','heal']);
+      if(c.bonus==='atk'){r.atkBonusPct+=.15;r.displayAtkBonusPct+=.15;}
+      if(c.bonus==='hp'){c.hpDelta=Math.round(unit.maxHp*.20);unit.maxHp+=c.hpDelta;if(!isBleeding(unit))unit.hp+=c.hpDelta;r.displayHpBonusPct+=.20;}
+      refreshUnitDisplay(unit);
+    }
+    function entry(bs,unit) { if(id(unit)==='sung-jin-woo'&&!state(unit).bonus)rerollBonus(bs,unit); }
+    function summon(bs,owner,hp,attack,name,passiveId=null,shield=0) {
+      if(!canCreateCompanion(owner))return null;
+      hp=Math.max(1,Math.round(hp));attack=Math.max(1,Math.round(attack));
+      const card={id:`quest-summon-${name}`,name,element:owner.card.element,image:owner.card.image,stats:{hp,atk:attack},passive:null};
+      const unit={card,display:{name,hp,atk:attack},hp,maxHp:hp,atk:attack,mutations:[],defeated:false,isClone:true,isSummoned:true,isTemporaryAlly:true,questOwner:owner};
+      ensureRuntime(unit).effectivePassiveId=passiveId;
+      if(shield>0)addShield(unit,shield,'divine-steed');
+      if(bs.mode==='tower'&&bs.enemyTeam.includes(owner))window.TowerSystem.protectEnemyUnit(unit);
+      teamOf(bs,owner).push(unit);state(owner).clones.push(unit);
+      if(passiveId){runOnEntry(bs,unit);champions.entry(bs,unit);}
+      refreshUnitDisplay(unit);return unit;
+    }
+    function lastStanding(bs,unit) {
+      const c=state(unit);
+      if(!isMadara(unit)||c.lastStandUsed||!isAlive(unit)||!canCreateCompanion(unit)||alliesOf(bs,unit,false).length)return;
+      c.lastStandUsed=true;
+      const dead=teamOf(bs,unit).filter(v=>v!==unit&&!isAlive(v)&&!isGeneratedUnit(v)&&!champions.uncloneable(v));
+      const hp=unit.maxHp*.5,attack=computeWeakenedAtk(unit)*.5,shield=unit.maxHp*.5;
+      for(let i=0;i<3;i++){const victim=pick(dead);summon(bs,unit,hp,attack,'Divine Steed Clone',victim?(ensureRuntime(victim).effectivePassiveId||cardIdOf(victim)):null,shield);}
+      safeLog('[PASSIVE] Divine Steed summoned 3 Clones with 50% stats and 50% Madara max HP shields.','passive');
+    }
+    function turn(bs) { for(const unit of [...allUnits(bs)].filter(isAlive))lastStanding(bs,unit); }
+    function kill(bs,unit,victim) {
+      if(id(unit)!=='sung-jin-woo'||isAlive(victim))return;
+      if(!isGeneratedUnit(victim)&&!champions.uncloneable(victim))summon(bs,unit,victim.maxHp*.5,computeWeakenedAtk(victim)*.5,'Shadow');
+      rerollBonus(bs,unit);
+    }
+    function multiplier(unit,target) {
+      const code=id(unit),c=state(unit);
+      if(code==='frieren')return 1+c.mana*.005;
+      if(code==='alexander-anderson'&&c.lowHpUsed)return 4*(window.ElementSystem.of(target)==='Dark'?2.5:1);
+      return 1;
+    }
+    function zoltraak(bs,unit,bonus=multiplier(unit,null)) {
+      const target=activeDefender(bs,unit);
+      if(isAlive(target))champions.hit(bs,unit,target,computeWeakenedAtk(unit)*1.75*bonus);
+      safeLog('[PASSIVE] Endless Mana • Zoltraak (175% ATK).','passive');
+    }
+    function manaBurst(bs,unit) {
+      const c=state(unit);if(c.mana<100||c.casting||!isAlive(unit))return;
+      c.casting=true;const bonus=1+c.mana*.005;c.mana=0;
+      try {heal(unit,unit.maxHp*.35,'ENDLESS MANA',bs,unit);zoltraak(bs,unit,bonus);} finally {c.casting=false;}
+    }
+    function damaged(bs,unit,damage) {
+      if(!(damage>0)||!isAlive(unit))return;
+      const code=id(unit),c=state(unit);
+      if(code==='frieren') {
+        const lowHpTrigger=unit.hp<unit.maxHp*.25&&!c.lowHpUsed;
+        if(lowHpTrigger)c.lowHpUsed=true;
+        c.mana=Math.min(100,Number((c.mana+3.5).toFixed(2)));manaBurst(bs,unit);
+        if(lowHpTrigger){zoltraak(bs,unit);c.mana=Math.min(100,c.mana+30);manaBurst(bs,unit);}
+      }
+      if(code==='alexander-anderson'&&unit.hp<unit.maxHp*.07&&!c.lowHpUsed){
+        c.lowHpUsed=true;heal(unit,Math.max(0,unit.maxHp*.77-unit.hp),'PRAY TO GOD',bs,unit);
+        addActiveTag(unit,'CRUCIFIX • +300% DAMAGE');
+      }
+    }
+    function spell(bs,unit,target,options) {
+      if(id(unit)!=='frieren')return null;
+      const choice=Math.floor(Math.random()*3),attack=computeWeakenedAtk(unit)*multiplier(unit,target);
+      if(choice===0)champions.area(bs,unit,enemiesOf(bs,unit),attack*.4);
+      else if(choice===1){for(const enemy of enemiesOf(bs,unit))if(sourcePassiveAllowed(enemy,unit)){
+        setStatus(enemy,'stunTurns',1,unit);
+        if(ensureRuntime(enemy).stunTurns>0)ensureRuntime(enemy).timeDilationPending=true;else suppress(bs,enemy,1);
+      }}
+      if(choice===2)for(const ally of alliesOf(bs,unit))heal(ally,ally.maxHp*.25,'HEALING',bs,unit);
+      safeLog(`[PASSIVE] Endless Mana • ${['Vollzanbel','Time Dilation','Healing'][choice]}.`,'passive');
+      ensureCurrentIndices(bs);return {hit:true,damage:0,killed:!isAlive(target),spell:true,target,attacker:unit};
+    }
+    function attackOptions(unit,options) {
+      if(id(unit)!=='sung-jin-woo')return options;
+      const action=pick(['hunter','shadow','fang']);return {...options,questAction:action,damageMultiplier:(options.damageMultiplier||1)*(action==='hunter'?1.2:action==='fang'?.6:1)};
+    }
+    function afterAttack(bs,unit,target,result,options) {
+      if(!isAlive(unit))return;
+      const code=id(unit),c=state(unit);
+      if(code==='sung-jin-woo'){
+        if(c.bonus==='heal')heal(unit,unit.maxHp*.015,'SYSTEMS STATS',bs,unit);
+        if(options.questAction==='fang'){const other=enemiesOf(bs,unit).find(v=>v!==target);if(other)champions.hit(bs,unit,other,computeWeakenedAtk(unit)*.6);}
+        if(options.questAction==='shadow')callAlly(bs,unit);
+      }
+      if(code==='madara-lubu'&&Math.random()<.20)callAlly(bs,unit);
+    }
+    function callAlly(bs,unit) {
+      const team=teamOf(bs,unit),at=team.indexOf(unit);
+      const pool=alliesOf(bs,unit,false).filter(v=>!isUnitStunned(v)&&(id(unit)!=='sung-jin-woo'||v.questOwner===unit||team.indexOf(v)>at));
+      const ally=pick(pool);if(!ally)return;
+      const queue=bs.questSupportQueue ||= [];queue.push({owner:unit,ally});
+      if(bs.questSupportDraining)return;
+      bs.questSupportDraining=true;
+      try {
+        // Linked support chains use a queue rather than recursive JS calls.
+        while(queue.length){
+          const job=queue.shift(),target=activeDefender(bs,job.ally);
+          if(!isAlive(job.owner)||!isAlive(job.ally)||!target)continue;
+          performAttack(bs,job.ally,target,{isFollowUp:true,passiveAttack:true,chainDepth:0,questCalled:true});
+        }
+      } finally {bs.questSupportDraining=false;queue.length=0;}
+    }
+    function attack(bs,unit,target,options) {
+      const token={};chains.set(unit,token);
+      try {
+        const first=performAttack(bs,unit,target,{...options,questChainToken:token});
+        if(first.skipped||first.outOfTurn||(!first.hit&&!first.dodged&&!first.missed))return first;
+        let count=0;
+        while(isAlive(unit)&&activeChain(unit)&&enemiesOf(bs,unit).length){
+          const madara=isMadara(unit);
+          if(madara?getCardAttackCount(unit)<5:state(unit).lowHpUsed)break;
+          if(Math.random()>=(madara?.5:.77))break;
+          const enemy=isAlive(target)?target:activeDefender(bs,unit);if(!enemy)break;
+          count++;
+          const result=performAttack(bs,unit,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:madara?1:.77,chainDepth:0,questChainToken:token,questCalled:options.questCalled});
+          if(result.skipped||result.outOfTurn)break;
+          if(result.hit&&!result.reflected&&result.damage>0&&isAlive(enemy)&&sourcePassiveAllowed(enemy,unit))addDot(enemy,'bleed',madara?3:count,computeWeakenedAtk(unit)*(madara?.25:.07),unit);
+          target=enemy;
+        }
+        return first;
+      }finally{chains.delete(unit);ensureCurrentIndices(bs);}
+    }
+    function linked(bs,unit,options){return Boolean(options.questChainToken&&chains.get(unit)===options.questChainToken);}
+    function endTurn(bs,actor) {
+      const r=ensureRuntime(actor);
+      if(r.timeDilationPending&&r.stunTurns===0){r.timeDilationPending=false;suppress(bs,actor,1);}
+    }
+    return {ids,state,id,entry,isMadara,activeChain,linked,attack,dodge,passiveDodge,turn,kill,multiplier,damaged,spell,attackOptions,afterAttack,endTurn};
+  })();
+
   function isTeamDefeated(team, includeReserves = false) {
     // Tower's queue includes every spawned fighter, including passive clones.
     // Retain the existing Arena rule for temporary allies outside Tower.
@@ -1018,6 +1175,7 @@
   function setStatus(unit, key, turns, source = null) {
     if (!unit) return;
     const runtime = ensureRuntime(unit);
+    if (key === 'stunTurns' && questSkills.isMadara(unit) && Math.random() < .5) { safeLog('[PASSIVE] Divine Steed resisted Stun.', 'dodge'); return; }
     const safeTurns = Math.max(1, Math.floor(Number(turns) || 0));
     if (safeTurns <= 0) return;
     const beforeTurns = Math.max(0, Number(runtime[key]) || 0);
@@ -1126,7 +1284,7 @@
       case 'diavolo': chance = 0.35; break;
       default: break;
     }
-    chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit));
+    chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit), questSkills.isMadara(unit) ? .10 : 0);
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0);
     if (getEffectivePassiveCardId(unit) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0 || runtime.noDodgeAgainstUnit) chance = 0;
@@ -1212,7 +1370,7 @@
       case 'diavolo': chance = 0.35; break;
       default: break;
     }
-    chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target));
+    chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target), questSkills.isMadara(target) ? .10 : 0);
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0);
     if (getEffectivePassiveCardId(target) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0) chance = 0;
@@ -1237,11 +1395,14 @@
         const dmg = Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : 1))));
         if (dmg > 0 && isAlive(unit)) {
           const before = unit.hp;
-          const prevented = dmg >= before && champions.fatal(battleState, unit);
-          if (!prevented) unit.hp = Math.max(0, unit.hp - dmg);
+          const absorbed = absorbShieldDamage(unit, dmg, battleState, effect.source);
+          const prevented = absorbed >= before && champions.fatal(battleState, unit);
+          if (!prevented) unit.hp = Math.max(0, unit.hp - absorbed);
+          const actualDamage = Math.max(0, before - unit.hp);
           recordBattleDamage(battleState, effect.source, unit, before);
-          runtime.lastDamageTaken = dmg;
-          safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} takes ${dmg.toLocaleString('en-US')} ${kind.toUpperCase()} damage.`, 'status');
+          questSkills.damaged(battleState, unit, actualDamage);
+          runtime.lastDamageTaken = actualDamage;
+          safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} takes ${actualDamage.toLocaleString('en-US')} ${kind.toUpperCase()} damage.`, 'status');
           if (unit.hp <= 0) {
             unit.defeated = true;
             champions.death(battleState, unit, effect.source);
@@ -1348,7 +1509,8 @@
         }
       }
     }
-    return remaining;
+    // A shield consumes the whole hit; overflow never reaches HP.
+    return 0;
   }
 
   function calculateBaseDamage(attacker) {
@@ -1374,12 +1536,13 @@
   }
 
   function deferFatality(battleState, target) {
-    return Boolean(champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+    return Boolean(ensureRuntime(target).shield > 0 || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
     if (!target || !isAlive(target)) return { damage: 0, killed: false, reflected: false };
     if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
+    if (questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
     const targetRuntime = ensureRuntime(target);
     const source = attacker || null;
 
@@ -1398,6 +1561,7 @@
     if (!isAlive(target)) return { damage: 0, killed: true };
     let remaining = meta.elementApplied ? Math.max(0, Number(amount) || 0) : window.ElementSystem.damage(source, target, amount);
     if (targetRuntime.incomingVulnerabilityTurns > 0) remaining *= 1 + targetRuntime.incomingVulnerabilityPct;
+    const shielded = remaining > 0 && targetRuntime.shield > 0;
     remaining = absorbShieldDamage(target, remaining, battleState, source);
 
     const reduction = clamp(
@@ -1415,7 +1579,7 @@
 
     const before = Math.max(0, Number(target.hp) || 0);
     // A protected ally's survival/clone triggers see only its own damage share.
-    if ((calamityProtected || Number(targetRuntime.raidHakiReduction) > 0) && remaining >= before && onFatalityAttempt(battleState, target, attacker, remaining, meta)) {
+    if ((calamityProtected || questSkills.isMadara(target) || Number(targetRuntime.raidHakiReduction) > 0) && remaining >= before && onFatalityAttempt(battleState, target, attacker, remaining, meta)) {
       recordBattleDamage(battleState, attacker, target, before);
       return { damage: 0, killed: false, preventedFatality: true };
     }
@@ -1423,13 +1587,15 @@
     target.hp = Math.max(0, before - Math.floor(remaining));
     recordBattleDamage(battleState, attacker, target, before);
     const damage = Math.max(0, before - target.hp);
+    questSkills.damaged(battleState, target, damage);
     let revived = false;
     if (target.hp <= 0) { target.defeated = true; revived = champions.death(battleState, target, attacker); }
     else raidSecrets.rescue(battleState, target);
     refreshUnitDisplay(target);
 
     return {
-      damage: revived ? damage : Math.max(0, before - target.hp),
+      damage: revived || questSkills.ids.has(getEffectivePassiveCardId(target)) ? damage : Math.max(0, before - target.hp),
+      shielded,
       killed: !isAlive(target),
       reflected: false
     };
@@ -1610,6 +1776,7 @@
     if (cardIdOf(unit) === 'subaru') runtime.repeatReviveCount = 0;
     if (cardIdOf(unit) === 'yuta-okkotsu') runtime.firstFatalityUsed = false;
     expansion.entry(battleState,unit);
+    questSkills.entry(battleState,unit);
   }
 
   function beforeAttack(battleState, attacker, target) {
@@ -2232,6 +2399,7 @@
     const id = getEffectivePassiveCardId(defender);
     champions.dodge(battleState, defender, attacker, outcome);
     expansion.dodge(battleState, defender, attacker);
+    questSkills.dodge(battleState, defender, attacker);
     raidSecrets.dodge(battleState, defender, attacker);
     const runtime = ensureRuntime(defender);
     runtime.dodgeStreak += 1;
@@ -2361,6 +2529,7 @@
     if (!killer || !victim) return;
     champions.kill(battleState, killer, victim);
     expansion.kill(battleState, killer, victim);
+    questSkills.kill(battleState, killer, victim);
     const runtime = ensureRuntime(killer);
     runtime.kills += 1;
     const id = getEffectivePassiveCardId(killer);
@@ -2658,13 +2827,14 @@
     if (!battleState || !attacker || !isAlive(attacker)) return { hit: false, killed: false, damage: 0 };
     if (attacker.isExpMonster) return { hit: false, killed: false, damage: 0, trainingDummy: true };
     ensureRuntime(attacker);
+    if (questSkills.activeChain(attacker) && !options.questChainToken) return questSkills.attack(battleState,attacker,requestedTarget,options);
     if (alucard.active(attacker) && !options.hermesToken) return alucard.attack(battleState,attacker,requestedTarget,options);
 
     // Root attacks must belong to the scheduled frontline. Follow-ups remain
     // inside the same initiating turn; explicit support/interceptor attacks
     // are the only other legal out-of-turn combat actions.
     const passiveId = getEffectivePassiveCardId(attacker);
-    const isLinkedFollowUp = Boolean(options.isFollowUp) && (isScheduledTurnAttacker(battleState, attacker) || alucard.linked(battleState,attacker,options));
+    const isLinkedFollowUp = Boolean(options.isFollowUp) && (isScheduledTurnAttacker(battleState, attacker) || alucard.linked(battleState,attacker,options) || questSkills.linked(battleState,attacker,options));
     const isExplicitSupportAction = Boolean(options.outOfTurnPassive || options.linkedAttack) && OUT_OF_TURN_SUPPORT_IDS.has(passiveId);
     const isRootAttack = (Number(options.chainDepth) || 0) === 0 && !options.isFollowUp && !options.isCounter;
     const isCounter = Boolean(options.isCounter);
@@ -2691,6 +2861,9 @@
     attackState.ownAttackCount = Math.max(0, Number(attackState.ownAttackCount) || 0) + 1;
     attackState.attackCount = attackState.ownAttackCount;
 
+    options = questSkills.attackOptions(attacker, options);
+    const spell = questSkills.spell(battleState, attacker, target, options);
+    if (spell) return spell;
     target = expansion.target(battleState, attacker, target, options);
     const friendlyFire = teamOf(battleState,attacker).includes(target);
     if (!friendlyFire) target = maybeRedirectTarget(battleState, attacker, target);
@@ -2720,13 +2893,14 @@
       const preview = { ...attacker, passiveState: { ...ensureRuntime(attacker) } };
       preview.cardState = preview.passiveState;
       let incomingDamage = computeWeakenedAtk(attacker) * passiveAttackMultiplier(preview, target, battleState, options);
-      incomingDamage *= expansion.multiplier(attacker, target, battleState) * champions.multiplier(attacker, target, options) * (Number(options.damageMultiplier) || 1);
+      incomingDamage *= questSkills.multiplier(attacker, target) * expansion.multiplier(attacker, target, battleState) * champions.multiplier(attacker, target, options) * (Number(options.damageMultiplier) || 1);
       if (champions.state(attacker).heresy > 0) incomingDamage *= .91;
       incomingDamage = window.ElementSystem.damage(attacker, target, incomingDamage);
       onDodge(battleState, target, attacker, { chainDepth: options.chainDepth || 0, incomingDamage });
       champions.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
       expansion.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
       raidSecrets.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false, attackDamage: incomingDamage }, options);
+      questSkills.afterAttack(battleState, attacker, target, {damage:0,hit:false}, options);
       return { hit: false, dodged: true, killed: false, damage: 0 };
     }
 
@@ -2734,11 +2908,13 @@
       const reflected = Math.max(1, Math.floor((Number(attacker.atk) || 1) * 0.50));
       const result = damageUnit(battleState, target, attacker, reflected, { passiveAttack: true, passiveBypass: true });
       safeLog(`[PASSIVE] ${target.display?.name || 'Asta'} reflected a passive attack for ${reflected.toLocaleString('en-US')} damage.`, 'passive');
+      questSkills.afterAttack(battleState, attacker, target, {...result,hit:true,reflected:true}, options);
       return { hit: true, reflected: true, critical: false, killed: result.killed, damage: result.damage };
     }
 
     if (champions.state(attacker).heresy > 0 && Math.random() < .03) {
       expansion.afterAttack(battleState,attacker,target,{hit:false,damage:0},options);
+      questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options);
       return { hit:false,missed:true,damage:0 };
     }
     const critStats = getCritStats(attacker);
@@ -2752,7 +2928,7 @@
       setStatus(target, 'stunTurns', 1, attacker);
     }
 
-    multiplier *= champions.multiplier(attacker, target, { ...options, critical }) * expansion.multiplier(attacker, target, battleState);
+    multiplier *= champions.multiplier(attacker, target, { ...options, critical }) * expansion.multiplier(attacker, target, battleState) * questSkills.multiplier(attacker, target);
     if (champions.state(attacker).heresy > 0) multiplier *= .91;
     let rawDamage = Math.max(1, Math.floor(baseAttack * multiplier));
     const attackDamage = rawDamage;
@@ -2764,13 +2940,13 @@
     target.hpBeforeDeath = previousHp;
 
     let result = { damage: 0, killed: false };
-    if (raidSecrets.block(battleState, attacker, target, options)) { expansion.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { hit: false, damage: 0, killed: false, raidBlocked: true, target, attacker }; }
+    if (raidSecrets.block(battleState, attacker, target, options)) { expansion.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { hit: false, damage: 0, killed: false, raidBlocked: true, target, attacker }; }
     const fatalityPrevented = previousHp > 0 && rawDamage >= previousHp && !deferFatality(battleState, target)
       ? onFatalityAttempt(battleState, target, attacker, rawDamage, options)
       : false;
 
     if (!fatalityPrevented) {
-      result = damageUnit(battleState, attacker, target, rawDamage, { passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true, elementApplied: true });
+      result = damageUnit(battleState, attacker, target, rawDamage, { passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true, elementApplied: true, dodgeChecked: true });
       result.critical = critical;
       result.hit = true;
     } else {
@@ -2780,11 +2956,11 @@
       result = { damage: 0, killed: false, preventedFatality: true, critical, hit: true };
     }
 
-    if (result.raidBlocked) { ensureCurrentIndices(battleState); return { ...result, hit: false, target, attacker }; }
+    if (result.raidBlocked) { questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { ...result, hit: false, target, attacker }; }
 
     ensureRuntime(attacker).lastCrit = critical;
 
-    const displayedDamage = Math.max(0, result.damage || rawDamage);
+    const displayedDamage = Math.max(0, result.damage);
     if (critical) {
       safeLog(`[CRITICAL HIT!] ${attacker.display?.name || cardOf(attacker)?.name || 'Unit'} dealt ${displayedDamage.toLocaleString('en-US')} damage.`, 'critical');
     } else {
@@ -2794,7 +2970,7 @@
 
     // A successful hit breaks consecutive-dodge streaks (The Flash).
     ensureRuntime(target).dodgeStreak = 0;
-    onHitTaken(battleState, target, attacker, { hit: true, damage: champions.id(target) ? result.damage : result.damage || rawDamage, critical, options });
+    onHitTaken(battleState, target, attacker, { hit: true, damage: champions.id(target) || result.shielded || questSkills.ids.has(getEffectivePassiveCardId(target)) ? result.damage : result.damage || rawDamage, critical, options });
     const livingBeforeHitEffects = isAlive(target);
     applyHitEffects(battleState, attacker, target, { ...result, critical, hit: true, isFollowUp: Boolean(options.isFollowUp), chainDepth: Number(options.chainDepth) || 0 });
     if (livingBeforeHitEffects && !isAlive(target)) result.killed = true;
@@ -2812,6 +2988,7 @@
       }
     }
 
+    questSkills.afterAttack(battleState,attacker,target,result,options);
     alucard.applyBleed(battleState,attacker,target,{...result,hit:true});
 
     // Build/refresh dynamic indices after AOE or clone/revive actions.
@@ -3000,6 +3177,7 @@
       battleState.enemyIndex = battleState.enemyTeam.indexOf(attacker);
     }
 
+    questSkills.turn(battleState);
     expansion.turn(battleState);
     champions.turn(battleState, attacker);
     raidSecrets.turn(battleState);
@@ -3057,6 +3235,7 @@
     champions.endTurn(battleState, actor);
     raidSecrets.endTurn(battleState);
     expansion.endTurn(battleState, actor);
+    questSkills.endTurn(battleState, actor);
     ensureCurrentIndices(battleState);
     const winner = checkBattleWinner(battleState);
     return winner ? { ended: true, winner } : { ended: false, winner: null };
@@ -3067,6 +3246,9 @@
     const runtime = ensureRuntime(unit);
     const passive = getPassive(unit);
     const badges = champions.badges(unit);
+    if (questSkills.id(unit) === 'frieren') badges.push({icon:'✦',label:`MANA ${questSkills.state(unit).mana}%`,tone:'passive',category:'passive'});
+    if (questSkills.id(unit) === 'sung-jin-woo') badges.push({icon:'✦',label:`SYSTEMS ${questSkills.state(unit).bonus.toUpperCase()} • ${questSkills.state(unit).clones.filter(isAlive).length} Shadows`,tone:'passive',category:'passive'});
+    if (questSkills.id(unit) === 'alexander-anderson' && questSkills.state(unit).lowHpUsed) badges.push({icon:'✦',label:'CRUCIFIX',tone:'passive',category:'passive'});
     if (alucard.active(unit)) badges.push({icon:"🩸",label:`HERMES • ${getCardAttackCount(unit)} attacks • ${alucard.state(unit).clones.filter(isAlive).length}/3 Clones`,tone:"passive",category:"passive"});
     if (isBleeding(unit)) badges.push({ icon: '🩸', label: 'BLEED • HEAL BLOCKED', tone: 'bleed', category: 'status', status: 'Anti-heal' });
     const atkDisplayPct = Math.round((Math.max(0, Number(runtime.displayAtkBonusPct) || 0) + Math.max(0, Number(runtime.temporaryAtkBonusPct) || 0)) * 100);
@@ -3404,6 +3586,7 @@
 
 
   const PASSIVE_TRIGGER_CLASSIFICATION = Object.freeze({
+    ...Object.fromEntries([...questSkills.ids].map(id => [id, Object.freeze(["QUEST_CARD_ISOLATED_HOOKS"])])),
     [alucard.ID]: Object.freeze(["EVERY_NTH_ATTACK","ON_FATALITY","TEAM_SUPPORT"]),
     ...Object.fromEntries([...expansion.ids].map(id => [id, Object.freeze(["ON_CARD_ATTACK_STRIKE", "ON_CARD_DEFEND_OR_HIT"])])),
     'starter-common': Object.freeze(['ON_CARD_ATTACK_STRIKE']),
@@ -3511,6 +3694,7 @@
   // Explicit coverage registry for auditing. It mirrors the uploaded
   // cards.js IDs, not a second set of passive data.
   const PASSIVE_HANDLERS = Object.freeze({
+    ...Object.fromEntries([...questSkills.ids].map(id => [id, true])),
     [alucard.ID]: true,
     ...Object.fromEntries([...expansion.ids].map(id => [id, true])),
     'starter-common': true,
@@ -3667,6 +3851,7 @@
         expansion.entry(battleState, unit);
       }
 
+      questSkills.turn(battleState);
       ensureCurrentIndices(battleState);
       host.renderBattleStats?.();
     },

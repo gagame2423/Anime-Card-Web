@@ -1604,10 +1604,12 @@ function rollCard(source = "manual") {
     syncGameClockToNow();
 
     const result = drawCardFromPool();
+    const questRollEvent = { startedAt: Date.now(), weatherIds: getActiveWeatherDefinitions().map(w => w.id), cardId: result.card?.id || null, mutationIds: [] };
     state.totalRolls += 1;
 
     if (result.card) {
       const mutations = rollMutations();
+      questRollEvent.mutationIds = mutations.map(m => m.id);
       const display = getDisplayCard(result.card, mutations);
       const variantKey = getVariantKey(result.card.id, mutations);
       const cardId = normalizeCardId(result.card.id);
@@ -1653,7 +1655,7 @@ function rollCard(source = "manual") {
       showMiss(result.score);
     }
 
-    saveState();
+    if (saveState()) window.QuestSystem.record('roll', { ...questRollEvent, id: String(state.totalRolls) });
     refreshAchievements();
     updateStats();
     if (source === "auto") {
@@ -2167,9 +2169,10 @@ function renderCollection() {
       meta.className = "collection-mini__meta";
       const passiveMini = document.createElement("div");
       passiveMini.className = "collection-passive-mini";
-      passiveMini.textContent = getCardPassiveCopy(card).name;
-      passiveMini.title = normalizePassiveText(getCardPassiveCopy(card).description);
-      passiveMini.appendChild(createPassiveExpandButton(getCardPassiveCopy(card).name, getCardPassiveCopy(card).description));
+      const mysteryQuest = card.questOnly && !isCardRollUnlocked(card);
+      passiveMini.textContent = mysteryQuest ? 'Quest Card • Passive hidden' : getCardPassiveCopy(card).name;
+      passiveMini.title = mysteryQuest ? 'Complete this card’s quest to reveal its passive.' : normalizePassiveText(getCardPassiveCopy(card).description);
+      if (!mysteryQuest) passiveMini.appendChild(createPassiveExpandButton(getCardPassiveCopy(card).name, getCardPassiveCopy(card).description));
       const rate = document.createElement("span");
       rate.className = "collection-mini__rate";
       rate.textContent = `1 in ${chance.toLocaleString("en-US")}`;
@@ -2187,7 +2190,7 @@ function renderCollection() {
       } else if (card?.unlockRequirement) {
         const requirement = document.createElement('span');
         requirement.className = `weather-requirement ${isCardRollUnlocked(card) ? 'active' : ''}`;
-        requirement.textContent = `${isCardRollUnlocked(card) ? 'Unlocked' : 'Requires'}: ${window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement}`;
+        requirement.textContent = `${isCardRollUnlocked(card) ? 'Unlocked' : 'Requires'}: ${card.questOnly ? 'Complete Quest Cards in the utility menu' : window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement}`;
         meta.appendChild(requirement);
       }
 
@@ -2500,7 +2503,7 @@ function renderPreview() {
     : "Normal Variant";
   els.previewCollectedCount.textContent = `x${getOwnedCardCount(card.id).toLocaleString("en-US")} total`;
   els.previewRequirement.textContent = card.raidOnly ? 'Marine Ford Raid exclusive • Once per card • Never available in normal RNG' : card.unlockRequirement
-    ? `${window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement} • Permanently unlocked in the standard pool`
+    ? `${card.questOnly ? 'Complete Quest Cards in the utility menu' : window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement} • Permanently unlocked in the standard pool`
     : card.requiredWeather ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}` : 'Available in the standard pool';
 
   renderMutationBadges(els.previewMutationBadges, variant.mutations);
@@ -3934,6 +3937,7 @@ function finishBattle(playerWon) {
     if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')}`;
   }
 
+  recordQuestBattleCompletion(battleState);
   let replayable = false;
   try { replayable = canReplayBattleTeam(); } catch (error) { console.warn('Replay check failed safely:', error); }
   if (els.battleAutoAgainButton) {
@@ -4052,6 +4056,8 @@ function startBattle(useExistingSetup = true) {
       battleState.isBattling = false; window.alert(error.message); renderBattleSelection(); return;
     }
   }
+  try { battleState.questContext = window.QuestSystem.battleContext(battleState, getActiveWeatherDefinitions().map(w => w.id)); }
+  catch (error) { appendBattleLog(error.message, 'status'); }
   window.PassiveSystem?.beginBattle?.(battleState);
   if (isTimeTrialBattle()) window.TimeTrialSystem.prepareAfterEntry(battleState);
   document.getElementById('timeTrialSummary')?.classList.add('hidden');
@@ -4160,6 +4166,7 @@ function renderBossEventControls() {
   const entry=getActiveWeatherEntries().find(w=>w.weatherId==='eclipse');
   document.getElementById('bossEventAvailability').textContent=progress.available?`OPEN • Eclipse/Eclipsed • ${entry?formatWeatherCountdown(getWeatherRemainingSeconds(entry)):''}`:'CLOSED • Requires Eclipse (Eclipsed) weather';
   const slider=document.getElementById('bossEventDifficulty');slider.value=progress.difficulty;slider.disabled=isBattleMatchActive();
+  syncDifficultyNumber('bossEvent', progress.difficulty);
   document.getElementById('bossEventDifficultyValue').textContent=`${progress.difficulty} • Boss Lv.${progress.difficulty}`;
   document.getElementById('bossEventBalance').textContent=`${progress.coins.toLocaleString('en-US')} Boss Event Coins`;
   document.getElementById('bossEventRules').textContent=`5 player cards vs 1 Alucard • Victory: ${range.min}–${range.max} Boss Event Coins • ${(event.cardChance(progress.difficulty)*100).toFixed(2)}% Alucard drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`;
@@ -4179,6 +4186,7 @@ function finishBossEventBattle(won) {
   try {summary=window.BossEventSystem.finish(battleState,won);}
   catch(error){summary={won:false,coins:0,card:null,type:battleState.bossEvent.type,difficulty:battleState.bossEvent.difficulty,error:error.message};appendBattleLog(error.message,'defeat');}
   if(!summary)return;
+  if (!summary.error) recordQuestBattleCompletion(battleState);
   clearAutoContinueBattleTimer();clearBattleTurnTimer();clearBattleAnimationTimers();
   battleState.finished=true;battleState.isBattling=false;battleState.outcome=summary.won?'victory':'defeat';
   const card=summary.card?getCardById(summary.card.cardId):null,mutations=summary.card?.mutationIds.map(id=>MUTATION_BY_ID[id]?.name||id).join(' + ');
@@ -4231,6 +4239,7 @@ function renderRaidControls() {
   const controls = document.getElementById('raidControls'); controls?.classList.toggle('hidden', !isRaidBattle());
   const type = getRaidType(), progress = raid.snapshot(type), range = raid.coinRange(progress.difficulty);
   const slider = document.getElementById('raidDifficulty'); slider.value = progress.difficulty; slider.disabled = isBattleMatchActive();
+  syncDifficultyNumber('raid', progress.difficulty);
   document.getElementById('raidDifficultyValue').textContent = `${progress.difficulty} • Enemy Lv.${progress.difficulty}`;
   document.getElementById('raidBalances').textContent = `${window.InventorySystem.quantity(raid.KEY_ITEM.id)} Keys • ${progress.coins.toLocaleString('en-US')} Coins • Team HP/ATK +${progress.upgradeLevel}%`;
   document.getElementById('raidRules').textContent = `4 player cards vs 10 preset bosses • 1 Key per entry • Victory: ${range.min}–${range.max} Marine Ford Coins • ${(raid.secretChance(progress.difficulty) * 100).toFixed(2)}% secret roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`;
@@ -4256,6 +4265,7 @@ function finishRaidBattle(won) {
   try { summary = window.RaidSystem.finish(battleState, won); }
   catch (error) { summary = { won: false, coins: 0, secret: null, type: battleState.raid.type, difficulty: battleState.raid.difficulty, error: error.message }; appendBattleLog(error.message, 'defeat'); }
   if (!summary) return;
+  if (!summary.error) recordQuestBattleCompletion(battleState);
   clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
   battleState.finished = true; battleState.isBattling = false; battleState.outcome = summary.won ? 'victory' : 'defeat';
   const secret = summary.secret ? getCardById(summary.secret.cardId) : null;
@@ -4327,6 +4337,7 @@ function finishTimeTrialBattle(won, reason = '') {
     appendBattleLog(error.message, 'defeat');
   }
   if (!summary) return;
+  if (summary.reason !== 'save-error') recordQuestBattleCompletion(battleState);
   clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
   battleState.finished = true; battleState.isBattling = false;
   battleState.outcome = summary.won ? 'victory' : 'defeat';
@@ -4553,7 +4564,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4561,7 +4572,7 @@ function setSaveTransferStatus(message, failed = false) {
 }
 function buildGameSaveExport() {
   syncGameClockToNow(); refreshAchievements(); window.InventorySystem?.tick();
-  if (![window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
+  if (![window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.QuestSystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
   if (!saveState()) throw new Error('Your progress could not be saved. Please try again.');
   const storage = {};
   for (const key of getGameSaveKeys()) {
@@ -4659,6 +4670,8 @@ function validateSaveRecord(key, value) {
     }
   } else if (key === window.TimeTrialSystem.KEY) {
     ensure(window.TimeTrialSystem.validSave(value), 'invalid Time Trial progression, fractional EXP or active attempt.');
+  } else if (key === window.QuestSystem.KEY) {
+    ensure(window.QuestSystem.validSave(value), 'invalid accepted quest progress or reward receipt.');
   } else if (key === window.EvolutionSystem.KEY) {
     ensure(window.EvolutionSystem.validSave(value), "unfinished or invalid evolution transaction.");
   } else if (key === window.BossEventSystem.KEY) {
@@ -4783,7 +4796,7 @@ document.getElementById('evolutionCloseButton')?.addEventListener('click',()=>cl
 // ============================================================
 function getAchievementSnapshot() {
   return { uniqueCards: getUniqueCount(), totalRolls: state.totalRolls, currency: state.currency,
-    knownBattleWins: window.TowerSystem?.victories || 0, knownRaidWins: window.RaidSystem?.totalWins() || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {}, timeTrialRoom: window.TimeTrialSystem?.bestRoom || 0 };
+    knownBossWins: window.BossEventSystem?.totalWins() || 0, knownBattleWins: window.TowerSystem?.victories || 0, knownRaidWins: window.RaidSystem?.totalWins() || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {}, timeTrialRoom: window.TimeTrialSystem?.bestRoom || 0 };
 }
 function applyAchievementReward(achievement) {
   state.achievementRewardReceipts ||= {};
@@ -4831,6 +4844,45 @@ function renderAchievements() {
 // ============================================================
 // GLOBAL LOOP
 // ============================================================
+
+// Quest progress receives only fresh, completed gameplay events.
+function recordQuestBattleCompletion(battle) {
+  if (!battle?.questContext || battle.questCompletionRecorded || ['surrender', 'aborted'].includes(battle.outcome)) return;
+  battle.questCompletionRecorded = true;
+  window.QuestSystem.record('battle', battle.questContext);
+}
+function recordQuestEnemyDefeat(battle, victim, source) {
+  if (!battle?.questContext || !battle.enemyTeam.includes(victim) || !battle.playerTeam.includes(source) || victim.isClone || victim.isSummoned || victim.isTemporaryAlly) return;
+  const seen = battle.questDefeatSeen ||= new WeakSet();
+  if (seen.has(victim)) return;
+  seen.add(victim);
+  const context = battle.questContext;
+  window.QuestSystem.record('defeat', { ...context, id: `${context.id}_${++context.defeatSequence}`, cardId: victim.card.id, weatherIds: getActiveWeatherDefinitions().map(w => w.id) });
+}
+function syncDifficultyNumber(prefix, value) {
+  const input = document.getElementById(prefix + 'DifficultyNumber');
+  if (document.activeElement !== input) input.value = String(value);
+  input.disabled = isBattleMatchActive();
+}
+function wireDifficultyNumber(prefix, system, getType, render) {
+  const input = document.getElementById(prefix + 'DifficultyNumber');
+  const commit = () => {
+    if (isBattleMatchActive()) return;
+    const previous = system.snapshot(getType()).difficulty;
+    const parsed = input.value.trim() === '' ? previous : Number(input.value);
+    const next = Number.isFinite(parsed) ? Math.max(1, Math.min(1000, Math.floor(parsed))) : previous;
+    system.setDifficulty(getType(), next);
+    input.value = String(system.snapshot(getType()).difficulty); render();
+  };
+  input.addEventListener('change', commit);
+  input.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); commit(); input.blur(); } });
+  document.getElementById(prefix + 'Difficulty').addEventListener('input', () => { input.value = String(system.snapshot(getType()).difficulty); });
+}
+wireDifficultyNumber('raid', window.RaidSystem, getRaidType, renderRaidControls);
+wireDifficultyNumber('bossEvent', window.BossEventSystem, getBossEventType, renderBossEventControls);
+document.getElementById('questOpenButton').addEventListener('click', () => { window.QuestSystem.render(document.getElementById('questGrid')); openModal('questModal'); });
+document.getElementById('questCloseButton').addEventListener('click', () => closeModal('questModal'));
+
 
 function globalTick() {
   if (isImportingSave) return;
@@ -5049,7 +5101,7 @@ function resetGame() {
   try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
   renderAutoContinueBattleToggle();
   returnToLobby();
-  window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset();
+  window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset();
 
   clearCooldownExpiryTimer();
   clearBattleTurnTimer();
@@ -5129,6 +5181,7 @@ function escapeHtml(value) {
 if (window.PassiveSystem?.configureHost) {
   window.PassiveSystem.configureHost({
     getCardById,
+    onUnitDefeated: recordQuestEnemyDefeat,
     appendBattleLog,
     showBattleFloatingText,
     renderBattleStats,
@@ -5495,6 +5548,7 @@ window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreez
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
 window.TimeTrialSystem?.configure({ getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (1 + getWeatherBonus("exp")), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
+window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
 refreshAchievements();
 recoverElapsedRealTime();

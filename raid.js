@@ -44,7 +44,7 @@
     if (!validAttempt(p) || !v.activeAttempt || p.id !== v.activeAttempt.id || p.type !== v.activeAttempt.type || p.difficulty !== v.activeAttempt.difficulty || p.startedAt !== v.activeAttempt.startedAt) return false;
     const range = coinRange(p.difficulty);
     if ('baseCoins' in p || 'dropMultiplier' in p) {
-      if (!integer(p.baseCoins, range.min, range.max) || typeof p.dropMultiplier !== 'number' || !Number.isFinite(p.dropMultiplier) || p.dropMultiplier < 1 || p.dropMultiplier > 1.45) return false;
+      if (!integer(p.baseCoins, range.min, range.max) || typeof p.dropMultiplier !== 'number' || !Number.isFinite(p.dropMultiplier) || p.dropMultiplier < 1 || p.dropMultiplier > 2.35) return false;
       const exact = p.baseCoins * p.dropMultiplier;
       if (!integer(p.coins, Math.floor(exact), Math.ceil(exact))) return false;
     } else if (!integer(p.coins, range.min, range.max)) return false;

@@ -9,13 +9,14 @@
     rolls: Object.freeze([1000, 10000, 100000, 1000000, 10000000, 100000000]),
     tower: Object.freeze([10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 1000000]),
     timetrial: Object.freeze([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]),
-    raid: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000])
+    raid: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]),
+    boss: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000])
   });
-  const CATEGORIES = Object.freeze({ collection: 'Collection', battles: 'Battle wins', currency: 'VNĐ milestones', rolls: 'Total rolls', tower: 'Tower progress', timetrial: 'Time Trial rooms', raid: 'Total Raid wins' });
+  const CATEGORIES = Object.freeze({ collection: 'Collection', battles: 'Battle wins', currency: 'VNĐ milestones', rolls: 'Total rolls', tower: 'Tower progress', timetrial: 'Time Trial rooms', raid: 'Total Raid wins', boss: 'Total Boss Event clears' });
   const count = value => Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Number(value)))) : 0;
   const record = value => value && typeof value === 'object' && !Array.isArray(value);
   const safeKey = id => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id);
-  function fresh() { return { version: 1, stats: { collection: 0, battles: 0, currencyEarned: 0, peakCurrency: 0, rolls: 0, tower: 0, timetrial: 0, raid: 0 }, towerProgress: {}, claimed: {}, unlockedRequirements: {} }; }
+  function fresh() { return { version: 1, stats: { collection: 0, battles: 0, currencyEarned: 0, peakCurrency: 0, rolls: 0, tower: 0, timetrial: 0, raid: 0, boss: 0 }, towerProgress: {}, claimed: {}, unlockedRequirements: {} }; }
   function load() {
     let raw; try { raw = JSON.parse(host.localStorage?.getItem(KEY) || 'null'); } catch (_) { raw = null; }
     const result = fresh();
@@ -43,6 +44,10 @@
         if (category === 'timetrial') {
           const reward = target <= 100 ? { luckBonus: .1 } : target <= 150 ? { expBonus: .1 } : { coinBonus: .1 };
           result.push(Object.freeze({ id, category, target, title: `Clear Time Trial Room ${target}`, reward: Object.freeze(reward), automatic: false }));
+          return;
+        }
+        if (category === 'boss') {
+          result.push(Object.freeze({ id, category, target, title: `Clear ${compact(target)} Boss Events across all types`, reward: Object.freeze({ dropBonus: .1 }), automatic: false }));
           return;
         }
         if (category === 'raid') {
@@ -94,6 +99,7 @@
       // The Raid module owns durable per-type win counts. Reconciliation uses
       // their sum, so reloads/pending reward recovery never add a win twice.
       data.stats.raid = Math.max(data.stats.raid, count(snapshot.knownRaidWins));
+      data.stats.boss = Math.max(data.stats.boss, count(snapshot.knownBossWins));
       data.stats.peakCurrency = Math.max(data.stats.peakCurrency, count(snapshot.currency));
       // Old saves have no lifetime-earnings history. The known balance is the
       // migration baseline; subsequent awards are recorded explicitly.

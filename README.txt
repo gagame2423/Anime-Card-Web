@@ -1,177 +1,124 @@
 NHẬT KÝ CẬP NHẬT 16/10/2026
-MARINE FORD NGẪU NHIÊN, BỘ ĐẾM PASSIVE VÀ BOSS EVENT ALUCARD
+NHẬP SỐ CHÍNH XÁC, MADARA LUBU, SHIELD VÀ QUEST CARD
 
-1. MARINE FORD RAID: ROLL CHỈ SỐ MỖI TRẬN
+1. NHẬP ĐỘ KHÓ BẰNG SỐ
 
-Mỗi lần bắt đầu một trận Raid, từng địch roll HP và ATK độc lập trong khoảng nguyên bao gồm cả hai đầu mút. Không còn dùng giá trị trung bình cố định.
+- Lobby Raid và Boss Event có thêm ô nhập số bên cạnh thanh trượt.
+- Nhập số nguyên từ 1 đến 1.000; nhấn Enter hoặc rời ô để xác nhận. Thanh trượt, level địch, phần xem trước và dữ liệu lưu đồng bộ theo giá trị đã xác nhận.
+- Số vượt khoảng được đưa về đầu mút hợp lệ; phần thập phân được làm tròn xuống. Ô trống trả về độ khó đang lưu.
+- Game không ghi đè nội dung đang gõ khi lobby tự cập nhật. Khóa cả hai điều khiển trong lúc trận đang diễn ra.
 
-Khoảng chỉ số gốc tại Difficulty 1:
-- Luffy Kid: HP 3.000–5.000; ATK 175–300.
-- Buggy: HP 1.750–3.000; ATK 300–500.
-- Ice Admiral: HP 3.500–5.000; ATK 350–500.
-- Light Admiral: HP 2.500–4.000; ATK 700–1.000.
-- Garp: HP 7.500–10.000; ATK 500–700.
-- Boa Hancock: HP 2.500–4.000; ATK 500–600.
-- Doflamingo: HP 3.000–5.000; ATK 750–1.000.
-- Shanks: HP 4.500–6.000; ATK 1.250–2.500.
-- BlackBeard: HP 6.500–8.000; ATK 900–1.200.
-- WhiteBeard: HP 15.000–30.000; ATK 3.000–10.000.
+2. THÀNH TỰU BOSS EVENT CỘNG DỒN
 
-Công thức giữ hệ số level Raid hiện có:
-  D = Difficulty, số nguyên từ 1 đến 1.000.
-  S(D) = 1 + 0,075 x (D - 1).
-  Chỉ số gốc = min + floor(U x (max - min + 1)), U thuộc [0, 1).
-  Chỉ số vào trận = round(chỉ số gốc x S(D)).
+- Theo dõi tổng số lần thắng đã lưu của tất cả loại Boss Event, tách biệt với tổng thắng Raid.
+- Các mốc: 1; 10; 100; 1.000; 10.000; 100.000; 1.000.000; 10.000.000; 100.000.000.
+- Mỗi mốc cho +0,1 Drop Multiplier vĩnh viễn sau khi nhấn Claim reward trong Achievements, mục Total Boss Event clears.
+- Hoàn tất cả 9 mốc Boss Event cho +0,9. Kết hợp 9 mốc Raid hiện có (+0,45), Drop Multiplier tối đa từ hai nhóm này là x2,35.
+- Drop Multiplier áp dụng cho số lượng vật phẩm rơi như Shards, Raid Coins, Boss Event Coins, Tower Coins và key; không nhân VNĐ hoặc EXP, không sửa xác suất thẻ Secret.
+- Số lượng = floor(số lượng gốc x Drop Multiplier), thêm 1 với xác suất bằng phần thập phân còn lại.
+- Khôi phục phần thưởng đang chờ không cộng thêm một lần thắng. Save chấp nhận các phần thưởng đã chốt với Drop Multiplier đến x2,35.
 
-- Roll riêng 2 giá trị cho mỗi địch, tổng cộng 20 phép roll stat cho 10 địch khi tạo trận.
-- Giữ bộ chỉ số đã roll cho suốt trận đó. Trận tiếp theo roll lại; đổi mục tiêu hoặc render UI không roll lại địch đang đánh.
-- Lobby hiển thị khoảng HP/ATK đã nhân level. Xem trước và kéo Difficulty không tiêu RNG tạo địch.
-- Chỉ số tùy chỉnh được đặt vào bản sao card của trận, không ghi đè HP/ATK gốc trong cards.js; passive dùng đúng snapshot của địch.
-- Chuẩn hóa tên hiển thị thành Marine Ford. Giữ nguyên ID marine_fort, ID key và tên khóa lưu trữ để bảo toàn ví, key, tiến độ và vật phẩm tiến hóa cũ.
+3. MADARA LUBU: MỐC MANGEKYO TOWER TẦNG 200
 
-2. SỬA BỘ ĐẾM ĐÒN ĐÁNH QUA NHIỀU MỤC TIÊU
+- Mangekyo dùng Tower Tsukuyomi hiện có; không tạo thêm một Tower hoặc thay đổi điều kiện đội hình người chơi.
+- Thắng tầng 200 của Tower Tsukuyomi tự cấp 1 Madara Lubu bản Normal và mở khóa roll vĩnh viễn. Chỉ roll được khi Tsukuyomi/Mangekyo đang hoạt động.
+- Mã thẻ: madara-lubu. Điều kiện: tower_floor_200_tsukuyomi.
+- Element Fire; Secret; tỷ lệ 1 trong 10.000.000; HP cấp 1: 500.000; ATK cấp 1: 100.000.
+- Artwork tham chiếu: assets/cards/madaralubu.png.
 
-- Ghi nhận mỗi đòn đánh hợp lệ đúng 1 lần vào runtime của chính đơn vị tấn công. Không gắn bộ đếm vào đối thủ đang đối mặt.
-- Đối thủ chết, địch kế tiếp vào sân, cập nhật chỉ số hoặc render khung thẻ không đưa bộ đếm về 0.
-- Các bản sao cùng ID thẻ vẫn có bộ đếm riêng; không cộng dồn đòn của hai đơn vị khác nhau.
-- Giữ phân biệt hiện có giữa đòn chính và đòn phụ của từng passive. Không biến kỹ năng chỉ kích hoạt ở đòn thứ N một lần thành kỹ năng lặp vô hạn.
-- Đòn bị Stun/Freeze chặn trước khi thực hiện không được tính là một đòn đánh. Đòn đã thực hiện vẫn được tính khi bị né hoặc chặn sát thương; passive có điều kiện “trúng đòn” vẫn cần thỏa điều kiện riêng.
-- Naruto x Sasuke vẫn chọn lại mode theo địch mới, nhưng bộ đếm đòn không còn reset theo mục tiêu. Việc đổi mode vẫn xử lý Clone và shield theo cơ chế hiện có.
-- Dark Decade giữ bộ đếm đòn khi lấy passive mới sau khi hạ địch, thay vì làm mất tiến độ lúc khởi tạo lại trạng thái passive.
-- Bộ đếm được khởi tạo mới cho trận mới hoặc đơn vị mới; không mang tiến độ đòn đánh từ trận trước sang trận sau.
-- Làm rõ mô tả Chidori của Sasuke Kid: hiệu ứng tại đòn thứ 3, không ghi nhầm thành lặp mỗi 3 đòn. Không đổi logic sát thương của thẻ này.
+Divine Steed:
+- 10% né đòn thường và đòn gây sát thương từ passive. Né thành công khóa passive của người đánh trong 5 lượt của người đó.
+- Mỗi lần nhận Stun có 50% kháng Stun; không đồng nhất Stun với Freeze.
+- Từ đòn thứ 5, mỗi đòn có 50% tạo follow-up gây 100% ATK hiện tại. Follow-up có thể tiếp tục kích hoạt follow-up, không áp giới hạn số đòn cố định.
+- Follow-up trúng và gây sát thương áp dụng Bleed trong 3 lượt, mỗi lượt bằng 25% ATK hiện tại tại lúc áp dụng.
+- Mỗi đòn có 20% gọi một đồng đội còn sống và không bị khống chế đánh hỗ trợ. Các đòn gọi hỗ trợ được xử lý qua hàng đợi để không tạo đệ quy JavaScript.
+- Khi là đơn vị duy nhất còn sống trong đội, triệu hồi 3 Clone đúng một lần/trận. Mỗi Clone có 50% max HP và ATK hiện tại của Madara; mỗi Clone nhận riêng shield bằng 50% max HP của Madara tại lúc triệu hồi.
+- Mỗi Clone chọn ngẫu nhiên một passive của đồng đội gốc đã chết, tuân thủ các ngoại lệ không được sao chép đang có. Nếu không có passive hợp lệ, Clone không nhận passive.
+- Clone/summon không được tạo thêm Clone/summon. Không thêm giới hạn triệu hồi chung cho các thẻ khác.
 
-3. CHẾ ĐỘ MỚI: BOSS EVENT
+4. SHIELD CHẶN SÁT THƯƠNG DƯ
 
-Thêm boss_event.js để tách biệt điều kiện mở sự kiện, Difficulty, tạo boss, ví Event Coins, phần thưởng, cửa hàng và lưu dữ liệu khỏi app.js.
+- Nếu shield còn lớn hơn 0 khi nhận một đòn, shield hấp thụ toàn bộ đòn đó. Phần vượt giá trị shield không chuyển sang HP.
+- Ví dụ: shield 10 nhận 20 sát thương -> shield về 0, HP giữ nguyên. Đòn tiếp theo mới gây sát thương HP khi không còn shield.
+- Nếu shield lớn hơn sát thương, trừ đúng sát thương vào shield và vẫn giữ nguyên HP.
+- Áp dụng cho đòn thường, đòn passive và từng tick Burn/Bleed. Shield không xóa trạng thái Burn/Bleed hoặc thời gian còn lại của chúng.
+- Shield vỡ vẫn giữ hiệu ứng vỡ shield vốn có. Đòn được shield chặn không tiêu thụ hiệu ứng sống sót/hồi sinh do xét nhầm sát thương chí tử.
+- Sát thương dùng cho Mana và thống kê VNĐ Tower là HP thực sự bị mất; sát thương bị shield chặn không được tính.
 
-- Truy cập Arena rồi chọn Boss Event.
-- Đội người chơi: 5 thẻ. Đội địch ban đầu: 1 Boss.
-- Sự kiện đầu tiên: Alucard Event.
-- Difficulty 1–1.000; level boss bằng Difficulty.
-- Không có cây nâng cấp HP/ATK bằng Event Coins.
-- Không yêu cầu key hoặc vé vào trận; điều kiện vào là đội hình đủ 5 thẻ hợp lệ và cửa sổ thời tiết của sự kiện đang mở.
-- Lượt đánh dùng nhịp chiến đấu thông thường. Speed Battle Potion hoạt động, rút lượt xuống 1 giây; không áp dụng quy tắc lượt cố định của Time Trial cho Boss Event.
-- Thắng chỉ nhận Boss Event Coins và có thể rơi thẻ Alucard. Không có VNĐ, EXP, key hoặc potion rơi trực tiếp từ trận Boss Event.
-- Thua không mất thẻ; không nhận phần thưởng chiến thắng.
-- Hệ thống xét toàn bộ hàng đợi còn sống, bao gồm Clone/summon. Không kết thúc khi vẫn còn đơn vị hợp lệ cần đánh.
-- Số thắng và ví Boss Event được lưu riêng, không cộng vào tổng thắng Raid.
+5. HỆ THỐNG QUEST CARD RIÊNG
 
-CỬA SỔ THỜI TIẾT ALUCARD
+- Thêm quest.js để quản lý định nghĩa quest, sự kiện tiến độ, lưu localStorage, nhận quest, đối soát thưởng và giao diện.
+- Mở menu ... rồi chọn Quest Cards; mục này tách biệt với Evolution.
+- Giao diện quest hiển thị tên và artwork, không hiển thị HP, ATK hoặc passive. Index cũng ẩn passive của Quest Card chưa mở khóa.
+- Nhấn Accept Quest để bắt đầu theo dõi. Không lấy lại số roll, Index, số trận hoặc số quái đã hạ trong quá khứ.
+- Các bước chạy tuần tự. Chỉ bước đang mở được cộng; sự kiện hoàn tất bước trước không được dùng lại cho bước sau.
+- Trận đã bắt đầu trước khi nhận quest không được tính. Không thể nhận quest mới khi đang đánh hoặc đang chuyển save.
+- Hoàn thành trận tính cả thắng và thua, kể cả các chế độ đặc biệt. Bỏ cuộc, thoát giữa trận và trận chưa hoàn tất khi tải lại không tính.
+- Điều kiện thời tiết của lượt roll lấy tại lúc roll; điều kiện thời tiết của trận lấy lúc bắt đầu; điều kiện thời tiết khi hạ quái lấy tại lúc hạ quái.
+- Điều kiện có Igris xét đội hình ban đầu. Mỗi Normal Demon gốc được tính tối đa một lần trong một trận khi bị phía người chơi hạ; Clone/summon không tăng bộ đếm này.
+- Lượt roll hụt vẫn tính cho bước yêu cầu số lần roll; bước yêu cầu thẻ hoặc mutation chỉ tính kết quả phù hợp. Double mutation được xét từng thành phần.
+- Hoàn tất toàn bộ bước tự cấp 1 thẻ bản Normal, không nhận mutation từ thời tiết đang bật. Receipt bảo đảm không cấp trùng khi tải lại hoặc khôi phục thưởng đang chờ.
+- Sau đó thẻ tham gia roll tiêu chuẩn theo điều kiện thời tiết riêng của thẻ. Tiến độ, trạng thái nhận quest và receipt thưởng đi cùng gói .acrsave; save cũ chưa có kho quest vẫn nhập được.
 
-- Chỉ mở khi thời tiết Eclipse đang hoạt động; Eclipsed là tên mutation đi kèm và là bí danh được chấp nhận khi tra cứu thời tiết.
-- Sở hữu một thẻ mang mutation Eclipsed không thay thế điều kiện thời tiết thật sự đang hoạt động.
-- Thời gian mở event bằng thời gian Eclipse còn lại, hiển thị ngay tại lobby. Không tự thêm một giới hạn trận 3 hoặc 5 phút không có trong yêu cầu.
-- Kiểm tra điều kiện trước khi Start, trước khi Continue thủ công và trước khi Auto Continue bắt đầu trận tiếp theo.
-- Kiểm tra cả thời gian thực kể từ lần đồng bộ gần nhất, tránh cho vào trận bằng thời tiết đã hết hạn trong khoảng giữa hai tick.
-- Nếu Eclipse hết giữa trận đã bắt đầu hợp lệ, trận được đánh và phát thưởng đến hết. Trận kế tiếp bị chặn cho đến khi Eclipse hoạt động trở lại.
-- Auto Continue vẫn giữ tùy chọn ON nhưng không tự vào một trận trái điều kiện khi cửa sổ đóng. Công tắc vẫn hỗ trợ cả kết quả thắng và thua.
+SUNG JIN WOO
 
-CHỈ SỐ BOSS
+- Element Water; Secret; tỷ lệ 1 trong 2.023.000; HP cấp 1: 223.000; ATK cấp 1: 22.300. Roll trong Shadow sau khi mở khóa.
+- Artwork: assets/cards/sungjinwoo.png.
+- Bước 1: hoàn thành 1.000 trận 1v1 trong Shadow.
+- Bước 2: roll 10.000 lần trong Shadow.
+- Bước 3: hoàn thành 1.000 trận ở bất kỳ chế độ nào với Igris trong đội hình ban đầu.
+- Bước 4: roll Igris mang Monarch, chấp nhận Monarch trong double mutation.
 
-Alucard Event Boss tại Difficulty 1:
-  HP 666.666; ATK 66.666; Element Fire.
+Systems Stats:
+- Mỗi lần chính thẻ này hạ địch, tạo một Shadow không có passive với 50% max HP và ATK của kẻ bị hạ; giữ các ngoại lệ không được sao chép.
+- Chọn một bonus khi bắt đầu trận và chọn lại sau mỗi lần hạ địch: +15% ATK, +20% max HP hoặc hồi 1,5% max HP mỗi đòn. Bonus giữ nguyên đến lần hạ tiếp theo, không cộng dồn với chính nó và không xóa buff từ nguồn khác.
+- Mỗi đòn chọn một hành động: Hunter Slash gây 120% ATK; Shadow Attack gọi một Shadow hoặc đồng đội ở sau đánh hỗ trợ; Fang Strike gây 60% ATK lên 2 địch phía trước.
 
-Công thức:
-  HP boss = round(666666 x S(D)).
-  ATK boss = round(66666 x S(D)).
-  S(D) = 1 + 0,075 x (D - 1).
+FRIEREN
 
-Boss sử dụng Bird of Hermes, gồm cả hồi sinh một lần. Chỉ số boss và chỉ số thẻ người chơi nhận được là hai bộ số riêng, không ghi đè lẫn nhau.
+- Element Holy; Secret; tỷ lệ 1 trong 2.500.000; HP cấp 1: 200.000; ATK cấp 1: 25.000. Roll trong Heavenly sau khi mở khóa.
+- Artwork: assets/cards/frieren.png.
+- Bước 1: hạ 10.000 Normal Demon ở bất kỳ chế độ nào.
+- Bước 2: hoàn thành 1.000 trận 1v1 trong Heavenly.
+- Bước 3: roll 1.000 thẻ mang Angelic, tức mutation của Heavenly; chấp nhận double mutation.
 
-4. BOSS EVENT COINS VÀ CỬA HÀNG
+Endless Mana:
+- Mỗi lần mất HP do sát thương nhận +3,5% Mana. Shield chặn hết sát thương không cho Mana.
+- Hệ số sát thương từ Mana = 1 + 0,005 x số điểm % Mana. Ví dụ 50% Mana cho +25% sát thương; 100% Mana cho +50%.
+- Đạt 100% Mana: hồi 35% max HP, dùng Zoltraak gây 175% ATK hiện tại với bonus Mana tương ứng rồi đặt Mana về 0. Không có chuyển sát thương dư sang mục tiêu khác.
+- Nếu còn sống sau đòn và HP dưới 25%, lập tức dùng Zoltraak và nhận 30% Mana, đúng một lần/trận.
+- Đòn thường được thay bằng một phép ngẫu nhiên: Vollzanbel gây 40% ATK lên toàn bộ địch; Time Dilation Stun toàn bộ địch 1 lượt rồi khóa passive thêm 1 lượt; Healing hồi 25% max HP cho toàn đội.
+- Thời gian khóa passive sau Time Dilation bắt đầu khi Stun kết thúc, không bị tiêu hao trong lượt Stun. Thanh trạng thái hiển thị Mana hiện tại.
 
-Dùng đường cong coin của Raid cho ví Boss Event riêng:
-  t = ((D - 1) / 999)^0,85.
-  Coin tối thiểu = round(1 + 69 x t).
-  Coin tối đa = round(1 + 99 x t).
-  Roll một số nguyên trong khoảng này khi thắng.
+ALEXANDER ANDERSON
 
-- Difficulty 1: đúng 1 coin cơ bản.
-- Difficulty 1.000: 70–100 coin cơ bản.
-- Drop Multiplier từ thành tựu áp dụng lên số lượng Event Coins như các loại coin rơi khác, dùng quy tắc làm tròn xác suất hiện có.
-- Hệ số VNĐ, EXP hoặc Luck không được dùng để tăng Event Coins.
-- Không nhân lại coin sau khi reload một phần thưởng đang chờ lưu.
+- Element Water; Mythic; tỷ lệ 1 trong 777.000; HP cấp 1: 77.700; ATK cấp 1: 7.700. Không khóa thời tiết khi roll sau khi mở khóa.
+- Artwork: assets/cards/alexanderanderson.png.
+- Bước 1: hoàn thành 1.000 trận Alucard Event ở Difficulty > 6, tức từ 7 trở lên.
+- Bước 2: hạ 10.000 Normal Demon trong Eclipse/Eclipsed.
+- Bước 3: roll 10.000 lần trong Heavenly.
 
-Boss Event Shop:
-- 10 Boss Event Coins: 1 Rich Potion.
-- 10 Boss Event Coins: 1 EXP Potion.
-- 10 Boss Event Coins: 1 Lucky Potion.
-- 10 Boss Event Coins: 1 Speed Potion.
-- 25 Boss Event Coins: 1 Speed Battle Potion.
+Pray to God:
+- Mỗi đòn có 77% tạo follow-up gây 77% ATK hiện tại; follow-up có thể tiếp tục kích hoạt không giới hạn số đòn cố định.
+- Follow-up thứ n trong chuỗi áp dụng Bleed n lượt, mỗi lượt bằng 7% ATK hiện tại tại lúc áp dụng. Đếm n bắt đầu lại ở chuỗi mới.
+- Nếu còn sống và HP dưới 7%, một lần/trận hồi đến 77% max HP, nhận +300% sát thương đòn đánh (x4), ngừng follow-up và nhận Crucifix.
+- Crucifix tăng thêm 150% sát thương đối với Dark (x2,5). Các hệ số sát thương áp dụng cùng quy tắc Element hiện có.
+- Không hồi sinh bằng bất kỳ nguồn nào. Đòn đã làm HP về 0 không kích hoạt ngưỡng sống sót dưới 7%. Quy tắc Bleed chặn hồi HP vẫn áp dụng.
 
-Mỗi lượt mua nhận đúng 1 vật phẩm vào Storage. Drop Multiplier không nhân hàng mua. Không thêm VND Potion trở lại. Có thể tiêu coin đã kiếm được khi cửa sổ thời tiết đã đóng; cửa hàng không có nút nâng cấp chỉ số.
+6. BẢNG EXCEL DỮ LIỆU THẺ
 
-5. THẺ MỚI: ALUCARD
+- Bàn giao anime-card-rng-cards.xlsx với đủ 129 thẻ trong cards.js, gồm 4 thẻ của bản cập nhật này.
+- Đúng 4 cột: Card Name; HP Level 1; ATK Level 1; Card Passive.
+- HP và ATK là số gốc cấp 1, chưa tính mutation, buff hoặc hệ số level.
+- Card Passive gồm tên và mô tả đầy đủ. Có bộ lọc tiêu đề, cố định hàng tiêu đề/cột tên, ngắt dòng và định dạng số dễ đọc.
+- Bảng Excel là tài liệu tham khảo đầy đủ; giao diện Quest Card trong game vẫn giữ bí mật đến khi mở khóa.
 
-- ID: boss-event-alucard.
-- Nguồn: phần thưởng Alucard Event.
-- Tỷ lệ roll thường: 1 trong 0; không vào gacha thường, kể cả sau khi đã sở hữu.
-- Rarity dữ liệu: Secret.
-- Element: Fire.
-- HP gốc: 333.333.
-- ATK gốc: 66.666.
-- Đường dẫn artwork: assets/cards/alucard.png. Gói cập nhật không kèm tệp artwork.
+7. TỆP VÀ KHẢ NĂNG TƯƠNG THÍCH CỦA BẢN CẬP NHẬT
 
-XÁC SUẤT THẺ RƠI
-
-  P(D) = 0,006 + 0,054 x (D - 1) / 999.
-
-- Difficulty 1: 0,6% mỗi trận thắng.
-- Difficulty 1.000: 6% mỗi trận thắng.
-- Luck, Rich, EXP và Drop Multiplier không sửa xác suất thẻ độc quyền này.
-- Thẻ có thể rơi thêm ở những lần thắng sau; không áp đặt giới hạn chỉ được sở hữu một bản. Mỗi kết quả rơi chỉ cấp đúng 1 bản sao.
-- Khi thẻ rơi, dùng đúng công thức mutation đang hoạt động: Common 10%, Uncommon 5%, Rare 2,5%; tối đa 2 mutation.
-- Khi có đúng Eclipse + Sunny, xác suất Eclipsed + Solar là 5% x 10% = 0,5% trong những lần đã rơi thẻ. Đây là xác suất mutation có điều kiện, không thay thế xác suất rơi Alucard.
-- Bản trùng không cấp EXP roll và không reset level của những bản Alucard đã có.
-
-BIRD OF HERMES
-
-- Mỗi 2 đòn đánh hợp lệ, đòn trúng gây sát thương áp dụng Bleed 1 lượt, sát thương mỗi lượt bằng 66% ATK hiện tại tại lúc áp dụng. Đòn phụ cũng được tính vào bộ đếm này.
-- Sau khi hoàn tất 6 đòn, mở phép thử follow-up 66%. Mỗi follow-up dùng 33% ATK trước crit, element và phòng thủ; hồi 3% max HP cho Alucard theo luật hồi máu hiện có.
-- Một follow-up có thể tiếp tục thử 66% để tạo follow-up kế tiếp. Không có giới hạn số đòn, không dùng giới hạn chain 24 đòn của cơ chế cũ. Chuỗi xử lý theo vòng lặp để tránh tràn call stack.
-- Chuỗi dừng khi phép thử thất bại, không còn địch, Alucard không còn hoạt động hoặc không thể tiếp tục đòn hợp lệ. Hiệu ứng vô hiệu hóa passive vẫn chặn chuỗi.
-- 6 follow-up liên tiếp trúng và gây sát thương sẽ tạo một Clone của đồng đội gốc đang sống được chọn ngẫu nhiên, đặt ngay trước Alucard. Đòn né, phản hoặc chặn hết sát thương làm mất chuỗi đếm trúng liên tiếp. Đổi địch trong cùng chuỗi không reset bộ đếm.
-- Tối đa 3 Clone còn sống do mỗi Alucard tạo ra. Khi Clone bị hạ, một lần đủ điều kiện sau có thể tạo bản thay thế. Không đặt giới hạn tạo Clone chung lên các thẻ khác.
-- Clone sao chép max HP, ATK và passive của đồng đội được chọn. Không chọn Alucard hoặc thẻ bị cấm clone; Clone/summon không tự tạo thêm đơn vị.
-- Khi chết, Alucard tự hồi sinh đúng 1 lần/trận tại cuối hàng đợi với 66% max HP; đồng đội đang sống kế tiếp được lên sân. Giữ bộ đếm đòn của chính Alucard sau hồi sinh.
-- Alucard không thể bị clone hoặc chuyển thành đơn vị sao chép bằng cơ chế tạo đồng đội. Điều này không đặt lệnh cấm chung lên việc sao chép passive vốn có của game.
-- Đồng đội vẫn có thể hồi sinh Alucard theo điều kiện của passive tương ứng. Bleed, chết vĩnh viễn và các luật cấm phục hồi hiện có vẫn được tôn trọng.
-- Khi còn sống và không phải đơn vị đang thực hiện lượt đánh, Alucard tăng sát thương Bleed do đồng đội gây ra lên x1,5. Không tăng Bleed của đối thủ; không tự tăng Bleed của chính nó qua hiệu ứng hỗ trợ này. Nhiều Alucard không nhân chồng cùng buff hỗ trợ.
-
-6. WHITEBEARD, SUGAR VÀ THANH BUFF THỜI TIẾT
-
-- WhiteBeard đổi Element từ Dark sang Holy. Không đổi chỉ số gốc, tỷ lệ roll hoặc passive của thẻ.
-- Đội Tower sinh mới dùng element Holy mới của WhiteBeard khi lọc theo loại tháp.
-- Giữ thành phần đội Tower đã khóa từ save cũ có WhiteBeard lúc thẻ còn Dark, tránh tự reroll một tầng đang thử lại. Thẻ trong đội cũ vẫn nhận element Holy mới. Ngoại lệ tương thích chỉ dành cho bản ghi cũ; đội sinh mới tuân thủ lọc element hiện tại.
-- Thời tiết Uncommon hiển thị đúng tên Sugar, không dùng Sweat làm tên thời tiết.
-- Khi nạp save cũ, bí danh weather Sweat/Sweet chuyển về ID sugar; các bản ghi trùng cùng thời tiết được hợp nhất, không cộng buff hai lần. Không đổi ID mutation sweat đang dùng cho Sweet và không làm mất mutation trên thẻ.
-- Buff thời tiết được hiển thị trực tiếp cạnh tên trong thanh Active Weather ở đầu màn hình, không chỉ nằm trong tooltip.
-- Ví dụ Sunny hiện +10% VNĐ; Sugar hiện +10% Roll Speed; Eclipse hiện +33% battle VNĐ và mức tăng cơ hội địch mutation.
-- Tên, buff, dòng nhóm/mutation và đồng hồ hết hạn có khoảng riêng. Nội dung dài xuống dòng trong chip; danh sách thời tiết có giới hạn chiều cao và cuộn khi cần, tránh đè giao diện phía dưới.
-- Giữ bố cục mobile và nút Start luôn tiếp cận được, gồm cả đội hình 5 ô của Boss Event. Nút + đọc passive đầy đủ vẫn ở góc phải dưới vùng passive.
-
-7. LƯU DỮ LIỆU VÀ PHẦN THƯỞNG AN TOÀN
-
-- Boss Event có store localStorage riêng: anime_card_rng_boss_event_v1, chứa coin, Difficulty, số thắng, số thứ tự lượt thử và phần thưởng đang chờ lưu.
-- Trước khi phát thưởng, lưu nguyên coin đã roll, hệ số Drop, coin cuối cùng và mutation của thẻ rơi.
-- Cấp thẻ có biên nhận riêng theo lượt thử. Nếu lưu coin thất bại sau khi thẻ đã được cấp, lần tải sau hoàn tất phần còn lại mà không cấp trùng thẻ hoặc roll lại mutation.
-- Trận bị gián đoạn không được tính thắng. Trận mới dùng đơn vị và trạng thái passive mới.
-- Store Boss Event được đưa vào export/import .acrsave và được kiểm tra trước khi ghi dữ liệu. Save cũ chưa có store này vẫn nhập được.
-- Giữ nguyên mã bảo vệ save, báo lỗi dữ liệu bị sửa, cooldown nhập/xuất độc lập 7 ngày và migration level một lần hiện có.
-- Tiến độ Evolution, vật phẩm tiến hóa, level hợp lệ và mutation vẫn đi cùng save; không đưa thẻ tiến hóa hoặc Alucard vào gacha thường.
-
-8. FILE THAY ĐỔI VÀ PHẠM VI BÀN GIAO
-
-- boss_event.js: module mới cho Alucard Event, Difficulty, boss, cửa hàng và giao dịch phần thưởng.
-- raid.js: khoảng chỉ số, roll riêng từng trận và API xem trước min–max.
-- passives.js: bộ đếm trên đơn vị tấn công, giữ tiến độ qua mục tiêu, Bird of Hermes và kiểm tra hàng đợi Boss Event.
-- cards.js: Alucard, WhiteBeard Holy và mô tả passive ngắn, đúng điều kiện bộ đếm.
-- tower.js: giữ đội WhiteBeard đã khóa trong save cũ, dùng phiên bản chọn địch mới cho các tầng tiếp theo.
-- weathers.js: chuẩn hóa bí danh thời tiết Sugar/Eclipse.
-- app.js: kết nối mode 5 thẻ, điều kiện weather, nhận thẻ có biên nhận, UI shop/kết quả, save và hiển thị buff.
-- index.html / styles.css: mục Boss Event, lobby/shop/tổng kết, đội 5 ô và chip thời tiết có buff.
-- inventory.js / evolution.js: đồng bộ tên hiển thị Marine Ford, giữ nguyên ID và logic vật phẩm/tiến hóa.
-- README.txt: chỉ ghi changelog của lần cập nhật này.
-
-Gói nguồn chỉ chứa mã HTML/CSS/JS và README.txt. Không kèm tệp ảnh, âm thanh, asset nhị phân, script test, log hay ảnh kiểm tra. Người dùng tự giữ và quản lý thư mục assets cùng tệp nhạc hiện có; các đường dẫn tài nguyên trong code được bảo toàn.
+- quest.js: module mới chuyên trách quest; app.js chỉ kết nối sự kiện roll, trận đấu, hạ địch, thưởng và chuyển save.
+- cards.js và passives.js: 4 thẻ mới, nội tại riêng và cơ chế shield.
+- achievements.js và boss_event.js: tổng thắng Boss Event cùng 9 mốc Drop Multiplier; raid.js và boss_event.js chấp nhận mức multiplier mới trong phần thưởng đang chờ.
+- index.html và styles.css: ô nhập độ khó, bộ chọn thành tựu Boss Event và modal Quest Cards riêng.
+- README.txt chỉ ghi nhật ký của bản cập nhật này. Bảng Excel được bàn giao riêng; archive game chỉ chứa mã nguồn và README.txt.
+- Giữ nguyên khối bảo vệ .acrsave, thời gian chờ 7 ngày, công thức Tower, khóa đối thủ khi thua, nhịp Time Trial và giao dịch Evolution.
+- Gói nguồn không kèm asset ảnh/nhạc, tệp kiểm thử, script kiểm định hoặc log. Người dùng tự quản lý asset theo các đường dẫn được khai báo.
