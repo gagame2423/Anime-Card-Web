@@ -445,7 +445,15 @@
             </button>
             <button type="button" class="battle-mode-option" data-battle-mode="tower" aria-pressed="false"><strong>🏰 TOWER</strong><span>Infinite floors • 4v4 • Tower Coins</span></button>
             <button id="timeTrialOpenButton" type="button" class="battle-mode-option" aria-pressed="false" aria-haspopup="dialog" aria-controls="timeTrialModeModal"><strong>⏱ TIME TRIAL</strong><span id="timeTrialModeHint">Choose Normal or EXP</span></button>
-            <button type="button" class="battle-mode-option" data-battle-mode="raid" aria-pressed="false"><strong>⚓ RAID</strong><span>Marine Fort • 4 vs 10 • Raid Coins</span></button>
+            <button type="button" class="battle-mode-option" data-battle-mode="raid" aria-pressed="false"><strong>⚓ RAID</strong><span>Marine Ford • 4 vs 10 • Raid Coins</span></button>
+            <button type="button" class="battle-mode-option" data-battle-mode="boss-event" aria-pressed="false"><strong>🩸 BOSS EVENT</strong><span>Alucard • 5 vs 1 • Eclipse required</span></button>
+          </div>
+          <div id="bossEventControls" class="boss-event-controls hidden">
+            <label for="bossEventTypeSelect">Boss Event</label><select id="bossEventTypeSelect" class="select-input"><option value="alucard">Alucard Event</option></select>
+            <strong id="bossEventAvailability" role="status"></strong>
+            <label class="raid-difficulty" for="bossEventDifficulty">Difficulty <output id="bossEventDifficultyValue">1 • Boss Lv.1</output><input id="bossEventDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
+            <strong id="bossEventBalance"></strong><button id="bossEventShopOpenButton" class="tower-shop-button" type="button">🩸 Event Shop</button>
+            <p id="bossEventRules"></p><p id="bossEventStats"></p>
           </div>
           <div id="timeTrialControls" class="time-trial-controls hidden">
             <strong id="timeTrialProgress">Room 1</strong><span id="timeTrialBalance">0 Shards</span>
@@ -453,7 +461,7 @@
             <p id="timeTrialRules"></p>
           </div>
           <div id="raidControls" class="raid-controls hidden">
-            <label for="raidTypeSelect">Raid type</label><select id="raidTypeSelect" class="select-input"><option value="marine_fort">Marine Fort Raid</option></select>
+            <label for="raidTypeSelect">Raid type</label><select id="raidTypeSelect" class="select-input"><option value="marine_fort">Marine Ford Raid</option></select>
             <label class="raid-difficulty" for="raidDifficulty">Difficulty <output id="raidDifficultyValue">1 • Enemy Lv.1</output><input id="raidDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
             <strong id="raidBalances"></strong><button id="raidShopOpenButton" class="tower-shop-button" type="button">⚓ Raid Shop</button>
             <p id="raidRules"></p>
@@ -642,8 +650,10 @@
         </div>
         <div id="timeTrialSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="raidSummary" class="time-trial-summary hidden" aria-live="polite"></div>
+        <div id="bossEventSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div class="battle-result__actions">
           <button id="timeTrialResultShopButton" class="ghost-button hidden" type="button">◆ Time Trial Shop</button>
+          <button id="bossEventResultShopButton" class="ghost-button hidden" type="button">🩸 Event Shop</button>
           <button id="raidResultShopButton" class="ghost-button hidden" type="button">⚓ Raid Shop</button>
           <button id="battle-again-btn" class="battle-primary-button" type="button">⚔️ Battle Again</button>
           <button id="battleChangeFighterButton" class="ghost-button" type="button">Change Fighter</button>
@@ -750,7 +760,7 @@
   </div>
 
   <div id="raidShopModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="raidShopTitle">
-    <section class="modal-panel module-modal"><header class="modal-header"><h2 id="raidShopTitle">⚓ Marine Fort Raid Shop</h2><button class="modal-close" data-close-modal="raidShopModal" type="button" aria-label="Close Raid shop">×</button></header><p id="raidShopBalance" class="module-description"></p><div id="raidShopGrid" class="module-grid"></div></section>
+    <section class="modal-panel module-modal"><header class="modal-header"><h2 id="raidShopTitle">⚓ Marine Ford Raid Shop</h2><button class="modal-close" data-close-modal="raidShopModal" type="button" aria-label="Close Raid shop">×</button></header><p id="raidShopBalance" class="module-description"></p><div id="raidShopGrid" class="module-grid"></div></section>
   </div>
   <div id="timeTrialModeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="timeTrialModeTitle">
     <section class="modal-panel module-modal">
@@ -771,6 +781,9 @@
   </div>
   <div id="evolutionModal" class="modal-backdrop hidden"><section class="modal-panel module-modal evolution-modal" role="dialog" aria-modal="true" aria-labelledby="evolutionTitle"><header class="modal-header"><h2 id="evolutionTitle">✧ Evolution</h2><button type="button" id="evolutionCloseButton" class="modal-close" aria-label="Close evolution">×</button></header><p id="evolutionStatus" role="status">Choose the exact mutation variant to sacrifice.</p><div id="evolutionGrid" class="module-shop-grid"></div></section></div>
 
+  <div id="bossEventShopModal" class="modal-backdrop hidden">
+    <section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="bossEventShopTitle"><header class="modal-header"><h2 id="bossEventShopTitle">🩸 Boss Event Shop</h2><button class="modal-close" data-close-modal="bossEventShopModal" type="button" aria-label="Close Boss Event shop">×</button></header><p id="bossEventShopBalance" class="module-description"></p><div id="bossEventShopGrid" class="module-grid"></div></section>
+  </div>
   <script src="mutations.js"></script>
   <script src="weathers.js"></script>
   <script src="cards.js"></script>
@@ -781,6 +794,7 @@
   <script src="tower.js"></script>
   <script src="timetrial.js"></script>
   <script src="raid.js"></script>
+  <script src="boss_event.js"></script>
   <script src="achievements.js"></script>
   <script src="evolution.js"></script>
   <script src="app.js"></script>

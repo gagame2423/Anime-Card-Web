@@ -48,7 +48,7 @@ const CARDS = [
     stats: { hp: 275, atk: 12 },
     passive: {
       name: "Chidori",
-      description: "Every 3rd attack deals x2.5 ATK damage."
+      description: "The 3rd attack deals x2.5 ATK damage."
     },
     image: "assets/cards/sasukekid.png"
   },
@@ -670,7 +670,7 @@ const CARDS = [
   },
   {
     id: "whitebeard",
-    element: "Dark",
+    element: "Holy",
     name: "WhiteBeard",
     rarity: "Mythic",
     chance: 500100,
@@ -1424,7 +1424,7 @@ const TOWER_REWARD_CARDS = [
   {"id": "tower-champion-reaper", "element": "Holy", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 60000, "atk": 30000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every 2nd primary attack: hit all enemies for 60% of each target’s current ATK.\nWhen damaged: 6% chance to counter for 50% damage received; counters cannot loop.\nFirst eligible fatal hit: revive at full HP, gain +100% current ATK permanently. Cannot be cloned or revived by teammates."}},
   {"id": "tower-champion-eclipse", "element": "Dark", "image": "assets/cards/wou.png", "towerType": "eclipse", "unlockRequirement": "tower_floor_100_eclipse", "sourceId": "weather-eclipse-harvester", "name": "Wonder Of You", "chance": 8000000, "requiredWeather": "Eclipse", "nativeWeather": "eclipse", "stats": {"hp": 800000, "atk": 8}, "passive": {"name": "Calamity", "description": "Protect a random living teammate; choose another if it dies. No position swap.\nAfter that ally’s shields/reduction, split remaining damage 50%/50%; absorb the shared half, with an 8% chance to reflect it instead. No recursive redirection.\nProtected ally’s kill: heal 80% max HP. Death while protecting: 8% chance to execute the attacker; normal immunity/survival rules apply."}},
   {"id": "tower-champion-malevolent", "element": "Fire", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 66666, "atk": 9999}, "passive": {"name": "Malevolent Kitchen", "description": "After 5 primary attacks, hit all living enemies for 25% current ATK at the start of every combat turn while alive.\nWhen hit and surviving: 66% chance to heal 6% max HP and gain +9% current ATK. ATK bonuses stack for the match."}},
-  {"id": "tower-champion-tsukuyomi", "element": "Nature", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 200000, "atk": 20000}, "passive": {"name": "Datebayo", "description": "Each new active enemy rolls Naruto/Sasuke mode (50% each); reset the mode attack counter.\nNaruto: every 3rd attack deals x3 damage and creates a 10% current HP/ATK Clone. Living Clones follow up each attack; Clone death heals the owner 10% max HP. No count cap; generated units cannot summon.\nSasuke: every 2nd attack hits all enemies for 50% ATK; 20% dodge. Dodge applies Burn for 5 turns (25% ATK/turn) and a 3-combat-turn shield equal to avoided damage. Burn ending naturally Stuns for 1 turn.\nSwitching to Sasuke removes Clones without healing; switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
+  {"id": "tower-champion-tsukuyomi", "element": "Nature", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 200000, "atk": 20000}, "passive": {"name": "Datebayo", "description": "Each new active enemy rolls Naruto/Sasuke mode (50% each); keep the card’s attack counter across target changes.\nNaruto: every 3rd attack deals x3 damage and creates a 10% current HP/ATK Clone. Living Clones follow up each attack; Clone death heals the owner 10% max HP. No count cap; generated units cannot summon.\nSasuke: every 2nd attack hits all enemies for 50% ATK; 20% dodge. Dodge applies Burn for 5 turns (25% ATK/turn) and a 3-combat-turn shield equal to avoided damage. Burn ending naturally Stuns for 1 turn.\nSwitching to Sasuke removes Clones without healing; switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
   {"id": "tower-champion-heavenly", "element": "Holy", "image": "assets/cards/judgement.png", "towerType": "heavenly", "unlockRequirement": "tower_floor_100_heavenly", "sourceId": "weather-heavenly-seraph", "name": "The Judgement", "chance": 300300, "requiredWeather": "Heavenly", "nativeWeather": "heavenly", "stats": {"hp": 40000, "atk": 5000}, "passive": {"name": "Divine Light", "description": "Every 2nd attack: 33% chance for a beam hitting all enemies for 50% current ATK; damaged targets have a 66% chance of Heresy for 1–3 turns.\nWhile any enemy has Heresy: beam chance/damage become 66%/66% ATK; Heresy chance becomes 33%.\nHeresy: deal 9% less damage; 3% chance to miss primary attacks."}},
   {"id": "tower-champion-shadow", "element": "Dark", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 102000, "atk": 28000}, "passive": {"name": "Dark Aurora", "description": "On kill: 29% chance to convert an eligible original enemy and steal its passive. Insert the converted unit directly in front of Dark Decade with Dark Decade’s current max HP/ATK and the victim’s passive.\nWhile alive, revive eligible original teammates at the back with Dark Decade’s stats (max 2 revivals/teammate); keep their own passives. Never revive itself, clones or summons.\nGenerated units cannot create companions. Uncloneable enemies and anti-revival restrictions remain excluded."}},
 ].map(reward => Object.freeze({ ...reward, towerFloor: 100, rarity: 'Secret', image: reward.image, description: `Clear Floor 100 of ${reward.towerType} Tower. Future rolls require the matching weather.` }));
@@ -1437,7 +1437,7 @@ const RAID_SECRET_CARDS = [
     passive: { name: 'Mera Mera', description: "Successful attacks: 10% chance to Burn for 3 turns (100% current ATK/turn).\nOn death: living teammates gain Brother Soul. Their successful attacks have a separate 10% chance to Burn for 1 turn (100% their current ATK). Stacks with other Burns; multiple Ace deaths do not increase the chance." } },
   { id: 'raid-secret-marco', element: 'Water', name: 'Marco', rarity: 'Secret', chance: 0, stats: { hp: 500000, atk: 10000 }, image: 'assets/cards/marco.png',
     passive: { name: 'Phoenix Inferno', description: "While alive, attacks against other teammates have a 10% chance to be blocked; counter for 200% current ATK without swapping.\nOnce/match, swap with a living ally below 10% HP and restore its HP; Bleed blocks healing.\n10% dodge; each dodge grants the living team +10% current max HP, stacking for the match." } }
-].map(card => Object.freeze({ ...card, requiredWeather: null, raidOnly: true, raidType: 'marine_fort', unlockRequirement: `raid_secret_${card.name.toLowerCase()}`, description: 'Exclusive Marine Fort Raid drop. Never available from normal rolls.' }));
+].map(card => Object.freeze({ ...card, requiredWeather: null, raidOnly: true, raidType: 'marine_fort', unlockRequirement: `raid_secret_${card.name.toLowerCase()}`, description: 'Exclusive Marine Ford Raid drop. Never available from normal rolls.' }));
 CARDS.push(...RAID_SECRET_CARDS);
 if (typeof window !== 'undefined') window.RAID_SECRET_CARDS = RAID_SECRET_CARDS;
 if (typeof window !== 'undefined') window.TOWER_REWARD_CARDS = TOWER_REWARD_CARDS;
@@ -1619,6 +1619,27 @@ const EXPANSION_CARDS = [
 ];
 CARDS.push(...EXPANSION_CARDS);
 window.EXPANSION_CARDS = EXPANSION_CARDS;
+// Boss Event exclusive: never enters normal rolls.
+const BOSS_EVENT_CARDS = [{
+  "id": "boss-event-alucard",
+  "name": "Alucard",
+  "element": "Fire",
+  "rarity": "Secret",
+  "chance": 0,
+  "bossEventOnly": true,
+  "eventType": "alucard",
+  "stats": {
+    "hp": 333333,
+    "atk": 66666
+  },
+  "image": "assets/cards/alucard.png",
+  "passive": {
+    "name": "Bird of Hermes",
+    "description": "Every 2 attacks: apply Bleed for 1 turn (66% current ATK).\nAfter 6 attacks, each attack has a 66% chance for a follow-up (33% ATK; heal 3% max HP). Follow-ups can repeat without a count cap.\n6 consecutive damaging follow-up hits create a random living teammate’s Clone directly in front of Alucard (max 3 living Clones).\nOn death, revive once at the back with 66% max HP. Cannot be cloned; teammate revivals are allowed.\nWhile alive and not attacking, allied Bleed deals x1.5 damage."
+  }
+}];
+CARDS.push(...BOSS_EVENT_CARDS);
+window.BOSS_EVENT_CARDS = BOSS_EVENT_CARDS;
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

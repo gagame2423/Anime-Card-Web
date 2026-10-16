@@ -3,7 +3,7 @@
   'use strict';
   const KEY = 'anime_card_rng_tower_v1';
   const POTION_COST = 25;
-  const SELECTION_VERSION = 2;
+  const SELECTION_VERSION = 3;
   const ENEMY_ELEMENTS = Object.freeze(Object.fromEntries(Object.entries({
     raining: ['Water'], snowing: ['Water', 'Nature'], sunny: ['Fire'], sugar: ['Electric'],
     reaper: ['Dark', 'Holy'], eclipse: ['Dark', 'Fire'], malevolent: ['Fire', 'Nature'],
@@ -71,13 +71,14 @@
     if (!structural) return false;
     // Existing locked encounters survive the update until the floor is cleared.
     if (record.selectionVersion === undefined) return true;
-    if (record.selectionVersion !== SELECTION_VERSION) return false;
+    if (![2, SELECTION_VERSION].includes(record.selectionVersion)) return false;
     const allowed = mode && ENEMY_ELEMENTS[String(mode).toLowerCase()];
     if (record.element !== null && !host.ElementSystem.TYPES.includes(record.element)) return false;
     if (mode && (allowed ? !allowed.includes(record.element) : record.element !== null)) return false;
     return record.lineup.every(slot => {
       const card = cards.find(card => card.id === slot.cardId);
-      return (!record.element || card.element === record.element) && Number.isSafeInteger(slot.selectionChance) &&
+      const legacyWhitebeard = record.selectionVersion === 2 && slot.cardId === 'whitebeard' && record.element === 'Dark';
+      return (!record.element || card.element === record.element || legacyWhitebeard) && Number.isSafeInteger(slot.selectionChance) &&
         (Number(card.chance) > 0 ? slot.selectionChance === Number(card.chance) : slot.selectionChance >= 100000 && slot.selectionChance <= 10000000);
     });
   }

@@ -7,8 +7,8 @@
     Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100, name:'Prime Garp' })
   ]);
   const MATERIALS = Object.freeze([
-    Object.freeze({ id:'web_string', name:'Web String', type:'material', icon:'🕸️', tier:'mythic', description:'Evolve Lv.100+ Doflamingo into Awakened Doflamingo. Marine Fort Raid Shop: 6,220 Coins.' }),
-    Object.freeze({ id:'cannon_ball', name:'Cannon Ball', type:'material', icon:'💣', tier:'mythic', description:'Evolve Lv.100+ Garp into Prime Garp. Marine Fort Raid Shop: 3,899 Coins.' })
+    Object.freeze({ id:'web_string', name:'Web String', type:'material', icon:'🕸️', tier:'mythic', description:'Evolve Lv.100+ Doflamingo into Awakened Doflamingo. Marine Ford Raid Shop: 6,220 Coins.' }),
+    Object.freeze({ id:'cannon_ball', name:'Cannon Ball', type:'material', icon:'💣', tier:'mythic', description:'Evolve Lv.100+ Garp into Prime Garp. Marine Ford Raid Shop: 3,899 Coins.' })
   ]);
   let bridge = {};
   function register() { MATERIALS.forEach(item => host.InventorySystem.registerItem(item)); }

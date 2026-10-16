@@ -149,8 +149,9 @@ const WEATHERS = [
 ].map(w => Object.freeze({ ...w, buffs: Object.freeze(w.buffs) }));
 const WEATHER_BY_ID = Object.freeze(Object.fromEntries(WEATHERS.map(w => [w.id, Object.freeze({ ...w, mutation: MUTATION_BY_ID[w.mutationId] })])));
 (function(host) {
+  function canonicalId(value) { const id=String(value || '').trim().toLowerCase(); return ({sweat:'sugar',sweet:'sugar',eclipsed:'eclipse',bizarre:'bizare'})[id] || id; }
   function bonus(active, stat) { return active.reduce((sum,w) => sum + (Number(w.buffs?.[stat]) || 0), 0); }
-  Object.assign(host, { WEATHERS, WEATHER_CONFIG, WEATHER_TIERS, WEATHER_BY_ID, WeatherSystem: Object.freeze({ bonus, describe: weather => {
+  Object.assign(host, { WEATHERS, WEATHER_CONFIG, WEATHER_TIERS, WEATHER_BY_ID, WeatherSystem: Object.freeze({ bonus, canonicalId, describe: weather => {
     const labels = {rollSpeed:'Roll Speed',exp:'EXP',coins:'VNĐ',battleCoins:'battle VNĐ',luck:'Luck',enemyMutationChance:'enemy mutation chance'};
     return Object.entries(weather.buffs || {}).map(([stat,value]) => stat === 'luck' ? `+${value} Luck` : `+${Math.round(value*100)}% ${labels[stat] || stat}`).join(' • ');
   } }) });

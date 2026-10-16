@@ -2,13 +2,20 @@
 (function (host) {
   'use strict';
   const KEY = 'anime_card_rng_raid_v1', MODE = 'raid';
-  const KEY_ITEM = Object.freeze({ id: 'marine_fort_raid_key', name: 'Marine Fort Raid Key', type: 'ticket', icon: '🗝️', tier: 'epic', description: 'One Marine Fort Raid entry. 10% drop on regular 1v1 / 4v4 victories.' });
+  const KEY_ITEM = Object.freeze({ id: 'marine_fort_raid_key', name: 'Marine Ford Raid Key', type: 'ticket', icon: '🗝️', tier: 'epic', description: 'One Marine Ford Raid entry. 10% drop on regular 1v1 / 4v4 victories.' });
   const SECRET_IDS = Object.freeze(['raid-secret-ace', 'raid-secret-marco', 'raid-secret-mihawk']);
-  const TYPES = Object.freeze({ marine_fort: Object.freeze({ name: 'Marine Fort Raid', keyId: KEY_ITEM.id,
+  const TYPES = Object.freeze({ marine_fort: Object.freeze({ name: 'Marine Ford Raid', keyId: KEY_ITEM.id,
     enemies: Object.freeze([
-      ['starter-epic', 3000, 175], ['buggy', 1750, 300], ['ice-admiral', 3500, 350],
-      ['light-admiral', 2500, 700], ['garp', 7500, 300], ['boa-hancock', 2500, 500],
-      ['doflamingo', 3000, 750], ['shanks', 4500, 1250], ['blackbeard', 6500, 900], ['whitebeard', 17500, 3000]
+      ["starter-epic", 3000, 5000, 175, 300],
+      ["buggy", 1750, 3000, 300, 500],
+      ["ice-admiral", 3500, 5000, 350, 500],
+      ["light-admiral", 2500, 4000, 700, 1000],
+      ["garp", 7500, 10000, 500, 700],
+      ["boa-hancock", 2500, 4000, 500, 600],
+      ["doflamingo", 3000, 5000, 750, 1000],
+      ["shanks", 4500, 6000, 1250, 2500],
+      ["blackbeard", 6500, 8000, 900, 1200],
+      ["whitebeard", 15000, 30000, 3000, 10000]
     ].map(row => Object.freeze(row))) }) });
   const SHOP = Object.freeze([{id:'web_string',cost:6220},{id:'cannon_ball',cost:3899}, ...['exp_potion', 'rich_potion', 'speed_potion', 'speed_battle_potion'].map(id => Object.freeze({ id, cost: id === 'speed_battle_potion' ? 50 : 25 }))]);
   const LEVEL_GROWTH = .075;
@@ -74,10 +81,12 @@
     const before = data.types[type].difficulty; data.types[type].difficulty = difficulty(value);
     if (persist()) return true; data.types[type].difficulty = before; return false;
   }
-  function enemies(type = 'marine_fort', d = data.types[type]?.difficulty) {
+  function enemies(type = 'marine_fort', d = data.types[type]?.difficulty, random = Math.random) {
     if (!validType(type)) return [];
     const level = difficulty(d), scale = 1 + (level - 1) * LEVEL_GROWTH;
-    return TYPES[type].enemies.map(([id, hp, atk]) => {
+    return TYPES[type].enemies.map(([id, hpMin, hpMax, atkMin, atkMax]) => {
+      const hp = hpMin + Math.floor(randomUnit(random) * (hpMax - hpMin + 1));
+      const atk = atkMin + Math.floor(randomUnit(random) * (atkMax - atkMin + 1));
       const native = host.ALL_CARDS.find(card => card.id === id);
       if (!native) throw new Error('Thiếu thẻ boss Raid: ' + id);
       const stats = { hp: Math.round(hp * scale), atk: Math.round(atk * scale) };
@@ -87,8 +96,13 @@
       return { card, display: { name: card.name, image: card.image, ...stats }, mutations: [], hp: stats.hp, maxHp: stats.hp, atk: stats.atk, defeated: false, level, isRaidEnemy: true };
     });
   }
+  function preview(type = 'marine_fort', d = data.types[type]?.difficulty) {
+    if (!validType(type)) return [];
+    const level = difficulty(d), scale = 1 + (level-1)*LEVEL_GROWTH;
+    return TYPES[type].enemies.map(([id,h0,h1,a0,a1]) => ({ card:host.ALL_CARDS.find(c=>c.id===id), level, hpMin:Math.round(h0*scale),hpMax:Math.round(h1*scale),atkMin:Math.round(a0*scale),atkMax:Math.round(a1*scale) }));
+  }
   function start(battle, type = 'marine_fort') {
-    if (battle?.mode !== MODE || battle.playerTeam?.length !== 4 || battle.enemyTeam?.length !== 10 || !canEnter(type) || data.activeAttempt) throw new Error('Cần đội 4 thẻ và 1 Marine Fort Raid Key để vào Raid.');
+    if (battle?.mode !== MODE || battle.playerTeam?.length !== 4 || battle.enemyTeam?.length !== 10 || !canEnter(type) || data.activeAttempt) throw new Error('Cần đội 4 thẻ và 1 Marine Ford Raid Key để vào Raid.');
     const previous = JSON.parse(JSON.stringify(data)), now = Date.now(), entry = data.types[type];
     const attempt = { id: `${now}_${++serial}`, type, difficulty: entry.difficulty, startedAt: now };
     data.activeAttempt = attempt;
@@ -149,15 +163,15 @@
       const item = host.InventorySystem.getItem(offer.id), box = doc.createElement('article'); box.className = 'module-item';
       const name = doc.createElement('strong'); name.textContent = `${item.icon} ${item.name}`;
       const text = doc.createElement('p'); text.textContent = item.description;
-      const button = doc.createElement('button'); button.type = 'button'; button.textContent = `${offer.cost} Marine Fort Coins`; button.disabled = entry.coins < offer.cost || Boolean(data.pendingReward);
+      const button = doc.createElement('button'); button.type = 'button'; button.textContent = `${offer.cost} Marine Ford Coins`; button.disabled = entry.coins < offer.cost || Boolean(data.pendingReward);
       button.addEventListener('click', () => { if (purchase(type, offer.id)) onChange(); else host.alert('Không thể mua vật phẩm Raid.'); }); box.append(name, text, button); grid.append(box);
     }
     const box = doc.createElement('article'); box.className = 'module-item';
     const name = doc.createElement('strong'); name.textContent = `Team HP / ATK +${entry.upgradeLevel}%`;
-    const text = doc.createElement('p'); text.textContent = 'Each upgrade adds 1% HP and ATK to your team inside Marine Fort Raid only. Maximum +100%.';
+    const text = doc.createElement('p'); text.textContent = 'Each upgrade adds 1% HP and ATK to your team inside Marine Ford Raid only. Maximum +100%.';
     const button = doc.createElement('button'); button.type = 'button'; button.textContent = entry.upgradeLevel >= 100 ? 'MAX +100%' : `Upgrade • ${upgradeCost(type)} Coins`; button.disabled = entry.upgradeLevel >= 100 || entry.coins < upgradeCost(type) || Boolean(data.activeAttempt);
     button.addEventListener('click', () => { if (upgrade(type)) onChange(); else host.alert('Không thể nâng cấp đội Raid.'); }); box.append(name, text, button); grid.append(box);
   }
   function reset() { data = fresh(); registerKey(); persist(); }
-  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, SECRET_IDS, TYPES, SHOP, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, totalWins, renderShop, reset, flush: persist });
+  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, SECRET_IDS, TYPES, SHOP, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, totalWins, renderShop, reset, flush: persist });
 })(window);

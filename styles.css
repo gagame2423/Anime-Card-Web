@@ -4398,3 +4398,19 @@ body {
 .mutation-clove { --mutation-color: #39ff14; }
 .mutation-storm { --mutation-color: #c8cdd4; }
 .mutation-stardust { --mutation-color: #ff38cf; }
+
+/* Weather benefits stay beside their name and wrap within the banner. */
+.weather-chip { height: auto; min-height: 33px; }
+.weather-chip__headline { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 10px; min-width: 0; }
+.weather-chip__headline > strong { flex: 0 0 auto; }
+.weather-chip__buffs { flex: 1 1 auto; color: #c2e7c9; font-size: 9px; line-height: 1.35; font-weight: 750; overflow-wrap: anywhere; }
+.active-weather__list { flex-wrap: wrap; }
+.weather-chip { flex-basis: 240px; }
+.boss-event-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px; border: 1px solid #8d4b65; border-radius: 12px; background: #241322; }
+.boss-event-controls > p { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.65; color: #e8c9dd; }
+#bossEventAvailability { color: #e6b0ce; font-size: 12px; }
+#bossEventShopModal:not(.hidden) { z-index: 7000 !important; }
+#battleModal.boss-event-mode .battle-team-slots { grid-template-columns: repeat(5,minmax(0,1fr)); }
+@media(max-width:760px) { #battleModal.boss-event-mode .battle-team-slots { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+.active-weather__list { max-height: 86px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }

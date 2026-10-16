@@ -278,11 +278,11 @@
       if (native === prefix + 'shadow' && effective.startsWith(prefix) && effective !== native) return effective.slice(prefix.length);
       return native.startsWith(prefix) ? native.slice(prefix.length) : effective.startsWith(prefix) ? effective.slice(prefix.length) : '';
     };
-    const state = unit => ensureRuntime(unit).champion ||= { attacks: 0, candies: 0, form: 1, reverting: 0, positive: 50, negative: 50, locked: false, clones: [], initialized: false };
+    const state = unit => ensureRuntime(unit).champion ||= { attacks: 0, modeAttacks: 0, candies: 0, form: 1, reverting: 0, positive: 50, negative: 50, locked: false, clones: [], initialized: false };
     const atk = unit => computeWeakenedAtk(unit);
     const pick = list => list[Math.min(list.length - 1, Math.floor(Math.random() * list.length))];
     const rand = (min, max) => min + Math.min(max - min, Math.floor(Math.random() * (max - min + 1)));
-    const uncloneable = unit => (cardIdOf(unit) === prefix + 'reaper' || id(unit) === 'reaper') || Boolean(unit?.championPermanentDeath);
+    const uncloneable = unit => ([prefix + 'reaper','boss-event-alucard'].includes(cardIdOf(unit)) || id(unit) === 'reaper' || getEffectivePassiveCardId(unit) === 'boss-event-alucard') || Boolean(unit?.championPermanentDeath);
     const noExternalRevive = unit => ([prefix + 'reaper', prefix + 'snowing'].includes(cardIdOf(unit)) || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath);
     function log(unit, text) { ensureRuntime(unit).lastPassiveTrigger = text; safeLog(`[CHAMPION] ${unit.display?.name || unit.card?.name}: ${text}`, 'passive'); }
     function describe(unit) {
@@ -351,7 +351,7 @@
     }
     function duo(bs, unit, target) {
       const c = state(unit); if (!target || c.enemy === target) return;
-      c.enemy = target; c.mode = Math.random() < 0.5 ? 'naruto' : 'sasuke'; c.modeAttacks = 0;
+      c.enemy = target; c.mode = Math.random() < 0.5 ? 'naruto' : 'sasuke'; c.modeAttacks ??= c.attacks;
       if (c.mode === 'sasuke') { for (const clone of c.clones) { clone.championDismissed = true; clone.hp = 0; clone.defeated = true; } c.clones = []; }
       else if (ensureRuntime(unit).shieldKind === 'sasuke') { ensureRuntime(unit).shield = 0; ensureRuntime(unit).shieldKind = ''; c.shieldTurns = 0; }
       log(unit, `Datebayo • ${c.mode.toUpperCase()}`);
@@ -385,7 +385,7 @@
       if (options.isFollowUp || options.isCounter) return;
       const c = state(unit); c.attacks++;
       if (id(unit) === 'normal') meter(bs, unit, true);
-      if (id(unit) === 'tsukuyomi') { duo(bs, unit, target); c.modeAttacks++; }
+      if (id(unit) === 'tsukuyomi') { duo(bs, unit, target); c.modeAttacks = c.attacks; }
       if (id(unit) === 'sugar' && c.reverting <= 0 && c.form !== 6) { c.candies = Math.min(100, c.candies + rand(1, 3) + (c.form === 1 ? 1 : 0)); form(unit); }
     }
     function incoming(bs, target) { if (id(target) === 'normal') meter(bs, target, false); }
@@ -459,6 +459,7 @@
     }
     function death(bs, unit, attacker) {
       if (isAlive(unit)) return false;
+      if (alucard.revive(bs,unit)) return true;
       raidSecrets.death(bs, unit);
       const c = state(unit); if (c.deathHandled) return false; c.deathHandled = true;
       const owner = unit.championOwner;
@@ -501,7 +502,7 @@
             ensureRuntime(unit).shield = 0; ensureRuntime(unit).shieldKind = '';
             removeActiveTag(unit, 'sasuke-shield');
           }
-          const retainedEffects = { heresy: c.heresy || 0, iceCrown: Boolean(c.iceCrown), darkRevives: c.darkRevives || 0 };
+          const retainedEffects = { attacks: c.attacks, modeAttacks: c.modeAttacks, heresy: c.heresy || 0, iceCrown: Boolean(c.iceCrown), darkRevives: c.darkRevives || 0 };
           delete ensureRuntime(unit).champion;
           Object.assign(state(unit), retainedEffects);
           const team = teamOf(bs, unit), at = team.indexOf(unit);
@@ -830,6 +831,62 @@
     }
     function reduction(unit) { return id(unit) === 'prime-garp' && unit.hp < unit.maxHp*.50 ? .25 : 0; }
     return { ids, entry, target, beforeAttack, multiplier, afterAttack, incoming, dodge, dodgeChance, fatal, kill, death, turn, endTurn, hypnosisTarget, reduction };
+  })();
+
+  // Alucard uses an iterative follow-up chain: no recursive depth/count cap.
+  const alucard = (() => {
+    const ID='boss-event-alucard',chains=new WeakMap();
+    const active=unit=>getEffectivePassiveCardId(unit)===ID;
+    const state=unit=>ensureRuntime(unit).hermes ||= {revived:false,clones:[],streak:0};
+    function linked(bs,unit,options){return Boolean(options.hermesToken&&chains.get(unit)===options.hermesToken&&active(unit)&&teamOf(bs,unit)===(bs.turn==='player'?bs.playerTeam:bs.enemyTeam));}
+    function applyBleed(bs,unit,target,result){
+      if(active(unit)&&getCardAttackCount(unit)%2===0&&result.hit&&!result.reflected&&result.damage>0&&isAlive(target)&&sourcePassiveAllowed(target,unit))addDot(target,'bleed',1,computeWeakenedAtk(unit)*.66,unit);
+    }
+    function clone(bs,unit){
+      if(!canCreateCompanion(unit))return;
+      const c=state(unit);c.clones=c.clones.filter(isAlive);if(c.clones.length>=3)return;
+      const pool=alliesOf(bs,unit,false).filter(ally=>!isGeneratedUnit(ally)&&!champions.uncloneable(ally));if(!pool.length)return;
+      const victim=pool[Math.min(pool.length-1,Math.floor(Math.random()*pool.length))];
+      const summon=cloneAsTemporaryAlly(victim,unit,bs,1);if(!summon)return;
+      ensureRuntime(summon).effectivePassiveId=getEffectivePassiveCardId(victim);
+      summon.display.name=`${victim.display?.name || victim.card.name} • Hermes Clone`;
+      summon.hermesOwner=unit;
+      const team=teamOf(bs,unit),indexKey=team===bs.playerTeam?'playerIndex':'enemyIndex',front=team[Number(bs[indexKey])||0];
+      const at=team.indexOf(unit);team.splice(at,0,summon);bs[indexKey]=front===unit?at:Math.max(0,team.indexOf(front));c.clones.push(summon);refreshUnitDisplay(summon);
+      safeLog(`[PASSIVE] Bird of Hermes summoned ${summon.display.name} directly in front of Alucard (${c.clones.length}/3 living Clones).`,'passive');
+    }
+    function attack(bs,unit,target,options){
+      const token={},c=state(unit);chains.set(unit,token);c.streak=0;
+      try{
+        const first=performAttack(bs,unit,target,{...options,hermesToken:token});
+        if(first.skipped||first.outOfTurn||(!first.hit&&!first.dodged&&!first.missed)||getCardAttackCount(unit)<6)return first;
+        while(isAlive(unit)&&active(unit)&&enemiesOf(bs,unit).length&&Math.random()<.66){
+          const enemy=isAlive(target)?target:activeDefender(bs,unit);if(!enemy)break;
+          const result=performAttack(bs,unit,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:.33,chainDepth:0,hermesToken:token});
+          if(result.skipped||result.outOfTurn)break;
+          heal(unit,unit.maxHp*.03,'BIRD OF HERMES',bs,unit);
+          if(result.hit&&!result.reflected&&result.damage>0){c.streak++;if(c.streak===6){clone(bs,unit);c.streak=0;}}
+          else c.streak=0;
+          target=enemy;
+        }
+        return first;
+      }finally{chains.delete(unit);c.streak=0;ensureCurrentIndices(bs);}
+    }
+    function revive(bs,unit){
+      if(!active(unit)||unit.championPermanentDeath||isAlive(unit)||isBleeding(unit)||state(unit).revived)return false;
+      const c=state(unit);c.revived=true;
+      const team=teamOf(bs,unit),key=team===bs.playerTeam?'playerIndex':'enemyIndex',next=firstLiving(team,Number(bs[key])||0);
+      unit.hp=Math.max(1,Math.round(unit.maxHp*.66));unit.defeated=false;
+      const at=team.indexOf(unit);if(at>=0)team.splice(at,1);team.push(unit);bs[key]=Math.max(0,team.indexOf(next||unit));
+      champions.state(unit).deathHandled=false;ensureRuntime(unit).passiveSuppressedUntilDeath=false;refreshUnitDisplay(unit);
+      safeLog('[PASSIVE] Bird of Hermes revived at the back with 66% max HP.','passive');return true;
+    }
+    function bleedMultiplier(bs,source){
+      if(!source)return 1;
+      const actor=bs.turn==='player'?bs.player:bs.enemy;
+      return alliesOf(bs,source,false).some(ally=>active(ally)&&ally!==actor)?1.5:1;
+    }
+    return {ID,active,state,linked,attack,applyBleed,revive,bleedMultiplier};
   })();
 
   function isTeamDefeated(team, includeReserves = false) {
@@ -1177,7 +1234,7 @@
       const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
       const remaining = [];
       for (const effect of list) {
-        const dmg = Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, Number(effect?.damage) || 0)));
+        const dmg = Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : 1))));
         if (dmg > 0 && isAlive(unit)) {
           const before = unit.hp;
           const prevented = dmg >= before && champions.fatal(battleState, unit);
@@ -1558,8 +1615,6 @@
   function beforeAttack(battleState, attacker, target) {
     const cardState = ensureCardState(attacker);
     if (!attacker || !target || !isAlive(attacker)) return;
-    cardState.ownAttackCount += 1;
-    cardState.attackCount = cardState.ownAttackCount;
     const runtime = cardState;
     runtime.lastTurnAttacked = true;
 
@@ -2603,12 +2658,13 @@
     if (!battleState || !attacker || !isAlive(attacker)) return { hit: false, killed: false, damage: 0 };
     if (attacker.isExpMonster) return { hit: false, killed: false, damage: 0, trainingDummy: true };
     ensureRuntime(attacker);
+    if (alucard.active(attacker) && !options.hermesToken) return alucard.attack(battleState,attacker,requestedTarget,options);
 
     // Root attacks must belong to the scheduled frontline. Follow-ups remain
     // inside the same initiating turn; explicit support/interceptor attacks
     // are the only other legal out-of-turn combat actions.
     const passiveId = getEffectivePassiveCardId(attacker);
-    const isLinkedFollowUp = Boolean(options.isFollowUp) && isScheduledTurnAttacker(battleState, attacker);
+    const isLinkedFollowUp = Boolean(options.isFollowUp) && (isScheduledTurnAttacker(battleState, attacker) || alucard.linked(battleState,attacker,options));
     const isExplicitSupportAction = Boolean(options.outOfTurnPassive || options.linkedAttack) && OUT_OF_TURN_SUPPORT_IDS.has(passiveId);
     const isRootAttack = (Number(options.chainDepth) || 0) === 0 && !options.isFollowUp && !options.isCounter;
     const isCounter = Boolean(options.isCounter);
@@ -2629,6 +2685,11 @@
       safeLog(`[STATUS] ${attacker.display?.name || cardOf(attacker)?.name || 'Unit'} could not attack.`, 'status');
       return { hit: false, skipped: true, killed: false, damage: 0 };
     }
+
+    // Count the legal attack once on its owner, independent of target/passive state.
+    const attackState = ensureRuntime(attacker);
+    attackState.ownAttackCount = Math.max(0, Number(attackState.ownAttackCount) || 0) + 1;
+    attackState.attackCount = attackState.ownAttackCount;
 
     target = expansion.target(battleState, attacker, target, options);
     const friendlyFire = teamOf(battleState,attacker).includes(target);
@@ -2750,6 +2811,8 @@
         ar.soul = Math.max(0, ar.soul);
       }
     }
+
+    alucard.applyBleed(battleState,attacker,target,{...result,hit:true});
 
     // Build/refresh dynamic indices after AOE or clone/revive actions.
     ensureCurrentIndices(battleState);
@@ -2910,7 +2973,7 @@
   }
 
   function checkBattleWinner(battleState) {
-    const includeReserves = battleState?.mode === 'tower' || battleState?.mode === 'raid' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
+    const includeReserves = battleState?.mode === 'tower' || battleState?.mode === 'raid' || battleState?.mode === 'boss-event' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
     if (isTeamDefeated(battleState?.enemyTeam, includeReserves)) return 'player';
     if (isTeamDefeated(battleState?.playerTeam, includeReserves)) return 'enemy';
     return null;
@@ -3004,6 +3067,7 @@
     const runtime = ensureRuntime(unit);
     const passive = getPassive(unit);
     const badges = champions.badges(unit);
+    if (alucard.active(unit)) badges.push({icon:"🩸",label:`HERMES • ${getCardAttackCount(unit)} attacks • ${alucard.state(unit).clones.filter(isAlive).length}/3 Clones`,tone:"passive",category:"passive"});
     if (isBleeding(unit)) badges.push({ icon: '🩸', label: 'BLEED • HEAL BLOCKED', tone: 'bleed', category: 'status', status: 'Anti-heal' });
     const atkDisplayPct = Math.round((Math.max(0, Number(runtime.displayAtkBonusPct) || 0) + Math.max(0, Number(runtime.temporaryAtkBonusPct) || 0)) * 100);
     const hpDisplayPct = Math.round((Math.max(0, Number(runtime.displayHpBonusPct) || 0) + Math.max(0, Number(runtime.temporaryMaxHpBonusPct) || 0)) * 100);
@@ -3340,6 +3404,7 @@
 
 
   const PASSIVE_TRIGGER_CLASSIFICATION = Object.freeze({
+    [alucard.ID]: Object.freeze(["EVERY_NTH_ATTACK","ON_FATALITY","TEAM_SUPPORT"]),
     ...Object.fromEntries([...expansion.ids].map(id => [id, Object.freeze(["ON_CARD_ATTACK_STRIKE", "ON_CARD_DEFEND_OR_HIT"])])),
     'starter-common': Object.freeze(['ON_CARD_ATTACK_STRIKE']),
     'normal-demon': Object.freeze(['ON_KILL']),
@@ -3446,6 +3511,7 @@
   // Explicit coverage registry for auditing. It mirrors the uploaded
   // cards.js IDs, not a second set of passive data.
   const PASSIVE_HANDLERS = Object.freeze({
+    [alucard.ID]: true,
     ...Object.fromEntries([...expansion.ids].map(id => [id, true])),
     'starter-common': true,
     'normal-demon': true,
