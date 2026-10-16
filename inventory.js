@@ -11,6 +11,7 @@
     speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes outside Time Trial. Tower / Time Trial / Raid shops only.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'shop' }
   }).map(([id, item]) => [id, Object.freeze({ id, type: 'potion', tier: 'rare', ...item })])));
   // Preserve the original four-potion battle pool; exclusive items never enter it.
+  const POTION_BY_STAT = new Map(Object.entries(POTIONS).map(([id, potion]) => [potion.stat, id]));
   const BATTLE_DROP_IDS = Object.freeze(['lucky_potion', 'speed_potion', 'rich_potion', 'exp_potion']);
   const definitions = new Map(Object.entries(POTIONS));
   const hasOwn = (object, id) => Object.prototype.hasOwnProperty.call(object, id);
@@ -101,8 +102,8 @@
     data.buffs[id] = Math.max(Date.now(), Number(data.buffs[id]) || 0) + DURATION_MS; persist(); return true;
   }
   function multiplier(stat, at = Date.now()) {
-    for (const [id, potion] of Object.entries(POTIONS)) if (potion.stat === stat && Number(data.buffs[id]) > at) return 1 + potion.bonus;
-    return 1;
+    const id = POTION_BY_STAT.get(stat);
+    return id && Number(data.buffs[id]) > at ? 1 + POTIONS[id].bonus : 1;
   }
   function combatTurnMs(defaultMs = 3000, at = Date.now()) { return Number(data.buffs.speed_battle_potion) > at ? 1000 : defaultMs; }
   function tick(at = Date.now()) {

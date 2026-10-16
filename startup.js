@@ -31,6 +31,7 @@
     if (event.target === host && event.filename && event.message) report('script:' + event.filename, 'A game script could not initialize: ' + event.filename.split('/').pop() + '.', event.error);
   });
   ready(() => {
+    if (!host.RollPerformanceSystem) report('startup:RollPerformanceSystem', 'Could not load roll_performance.js; performance optimizations are unavailable.');
     for (const [name, control] of [['RollViewSystem','hideRollingCardToggle'], ['SandboxSystem','sandboxOpenButton']]) {
       const feature = host[name], node = doc.getElementById(control);
       if (!feature?.ready) {

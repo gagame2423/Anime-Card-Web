@@ -28,7 +28,7 @@
     }
     return result;
   }
-  let data = load(), bridge = {}, definitions = [], reconciling = false;
+  let data = load(), bridge = {}, definitions = [], bonusDefinitions = {}, reconciling = false;
   function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); return true; } catch (error) { console.warn('Achievement save unavailable', error); return false; } }
   function compact(value) {
     for (const [unit, suffix] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']]) if (value >= unit) return `${(value / unit).toFixed(2).replace(/\.?0+$/, '')}${suffix}`;
@@ -121,7 +121,7 @@
   }
   function recordBattleWin() { if (host.SandboxSystem?.active) return; data.stats.battles = count(data.stats.battles + 1); persist(); }
   function recordCurrencyEarned(amount) { if (host.SandboxSystem?.active) return; data.stats.currencyEarned = count(data.stats.currencyEarned + count(amount)); persist(); }
-  function configure(options = {}) { bridge = options; definitions = buildDefinitions(options.cards || host.ALL_CARDS || [], options.towerTypes || []); sync(); persist(); }
+  function configure(options = {}) { bridge = options; definitions = buildDefinitions(options.cards || host.ALL_CARDS || [], options.towerTypes || []); bonusDefinitions = {}; for (const def of definitions) for (const field of ['luckBonus','expBonus','coinBonus','dropBonus']) if (def.reward[field]) (bonusDefinitions[field] ||= []).push(def); sync(); persist(); }
   function list(category = 'all') {
     return definitions.filter(def => category === 'all' || def.category === category).map(def => ({ ...def, value: progress(def), complete: progress(def) >= def.target, claimed: data.claimed[def.id] === true }));
   }
@@ -149,7 +149,8 @@
   }
   function reset() { data = fresh(); persist(); }
   function bonus(field, receipts = {}) {
-    return Number(definitions.filter(def => def.reward[field] && (data.claimed[def.id] || receipts[def.id] === true)).reduce((sum, def) => sum + def.reward[field], 0).toFixed(2));
+    let sum = 0; for (const def of bonusDefinitions[field] || []) if (data.claimed[def.id] || receipts[def.id] === true) sum += def.reward[field];
+    return Number(sum.toFixed(2));
   }
   const getLuckBonus = receipts => bonus('luckBonus', receipts);
   const getExpBonus = receipts => bonus('expBonus', receipts);

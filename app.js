@@ -81,7 +81,7 @@ const defaultState = {
 let isImportingSave = false;
 let state = loadState();
 syncOwnershipRecords();
-saveState();
+saveState(true);
 
 // ============================================================
 // RUNTIME TIMERS - NEVER DEPEND ON ROLL CLICKS
@@ -98,11 +98,20 @@ let previewSelection = null;
 let collectionNeedsRefresh = true;
 let weatherHudSignature = "";
 let lastClockSecondRendered = -1;
+let rollUiDirty = false, rollUiCanPaint = true, pendingRollPresentation = null;
+let availableRollUiSignature = '';
+const weatherHudTimers = new Map();
 
 const els = {
   totalRolls: document.getElementById("totalRolls"),
   luckValue: document.getElementById("luckValue"),
   cooldownValue: document.getElementById("cooldownValue"),
+  achievementReadyCount: document.getElementById("achievementReadyCount"),
+  inventoryModal: document.getElementById("inventoryModal"),
+  inventoryCategory: document.getElementById("inventoryCategory"),
+  inventorySearch: document.getElementById("inventorySearch"),
+  achievementModal: document.getElementById("achievementModal"),
+  saveManagerModal: document.getElementById("saveManagerModal"),
   currencyValue: document.getElementById("currencyValue"),
   collectionSummary: document.getElementById("collectionSummary"),
   collectionButton: document.getElementById("collectionButton"),
@@ -664,6 +673,7 @@ function syncOwnershipRecords() {
   state.unlocked = normalizedUnlocked;
   state.mutations = mergedMutations;
   state.inventory = canonicalInventory;
+  window.RollPerformanceSystem?.invalidateOwnership();
 }
 
 function normalizeMutationId(id) {
@@ -1016,10 +1026,11 @@ function loadState() {
   }
 }
 
-function saveState() {
+function saveState(canonicalOwnership = false) {
   if (isImportingSave || window.SandboxSystem?.active) return false;
   try {
-    syncOwnershipRecords();
+    // Rolls already update all three canonical ownership stores together.
+    if (!canonicalOwnership) syncOwnershipRecords();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
   } catch (error) {
@@ -1037,7 +1048,7 @@ function saveGame() {
 function loadGame() {
   state = loadState();
   syncOwnershipRecords();
-  saveState();
+  saveState(true);
   return state;
 }
 
@@ -1209,8 +1220,8 @@ function renderClockAndWeather(force = false) {
   // The second-level guard only avoids unnecessary text churn.
   if (force || renderedSecond !== lastClockSecondRendered) {
     lastClockSecondRendered = renderedSecond;
-    if (els.gameClock) els.gameClock.textContent = formatGameClock(state.weather.gameSeconds);
-    if (els.gameClockStatus) els.gameClockStatus.textContent = "1:1 REAL TIME";
+    setCachedText(els.gameClock, formatGameClock(state.weather.gameSeconds));
+    setCachedText(els.gameClockStatus, '1:1 REAL TIME');
   }
   renderWeatherHud(force);
 }
@@ -1220,13 +1231,15 @@ function renderWeatherHud(force = false) {
 
   const entries = getActiveWeatherEntries();
   const signature = [
-    Math.floor(state.weather.gameSeconds),
-    ...entries.map(entry => `${entry.weatherId}:${Math.ceil(entry.expiresAt - state.weather.gameSeconds)}`)
+    ...entries.map(entry => entry.weatherId)
   ].join("|");
 
-  if (!force && signature === weatherHudSignature) return;
+  if (!force && signature === weatherHudSignature) {
+    for (const entry of entries) setCachedText(weatherHudTimers.get(entry.weatherId), formatWeatherCountdown(getWeatherRemainingSeconds(entry)));
+    return;
+  }
   weatherHudSignature = signature;
-
+  weatherHudTimers.clear();
   els.activeWeatherList.innerHTML = "";
   if (els.weatherHudEmpty) els.weatherHudEmpty.textContent = entries.length ? `${entries.length} ACTIVE` : "Normal";
   if (!entries.length) return;
@@ -1250,6 +1263,7 @@ function renderWeatherHud(force = false) {
       <strong class="weather-chip__timer">${formatWeatherCountdown(getWeatherRemainingSeconds(entry))}</strong>
     `;
 
+    weatherHudTimers.set(entry.weatherId, chip.querySelector('.weather-chip__timer'));
     els.activeWeatherList.appendChild(chip);
   }
 }
@@ -1268,25 +1282,39 @@ function showWeatherToast(weather) {
 // COOLDOWN - AUTHORITATIVE BOOLEAN + TIMESTAMP
 // ============================================================
 
+function setCachedText(node, value) {
+  if (window.RollPerformanceSystem) window.RollPerformanceSystem.text(node, value);
+  else if (node && node.textContent !== value) node.textContent = value;
+}
+function setCooldownProgress(progress) {
+  const node = els.cooldownProgress; if (!node) return;
+  const transform = `scaleX(${Math.max(0, Math.min(100, progress)) / 100})`;
+  if (node.style.transform !== transform) node.style.transform = transform;
+}
 function renderCooldownUI(now = Date.now()) {
+  const hidden = window.RollViewSystem?.enabled === true;
   const baseMs = getCooldownMs();
-  const remainingMs = isCooldownActive ? Math.max(0, cooldownUntil - now) : 0;
-  const progress = isCooldownActive && cooldownDurationMs > 0
-    ? Math.min(100, Math.max(0, ((cooldownDurationMs - remainingMs) / cooldownDurationMs) * 100))
-    : 100;
-
   if (els.rollButton) {
-    els.rollButton.disabled = isCooldownActive;
-    els.rollButton.setAttribute("aria-disabled", String(isCooldownActive));
+    if (els.rollButton.disabled !== isCooldownActive) els.rollButton.disabled = isCooldownActive;
+    const aria = String(isCooldownActive);
+    if (els.rollButton.getAttribute('aria-disabled') !== aria) els.rollButton.setAttribute('aria-disabled', aria);
   }
-  if (els.cooldownProgress) els.cooldownProgress.style.width = `${progress}%`;
-  if (els.cooldownLabel) els.cooldownLabel.textContent = isCooldownActive ? formatCooldown(remainingMs) : "READY";
-  if (els.cooldownHint) {
-    els.cooldownHint.textContent = isCooldownActive
-      ? `Next roll in ${formatCooldown(remainingMs)}`
-      : "Cooldown complete";
+  if (els.cooldownProgress && els.cooldownProgress.classList.contains('is-static') !== hidden) els.cooldownProgress.classList.toggle('is-static', hidden);
+  if (hidden) {
+    // One stationary transform, no animation frames or per-tick width writes.
+    setCooldownProgress(100);
+    const interval = formatCooldown(isCooldownActive ? cooldownDurationMs : baseMs);
+    setCachedText(els.cooldownValue, interval);
+    setCachedText(els.cooldownLabel, isCooldownActive || isAutoRolling ? interval : 'READY');
+    setCachedText(els.cooldownHint, 'Hidden rolling • fixed interval');
+    return;
   }
-  if (els.cooldownValue) els.cooldownValue.textContent = formatCooldown(isCooldownActive ? remainingMs : baseMs);
+  const remainingMs = isCooldownActive ? Math.max(0, cooldownUntil - now) : 0;
+  const progress = isCooldownActive && cooldownDurationMs > 0 ? Math.min(100, Math.max(0, ((cooldownDurationMs - remainingMs) / cooldownDurationMs) * 100)) : 100;
+  setCooldownProgress(progress);
+  setCachedText(els.cooldownLabel, isCooldownActive ? formatCooldown(remainingMs) : 'READY');
+  setCachedText(els.cooldownHint, isCooldownActive ? `Next roll in ${formatCooldown(remainingMs)}` : 'Cooldown complete');
+  setCachedText(els.cooldownValue, formatCooldown(isCooldownActive ? remainingMs : baseMs));
 }
 
 let cooldownVisualFrame = null;
@@ -1312,9 +1340,11 @@ function stopCooldownVisualLoop() {
 
 function runCooldownVisualLoop() {
   stopCooldownVisualLoop();
+  if (window.RollViewSystem?.enabled) return;
   const frame = () => {
+    if (window.RollViewSystem?.enabled) { cooldownVisualFrame = null; return; }
     if (!isCooldownActive) {
-      if (els.cooldownProgress) els.cooldownProgress.style.width = "100%";
+      setCooldownProgress(100);
       cooldownVisualFrame = null;
       return;
     }
@@ -1323,7 +1353,7 @@ function runCooldownVisualLoop() {
     const progress = cooldownDurationMs > 0
       ? Math.min(100, Math.max(0, ((cooldownDurationMs - remainingMs) / cooldownDurationMs) * 100))
       : 100;
-    if (els.cooldownProgress) els.cooldownProgress.style.width = `${progress}%`;
+    setCooldownProgress(progress);
     if (remainingMs > 0) cooldownVisualFrame = requestVisualFrame(frame);
     else cooldownVisualFrame = null;
   };
@@ -1350,11 +1380,11 @@ function completeCooldown(force = false) {
   cooldownDurationMs = 0;
   clearCooldownExpiryTimer();
   stopCooldownVisualLoop();
-  renderCooldownUI(now);
 
   // Immediate Auto-Roll on cooldown expiration. The global tick also checks
   // this condition, so a throttled browser cannot strand Auto Roll.
-  if (isAutoRolling) attemptAutoRoll();
+  if (isAutoRolling && attemptAutoRoll()) return true;
+  renderCooldownUI(now);
   return true;
 }
 
@@ -1383,19 +1413,27 @@ function isCardWeatherAvailable(card) {
   const weather = card.requiredWeathers || (card.requiredWeather ? [card.requiredWeather] : []);
   return !weather.length || weather.some(name => isWeatherActive(name === 'Mangekyo' ? 'Tsukuyomi' : name));
 }
-function getSortedCardsForRolling() {
+function buildEligibleRollPool() {
   return [...ALL_CARDS]
     .filter(card => isCardRollUnlocked(card) && isCardWeatherAvailable(card))
     .sort((a, b) => b.chance - a.chance);
 }
 
-function getEffectiveChance(card) {
-  return Math.max(0.000001, card.chance / getLuckMultiplier());
+function getSortedCardsForRolling() {
+  const cache = window.RollPerformanceSystem;
+  if (!cache) return buildEligibleRollPool();
+  const key = getActiveWeatherDefinitions().map(weather => weather.id).sort().join(',') + '|' + cache.unlockKey(isCardRollUnlocked);
+  return cache.pool(key, buildEligibleRollPool);
+}
+
+function getEffectiveChance(card, luck = getLuckMultiplier()) {
+  return Math.max(0.000001, card.chance / luck);
 }
 
 function drawCardFromPool() {
+  const luck = getLuckMultiplier();
   for (const card of getSortedCardsForRolling()) {
-    const effectiveChance = getEffectiveChance(card);
+    const effectiveChance = getEffectiveChance(card, luck);
     const hitProbability = Math.min(1, 1 / effectiveChance);
     if (Math.random() < hitProbability) {
       return { card, effectiveChance, score: hitProbability };
@@ -1582,17 +1620,17 @@ function rollCard(source = "manual") {
     const questRollEvent = { startedAt: Date.now(), weatherIds: getActiveWeatherDefinitions().map(w => w.id), cardId: result.card?.id || null, mutationIds: [] };
     state.totalRolls += 1;
 
+    let visualResult = null;
     if (result.card) {
       const mutations = rollMutations();
       questRollEvent.mutationIds = mutations.map(m => m.id);
-      const display = getDisplayCard(result.card, mutations);
       const variantKey = getVariantKey(result.card.id, mutations);
       const cardId = normalizeCardId(result.card.id);
-      const ownedBeforeRoll = getOwnedCardCount(cardId) > 0;
-      const variantOwnedBeforeRoll = getVariantEntries(cardId).some(entry => entry.key === variantKey && entry.count > 0);
+      const ownedBeforeRoll = window.RollPerformanceSystem ? window.RollPerformanceSystem.hasCard(state, cardId) : getOwnedCardCount(cardId) > 0;
+      const variantOwnedBeforeRoll = window.RollPerformanceSystem ? window.RollPerformanceSystem.hasVariant(state, variantKey) : getVariantEntries(cardId).some(entry => entry.key === variantKey && entry.count > 0);
       const isNewCardOrMutation = !ownedBeforeRoll || (mutations.length > 0 && !variantOwnedBeforeRoll);
       const revealRolledCard = (window.RollViewSystem?.cardResult?.(result.card, result.effectiveChance, mutations, isNewCardOrMutation) ?? true);
-      const levelInfoBeforeRoll = getCardLevelInfo(result.card);
+      const levelInfoBeforeRoll = revealRolledCard ? getCardLevelInfo(result.card) : null;
       const duplicateXp = ownedBeforeRoll
         ? getDuplicateCardRollExperience(result.card)
         : 0;
@@ -1609,7 +1647,7 @@ function rollCard(source = "manual") {
       if (inventoryEntry) {
         inventoryEntry.count = Math.max(0, Math.floor(Number(inventoryEntry.count) || 0)) + 1;
       } else {
-        const mutationIds = mutations.map(mutation => normalizeMutationId(mutation.id));
+        const mutationIds = parseVariantKey(variantKey).mutationIds;
         state.inventory[variantKey] = {
           id: cardId,
           cardId,
@@ -1619,36 +1657,59 @@ function rollCard(source = "manual") {
         };
       }
 
-      if (revealRolledCard) showResult(result.card, result.effectiveChance, mutations);
-      if (revealRolledCard) showRewardToast(0, mutations);
-      if (revealRolledCard && els.rewardToast) {
-        const mutationText = normalizeMutationObjects(mutations).map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ");
-        const xpLabel = ownedBeforeRoll
-          ? `DUPLICATE • +${rollExp.toLocaleString("en-US")} XP (50% of Lv.${levelInfoBeforeRoll.level} requirement)`
-          : `CARD ACQUIRED • +${levelResult.gained.toLocaleString("en-US")} EXP`;
-        els.rewardToast.textContent = `${mutationText ? `✦ ${mutationText} • ` : ""}${xpLabel}`;
-      }
+      window.RollPerformanceSystem?.acquired(state, cardId, variantKey);
+      if (revealRolledCard) visualResult = {card:result.card,chance:result.effectiveChance,mutations,ownedBeforeRoll,rollExp,levelResult,levelInfoBeforeRoll};
     } else {
       state.lastResultId = null;
-      if (window.RollViewSystem?.missResult?.(result.score) ?? true) showMiss(result.score);
+      if (window.RollViewSystem?.missResult?.(result.score) ?? true) visualResult = {score:result.score};
     }
 
-    if (saveState()) window.QuestSystem.record('roll', { ...questRollEvent, id: String(state.totalRolls) });
-    refreshAchievements();
-    updateStats();
-    if (source === "auto") {
-      // Auto-Roll can fire while the player is typing/searching Collection.
-      // Defer the DOM rebuild so the active grid/search state is untouched.
-      collectionNeedsRefresh = true;
-    } else {
-      collectionNeedsRefresh = false;
-      renderCollection();
-    }
-    renderUpgradeShop();
+    if (saveState(true)) window.QuestSystem.record('roll', {...questRollEvent,id:String(state.totalRolls)});
+    refreshAchievements(false);
+    collectionNeedsRefresh = true;
+    rollUiDirty = true;
+    rollUiCanPaint = Boolean(visualResult);
+    pendingRollPresentation = visualResult;
+    if (rollUiCanPaint) scheduleRollUi();
     return true;
   } finally {
     // The cooldown remains authoritative after the result is processed.
     renderCooldownUI(Date.now());
+  }
+}
+
+function scheduleRollUi() {
+  if (window.RollPerformanceSystem) window.RollPerformanceSystem.schedule(flushRollUi);
+  else flushRollUi();
+}
+function flushRollUi(force = false) {
+  if (isImportingSave || window.SandboxSystem?.active || (!force && !rollUiCanPaint)) return;
+  if (!rollUiDirty && !pendingRollPresentation) return;
+  const presentation = pendingRollPresentation;
+  pendingRollPresentation = null; rollUiDirty = false;
+  if (presentation) {
+    if (window.RollViewSystem?.presentLast) window.RollViewSystem.presentLast();
+    else if (presentation.card) showResult(presentation.card, presentation.chance, presentation.mutations);
+    else showMiss(presentation.score);
+    if (presentation.card) {
+      const {mutations,ownedBeforeRoll,rollExp,levelResult,levelInfoBeforeRoll} = presentation;
+      showRewardToast(0, mutations);
+      if (els.rewardToast) {
+        const mutationText = mutations.map(m => String(m?.name || '')).filter(Boolean).join(' + ');
+        const xpLabel = ownedBeforeRoll ? `DUPLICATE • +${rollExp.toLocaleString('en-US')} XP (50% of Lv.${levelInfoBeforeRoll.level} requirement)` : `CARD ACQUIRED • +${levelResult.gained.toLocaleString('en-US')} EXP`;
+        els.rewardToast.textContent = `${mutationText ? `✦ ${mutationText} • ` : ''}${xpLabel}`;
+      }
+    }
+  }
+  updateStats(); refreshAchievements();
+  if (els.upgradesModal && !els.upgradesModal.classList.contains('hidden')) renderUpgradeShop();
+  if (!isAutoRolling && els.collectionModal && !els.collectionModal.classList.contains('hidden')) { collectionNeedsRefresh = false; renderCollection(); }
+}
+function onRollViewModeChange() {
+  stopCooldownVisualLoop(); renderCooldownUI(Date.now());
+  if (!window.RollViewSystem?.enabled) {
+    pendingRollPresentation = null; flushRollUi(true);
+    if (isCooldownActive) runCooldownVisualLoop();
   }
 }
 
@@ -1751,7 +1812,7 @@ function escapeCssUrl(src) {
 // ============================================================
 
 function getUniqueCount() {
-  return ALL_CARDS.filter(card => getOwnedCardCount(card.id) > 0).length;
+  return window.RollPerformanceSystem ? window.RollPerformanceSystem.unique(state) : ALL_CARDS.filter(card => getOwnedCardCount(card.id) > 0).length;
 }
 
 function getVariantEntries(cardId) {
@@ -1972,11 +2033,7 @@ function getFilteredCards() {
   return sortedCards;
 }
 
-function getAvailableRollPool() {
-  return [...ALL_CARDS]
-    .filter(card => isCardRollUnlocked(card) && isCardWeatherAvailable(card))
-    .sort((a, b) => b.chance - a.chance);
-}
+function getAvailableRollPool() { return getSortedCardsForRolling(); }
 
 function getWeatherPoolBadgeTokens(activeWeathers) {
   const colors = activeWeathers
@@ -2008,6 +2065,9 @@ function renderAvailableCards() {
   const pool = getAvailableRollPool();
   const activeWeathers = getActiveWeatherDefinitions();
   const uniqueWeatherNames = activeWeathers.map(weather => weather.name);
+  const signature = pool.map(card => card.id).join(',') + '|' + uniqueWeatherNames.join(',');
+  if (signature === availableRollUiSignature) return;
+  availableRollUiSignature = signature;
   const weatherTokens = getWeatherPoolBadgeTokens(activeWeathers);
 
   if (els.availableCardsMode) {
@@ -2304,6 +2364,7 @@ function decrementOwnershipVariant(cardId, variantKey, copies = 1) {
   if (nextCardCount > 0) state.unlocked[normalizedId] = nextCardCount;
   else delete state.unlocked[normalizedId];
 
+  window.RollPerformanceSystem?.invalidateOwnership();
   return removed;
 }
 
@@ -2440,7 +2501,7 @@ function getBestPreviewVariant(cardId) {
 function getCardById(cardId) {
   const targetId = normalizeCardId(cardId);
   if (!targetId) return null;
-  return ALL_CARDS.find(card => normalizeCardId(card?.id) === targetId) || null;
+  return window.RollPerformanceSystem ? window.RollPerformanceSystem.card(targetId) : ALL_CARDS.find(card => normalizeCardId(card?.id) === targetId) || null;
 }
 
 function openCardPreview(cardId, preferredKey = null) {
@@ -2563,11 +2624,11 @@ function getScaledExpReward(baseValue) {
 
 function updateStats() {
   const unique = getUniqueCount();
-  if (els.totalRolls) els.totalRolls.textContent = state.totalRolls.toLocaleString("en-US");
-  if (els.currencyValue) els.currencyValue.textContent = formatCurrency(state.currency);
-  if (els.collectionSummary) els.collectionSummary.textContent = `Cards: ${unique}/${ALL_CARDS.length}`;
-  if (els.luckValue) els.luckValue.textContent = `${getLuckMultiplier().toFixed(2)}x`;
-  if (els.collectionModalCount) els.collectionModalCount.textContent = `${unique}/${ALL_CARDS.length}`;
+  setCachedText(els.totalRolls, state.totalRolls.toLocaleString('en-US'));
+  setCachedText(els.currencyValue, formatCurrency(state.currency));
+  setCachedText(els.collectionSummary, `Cards: ${unique}/${ALL_CARDS.length}`);
+  setCachedText(els.luckValue, `${getLuckMultiplier().toFixed(2)}x`);
+  setCachedText(els.collectionModalCount, `${unique}/${ALL_CARDS.length}`);
   renderCooldownUI(Date.now());
 }
 
@@ -4354,13 +4415,14 @@ function finishTimeTrialBattle(won, reason = '') {
 }
 
 function renderPotionInventory() {
+  if (!els.inventoryModal || els.inventoryModal.classList.contains('hidden')) return;
   const inventory = window.InventorySystem;
   if (!inventory) return;
   const chance = inventory.dropChance(state.dropChance || 0);
   if (els.dropChanceDisplay) els.dropChanceDisplay.textContent = `Drop Chance stat: +${Number(state.dropChance || 0).toFixed(2)}% • Next potion chance: ${Math.round(chance * 100)}% • Pity: ${inventory.getPity()} misses • Item amounts x${inventory.getDropMultiplier().toFixed(2)}`;
   const grid = els.potionInventoryList;
-  if (!grid || document.getElementById('inventoryModal')?.classList.contains('hidden')) return;
-  const category = document.getElementById('inventoryCategory');
+  if (!grid) return;
+  const category = els.inventoryCategory;
   if (category) {
     const types = [...new Set(['potion', 'currency', 'material', 'gear', 'ticket', ...inventory.list().map(item => item.type)])];
     const selected = category.value || 'all', signature = JSON.stringify(types);
@@ -4374,7 +4436,7 @@ function renderPotionInventory() {
     }
   }
   inventory.renderGrid(grid, {
-    search: document.getElementById('inventorySearch')?.value || '', category: category?.value || 'all',
+    search: els.inventorySearch?.value || '', category: category?.value || 'all',
     onUse: id => {
       updateStats(); renderUpgradeShop(); renderPotionInventory();
       if (id === 'speed_battle_potion' && battleState?.isBattling && !battleState.finished && !isTimeTrialBattle()) scheduleNextBattleTurn();
@@ -4806,14 +4868,15 @@ function applyAchievementReward(achievement) {
     return true;
   } catch (error) { state = previous; console.warn('Achievement reward save failed', error); return false; }
 }
-function refreshAchievements() {
+function refreshAchievements(render = true) {
   const achievements = window.AchievementSystem;
   if (!achievements || isImportingSave) return;
   achievements.sync(getAchievementSnapshot());
+  if (!render) return;
   const ready = achievements.list().filter(item => item.complete && !item.claimed && !item.automatic).length;
-  const badge = document.getElementById('achievementReadyCount');
-  if (badge) { badge.textContent = ready ? String(ready) : ''; badge.hidden = ready === 0; }
-  if (!document.getElementById('achievementModal')?.classList.contains('hidden')) renderAchievements();
+  const badge = els.achievementReadyCount;
+  setCachedText(badge, ready ? String(ready) : ''); if (badge && badge.hidden !== (ready === 0)) badge.hidden = ready === 0;
+  if (els.achievementModal && !els.achievementModal.classList.contains('hidden')) renderAchievements();
 }
 function renderAchievements() {
   const achievements = window.AchievementSystem;
@@ -4876,8 +4939,8 @@ document.getElementById('questCloseButton')?.addEventListener('click', () => clo
 
 function globalTick() {
   if (isImportingSave || window.SandboxSystem?.active) return;
-  if (!document.getElementById('saveManagerModal')?.classList.contains('hidden')) renderSaveTransferCooldowns();
-  refreshAchievements();
+  if (els.saveManagerModal && !els.saveManagerModal.classList.contains('hidden')) renderSaveTransferCooldowns();
+  refreshAchievements(!(window.RollViewSystem?.enabled && isAutoRolling));
   const now = Date.now();
   const previous = Number(state.weather.lastRealTimestamp);
   const deltaSeconds = Number.isFinite(previous)
@@ -4885,15 +4948,11 @@ function globalTick() {
     : 0;
   state.weather.lastRealTimestamp = now;
 
-  const beforeWeatherSignature = JSON.stringify(state.weather.active.map(entry => [entry.weatherId, entry.expiresAt]));
-  const clockChange = advanceGameClock(deltaSeconds);
-  const afterWeatherSignature = JSON.stringify(state.weather.active.map(entry => [entry.weatherId, entry.expiresAt]));
-  const weatherChanged = clockChange.weatherChanged || clockChange.expired || beforeWeatherSignature !== afterWeatherSignature;
+  advanceGameClock(deltaSeconds);
 
   window.InventorySystem?.tick(now);
   window.TimeTrialSystem?.checkDeadline();
-  renderTimeTrialControls();
-  if (isBossEventBattle()) renderBossEventControls();
+  if (els.battleModal && !els.battleModal.classList.contains('hidden')) { renderTimeTrialControls(); if (isBossEventBattle()) renderBossEventControls(); }
   renderPotionInventory();
   completeCooldown(false);
   renderClockAndWeather(false);
@@ -4902,15 +4961,9 @@ function globalTick() {
   // refreshed whenever the global ticker runs and immediately after weather changes.
   renderAvailableCards();
 
-  if (weatherChanged) {
-    // Weather changes affect the roll pool, not collection ownership. Do not
-    // rebuild the Collection DOM from the background ticker: that would replace
-    // the player's active search/filter DOM state while they are browsing.
-    saveState();
-  } else {
-    // Persist elapsed real-time clock so reload recovery is deterministic.
-    saveState();
-  }
+  // Only the clock changes here; ownership is already canonical. Persist each
+  // tick without rebuilding every variant in the player's collection.
+  saveState(true);
 
   // Global tick is the second authoritative Auto-Roll safety net.
   if (isAutoRolling && !isCooldownActive) attemptAutoRoll();
@@ -4961,6 +5014,7 @@ function openModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
   document.getElementById('utilityMenu')?.removeAttribute('open');
+  flushRollUi(true);
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
   if (id === "collectionModal") {
@@ -5090,6 +5144,8 @@ function closeModal(id) {
 function resetGame() {
   const confirmed = window.confirm("Reset rolls, 💵 upgrades, collection, mutations, weather, equipment, items, achievements, Tower and Time Trial progress? This cannot be undone.");
   if (!confirmed) return;
+  pendingRollPresentation = null; rollUiDirty = false; rollUiCanPaint = true;
+  window.RollPerformanceSystem?.cancel(flushRollUi);
   clearAutoContinueBattleTimer();
   autoContinueBattleEnabled = false;
   try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
@@ -5395,6 +5451,7 @@ els.sortSelect?.addEventListener("change", () => {
 els.autoRollToggle?.addEventListener("change", () => {
   isAutoRolling = Boolean(els.autoRollToggle.checked);
   if (isAutoRolling) attemptAutoRoll();
+  else { flushRollUi(true); renderCooldownUI(Date.now()); }
 });
 
 els.previewSalvageButton?.addEventListener("click", handlePreviewSalvage);
@@ -5538,7 +5595,7 @@ els.battleSetup?.classList.remove('hidden');
 
 function initializeGameViews() {
   try {
-    window.RollViewSystem?.configure?.({ showResult, showMiss });
+    window.RollViewSystem?.configure?.({showResult,showMiss,onModeChange:onRollViewModeChange});
   } catch (error) { window.GameStartup?.report('roll-ui', 'Roll display initialization failed.', error); }
   try {
     window.SandboxSystem?.configure?.({
@@ -5551,7 +5608,7 @@ function initializeGameViews() {
   onExit: () => {
     els.battleModal?.classList.remove('hidden');
     document.body?.classList.add('modal-open');
-    resumeGameRuntime();
+    resumeGameRuntime(); flushRollUi(true);
     if (battleState?.finished) scheduleAutoContinueBattle();
     if (isAutoRolling && !isCooldownActive) attemptAutoRoll();
   }

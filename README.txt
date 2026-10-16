@@ -1,39 +1,61 @@
-NHẬT KÝ SỬA LỖI TRIỂN KHAI WEB — 16/10/2026
+NHẬT KÝ CẬP NHẬT HIỆU NĂNG ROLL — 16/10/2026
 
-1. ĐỒNG BỘ HTML, JAVASCRIPT VÀ CSS
+1. HIDE ROLLING CARD: GIẢM TẢI GIAO DIỆN
 
-Đã kiểm tra tên tệp và ID: roll_view.js, sandbox.js cùng các module được tham chiếu đúng chữ hoa/thường. Không phát hiện lỗi casing trong gói nguồn được kiểm tra.
+Khi bật Hide Rolling Card, thanh tiến trình phía dưới đứng yên, không chạy vòng requestAnimationFrame. Cooldown hiển thị thời gian giữa hai lượt, ví dụ 0.38s, thay cho số đếm ngược thay đổi liên tục. Thời gian khóa roll và timer kích hoạt lượt tiếp theo vẫn giữ nguyên.
 
-Qua HTTP, trường hợp HTML mới kết hợp app.js cũ tái hiện đúng hai lỗi: Hide Rolling Card không phản hồi và Sandbox không mở, trong khi Console không báo lỗi. Đây là một nguyên nhân đã tái hiện trong môi trường kiểm tra; không phải kết luận từ việc truy cập website đang triển khai của người chơi.
+Roll ra thẻ/biến thể trùng hoặc Miss không dựng ảnh, nội tại, hiệu ứng kết quả, toast nhận thẻ, shop hay Collection. Bỏ phép tính Display Card dư thừa trước khi biết có cần hiển thị kết quả hay không. Trạng thái ẩn chỉ được ghi vào DOM khi thật sự chuyển từ hiện sang ẩn.
 
-Toàn bộ URL JS/CSS hiện dùng đường dẫn tương đối ./ và mã phiên bản ?v=20261016-deploy-fix-1 để tách khỏi tài nguyên URL cũ trong cache. Script dùng defer, giữ đúng thứ tự phụ thuộc và chạy khi HTML đã được phân tích. Áp dụng được cả khi game nằm ở thư mục gốc hoặc đường dẫn con của GitHub Pages.
+Thẻ chưa sở hữu hoặc mutation/double mutation mới vẫn được hiện. Mỗi kết quả hiển thị được gộp vào một khung hình; nếu kết quả đã bị lượt kế tiếp thay thế, hủy phần trình bày cũ, tránh hàng đợi animation hoặc ảnh lỗi thời.
 
-2. SỬA HIDE ROLLING CARD
+Bộ đếm và số lượng thẻ tiếp tục tăng trong dữ liệu. Trong chuỗi roll ẩn ra bản trùng, phần tổng kết trên màn hình giữ nguyên để tránh repaint; cập nhật khi có kết quả mới cần hiện, tắt Auto Roll, tắt Hide Rolling Card hoặc mở một cửa sổ giao diện. Mở Collection sẽ đọc dữ liệu hiện tại. Tắt Hide cũng khôi phục kết quả gần nhất và animation tiến trình thông thường.
 
-Binding chờ DOM sẵn sàng và có thể khởi tạo lại mà không gắn trùng listener. Khi ON, kết quả trùng được ẩn bằng hidden, class hidden và display:none !important trực tiếp; không còn phụ thuộc riêng vào stylesheet đang được cache.
+2. CACHE SỞ HỮU VÀ POOL ROLL
 
-Thẻ chưa sở hữu hoặc mutation/double mutation mới vẫn hiện đến lần roll được chấp nhận tiếp theo. Double mutation đảo thứ tự thành phần vẫn là cùng biến thể. Khi OFF, có thể xem lại kết quả đang ẩn mà không phát sinh roll hoặc nhận thêm thẻ.
+Thêm roll_performance.js, tách riêng các cache và hàng đợi trình bày:
+- Map tra cứu thẻ theo ID.
+- Set kiểm tra đã sở hữu thẻ/biến thể, với độ phức tạp trung bình O(1) sau khi xây chỉ mục.
+- Cập nhật Set khi nhận thẻ; làm mới khi chuẩn hóa save, thay dữ liệu, salvage hoặc Evolution. Các thao tác thay state được nhận biết qua tham chiếu dữ liệu.
+- Chỉ lọc/sắp xếp lại pool khi tập thời tiết hoặc điều kiện mở khóa thay đổi. Không gọi thêm RNG; giữ thứ tự xét thẻ và xác suất cũ.
+- Tính Luck một lần cho một lần rút pool, thay cho lặp lại trên từng thẻ ứng viên.
 
-Giữ nguyên RNG, cộng thẻ, EXP, quest và bộ đếm. Nếu module trình bày không tải được, luồng roll chính vẫn có thể hoạt động và giao diện báo lỗi tải. Nếu trình duyệt chặn ghi tùy chọn vào localStorage, công tắc vẫn hoạt động trong phiên hiện tại; tooltip thông báo không lưu được tùy chọn.
+Chỉ mục được xây khi cần và cập nhật dần; không quét toàn bộ kho để xét New Card/New Mutation trên từng roll. Cache pool chỉ giữ một tập hiện hành, không tích lũy lịch sử.
 
-3. SỬA KHỞI TẠO VÀ LỐI VÀO SANDBOX
+3. GIẢM REFLOW, REPAINT VÀ CẤP PHÁT
 
-Kiểm tra thành phần DOM, dữ liệu thẻ, module mutation/cấp/element/passive và cầu nối với app.js trước khi mở. Chuẩn bị đội hình trước khi chuyển khỏi Arena; lỗi mở không để trạng thái Sandbox bị kẹt đang hoạt động.
+Gộp cập nhật kết quả cần hiện, thông số và achievement UI bằng một hàng đợi requestAnimationFrame. Vòng RNG, cooldown, ghi save và quest chạy độc lập với hàng đợi này; không chờ khung hình mới để nhận roll.
 
-Bổ sung kiểm tra null cho các phần tùy chọn, listener và thao tác render. Khởi tạo nhiều lần không nhân đôi listener, danh sách thời tiết hoặc lượt chiến đấu. Lỗi bắt đầu/chạy trận được hiển thị, đồng thời dừng timer an toàn.
+Tiến trình ở chế độ hiện thẻ dùng transform:scaleX thay cho cập nhật width. Các nhãn chỉ được ghi lại khi nội dung đổi. Cache các DOM reference dùng thường xuyên; không query DOM trong vòng animation tiến trình.
 
-Giữ đầy đủ chọn thẻ Index cho hai đội, mutation, Level/HP/ATK, timer, preset, Start, Pause, Step và Exit. Runtime, RNG, thẻ và nhật ký Sandbox vẫn độc lập. Trận thử không ghi quest, achievement, EXP, VNĐ, vật phẩm, tiến trình hoặc đội hình thật.
+Available Rolls không dựng lại nếu pool/thời tiết hiển thị không đổi. Banner thời tiết giữ nguyên các chip và chỉ đổi chữ countdown; chỉ dựng cấu trúc lại khi thành phần hoặc thứ tự thời tiết thay đổi. Không cập nhật nội dung modal item/Arena khi modal tương ứng đang đóng.
 
-4. THÔNG BÁO LỖI TRIỂN KHAI
+Tra cứu bonus achievement và potion theo nhóm/chỉ số, tránh tạo các mảng filter/reduce/Object.entries trên mỗi lần tính Luck hoặc EXP. Dùng lại bản ghi kết quả gần nhất; hàng đợi chỉ giữ công việc cần thiết, không thêm listener hay phần tử hiệu ứng theo từng roll.
 
-Thêm startup.js để hiển thị thông báo khi module không tải, script không khởi tạo được hoặc giao diện tính năng chưa sẵn sàng. Nút tính năng chưa khởi tạo được sẽ bị vô hiệu hóa kèm hướng dẫn, thay cho nút bấm không phản hồi.
+Khi tab bị ẩn, trì hoãn công việc trình bày; khi quay lại chỉ xử lý trạng thái mới nhất. Không thay cơ chế thời gian thực, background audio hoặc chính sách throttle của trình duyệt.
 
-app.js bổ sung kiểm tra null cho binding, cập nhật chữ và các điều khiển Arena liên quan. Phần trình bày roll và Sandbox được khởi tạo độc lập; lỗi một phần không tự động bỏ qua khởi tạo phần còn lại.
+4. GIỮ NGUYÊN LƯU TRỮ VÀ TIẾN TRÌNH
 
-5. KIỂM TRA VÀ CÁCH ÁP DỤNG
+Mỗi lượt được chấp nhận vẫn cập nhật đủ unlocked, mutations, inventory, EXP, bộ đếm và sự kiện quest. Save chính vẫn được ghi sau từng roll; không chuyển sang cơ chế chỉ lưu định kỳ và không bỏ qua sự kiện nhiệm vụ.
 
-Đã kiểm tra bằng Chromium qua máy chủ HTTP phân biệt hoa/thường: đường dẫn con, tài nguyên có phiên bản, thẻ mới/trùng/mutation mới, CSS xung đột, tùy chọn lưu qua reload, khởi tạo lặp, Sandbox thắng trận/timer/Exit, module 404 và DOM thiếu. So sánh trước/sau trận thử xác nhận localStorage, quest, achievement, tiến trình chính, Arena và dữ liệu thẻ gốc không thay đổi.
+Vì roll cập nhật đồng bộ ba kho sở hữu theo định dạng chuẩn, bỏ bước chuẩn hóa lại toàn bộ kho ở cuối từng roll. Tick đồng hồ cũng không dựng lại sở hữu. Các đường lưu khác vẫn giữ chuẩn hóa; load/import/salvage/Evolution làm mới chỉ mục phù hợp.
 
-Khi triển khai, giải nén và cập nhật đồng bộ toàn bộ 23 tệp trong ZIP vào thư mục phục vụ game. Giữ nguyên tên tệp và đường dẫn tương đối; bảo đảm startup.js, levels.js, roll_view.js và sandbox.js cùng nằm cạnh index.html. Sau khi bản triển khai hoàn tất, tải lại trang; có thể dùng Ctrl+F5 để làm mới HTML cũ đang cache.
+Việc serialize và ghi save đầy đủ vẫn phụ thuộc kích thước dữ liệu; chỉ phép kiểm tra sở hữu là O(1). Không đổi schema save, bảo vệ .acrsave, hai cooldown 7 ngày, công thức EXP, cân bằng, drop rate, Tower, Raid, Time Trial, Boss Event hoặc cách ly Sandbox.
 
-Giữ các tài nguyên ảnh/âm thanh hiện có của dự án. Bản này không đổi cân bằng, nội tại chiến đấu, checksum .acrsave hoặc cooldown 7 ngày. Gói bàn giao chỉ gồm mã nguồn và README.txt; không có Excel, asset mới, script kiểm thử hay log.
+5. KIỂM TRA HIỆU NĂNG VÀ TÍNH ĐÚNG
+
+Trong ca đo Chromium với 807 biến thể, xử lý 20 lượt roll ẩn giảm từ khoảng 7.2 giây xuống khoảng 0.03 giây. Đây là phép đo chi phí xử lý cưỡng bức các lượt trong môi trường kiểm tra, không phải thay đổi tốc độ/cooldown game hay cam kết cho mọi thiết bị.
+
+Đối chiếu 200 lượt bằng cùng seed cho kết quả khớp về thứ tự thẻ, mutation, số lượng, EXP, quest, achievement, save và số lần gọi RNG (12,675 lần trong ca đo).
+
+Vòng Auto Roll qua timer trong 10 giây xử lý và lưu 27 lượt mà không ghi lại DOM của thẻ, progress, bộ đếm hoặc sidebar, không dựng artwork, không quét biến thể hoặc chuẩn hóa toàn kho. Kiểm tra thêm 5,000 lượt sau giai đoạn làm nóng không tăng số DOM node hay listener; đủ 5,100 lượt được lưu.
+
+Đã kiểm tra hiện thẻ mới/mutation mới, ẩn bản trùng, đổi ON/OFF, dừng Auto Roll, cập nhật pool khi thời tiết/mở khóa thay đổi, thời tiết hết hạn, salvage/load, HTTP ở đường dẫn con, thông báo thiếu module và cách ly Sandbox.
+
+6. TỆP VÀ TRIỂN KHAI
+
+Module mới: roll_performance.js.
+Các tệp tích hợp: app.js, roll_view.js, achievements.js, inventory.js, startup.js, index.html và styles.css.
+
+Gói ZIP chứa đầy đủ 24 tệp sản xuất, gồm README.txt này. Cập nhật đồng bộ toàn bộ nội dung ZIP, giữ roll_performance.js cạnh index.html. JS/CSS dùng mã phiên bản 20261016-roll-performance-1 để tránh trộn với bản cache cũ. Sau triển khai, tải lại trang hoặc Ctrl+F5.
+
+Không có Excel, script kiểm thử, log hay asset mới trong gói. Tiếp tục dùng các ảnh/âm thanh hiện có của dự án.
