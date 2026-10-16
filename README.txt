@@ -1,124 +1,105 @@
-NHẬT KÝ CẬP NHẬT 16/10/2026
-NHẬP SỐ CHÍNH XÁC, MADARA LUBU, SHIELD VÀ QUEST CARD
+NHẬT KÝ CẬP NHẬT — SANDBOX, ẨN THẺ ROLL, CẤP THẺ VÀ MARCO
+Ngày: 16/10/2026
 
-1. NHẬP ĐỘ KHÓ BẰNG SỐ
+1. CÔNG TẮC HIDE ROLLING CARD
 
-- Lobby Raid và Boss Event có thêm ô nhập số bên cạnh thanh trượt.
-- Nhập số nguyên từ 1 đến 1.000; nhấn Enter hoặc rời ô để xác nhận. Thanh trượt, level địch, phần xem trước và dữ liệu lưu đồng bộ theo giá trị đã xác nhận.
-- Số vượt khoảng được đưa về đầu mút hợp lệ; phần thập phân được làm tròn xuống. Ô trống trả về độ khó đang lưu.
-- Game không ghi đè nội dung đang gõ khi lobby tự cập nhật. Khóa cả hai điều khiển trong lúc trận đang diễn ra.
+Thêm công tắc ON/OFF ngay bên dưới Cooldown, ở góc phải thanh thông số của màn hình Roll. Trạng thái được lưu khi tải lại trang và đi cùng save .acrsave.
 
-2. THÀNH TỰU BOSS EVENT CỘNG DỒN
+Khi ON:
+- Ẩn hình thẻ và hiệu ứng kết quả trùng; hiển thị vùng thông báo nhẹ thay thế.
+- Hiện kết quả nếu nhận một thẻ chưa sở hữu, hoặc nhận một mutation/biến thể double mutation chưa sở hữu của thẻ đó.
+- Thẻ mới giữ nguyên trên màn hình đến lần roll được chấp nhận tiếp theo. Bấm khi còn cooldown không làm mất kết quả đang xem.
+- Double mutation có cùng hai thành phần được coi là cùng biến thể, dù thứ tự hai mutation đảo ngược.
+- Nếu đã sở hữu thẻ dưới dạng mutation, roll bản Normal không được tính là mutation mới.
+- Miss cũng không phát hiệu ứng hình ảnh khi đang ẩn.
 
-- Theo dõi tổng số lần thắng đã lưu của tất cả loại Boss Event, tách biệt với tổng thắng Raid.
-- Các mốc: 1; 10; 100; 1.000; 10.000; 100.000; 1.000.000; 10.000.000; 100.000.000.
-- Mỗi mốc cho +0,1 Drop Multiplier vĩnh viễn sau khi nhấn Claim reward trong Achievements, mục Total Boss Event clears.
-- Hoàn tất cả 9 mốc Boss Event cho +0,9. Kết hợp 9 mốc Raid hiện có (+0,45), Drop Multiplier tối đa từ hai nhóm này là x2,35.
-- Drop Multiplier áp dụng cho số lượng vật phẩm rơi như Shards, Raid Coins, Boss Event Coins, Tower Coins và key; không nhân VNĐ hoặc EXP, không sửa xác suất thẻ Secret.
-- Số lượng = floor(số lượng gốc x Drop Multiplier), thêm 1 với xác suất bằng phần thập phân còn lại.
-- Khôi phục phần thưởng đang chờ không cộng thêm một lần thắng. Save chấp nhận các phần thưởng đã chốt với Drop Multiplier đến x2,35.
+Khi OFF, khôi phục cách hiển thị thông thường. Có thể xem lại kết quả gần nhất đang bị ẩn mà không roll thêm hoặc nhận thêm phần thưởng.
 
-3. MADARA LUBU: MỐC MANGEKYO TOWER TẦNG 200
+Việc xét sở hữu được thực hiện trước khi cộng thẻ vừa roll. RNG, cooldown, Auto Roll, bộ đếm roll, cộng thẻ, EXP và các sự kiện nhiệm vụ vẫn đi qua luồng xử lý thông thường; công tắc chỉ điều khiển phần trình bày.
 
-- Mangekyo dùng Tower Tsukuyomi hiện có; không tạo thêm một Tower hoặc thay đổi điều kiện đội hình người chơi.
-- Thắng tầng 200 của Tower Tsukuyomi tự cấp 1 Madara Lubu bản Normal và mở khóa roll vĩnh viễn. Chỉ roll được khi Tsukuyomi/Mangekyo đang hoạt động.
-- Mã thẻ: madara-lubu. Điều kiện: tower_floor_200_tsukuyomi.
-- Element Fire; Secret; tỷ lệ 1 trong 10.000.000; HP cấp 1: 500.000; ATK cấp 1: 100.000.
-- Artwork tham chiếu: assets/cards/madaralubu.png.
+2. BỎ GIỚI HẠN CẤP CŨ
 
-Divine Steed:
-- 10% né đòn thường và đòn gây sát thương từ passive. Né thành công khóa passive của người đánh trong 5 lượt của người đó.
-- Mỗi lần nhận Stun có 50% kháng Stun; không đồng nhất Stun với Freeze.
-- Từ đòn thứ 5, mỗi đòn có 50% tạo follow-up gây 100% ATK hiện tại. Follow-up có thể tiếp tục kích hoạt follow-up, không áp giới hạn số đòn cố định.
-- Follow-up trúng và gây sát thương áp dụng Bleed trong 3 lượt, mỗi lượt bằng 25% ATK hiện tại tại lúc áp dụng.
-- Mỗi đòn có 20% gọi một đồng đội còn sống và không bị khống chế đánh hỗ trợ. Các đòn gọi hỗ trợ được xử lý qua hàng đợi để không tạo đệ quy JavaScript.
-- Khi là đơn vị duy nhất còn sống trong đội, triệu hồi 3 Clone đúng một lần/trận. Mỗi Clone có 50% max HP và ATK hiện tại của Madara; mỗi Clone nhận riêng shield bằng 50% max HP của Madara tại lúc triệu hồi.
-- Mỗi Clone chọn ngẫu nhiên một passive của đồng đội gốc đã chết, tuân thủ các ngoại lệ không được sao chép đang có. Nếu không có passive hợp lệ, Clone không nhận passive.
-- Clone/summon không được tạo thêm Clone/summon. Không thêm giới hạn triệu hồi chung cho các thẻ khác.
+Bỏ giới hạn gameplay Lv.999 và các kiểm tra tương ứng trong hệ thống cấp thẻ, chiến đấu và EXP Time Trial. Thẻ tiếp tục tăng cấp qua Lv.100, Lv.999 và Lv.1.000.
 
-4. SHIELD CHẶN SÁT THƯƠNG DƯ
+Bỏ thao tác migration cũ tự hạ thẻ về Lv.10 khi save chưa có cờ migration. Các bản ghi cấp hợp lệ trong save mới/cũ được giữ nguyên; dữ liệu cardProgress chính được ưu tiên, dữ liệu cấp trong các kho cũ chỉ bổ sung bản ghi còn thiếu. Cờ migration lịch sử không kích hoạt lại thao tác hạ cấp.
 
-- Nếu shield còn lớn hơn 0 khi nhận một đòn, shield hấp thụ toàn bộ đòn đó. Phần vượt giá trị shield không chuyển sang HP.
-- Ví dụ: shield 10 nhận 20 sát thương -> shield về 0, HP giữ nguyên. Đòn tiếp theo mới gây sát thương HP khi không còn shield.
-- Nếu shield lớn hơn sát thương, trừ đúng sát thương vào shield và vẫn giữ nguyên HP.
-- Áp dụng cho đòn thường, đòn passive và từng tick Burn/Bleed. Shield không xóa trạng thái Burn/Bleed hoặc thời gian còn lại của chúng.
-- Shield vỡ vẫn giữ hiệu ứng vỡ shield vốn có. Đòn được shield chặn không tiêu thụ hiệu ứng sống sót/hồi sinh do xét nhầm sát thương chí tử.
-- Sát thương dùng cho Mana và thống kê VNĐ Tower là HP thực sự bị mất; sát thương bị shield chặn không được tính.
+Công thức hiện hành được giữ nguyên:
+- Hệ số HP và ATK theo cấp L: 1 + 0,075 x (L - 1).
+- EXP để lên cấp từ L: floor(100 x hệ số độ hiếm x L).
+- Hệ số độ hiếm: Common = 1; Rare = 1,6; Epic = 2,4; Legendary = 3,6; Mythic = 5,2; Secret = 8.
+- EXP để tăng liên tiếp n cấp từ L: 100 x hệ số độ hiếm x n x (L + (n - 1) / 2).
+- Tìm số cấp đủ EXP bằng tìm kiếm nhị phân, tránh vòng lặp kéo dài khi nhận lượng EXP lớn.
 
-5. HỆ THỐNG QUEST CARD RIÊNG
+Chỉ giữ ranh giới số nguyên an toàn của JavaScript (Number.MAX_SAFE_INTEGER = 9.007.199.254.740.991), không dùng Lv.100 hoặc Lv.999 làm trần gameplay.
 
-- Thêm quest.js để quản lý định nghĩa quest, sự kiện tiến độ, lưu localStorage, nhận quest, đối soát thưởng và giao diện.
-- Mở menu ... rồi chọn Quest Cards; mục này tách biệt với Evolution.
-- Giao diện quest hiển thị tên và artwork, không hiển thị HP, ATK hoặc passive. Index cũng ẩn passive của Quest Card chưa mở khóa.
-- Nhấn Accept Quest để bắt đầu theo dõi. Không lấy lại số roll, Index, số trận hoặc số quái đã hạ trong quá khứ.
-- Các bước chạy tuần tự. Chỉ bước đang mở được cộng; sự kiện hoàn tất bước trước không được dùng lại cho bước sau.
-- Trận đã bắt đầu trước khi nhận quest không được tính. Không thể nhận quest mới khi đang đánh hoặc đang chuyển save.
-- Hoàn thành trận tính cả thắng và thua, kể cả các chế độ đặc biệt. Bỏ cuộc, thoát giữa trận và trận chưa hoàn tất khi tải lại không tính.
-- Điều kiện thời tiết của lượt roll lấy tại lúc roll; điều kiện thời tiết của trận lấy lúc bắt đầu; điều kiện thời tiết khi hạ quái lấy tại lúc hạ quái.
-- Điều kiện có Igris xét đội hình ban đầu. Mỗi Normal Demon gốc được tính tối đa một lần trong một trận khi bị phía người chơi hạ; Clone/summon không tăng bộ đếm này.
-- Lượt roll hụt vẫn tính cho bước yêu cầu số lần roll; bước yêu cầu thẻ hoặc mutation chỉ tính kết quả phù hợp. Double mutation được xét từng thành phần.
-- Hoàn tất toàn bộ bước tự cấp 1 thẻ bản Normal, không nhận mutation từ thời tiết đang bật. Receipt bảo đảm không cấp trùng khi tải lại hoặc khôi phục thưởng đang chờ.
-- Sau đó thẻ tham gia roll tiêu chuẩn theo điều kiện thời tiết riêng của thẻ. Tiến độ, trạng thái nhận quest và receipt thưởng đi cùng gói .acrsave; save cũ chưa có kho quest vẫn nhập được.
+Điều kiện Evolution yêu cầu Lv.100 trở lên và khoảng độ khó Raid/Boss Event 1–1.000 vẫn giữ nguyên, vì đây không phải giới hạn cấp thẻ người chơi.
 
-SUNG JIN WOO
+3. SỬA PHOENIX INFERNO CỦA MARCO
 
-- Element Water; Secret; tỷ lệ 1 trong 2.023.000; HP cấp 1: 223.000; ATK cấp 1: 22.300. Roll trong Shadow sau khi mở khóa.
-- Artwork: assets/cards/sungjinwoo.png.
-- Bước 1: hoàn thành 1.000 trận 1v1 trong Shadow.
-- Bước 2: roll 10.000 lần trong Shadow.
-- Bước 3: hoàn thành 1.000 trận ở bất kỳ chế độ nào với Igris trong đội hình ban đầu.
-- Bước 4: roll Igris mang Monarch, chấp nhận Monarch trong double mutation.
+Lượt cứu đồng đội một lần/trận hoạt động như cơ chế ngăn tử vong:
+- Khi một đồng đội khác nhận đòn chí tử, hoặc lượng HP sau sát thương sẽ xuống dưới 10% max HP, Marco còn sống và dùng được nội tại sẽ cứu đồng đội đó.
+- Ngăn tử vong trước khi chạy các xử lý chết, hạ gục hoặc hồi sinh riêng của nạn nhân; không yêu cầu nạn nhân phải còn HP sau đòn chí tử.
+- Đổi vị trí Marco với đồng đội được cứu, rồi hồi đồng đội lên max HP.
+- Đánh dấu đã dùng lượt cứu trước các callback để tránh kích hoạt lặp.
+- Bleed vẫn chặn hồi HP. Nếu được cứu khỏi đòn chí tử trong lúc Bleed, đồng đội còn ít nhất 1 HP.
+- Đòn bị shield hấp thụ hết không tiêu tốn lượt cứu khi đồng đội chưa rơi vào ngưỡng nguy hiểm.
+- Áp dụng cho sát thương thường, sát thương nội tại và Burn/Bleed. Marco đã chết hoặc bị khóa nội tại không thể cứu.
+- Sát thương thực sự đã trừ HP được ghi nhận trước bước hồi máu, tránh mất số liệu sát thương của trận.
 
-Systems Stats:
-- Mỗi lần chính thẻ này hạ địch, tạo một Shadow không có passive với 50% max HP và ATK của kẻ bị hạ; giữ các ngoại lệ không được sao chép.
-- Chọn một bonus khi bắt đầu trận và chọn lại sau mỗi lần hạ địch: +15% ATK, +20% max HP hoặc hồi 1,5% max HP mỗi đòn. Bonus giữ nguyên đến lần hạ tiếp theo, không cộng dồn với chính nó và không xóa buff từ nguồn khác.
-- Mỗi đòn chọn một hành động: Hunter Slash gây 120% ATK; Shadow Attack gọi một Shadow hoặc đồng đội ở sau đánh hỗ trợ; Fang Strike gây 60% ATK lên 2 địch phía trước.
+Không đổi chỉ số gốc, tỷ lệ chặn đòn/counter hoặc cơ chế dodge tăng HP của Marco.
 
-FRIEREN
+4. SANDBOX MODE — KHU VỰC THỬ NGHIỆM ĐỘC LẬP
 
-- Element Holy; Secret; tỷ lệ 1 trong 2.500.000; HP cấp 1: 200.000; ATK cấp 1: 25.000. Roll trong Heavenly sau khi mở khóa.
-- Artwork: assets/cards/frieren.png.
-- Bước 1: hạ 10.000 Normal Demon ở bất kỳ chế độ nào.
-- Bước 2: hoàn thành 1.000 trận 1v1 trong Heavenly.
-- Bước 3: roll 1.000 thẻ mang Angelic, tức mutation của Heavenly; chấp nhận double mutation.
+Lối vào: nút SANDBOX MODE bên cạnh tiêu đề Battle Arena. Chỉ mở khi không có trận thật hoặc thao tác chuyển save đang diễn ra.
 
-Endless Mana:
-- Mỗi lần mất HP do sát thương nhận +3,5% Mana. Shield chặn hết sát thương không cho Mana.
-- Hệ số sát thương từ Mana = 1 + 0,005 x số điểm % Mana. Ví dụ 50% Mana cho +25% sát thương; 100% Mana cho +50%.
-- Đạt 100% Mana: hồi 35% max HP, dùng Zoltraak gây 175% ATK hiện tại với bonus Mana tương ứng rồi đặt Mana về 0. Không có chuyển sát thương dư sang mục tiêu khác.
-- Nếu còn sống sau đòn và HP dưới 25%, lập tức dùng Zoltraak và nhận 30% Mana, đúng một lần/trận.
-- Đòn thường được thay bằng một phép ngẫu nhiên: Vollzanbel gây 40% ATK lên toàn bộ địch; Time Dilation Stun toàn bộ địch 1 lượt rồi khóa passive thêm 1 lượt; Healing hồi 25% max HP cho toàn đội.
-- Thời gian khóa passive sau Time Dilation bắt đầu khi Stun kết thúc, không bị tiêu hao trong lượt Stun. Thanh trạng thái hiển thị Mana hiện tại.
+Cấu hình hai đội:
+- Cả đội người chơi và đối thủ đều chọn được toàn bộ 129 thẻ trong Index, bao gồm thẻ khóa, chưa sở hữu, Quest, Evolution và Secret.
+- Thêm/xóa tối đa 10 vị trí cấu hình ban đầu cho mỗi bên. Giới hạn vị trí cấu hình này không đặt thêm giới hạn lên clone/summon phát sinh từ nội tại.
+- Mỗi vị trí chọn được tối đa hai mutation khác nhau, cấp, max HP và ATK. ATK tùy chỉnh có thể bằng 0.
+- Khi đổi thẻ, cấp hoặc mutation, HP/ATK mặc định được tính lại. Giá trị HP/ATK nhập tay là chỉ số đầu trận cuối cùng, không nhân mutation/cấp lần thứ hai.
+- Công thức mặc định: làm tròn(chỉ số Lv.1 x hệ số cấp x hệ số mutation tương ứng). Double mutation nhân các hệ số thành phần.
+- Nội tại vẫn có thể tăng/giảm các chỉ số này sau khi bắt đầu trận.
+- Nút Lv.1000 Preset là cấu hình thử nhanh, không phải cấp tối đa. Có thể nhập cấp cao hơn trực tiếp.
+- Reset Default Stats đưa các vị trí về Lv.1, không mutation và chỉ số mặc định; Clear Team xóa cả đội; Add Slot thêm vị trí mới.
 
-ALEXANDER ANDERSON
+Thiết lập và điều khiển trận:
+- Turn Duration nhập trực tiếp từ 0,1 đến 60 giây, mặc định 2 giây. Có thể đổi trong trận; potion của save thật không điều khiển timer Sandbox.
+- Có RNG seed riêng để lặp lại thử nghiệm với cùng đội hình và cấu hình. Sandbox không tiêu thụ chuỗi RNG của chế độ thật.
+- Có lựa chọn thời tiết thử nghiệm và lựa chọn nội tại của Aqua, không thay đổi thời tiết hay phần thưởng của save thật.
+- Start Sandbox khởi tạo trận mới; Pause/Resume tạm dừng/tiếp tục; Step Turn chạy một lượt khi tạm dừng; Stop Battle dừng thử nghiệm.
+- Hiển thị từng đơn vị, HP/ATK hiện tại, shield, trạng thái, nội tại, số lượt và tổng sát thương hai bên. Nhật ký giữ tối đa 150 sự kiện gần nhất.
+- Chỉ kết thúc khi toàn bộ hàng đợi đơn vị của một bên bị hạ, bao gồm đơn vị được tạo thêm.
+- Exit Sandbox, phím Escape hoặc bấm nền ngoài cửa sổ đưa về Arena thật. Thoát giữa trận hủy timer và runtime thử nghiệm.
 
-- Element Water; Mythic; tỷ lệ 1 trong 777.000; HP cấp 1: 77.700; ATK cấp 1: 7.700. Không khóa thời tiết khi roll sau khi mở khóa.
-- Artwork: assets/cards/alexanderanderson.png.
-- Bước 1: hoàn thành 1.000 trận Alucard Event ở Difficulty > 6, tức từ 7 trở lên.
-- Bước 2: hạ 10.000 Normal Demon trong Eclipse/Eclipsed.
-- Bước 3: roll 10.000 lần trong Heavenly.
+Cách ly tiến trình:
+- Dùng một runtime PassiveSystem riêng với RNG, bộ đếm, trạng thái và callback nhật ký riêng.
+- Thẻ và mutation tham gia thử nghiệm là bản sao; không dùng đơn vị hay đội hình chiến đấu thật.
+- Không gọi callback nhận thưởng, hạ địch cho nhiệm vụ, đổi thời tiết thật hoặc lưu tiến trình.
+- Thắng, thua, giết địch, sát thương, số lượt và thẻ sử dụng trong Sandbox không tăng nhiệm vụ, achievement, chỉ số người chơi, roll, EXP, VNĐ, tiền chế độ, vật phẩm hoặc tiến trình thẻ.
+- Có chốt chặn bổ sung ở luồng Quest, Achievement, cộng EXP, roll, lưu save và kết thúc trận thật khi Sandbox đang mở.
+- Auto Roll thật tạm ngừng nhưng giữ trạng thái bật; tiếp tục khi thoát nếu đủ cooldown. Auto Continue Battle được tạm ngừng và khôi phục việc lên lịch khi quay lại kết quả trận thật.
+- Không xuất/nhập save trong Sandbox. Không lưu cấu hình hoặc kết quả Sandbox vào localStorage hay .acrsave; tải lại trang sẽ mất phiên thử nghiệm.
+- Đồng hồ thời tiết và thời hạn potion thật vẫn dựa trên thời gian thực; khi thoát, giao diện thật đồng bộ lại thời gian đã trôi qua.
 
-Pray to God:
-- Mỗi đòn có 77% tạo follow-up gây 77% ATK hiện tại; follow-up có thể tiếp tục kích hoạt không giới hạn số đòn cố định.
-- Follow-up thứ n trong chuỗi áp dụng Bleed n lượt, mỗi lượt bằng 7% ATK hiện tại tại lúc áp dụng. Đếm n bắt đầu lại ở chuỗi mới.
-- Nếu còn sống và HP dưới 7%, một lần/trận hồi đến 77% max HP, nhận +300% sát thương đòn đánh (x4), ngừng follow-up và nhận Crucifix.
-- Crucifix tăng thêm 150% sát thương đối với Dark (x2,5). Các hệ số sát thương áp dụng cùng quy tắc Element hiện có.
-- Không hồi sinh bằng bất kỳ nguồn nào. Đòn đã làm HP về 0 không kích hoạt ngưỡng sống sót dưới 7%. Quy tắc Bleed chặn hồi HP vẫn áp dụng.
+5. CẤU TRÚC THAY ĐỔI TRONG BẢN NÀY
 
-6. BẢNG EXCEL DỮ LIỆU THẺ
+Module mới:
+- levels.js: tính cấp, EXP và hệ số chỉ số; không tự ghi save.
+- roll_view.js: công tắc ẩn kết quả roll và trạng thái trình bày gần nhất.
+- sandbox.js: cấu hình đội, RNG riêng, timer, runtime chiến đấu độc lập và giao diện Sandbox.
 
-- Bàn giao anime-card-rng-cards.xlsx với đủ 129 thẻ trong cards.js, gồm 4 thẻ của bản cập nhật này.
-- Đúng 4 cột: Card Name; HP Level 1; ATK Level 1; Card Passive.
-- HP và ATK là số gốc cấp 1, chưa tính mutation, buff hoặc hệ số level.
-- Card Passive gồm tên và mô tả đầy đủ. Có bộ lọc tiêu đề, cố định hàng tiêu đề/cột tên, ngắt dòng và định dạng số dễ đọc.
-- Bảng Excel là tài liệu tham khảo đầy đủ; giao diện Quest Card trong game vẫn giữ bí mật đến khi mở khóa.
+Module tích hợp:
+- app.js: điều phối roll, cấp thẻ, cầu nối mở/thoát Sandbox, chặn tiến trình thật và bổ sung tùy chọn ẩn roll vào save.
+- passives.js: tạo runtime độc lập dùng lại cùng bộ luật chiến đấu; sửa cơ chế cứu chí tử của Marco.
+- cards.js: mô tả Marco khớp cơ chế mới.
+- achievements.js và quest.js: chặn tracking/claim trong Sandbox.
+- timetrial.js: bỏ kiểm tra trần Lv.999 trong luồng cấp EXP.
+- index.html và styles.css: công tắc dưới Cooldown, lối vào Sandbox, màn hình cấu hình và bố cục responsive.
 
-7. TỆP VÀ KHẢ NĂNG TƯƠNG THÍCH CỦA BẢN CẬP NHẬT
+6. KIỂM TRA VÀ BÀN GIAO
 
-- quest.js: module mới chuyên trách quest; app.js chỉ kết nối sự kiện roll, trận đấu, hạ địch, thưởng và chuyển save.
-- cards.js và passives.js: 4 thẻ mới, nội tại riêng và cơ chế shield.
-- achievements.js và boss_event.js: tổng thắng Boss Event cùng 9 mốc Drop Multiplier; raid.js và boss_event.js chấp nhận mức multiplier mới trong phần thưởng đang chờ.
-- index.html và styles.css: ô nhập độ khó, bộ chọn thành tựu Boss Event và modal Quest Cards riêng.
-- README.txt chỉ ghi nhật ký của bản cập nhật này. Bảng Excel được bàn giao riêng; archive game chỉ chứa mã nguồn và README.txt.
-- Giữ nguyên khối bảo vệ .acrsave, thời gian chờ 7 ngày, công thức Tower, khóa đối thủ khi thua, nhịp Time Trial và giao dịch Evolution.
-- Gói nguồn không kèm asset ảnh/nhạc, tệp kiểm thử, script kiểm định hoặc log. Người dùng tự quản lý asset theo các đường dẫn được khai báo.
+Đã kiểm tra cú pháp, khởi động trình duyệt, trạng thái mới/trùng của thẻ và mutation, cấp vượt 100/999, các trường hợp cứu chí tử của Marco, cách ly localStorage/tiến trình Sandbox, timer và thao tác thoát. Đã đối chiếu các trận xác định bằng seed cho 128 thẻ ngoài Marco với bản trước.
+
+Luồng bảo vệ .acrsave và hai cooldown 7 ngày độc lập được giữ nguyên; đã kiểm tra vòng đóng gói/giải mã/đọc save và từ chối dữ liệu bị sửa. Tower, Raid, Boss Event, Evolution, Element và thông số phần thưởng không được cân bằng lại trong bản cập nhật này.
+
+Gói bàn giao chứa mã nguồn game đầy đủ và README.txt này. Không kèm Excel, script kiểm thử, log xác thực hoặc tài nguyên ảnh/âm thanh mới. Tiếp tục dùng các tài nguyên đã có của dự án.

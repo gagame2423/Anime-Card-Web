@@ -38,7 +38,7 @@
   let data = load(), bridge = {}, awarding = false;
   function persist() { try { host.localStorage.setItem(KEY, JSON.stringify(data)); return true; } catch (_) { return false; } }
   function reconcile() {
-    if (awarding) return;
+    if (awarding || host.SandboxSystem?.active) return;
     awarding = true;
     try {
       for (const def of QUESTS) {
@@ -64,6 +64,7 @@
       (!step.minDifficulty || e.difficulty >= step.minDifficulty);
   }
   function record(kind, e) {
+    if (host.SandboxSystem?.active || e?.sandbox || e?.mode === 'sandbox') return false;
     if (!['roll', 'battle', 'defeat'].includes(kind) || !e || typeof e.id !== 'string' || !integer(e.startedAt)) return false;
     const before = JSON.stringify(data);
     let changed = false;
@@ -82,6 +83,7 @@
     reconcile(); return changed;
   }
   function battleContext(battle, weatherIds) {
+    if (host.SandboxSystem?.active || battle?.sandbox || battle?.mode === 'sandbox') return null;
     if (data.sequence >= Number.MAX_SAFE_INTEGER) throw Error('Quest event limit reached.');
     data.sequence++;
     if (!persist()) { data.sequence--; throw Error('Không thể lưu lượt theo dõi quest.'); }

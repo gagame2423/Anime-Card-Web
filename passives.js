@@ -12,12 +12,14 @@
 // ============================================================
 
 (() => {
+ function createPassiveRuntime(initialHost = {}) {
+  const Math = initialHost.random ? Object.assign(Object.create(globalThis.Math), {random:initialHost.random}) : globalThis.Math;
   const BASE_CRIT_CHANCE = 0.05;
   const BASE_CRIT_MULTIPLIER = 1.5;
   const MAX_CHAIN_ATTACKS = 24;
   const MAX_SLASHES = 16;
 
-  let host = {};
+  let host = { ...initialHost };
   let passiveLogSequence = 0;
 
   // Passive definitions are derived directly from the loaded cards.js database.
@@ -450,6 +452,7 @@
     function fatal(bs, unit) {
       const code = id(unit), c = state(unit);
       if (unit.championPermanentDeath) return false;
+      if (raidSecrets.rescue(bs, unit, {fatal:true})) return true;
       if (code === 'snowing' && c.iceTurns > 0) { unit.hp = Math.min(unit.hp, 1); unit.defeated = false; return true; }
       if (isBleeding(unit)) return false;
       if (expansion.fatal(bs, unit)) return true;
@@ -459,6 +462,7 @@
     }
     function death(bs, unit, attacker) {
       if (isAlive(unit)) return false;
+      if (!state(unit).deathHandled && raidSecrets.rescue(bs, unit, {fatal:true})) return true;
       if (alucard.revive(bs,unit)) return true;
       raidSecrets.death(bs, unit);
       const c = state(unit); if (c.deathHandled) return false; c.deathHandled = true;
@@ -614,17 +618,25 @@
       hit(bs, marco, attacker, atk(marco) * 2, { raidCounter: true });
       return true;
     }
-    function rescue(bs, target) {
-      if (!isAlive(target) || target.hp >= target.maxHp * .10) return;
-      const marco = alliesOf(bs, target, false).find(unit => id(unit) === 'raid-secret-marco' && !state(unit).rescued);
-      if (!marco) return;
+    function rescuer(bs, target) {
+      if (!target || target.championPermanentDeath) return null;
+      return alliesOf(bs, target, false).find(unit => id(unit) === 'raid-secret-marco' && !state(unit).rescued) || null;
+    }
+    function canRescue(bs, target) { return Boolean(rescuer(bs, target)); }
+    function rescue(bs, target, options = {}) {
+      if (!target || (!options.fatal && (!isAlive(target) || target.hp >= target.maxHp * .10))) return false;
+      const marco = rescuer(bs, target); if (!marco) return false;
       const team = teamOf(bs, target), at = team.indexOf(target), from = team.indexOf(marco);
-      if (at < 0 || from < 0) return;
+      if (at < 0 || from < 0) return false;
+      // Claim before any heal/counter hook. Fatal rescue prevents death rather
+      // than invoking the defeated unit's revival/death/kill handlers.
       state(marco).rescued = true;
+      target.hp = Math.max(1, target.hp); target.defeated = false;
       [team[at], team[from]] = [team[from], team[at]];
-      heal(target, target.maxHp, 'PHOENIX RESCUE', bs, marco);
-      safeLog(`[PASSIVE] Marco swapped positions with ${target.display?.name || target.card.name} and restored its HP once this match.`, 'passive');
-      refreshUnitDisplay(target);
+      heal(target, Math.max(0, target.maxHp - target.hp), 'PHOENIX RESCUE', bs, marco);
+      refreshUnitDisplay(target); ensureCurrentIndices(bs);
+      safeLog(`[PASSIVE] Marco prevented an ally's defeat or low-HP danger, swapped positions, and restored HP once this match.`, 'passive');
+      return true;
     }
     function dodge(bs, unit, attacker) {
       if (id(unit) === 'raid-secret-mihawk') hit(bs, unit, attacker, atk(unit) * 5, { raidCounter: true });
@@ -665,7 +677,7 @@
       }
     }
     function dodgeChance(unit) { return id(unit) === 'raid-secret-mihawk' ? .50 : id(unit) === 'raid-secret-marco' ? .10 : 0; }
-    return { block, rescue, dodge, afterAttack, death, turn, endTurn, dodgeChance };
+    return { block, canRescue, rescue, dodge, afterAttack, death, turn, endTurn, dodgeChance };
   })();
 
   // New weather/evolution skills share the same damage, status and death pipeline.
@@ -1062,7 +1074,7 @@
     if (unit.isTowerEnemy) window.TowerSystem?.protectEnemyUnit?.(unit);
     unit.maxHp = Math.max(1, Number(unit.maxHp) || Number(unit.hp) || 1);
     unit.hp = Math.max(0, Number(unit.hp) || 0);
-    unit.atk = Math.max(1, Number(unit.atk) || 1);
+    unit.atk = Math.max(unit.sandboxAllowZeroAttack ? 0 : 1, Number(unit.atk) || 0);
     if (!unit.display || typeof unit.display !== 'object') unit.display = {};
     unit.display.hp = unit.maxHp;
     unit.display.atk = unit.atk;
@@ -1396,10 +1408,12 @@
         if (dmg > 0 && isAlive(unit)) {
           const before = unit.hp;
           const absorbed = absorbShieldDamage(unit, dmg, battleState, effect.source);
-          const prevented = absorbed >= before && champions.fatal(battleState, unit);
-          if (!prevented) unit.hp = Math.max(0, unit.hp - absorbed);
+          const marcoPending = absorbed > 0 && before - absorbed < unit.maxHp * .10 && raidSecrets.canRescue(battleState, unit);
+          const prevented = !marcoPending && absorbed >= before && champions.fatal(battleState, unit);
+          if (!prevented) unit.hp = Math.max(marcoPending ? 1 : 0, unit.hp - absorbed);
           const actualDamage = Math.max(0, before - unit.hp);
           recordBattleDamage(battleState, effect.source, unit, before);
+          if (marcoPending) raidSecrets.rescue(battleState, unit);
           questSkills.damaged(battleState, unit, actualDamage);
           runtime.lastDamageTaken = actualDamage;
           safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} takes ${actualDamage.toLocaleString('en-US')} ${kind.toUpperCase()} damage.`, 'status');
@@ -1536,7 +1550,7 @@
   }
 
   function deferFatality(battleState, target) {
-    return Boolean(ensureRuntime(target).shield > 0 || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+    return Boolean(ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
@@ -1544,6 +1558,7 @@
     if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
     if (questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
     const targetRuntime = ensureRuntime(target);
+    const fatalityDeferred = deferFatality(battleState, target);
     const source = attacker || null;
 
     if (targetRuntime.invincibleTurns > 0 || targetRuntime.hakariInvincible > 0) {
@@ -1578,15 +1593,17 @@
     targetRuntime.lastHitReceived = remaining;
 
     const before = Math.max(0, Number(target.hp) || 0);
+    const marcoPending = remaining > 0 && before - Math.floor(remaining) < target.maxHp * .10 && raidSecrets.canRescue(battleState, target);
     // A protected ally's survival/clone triggers see only its own damage share.
-    if ((calamityProtected || questSkills.isMadara(target) || Number(targetRuntime.raidHakiReduction) > 0) && remaining >= before && onFatalityAttempt(battleState, target, attacker, remaining, meta)) {
+    if (!marcoPending && (fatalityDeferred || calamityProtected || questSkills.isMadara(target) || Number(targetRuntime.raidHakiReduction) > 0) && remaining >= before && onFatalityAttempt(battleState, target, attacker, remaining, meta)) {
       recordBattleDamage(battleState, attacker, target, before);
       return { damage: 0, killed: false, preventedFatality: true };
     }
-    if (remaining >= before && !isBleeding(target) && champions.fatal(battleState, target)) return { damage: 0, killed: false, preventedFatality: true };
-    target.hp = Math.max(0, before - Math.floor(remaining));
+    if (!marcoPending && remaining >= before && !isBleeding(target) && champions.fatal(battleState, target)) return { damage: 0, killed: false, preventedFatality: true };
+    target.hp = Math.max(marcoPending ? 1 : 0, before - Math.floor(remaining));
     recordBattleDamage(battleState, attacker, target, before);
     const damage = Math.max(0, before - target.hp);
+    const marcoRescued = marcoPending && raidSecrets.rescue(battleState, target);
     questSkills.damaged(battleState, target, damage);
     let revived = false;
     if (target.hp <= 0) { target.defeated = true; revived = champions.death(battleState, target, attacker); }
@@ -1594,8 +1611,8 @@
     refreshUnitDisplay(target);
 
     return {
-      damage: revived || questSkills.ids.has(getEffectivePassiveCardId(target)) ? damage : Math.max(0, before - target.hp),
-      shielded,
+      damage: revived || marcoRescued || questSkills.ids.has(getEffectivePassiveCardId(target)) ? damage : Math.max(0, before - target.hp),
+      shielded, marcoRescued,
       killed: !isAlive(target),
       reflected: false
     };
@@ -2679,6 +2696,7 @@
   function onFatalityAttempt(battleState, target, attacker, incomingDamage, context = {}) {
     if (!target || !attacker) return false;
     if (target.championPermanentDeath) return false;
+    if (raidSecrets.rescue(battleState, target, {fatal:true})) return true;
     const runtime = ensureRuntime(target);
     const id = getEffectivePassiveCardId(target);
     // Bleeding prohibits revival-HP restoration as well as ordinary heals.
@@ -2772,7 +2790,7 @@
   }
 
   function computeWeakenedAtk(attacker) {
-    if (attacker?.isExpMonster) return 0;
+    if (attacker?.isExpMonster || (attacker?.sandboxAllowZeroAttack && Number(attacker.atk) === 0)) return 0;
     const runtime = ensureRuntime(attacker);
     const reduction = runtime.weakenAttackTurns > 0 ? clamp(runtime.weakenAttackPct, 0, 0.95) : 0;
     const attackBuff = 1 + Math.max(0, Number(runtime.atkBonusPct) || 0);
@@ -2799,7 +2817,7 @@
   }
 
   function getBaseAtk(unit) {
-    if (unit?.isExpMonster) return 0;
+    if (unit?.isExpMonster || (unit?.sandboxAllowZeroAttack && Number(unit.atk) === 0)) return 0;
     return Math.max(1, Number(unit?.card?.stats?.atk) || Number(unit?.display?.atk) || Number(unit?.atk) || 1);
   }
 
@@ -2930,11 +2948,11 @@
 
     multiplier *= champions.multiplier(attacker, target, { ...options, critical }) * expansion.multiplier(attacker, target, battleState) * questSkills.multiplier(attacker, target);
     if (champions.state(attacker).heresy > 0) multiplier *= .91;
-    let rawDamage = Math.max(1, Math.floor(baseAttack * multiplier));
+    let rawDamage = Math.max(attacker.sandboxAllowZeroAttack ? 0 : 1, Math.floor(baseAttack * multiplier));
     const attackDamage = rawDamage;
     rawDamage = window.ElementSystem.damage(attacker, target, rawDamage);
     const damageReduction = clamp(ensureRuntime(target).damageReductionPct, 0, 0.95);
-    rawDamage = Math.max(1, Math.floor(rawDamage * (1 - damageReduction)));
+    rawDamage = Math.max(attacker.sandboxAllowZeroAttack ? 0 : 1, Math.floor(rawDamage * (1 - damageReduction)));
 
     const previousHp = Math.max(0, Number(target.hp) || 0);
     target.hpBeforeDeath = previousHp;
@@ -3150,7 +3168,7 @@
   }
 
   function checkBattleWinner(battleState) {
-    const includeReserves = battleState?.mode === 'tower' || battleState?.mode === 'raid' || battleState?.mode === 'boss-event' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
+    const includeReserves = battleState?.sandbox === true || battleState?.mode === 'sandbox' || battleState?.mode === 'tower' || battleState?.mode === 'raid' || battleState?.mode === 'boss-event' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
     if (isTeamDefeated(battleState?.enemyTeam, includeReserves)) return 'player';
     if (isTeamDefeated(battleState?.playerTeam, includeReserves)) return 'enemy';
     return null;
@@ -3302,6 +3320,7 @@
   }
 
   function modifyVictoryRewards(battleState, rewardProfile) {
+    if (battleState?.sandbox || battleState?.mode === 'sandbox') return {...rewardProfile,reward:0,experience:0,dropRateBonus:0,cardExperienceRewards:[]};
     const profile = { ...rewardProfile };
     const playerTeam = Array.isArray(battleState?.playerTeam) ? battleState.playerTeam.filter(Boolean) : [];
     let multiplier = 1;
@@ -3320,6 +3339,7 @@
   }
 
   function onVictory(battleState) {
+    if (battleState?.sandbox || battleState?.mode === 'sandbox') return;
     const playerTeam = aliveUnits(battleState?.playerTeam || []);
     const sailor = playerTeam.find(unit => getEffectivePassiveCardId(unit) === 'sailor-moon');
     if (sailor && getBattleModeFromState(battleState) === '1v1' && Math.random() < 0.20) {
@@ -3819,7 +3839,8 @@
     };
   }
 
-  window.PassiveSystem = Object.freeze({
+  return Object.freeze({
+    createIsolated: options => createPassiveRuntime(options),
     BASE_CRIT_CHANCE,
     BASE_CRIT_MULTIPLIER,
     MAX_CHAIN_ATTACKS,
@@ -3898,4 +3919,6 @@
       return onFatalityAttempt(battleState, target, attacker, incomingDamage, context);
     }
   });
+ }
+ window.PassiveSystem = createPassiveRuntime();
 })();

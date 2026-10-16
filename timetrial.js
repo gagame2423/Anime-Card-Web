@@ -131,12 +131,12 @@
         if (!info) throw new Error('Không tìm thấy thông số EXP của thẻ đang luyện.');
         const baseRate = .001 + .009 * Math.max(0, Math.min(1, Number(random()) || 0));
         const rate = baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1);
-        if (info.level < 999) {
+        if (info.level < host.CardLevelSystem.MAX_LEVEL) {
           const exact = info.required * rate + (data.xpCarry[run.cardId] || 0);
           const amount = Math.floor(exact), carry = exact - amount;
           const result = bridge.grantExperience?.(run.cardId, amount, run.owner);
           if (!result) throw new Error('Không thể lưu EXP. Lượt thử đã dừng để bảo vệ tiến độ.');
-          data.xpCarry[run.cardId] = result.level >= 999 ? 0 : carry;
+          data.xpCarry[run.cardId] = result.level >= host.CardLevelSystem.MAX_LEVEL ? 0 : carry;
           run.experience += result.gained; run.progressPercent += rate * 100; run.levelUps += result.levelUps;
         }
         run.monsters++;
