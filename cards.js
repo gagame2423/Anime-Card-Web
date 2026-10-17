@@ -1836,6 +1836,69 @@ CARDS.push(...[
     }
   }
 ]);
+// Tower milestone additions.
+CARDS.push(...[
+  {
+    "id": "tower-champion-wind",
+    "name": "Xtreme Chan",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 2010000,
+    "requiredWeather": "Wind",
+    "towerType": "wind",
+    "towerFloor": 100,
+    "unlockRequirement": "tower_floor_100_wind",
+    "stats": {
+      "hp": 210000,
+      "atk": 21000
+    },
+    "image": "assets/cards/xtremechan.png",
+    "passive": {
+      "name": "The Fuuto Wind",
+      "description": "Last ally alive: +50% damage and gain all fallen teammates’ max HP once.\nWhen attacked, 21% chance to gain 21% damage reduction for the next turn; does not stack.\nEvery 2nd attack replaces the normal hit with Heat (50% ATK + Burn: 30% ATK, 2 turns), Cyclone (100% ATK to up to 2 enemies), Lunar (110% ATK + 1-turn stun), or Joker (x2 damage)."
+    }
+  },
+  {
+    "id": "tower-champion-bizare",
+    "name": "Star Plantinum Requiem",
+    "element": "Electric",
+    "rarity": "Secret",
+    "chance": 3000000,
+    "requiredWeather": "Bizare",
+    "towerType": "bizare",
+    "towerFloor": 100,
+    "unlockRequirement": "tower_floor_100_bizare",
+    "stats": {
+      "hp": 200000,
+      "atk": 33000
+    },
+    "image": "assets/cards/spr.png",
+    "passive": {
+      "name": "SPR",
+      "description": "Each attack has a 33% chance to follow up for normal attack damage; follow-ups can chain.\nCleanse effects that prevent attacking, then stun the inflicting enemy on its next turn; 2-turn cooldown.\n33% chance to survive fatal damage at 1 HP, once per match."
+    }
+  },
+  {
+    "id": "tower-champion-shadow-200",
+    "name": "Shadow The World Requiem",
+    "element": "Dark",
+    "rarity": "Secret",
+    "chance": 12000000,
+    "requiredWeather": "Shadow",
+    "towerType": "shadow",
+    "towerFloor": 200,
+    "unlockRequirement": "tower_floor_200_shadow",
+    "stats": {
+      "hp": 600000,
+      "atk": 120000
+    },
+    "image": "assets/cards/stwr.png",
+    "passive": {
+      "name": "STWR",
+      "description": "Each attack: 12% chance to skip the enemy turn and act again. Each kill permanently adds +12% HP and +12% ATK.\nCleanse attack-disabling effects and inflict Bleed (30% ATK/turn, 3 turns); 3-turn cooldown.\nWhile supporting, 12% chance to join an ally’s attack; both deal 120% ATK.\nCannot be cloned or revived. On death, stun all enemies for 5 turns."
+    }
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

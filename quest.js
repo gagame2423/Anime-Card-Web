@@ -72,6 +72,7 @@
   function record(kind, e) {
     if (host.SandboxSystem?.active || e?.sandbox || e?.mode === 'sandbox') return false;
     if (!['roll', 'battle', 'defeat'].includes(kind) || !e || typeof e.id !== 'string' || !integer(e.startedAt)) return false;
+    host.QuestsSystem?.record(kind,e);
     const before = JSON.stringify(data);
     let changed = false;
     for (const def of QUESTS) {
@@ -86,14 +87,14 @@
       if (q.progress >= step.target) { q.step++; q.progress = 0; }
     }
     if (changed && !persist()) { data = JSON.parse(before); return false; }
-    reconcile(); return changed;
+    reconcile(); if(changed)host.QuestsSystem?.notify(); return changed;
   }
   function battleContext(battle, weatherIds) {
     if (host.SandboxSystem?.active || battle?.sandbox || battle?.mode === 'sandbox') return null;
     if (data.sequence >= Number.MAX_SAFE_INTEGER) throw Error('Quest event limit reached.');
     data.sequence++;
     if (!persist()) { data.sequence--; throw Error('Không thể lưu lượt theo dõi quest.'); }
-    return { id: String(data.sequence), startedAt: battle.startedAt, mode: battle.mode, weatherIds: [...weatherIds], teamIds: battle.playerTeam.map(u => u.card.id), teamElements: battle.playerTeam.filter(u => !u.isClone && !u.isSummoned && !u.isTemporaryAlly).map(u => u.card.element), eventType: battle.bossEvent?.type, difficulty: battle.bossEvent?.difficulty, defeatSequence: 0 };
+    return { id: String(data.sequence), startedAt: battle.startedAt, mode: battle.mode, weatherIds: [...weatherIds], teamIds: battle.playerTeam.map(u => u.card.id), teamElements: battle.playerTeam.filter(u => !u.isClone && !u.isSummoned && !u.isTemporaryAlly).map(u => u.card.element), eventType: battle.bossEvent?.type, difficulty: battle.bossEvent?.difficulty ?? battle.raid?.difficulty, defeatSequence: 0 };
   }
   const snapshot = id => data.quests[id] ? JSON.parse(JSON.stringify(data.quests[id])) : null;
   function render(grid) {

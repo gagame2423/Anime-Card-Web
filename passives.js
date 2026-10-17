@@ -291,8 +291,8 @@
     const atk = unit => computeWeakenedAtk(unit);
     const pick = list => list[Math.min(list.length - 1, Math.floor(Math.random() * list.length))];
     const rand = (min, max) => min + Math.min(max - min, Math.floor(Math.random() * (max - min + 1)));
-    const uncloneable = unit => ([prefix + 'reaper','boss-event-alucard'].includes(cardIdOf(unit)) || id(unit) === 'reaper' || getEffectivePassiveCardId(unit) === 'boss-event-alucard') || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || hasPassive(unit,prefix+'reaper') || hasPassive(unit,'boss-event-alucard');
-    const noExternalRevive = unit => ([prefix + 'reaper', prefix + 'snowing', 'alexander-anderson'].includes(cardIdOf(unit)) || ensureRuntime(unit).effectivePassiveId === 'alexander-anderson' || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || [prefix+'reaper',prefix+'snowing','alexander-anderson'].some(key=>hasPassive(unit,key));
+    const uncloneable = unit => ([prefix + 'reaper','boss-event-alucard','tower-champion-shadow-200'].includes(cardIdOf(unit)) || id(unit) === 'reaper' || getEffectivePassiveCardId(unit) === 'boss-event-alucard') || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || hasPassive(unit,prefix+'reaper') || hasPassive(unit,'boss-event-alucard') || hasPassive(unit,'tower-champion-shadow-200');
+    const noExternalRevive = unit => ([prefix + 'reaper', prefix + 'snowing', 'alexander-anderson', 'tower-champion-shadow-200'].includes(cardIdOf(unit)) || ensureRuntime(unit).effectivePassiveId === 'alexander-anderson' || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || [prefix+'reaper',prefix+'snowing','alexander-anderson','tower-champion-shadow-200'].some(key=>hasPassive(unit,key));
     function log(unit, text) { ensureRuntime(unit).lastPassiveTrigger = text; safeLog(`[CHAMPION] ${unit.display?.name || unit.card?.name}: ${text}`, 'passive'); }
     function describe(unit) {
       if (!unit) return null;
@@ -459,7 +459,8 @@
     }
     function fatal(bs, unit) {
       const code = id(unit), c = state(unit);
-      if (unit.championPermanentDeath) return false;
+      if (unit.championPermanentDeath || cardIdOf(unit)==='tower-champion-shadow-200' || hasPassive(unit,'tower-champion-shadow-200')) return false;
+      if (requiem.fatal(bs, unit)) return true;
       if (grimoire.fatal(bs, unit)) return true;
       if (raidSecrets.rescue(bs, unit, {fatal:true})) return true;
       if (code === 'snowing' && c.iceTurns > 0) { unit.hp = Math.min(unit.hp, 1); unit.defeated = false; return true; }
@@ -471,6 +472,7 @@
     }
     function death(bs, unit, attacker) {
       if (isAlive(unit)) return false;
+      requiem.death(bs,unit);
       if (!state(unit).deathHandled && raidSecrets.rescue(bs, unit, {fatal:true})) return true;
       if (alucard.revive(bs,unit)) return true;
       raidSecrets.death(bs, unit);
@@ -1132,6 +1134,11 @@
     indices:ensureCurrentIndices,hit:(...args)=>champions.hit(...args)
   });
 
+  const requiem=window.createRequiemSkills({owns:(u,key)=>(u?.passiveState?.effectivePassiveId||cardIdOf(u))===key||Boolean(u?.passiveState?.grimoire?.copies?.some(copy=>copy.id===key)),runtime:ensureRuntime,id:getEffectivePassiveCardId,rawId:cardIdOf,has:hasPassive,passiveRuntimeFor,alive:isAlive,
+    allies:alliesOf,enemies:enemiesOf,team:teamOf,all:allUnits,atk:computeWeakenedAtk,random:()=>Math.random(),hit:(...args)=>champions.hit(...args),
+    status:setStatus,dot:addDot,refresh:refreshUnitDisplay,log:safeLog,enemyFront:activeDefender,stunned:isUnitStunned,
+    hpBonus:applyMaxHpBonus,atkBonus:applyPermanentAtkBonus,attack:(...args)=>performAttack(...args)});
+
   // Multiplex hooks only for units that own copied passives. Each copy keeps
   // private counters/forms; HP, shields, debuffs and combat buffs stay shared.
   function multiplex(fn, index, combine='last') {
@@ -1298,6 +1305,7 @@
     if (safeTurns <= 0) return;
     const beforeTurns = Math.max(0, Number(runtime[key]) || 0);
     runtime[key] = Math.max(beforeTurns, safeTurns);
+    requiem.afflicted(activeCombat,unit,key,source);
     refreshUnitDisplay(unit);
 
     const labels = { stunTurns: 'STUN', freezeTurns: 'FREEZE', snailTurns: 'SNAIL', invincibleTurns: 'INVINCIBLE', immuneTurns: 'IMMUNE' };
@@ -1449,7 +1457,7 @@
       currentHp,
       maxHp,
       dodgePct: getDisplayDodgeChance(unit),
-      damageReductionPct: clamp((Number(runtime.damageReductionPct) || 0) + (Number(runtime.raidHakiReduction) || 0), 0, .95) * 100,
+      damageReductionPct: clamp((Number(runtime.damageReductionPct) || 0) + (Number(runtime.raidHakiReduction) || 0) + requiem.reduction(activeCombat,unit), 0, .95) * 100,
       shield,
       shieldPct: Math.min(100, (shield / maxHp) * 100),
       effects
@@ -1691,7 +1699,7 @@
     remaining *= (meta.yunoDamageApplied?1:yuno.offensive(source,target)) * yuno.defensive(source,target);
     const shielded = remaining > 0 && targetRuntime.shield > 0;
     const reduction = clamp(
-      Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
+      requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
       (hasPassive(target,'aquaman') && host.isWeatherActive?.('Raining') ? 0.50 : 0),
       0,
       0.95
@@ -1712,7 +1720,10 @@
       recordBattleDamage(battleState, attacker, target, before);
       return { damage: 0, killed: false, preventedFatality: true };
     }
-    if (!marcoPending && remaining >= before && !isBleeding(target) && champions.fatal(battleState, target)) return { damage: 0, killed: false, preventedFatality: true };
+    if (!marcoPending && remaining >= before && (!isBleeding(target)||hasPassive(target,requiem.SPR)) && champions.fatal(battleState, target)) {
+      if(hasPassive(target,requiem.SPR)){recordBattleDamage(battleState,attacker,target,before);return{damage:Math.max(0,before-target.hp),killed:false,preventedFatality:true};}
+      return { damage: 0, killed: false, preventedFatality: true };
+    }
     target.hp = Math.max(marcoPending ? 1 : 0, before - Math.floor(remaining));
     recordBattleDamage(battleState, attacker, target, before);
     const damage = Math.max(0, before - target.hp);
@@ -2579,6 +2590,7 @@
   }
 
   function onHitTaken(battleState, defender, attacker, outcome) {
+    requiem.taken(battleState,defender);
     if (!defender || !attacker || !outcome?.hit) return;
     const runtime = ensureRuntime(defender);
     const id = getEffectivePassiveCardId(defender);
@@ -2653,7 +2665,9 @@
 
   function onTeammateDeath(battleState, victim) {
     if (!battleState || !victim) return;
-    if (champions.death(battleState, victim, null) || isAlive(victim) || champions.uncloneable(victim)) return;
+    if (champions.death(battleState, victim, null) || isAlive(victim)) return;
+    requiem.checkLastStand(battleState);
+    if(champions.uncloneable(victim))return;
     const team = teamOf(battleState, victim);
     if (isGeneratedUnit(victim)) return;
     const jinUnits = aliveUnits(team).filter(unit => canCreateCompanion(unit) && hasPassive(unit,'jin-mori'));
@@ -2664,6 +2678,7 @@
 
   function onKill(battleState, killer, victim, context = {}) {
     if (!killer || !victim) return;
+    requiem.kill(battleState,killer,victim);
     champions.kill(battleState, killer, victim);
     expansion.kill(battleState, killer, victim);
     questSkills.kill(battleState, killer, victim);
@@ -2815,7 +2830,7 @@
 
   function onFatalityAttempt(battleState, target, attacker, incomingDamage, context = {}) {
     if (!target || !attacker) return false;
-    if (target.championPermanentDeath) return false;
+    if (target.championPermanentDeath || cardIdOf(target)==='tower-champion-shadow-200' || hasPassive(target,'tower-champion-shadow-200')) return false;
     if (grimoire.fatal(battleState, target)) return true;
     if (raidSecrets.rescue(battleState, target, {fatal:true})) return true;
     const runtime = ensureRuntime(target);
@@ -2981,6 +2996,7 @@
             const driverOptions={...options,grimoireInitialResult:first,grimoireDriver:true};
             if (questSkills.activeChain(attacker)) questSkills.attack(battleState,attacker,requestedTarget,driverOptions);
             else if (alucard.active(attacker)) alucard.attack(battleState,attacker,requestedTarget,driverOptions);
+            else if (getEffectivePassiveCardId(attacker)===requiem.SPR) requiem.chain(battleState,attacker,requestedTarget,driverOptions);
             else if (getEffectivePassiveCardId(attacker)==='speed-wizard') grimoire.attack(battleState,attacker,requestedTarget,driverOptions);
           });
         }
@@ -2990,6 +3006,7 @@
     if (!battleState || !attacker || !isAlive(attacker)) return { hit: false, killed: false, damage: 0 };
     if (attacker.isExpMonster) return { hit: false, killed: false, damage: 0, trainingDummy: true };
     ensureRuntime(attacker);
+    if(getEffectivePassiveCardId(attacker)===requiem.SPR&&!options.requiemChain)return requiem.chain(battleState,attacker,requestedTarget,options);
     if (getEffectivePassiveCardId(attacker)==='speed-wizard' && !options.godspeedToken && !options.grimoireDriver) return grimoire.attack(battleState,attacker,requestedTarget,options);
     if (questSkills.activeChain(attacker) && !options.questChainToken) return questSkills.attack(battleState,attacker,requestedTarget,options);
     if (alucard.active(attacker) && !options.hermesToken) return alucard.attack(battleState,attacker,requestedTarget,options);
@@ -3028,6 +3045,7 @@
     if (!isAlive(attacker)) return {hit:false,damage:0,killed:false};
     if (!isAlive(target)) { target=activeDefender(battleState,attacker); if(!isAlive(target))return {hit:false,damage:0,killed:true}; }
 
+    options=requiem.prepare(battleState,attacker,target,options);
     options = questSkills.attackOptions(attacker, options);
     const spell = questSkills.spell(battleState, attacker, target, options);
     if (spell) return spell;
@@ -3069,6 +3087,7 @@
       raidSecrets.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false, attackDamage: incomingDamage }, options);
       questSkills.afterAttack(battleState, attacker, target, {damage:0,hit:false}, options);
       yuno.afterAttack(battleState,attacker,target,{damage:0,hit:false},options);
+      requiem.after(battleState,attacker,target,{damage:0,hit:false},options);
       return { hit: false, dodged: true, killed: false, damage: 0 };
     }
 
@@ -3078,6 +3097,7 @@
       safeLog(`[PASSIVE] ${target.display?.name || 'Asta'} reflected a passive attack for ${reflected.toLocaleString('en-US')} damage.`, 'passive');
       questSkills.afterAttack(battleState, attacker, target, {...result,hit:true,reflected:true}, options);
       yuno.afterAttack(battleState,attacker,target,{...result,hit:false,reflected:true},options);
+      requiem.after(battleState,attacker,target,{...result,hit:false},options);
       return { hit: true, reflected: true, critical: false, killed: result.killed, damage: result.damage };
     }
 
@@ -3085,12 +3105,13 @@
       expansion.afterAttack(battleState,attacker,target,{hit:false,damage:0},options);
       questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options);
       yuno.afterAttack(battleState,attacker,target,{hit:false,damage:0},options);
+      requiem.after(battleState,attacker,target,{hit:false,damage:0},options);
       return { hit:false,missed:true,damage:0 };
     }
     const critStats = getCritStats(attacker);
     const critical = options.forceCritical || Math.random() < critStats.chance;
     const baseAttack = computeWeakenedAtk(attacker);
-    let multiplier = passiveAttackMultiplier(attacker, target, battleState, options);
+    let multiplier = passiveAttackMultiplier(attacker, target, battleState, options) * requiem.multiplier(attacker);
     if (options.damageMultiplier) multiplier *= Math.max(0, Number(options.damageMultiplier) || 1);
     if (critical) multiplier *= critStats.multiplier;
 
@@ -3111,7 +3132,7 @@
     target.hpBeforeDeath = previousHp;
 
     let result = { damage: 0, killed: false };
-    if (raidSecrets.block(battleState, attacker, target, options)) { expansion.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { hit: false, damage: 0, killed: false, raidBlocked: true, target, attacker }; }
+    if (raidSecrets.block(battleState, attacker, target, options)) { requiem.after(battleState,attacker,target,{hit:false,damage:0},options); expansion.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { hit: false, damage: 0, killed: false, raidBlocked: true, target, attacker }; }
     const fatalityPrevented = previousHp > 0 && rawDamage >= previousHp && !deferFatality(battleState, target)
       ? onFatalityAttempt(battleState, target, attacker, rawDamage, options)
       : false;
@@ -3134,10 +3155,11 @@
       raidSecrets.afterAttack(battleState,attacker,target,{...outcome,attackDamage},options);
       questSkills.afterAttack(battleState,attacker,target,outcome,options);
       yuno.afterAttack(battleState,attacker,target,outcome,options);
+      requiem.after(battleState,attacker,target,outcome,options);
       ensureCurrentIndices(battleState);return {...result,hit:false,target,attacker};
     }
-    if (result.reflected || result.dodged) { yuno.afterAttack(battleState,attacker,target,{...result,hit:false},options);ensureCurrentIndices(battleState); return {...result,hit:false,target,attacker}; }
-    if (result.raidBlocked) { questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { ...result, hit: false, target, attacker }; }
+    if (result.reflected || result.dodged) { requiem.after(battleState,attacker,target,{...result,hit:false},options); yuno.afterAttack(battleState,attacker,target,{...result,hit:false},options);ensureCurrentIndices(battleState); return {...result,hit:false,target,attacker}; }
+    if (result.raidBlocked) { requiem.after(battleState,attacker,target,{hit:false,damage:0},options); questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { ...result, hit: false, target, attacker }; }
 
     ensureRuntime(attacker).lastCrit = critical;
 
@@ -3172,6 +3194,7 @@
     questSkills.afterAttack(battleState,attacker,target,result,options);
     alucard.applyBleed(battleState,attacker,target,{...result,hit:true});
     yuno.afterAttack(battleState,attacker,target,{...result,hit:true},options);
+    requiem.after(battleState,attacker,target,result,options);
 
     // Build/refresh dynamic indices after AOE or clone/revive actions.
     ensureCurrentIndices(battleState);
@@ -3195,6 +3218,7 @@
       return { skipped: true };
     }
 
+    requiem.cleanse(battleState,attacker);
     const skipGodspeed = grimoire.skipTurn(attacker);
     const actorStatus = tickStatusEffects(battleState, attacker);
     if (skipGodspeed) { safeLog('[PASSIVE] Godspeed skips this attack turn after dodging.', 'status'); return {skipped:true}; }
@@ -3361,6 +3385,7 @@
       battleState.enemyIndex = battleState.enemyTeam.indexOf(attacker);
     }
 
+    requiem.turn(battleState);
     questSkills.turn(battleState);
     expansion.turn(battleState);
     champions.turn(battleState, attacker);
@@ -3404,7 +3429,8 @@
       safeLog(`[GAUNTLET] Enemy position ${previousEnemyIndex + 1} was defeated. Position ${currentEnemyIndex + 1} enters the arena.`, 'status');
     }
 
-    battleState.turn = battleState.turn === 'player' ? 'enemy' : 'player';
+    battleState.turn = battleState.requiemExtraSide || (battleState.turn === 'player' ? 'enemy' : 'player');
+    delete battleState.requiemExtraSide;
     ensureCurrentIndices(battleState);
 
     winner = checkBattleWinner(battleState);
@@ -4015,6 +4041,11 @@
     };
   }
 
+  requiem.cleanse=multiplex(requiem.cleanse,1,'some');
+  requiem.afflicted=multiplex(requiem.afflicted,1);
+  requiem.after=multiplex(requiem.after,1);
+  requiem.taken=multiplex(requiem.taken,1);
+  requiem.kill=multiplex(requiem.kill,1);
   yuno.afterAttack=multiplex(yuno.afterAttack,1);
   runOnEntry=multiplex(runOnEntry,1);
   beforeAttack=multiplex(beforeAttack,1);

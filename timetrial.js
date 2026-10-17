@@ -3,7 +3,7 @@
   'use strict';
   const KEY = 'anime_card_rng_timetrial_v1';
   const MODES = Object.freeze({ normal: 'time-trial', exp: 'exp-time-trial' });
-  const TURN_MS = 2000;
+  const TURN_MS = 1000;
   const LIMITS = Object.freeze({ [MODES.normal]: 180000, [MODES.exp]: 300000 });
   const TICKET_ID = 'exp_time_trial_ticket';
   const TICKET = Object.freeze({ id: TICKET_ID, name: 'EXP Time Trial Ticket', type: 'ticket',
@@ -76,7 +76,7 @@
   function monster(player) {
     const hp = Math.max(1, Math.floor(Math.max(1, Number(player?.maxHp) || 1) * .10));
     const card = { id: 'exp-trial-monster', name: 'EXP Monster', stats: { hp, atk: 0 }, chance: 1,
-      passive: { name: 'Training Dummy', description: '0 ATK. Defeat for 0.1%–1.0% current level EXP.' }, image: '' };
+      passive: { name: 'Training Dummy', description: '0 ATK. Defeat for 0.5%–3.0% current level EXP.' }, image: '' };
     const unit = { card, display: { name: card.name, hp, atk: 0 }, hp, maxHp: hp,
       mutations: [], defeated: false, isExpMonster: true, level: 1 };
     // Keep zero even when generic passive display helpers normalize stats.
@@ -130,7 +130,7 @@
         const info = bridge.getLevelInfo?.(run.cardId);
         if (!info) throw new Error('Không tìm thấy thông số EXP của thẻ đang luyện.');
         if (info.level < host.CardLevelSystem.MAX_LEVEL) {
-        const baseRate = .001 + .009 * Math.max(0, Math.min(1, Number(random()) || 0));
+        const baseRate = .005 + .025 * Math.max(0, Math.min(1, Number(random()) || 0));
         const rate = baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1);
           const exact = info.required * rate + (data.xpCarry[run.cardId] || 0);
           const amount = Math.floor(exact), carry = exact - amount;

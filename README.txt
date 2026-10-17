@@ -1,175 +1,185 @@
-NHẬT KÝ CẬP NHẬT — YUNO, EXP THEO RNG VÀ HƯỚNG DẪN TOWER
-Ngày 17/10/2026 — phiên bản cache 20261017-yuno-1
+NHẬT KÝ CẬP NHẬT — QUEST, CHẾ TẠO POTION VÀ TOWER REQUIEM
+Phiên bản: 20261017-quests-1
 
-Tài liệu chỉ ghi thay đổi trong bản cập nhật hiện tại.
+Tài liệu chỉ ghi các thay đổi của bản cập nhật này. Không kèm lịch sử các bản cũ.
 
-1. SỬA CRASH RARITY VÀ KIỂM TRA SALVAGE
+1. GIAO DIỆN VÀ MODULE QUEST
 
-Định nghĩa rarityOrder trong phạm vi dùng chung của app.js: Common 0, Rare 1, Epic 2, Legendary 3, Mythic 4, Secret 5. Bộ chọn Rarity của Arena so sánh bậc rarity trước, sau đó so sánh độ hiếm 1 in N trong cùng bậc và tên thẻ để ổn định thứ tự. Không còn phụ thuộc biến chưa khai báo hoặc điểm tổng hợp có thể làm độ hiếm lấn át bậc rarity.
+Thêm quests.js để quản lý bộ quest luân phiên, reset theo Game Time, tiến độ, phần thưởng, timer buff và giao diện. quest.js tiếp tục phụ trách các Card Quest tuần tự đang có; trạng thái đã Accept, bước hiện tại và thẻ đã mở khóa được giữ nguyên.
 
-Đã rà soát Salvage All Extra Duplicates và giữ quy tắc theo từng khóa chuẩn cardId + mutationIds:
-- Với mỗi biến thể, chỉ salvage max(0, số lượng - 1).
-- Giữ một bản Normal nếu có Normal; giữ một bản của từng mutation và double mutation đang sở hữu.
-- Wet, Solar, Wet + Monarch và Solar + Monarch là bốn biến thể khác nhau.
-- Hai thứ tự Wet + Monarch / Monarch + Wet là cùng một tổ hợp; không được nhân đôi thành hai biến thể giả.
-- Các tên cũ Sweet/Sweat, Blizzard/Frost và Sacrifice/Eclipsed được chuẩn hóa về cùng mutation tương ứng. Chuẩn hóa tên không gộp hai mutation khác nhau.
-- Chạy salvage lại khi mỗi biến thể còn một bản sẽ không xóa thêm thẻ. Giữ công thức VNĐ mỗi bản và đồng bộ dữ liệu sở hữu như trước.
+Trong menu ..., Quest Cards được đổi thành Quests. Giao diện theo bố cục ảnh mẫu:
+- Daily, Weekly, Story · Card Quests và Permanent.
+- Danh sách bên trái có tiêu đề, thời gian còn lại, nút ghim, thanh tiến độ và số hoàn thành/mục tiêu.
+- Bên phải có mô tả, phần trăm hoàn thành, phần thưởng và nút nhận.
+- Story tích hợp các Card Quest hiện có; chỉ hiện ảnh và yêu cầu, không lộ HP, ATK hoặc nội tại của thẻ bí ẩn.
+- Permanent truy cập các achievement hiện hành và nhận phần thưởng vĩnh viễn.
+- Tông nền tối, viền cyan, thanh tiến độ phát sáng. Mobile chuyển thành các vùng cuộn để truy cập đầy đủ danh sách và chi tiết.
+- Buff Luck/Drop từ quest hiển thị thời gian còn lại ngay trong cửa sổ Quest.
 
-Đã kiểm tra toàn bộ 92 biến thể hợp lệ của một thẻ: một Normal, 13 mutation đơn và 78 tổ hợp đôi. Sau salvage, cả 92 biến thể đều còn đúng một bản.
+Reset Daily tại các mốc Game Time 86.400 giây: 24h, 48h, 72h...
+Reset Weekly tại các mốc Game Time 604.800 giây: 7 ngày, 14 ngày...
+Đây là mốc của đồng hồ game, không phải nửa đêm theo múi giờ. Game Time vẫn chạy 1:1 với thời gian thực và tính cả khoảng thời gian rời game theo cơ chế hiện có. Khi bỏ qua nhiều chu kỳ, chỉ tạo bộ quest của chu kỳ hiện tại, không phát thưởng cho các chu kỳ đã trôi qua.
 
-2. CÔNG THỨC EXP MỚI: ĐỘ HIẾM 1 IN N LÀ YẾU TỐ CHÍNH
+Mỗi nhóm có đúng 3 quest, lấy ngẫu nhiên không trùng từ 7 lựa chọn. Bộ đã chọn và tiến độ được lưu. Reload không reroll. Khi reset, quest chưa nhận thưởng của chu kỳ cũ hết hiệu lực; buff đã nhận vẫn chạy đến thời điểm hết hạn riêng.
 
-levels.js là nguồn công thức chung cho yêu cầu EXP, giao diện tiến trình và cấp Level.
+Các mục tiêu phụ thuộc tài khoản được chốt lúc bộ quest được tạo:
+- Daily Roll: max(1, round(0,10 x tổng roll hiện có)).
+- Weekly Roll: max(1, round(1,00 x tổng roll hiện có)).
+- Daily Time Trial: max(1, round(0,70 x phòng cao nhất)).
+- Weekly Time Trial: max(1, round(1,15 x phòng cao nhất)).
+- Không thay mục tiêu giữa chu kỳ khi người chơi roll thêm hoặc phá kỷ lục.
+- Theo xác nhận, Time Trial chỉ tính thắng đúng phòng mục tiêu 5 lần qua các lượt chạy; thắng phòng cao hơn không cộng vào quest này; không tính EXP Time Trial vào quest vượt phòng.
 
-Với một thẻ roll được:
-N = mẫu số RNG gốc trong cards.js, ví dụ 2 hoặc 1,500,000.
-r = log10(N).
-A = 150 x (1 + r)^1.5.
-p = 1.30 + 0.06 x r.
-EXP cần để tăng từ Level L = floor(A x L^p).
+2. DAILY QUEST — CHỌN 3 TRONG 7
 
-N càng lớn thì cả hệ số A và số mũ p đều lớn hơn. Hai thẻ có cùng N dùng cùng đường cong, dù nhãn rarity khác nhau. Dùng RNG gốc; Luck, thời tiết và mutation không làm mẫu số dùng để tính EXP thay đổi theo thời điểm.
+1) Hạ 200 địch ở các chế độ thực: +1 Luck trong 4 giờ.
+2) Thắng phòng Time Trial đạt mục tiêu Daily 5 lần: một thời tiết Common/Uncommon ngẫu nhiên trong 4 giờ.
+3) Thắng 25 Raid ở difficulty > 10: cộng thêm 50% số VNĐ hiện có khi nhận, tổng VNĐ trở thành x1.5.
+4) Thắng 5 Boss Event ở difficulty > 5: +0.10 Drop Multiplier trong 4 giờ.
+5) Roll đủ mục tiêu Daily: +1 Luck trong 4 giờ.
+6) Thắng 50 trận 1v1 thường: cộng thêm 50% VNĐ hiện có khi nhận.
+7) Gặp 3 thời tiết Rare khác nhau trong chu kỳ: một thời tiết Uncommon/Rare ngẫu nhiên trong 3 giờ.
 
-Một số mốc chính xác, trước mọi cơ chế thưởng EXP:
-1 in 2:
-  Lv.1: 222; Lv.10: 4,630; Lv.100: 96,304; Lv.1000: 2,003,123.
-1 in 300,000, tương ứng Yuno:
-  Lv.1: 2,472; Lv.10: 105,145; Lv.100: 4,471,145; Lv.1000: 190,128,020.
-1 in 1,500,000:
-  Lv.1: 2,883; Lv.10: 135,048; Lv.100: 6,324,906; Lv.1000: 296,223,572.
-1 in 4,444,444, tương ứng Yuno Spirit Demonic:
-  Lv.1: 3,172; Lv.10: 158,586; Lv.100: 7,927,488; Lv.1000: 396,282,292.
+Daily #7 chỉ tính mỗi loại Rare một lần trong chu kỳ. Nhiều lần gặp cùng Shadow không thay thế cho 3 loại khác nhau.
 
-Các số ở Lv.1000 mô tả giá trị hàm yêu cầu để đối chiếu công thức; game không cho lên Lv.1001 và không nhận thêm EXP tại mức tối đa.
+3. WEEKLY QUEST — CHỌN 3 TRONG 7
 
-Thẻ 1 in 0 không được hưởng đường cong rẻ do mẫu số bằng 0. Có thể đặt levelingRate riêng trong cards.js. Yuno Spirit dùng levelingRate = 1,500,000; giá trị này chỉ dùng tính EXP, không đưa thẻ vào pool roll. Nếu chưa cấu hình, dùng N quy ước: Common 10, Rare 100, Epic 1,000, Legendary 10,000, Mythic 500,000, Secret 1,000,000. Rarity chỉ tham gia dự phòng cho nhóm thẻ không roll được.
+1) Hạ 10.000 địch: +1 Luck trong 48 giờ.
+2) Thắng phòng Time Trial đạt mục tiêu Weekly 5 lần: một thời tiết Uncommon/Rare ngẫu nhiên trong 48 giờ.
+3) Thắng 500 Raid ở difficulty > 250: cộng thêm 500% VNĐ hiện có khi nhận.
+4) Thắng 500 Boss Event ở difficulty > 50: +0.25 Drop Multiplier trong 48 giờ.
+5) Roll đủ mục tiêu Weekly: +1 Luck trong 48 giờ.
+6) Thắng 500 trận 1v1 thường: cộng thêm 500% VNĐ hiện có khi nhận.
+7) Gặp tổng cộng 36 lần thời tiết Uncommon/Rare: một thời tiết Rare ngẫu nhiên trong 36 giờ.
 
-Để đường cong khó hơn có hiệu lực, EXP roll trùng giữ ngân sách tuyệt đối của bản trước, thay vì lấy 50% yêu cầu EXP mới:
-EXP trùng cơ bản = floor(50 x hệ số rarity x L).
-Hệ số thưởng: Common 1; Rare 1.6; Epic 2.4; Legendary 3.6; Mythic 5.2; Secret 8.
-Tiếp tục nhân buff EXP của thời tiết, potion và achievement. Yêu cầu EXP tăng nhanh hơn lượng thưởng khi lên Level cao.
+Theo xác nhận: “+500%” nghĩa là cộng thêm x5 số dư, tổng sau nhận là x6, không phải tổng x5. Ví dụ đang có 1.000 VNĐ thì nhận Weekly tiền sẽ thành 6.000 VNĐ. Sau đó nhận Daily +50% sẽ thành 9.000 VNĐ. Không nhân phần thưởng tiền này với Rich Potion hoặc các hệ số thu nhập khác.
 
-Thưởng EXP trận thường giữ ngân sách tăng theo sqrt(L) hiện hành. EXP Time Trial vẫn là chế độ luyện EXP theo phần trăm yêu cầu Level hiện tại, với vé và thời gian như trước. Tower vẫn không cho EXP.
+Theo xác nhận: quest 1v1 dùng chế độ 1v1 thường có sẵn, không tạo một hệ thống PvP trực tuyến mới.
 
-Giữ giới hạn Level 1000, bỏ sớm EXP cho thẻ tối đa và dọn EXP dư tại giới hạn. Khi load/import, giữ Level hợp lệ và số EXP tuyệt đối đã có; không hạ Level của người chơi chỉ vì đổi công thức. Thanh tiến trình được tính lại theo yêu cầu mới. Các Level vượt 1000 vẫn được clamp theo quy tắc hiện có.
+Weekly #7 cộng từng lần thời tiết xuất hiện từ bộ lập lịch, được tính lặp cùng loại ở các lần xuất hiện khác nhau. Chỉ đọc lại HUD, reload hoặc cập nhật countdown không tạo lượt gặp mới. Thời tiết nhận từ phần thưởng quest không tự tạo thêm tiến độ gặp thời tiết.
 
-Cấp EXP nhiều Level dùng tổng chi phí được cache và tìm kiếm nhị phân. Bảng có tối đa 1000 ô/thẻ, tạo khi cần vượt ngưỡng Level; thưởng nhỏ chưa đủ tăng Level không dựng bảng. Tách giới hạn số an toàn khỏi giới hạn Level, tránh lặp hàng triệu lần hoặc cấp Level theo công thức tuyến tính cũ. Kiểm tra roll trùng không còn tính yêu cầu EXP chỉ để suy ra ngân sách thưởng.
+Chọn thời tiết thưởng ngẫu nhiên đều giữa các loại thuộc các tier được phép. Nếu loại đó đang hoạt động, kéo thời điểm hết hạn lên ít nhất bằng thời hạn thưởng, không làm ngắn timer đang dài hơn.
 
-3. YUNO SPIRIT VÀ SPIRIT CROWN
+Luck quest là cộng vào hệ số Luck trước hệ số potion. Các buff Luck còn hạn cộng với nhau. Bonus Drop được cộng vào hệ số Drop dùng chung; ví dụ x1.20 +0.10 = x1.30. Nó tác động lượng vật phẩm, Shards, Coin và Key thông qua hệ thống drop hiện hành, không tăng VNĐ/EXP và không tự tăng xác suất thẻ Secret.
 
-Yuno Spirit:
-- ID: yuno-spirit.
-- Element Nature; rarity Secret; rate 1 in 0, chỉ Evolution.
-- HP Lv.1: 255,500; ATK Lv.1: 19,892.
-- Ảnh: assets/cards/yunospirit.png.
+Theo dõi chỉ từ sự kiện mới của chế độ thực. Sandbox không tăng kill, roll, thắng trận, quest hoặc achievement; không nhận thưởng quest trong Sandbox. Trận thua không được tính là thắng, surrender/aborted không tính hoàn thành. Một sự kiện gửi lặp bị chặn. Kẻ địch clone/summon không được dùng để farm kill quest. Card Quest vẫn chỉ theo dõi sau Accept và từng bước theo thứ tự.
 
-Spirit Crown:
-- ID vật phẩm: spirit_crown; loại material, lưu trong Storage.
-- Giá: 4,400 Lucius Event Coins tại Lucius Event Shop.
-- Ảnh: assets/spiritcrown.png.
-- Trừ đúng ví Lucius; không trừ hoặc dùng thay bằng Alucard Event Coins.
+4. CHẾ TẠO SUPER POTION
 
-Tiến hóa: Yuno Lv.100 trở lên + một bản Yuno ở biến thể đã chọn + 1 Spirit Crown => Yuno Spirit Lv.1, EXP 0. Giữ nguyên mutation hoặc double mutation của bản Yuno bị tiêu thụ. Lv.99 bị chặn; chỉ tiêu một bản thẻ và một nguyên liệu. Áp dụng giao dịch khôi phục và biên nhận tiến hóa một lần của hệ thống hiện có. Yuno Spirit không được roll thường sau tiến hóa.
+Thêm crafting.js và mục Crafting trong menu ...:
+10 Lucky Potion -> 1 Super Luck Potion.
+10 Rich Potion -> 1 Super Rich Potion.
+10 EXP Potion -> 1 Super EXP Potion.
+10 Speed Potion -> 1 Super Speed Potion.
 
-Spirit Wind Grimoire:
-- Khi vào trận, cấp cho toàn bộ đồng đội còn sống, gồm chính mình, khiên bằng 48% max HP hiện tại của Yuno Spirit. Khiên này không có thời hạn trong trận; vẫn tồn tại trên người nhận nếu nguồn cấp bị hạ.
-- Có 30% cơ hội né đòn. Mỗi lần né thành công cộng thêm khiên bằng 30% HP hiện tại của thẻ, không phải 30% max HP.
-- Khiên né tồn tại thêm 3 lượt chiến đấu và được gỡ ở cuối lượt thứ ba sau lúc tạo. Thời hạn tính bằng lượt, không tính bằng giây hoặc tốc độ potion.
-- Mỗi đòn tấn công có 26% cơ hội xáo thứ tự các địch còn sống, rồi gây thêm 48% ATK hiện tại lên toàn bộ địch. Đội hình gốc lưu cho lần retry Tower không bị ghi đè bởi thứ tự bị xáo trong trận.
-- Đổi mục tiêu do xáo đội hình không đặt lại bộ đếm đòn của các thẻ.
-
-4. YUNO SPIRIT DEMONIC — CHAMPION LUCKY FLOOR 100
+Các ID mới:
+super_luck_potion, super_rich_potion, super_exp_potion, super_speed_potion.
+Lucky Potion là tên vật phẩm Luck Potion thường đang có trong game.
 
 Thông số:
-- ID: tower-champion-lucky.
-- Element Nature; rarity Secret; rate 1 in 4,444,444.
-- HP Lv.1: 444,444; ATK Lv.1: 22,222.
-- Ảnh: assets/cards/yunospiritdemonic.png.
+- Super Luck: Luck x1.50 trong 300 giây.
+- Super Rich: VNĐ thu được x1.50 trong 300 giây.
+- Super EXP: EXP thu được x1.50 trong 300 giây.
+- Super Speed: tốc độ roll x1.15 trong 300 giây; cooldown chia cho 1.15.
 
-Theo cơ chế Champion đã xác nhận, lần hoàn thành Lucky Tower Floor 100 cấp một bản Normal và mở khóa thẻ vĩnh viễn. Sau mở khóa, thẻ vào pool roll với rate 1 in 4,444,444 khi Lucky đang hoạt động. Không thêm thẻ vào pool khi thiếu Lucky. Save đã có tiến độ Lucky từ Floor 100 trở lên được đối chiếu với milestone mới theo cơ chế achievement; biên nhận chặn cấp lặp lại.
+Một Super Potion thay hệ số của potion thường cùng loại, không nhân hai hệ số với nhau. Khi dùng Super, thời gian còn lại của potion thường được chuyển sang trạng thái PAUSED. Super hết hạn thì potion thường tiếp tục từ phần thời gian còn lại đó. Dùng thêm potion thường khi Super đang chạy sẽ cộng thời lượng vào phần đang pause; không kích hoạt hai buff cùng loại đồng thời.
 
-Anti Spirit Grimoire:
-- Gây x2 damage lên địch Holy, đồng thời nhận ít hơn 22% damage từ nguồn Holy. Bonus này phối hợp với matrix Element hiện hành, không đổi Element của thẻ.
-- Mỗi đòn có 44% cơ hội xuyên đội hình. Đòn chính là hit đầu với 100% ATK cơ bản; không cộng thêm một hit 100% trùng lên mục tiêu đầu.
-- Các hit xuyên tiếp theo nhân x0.78 cho mỗi hit trước đã gây sát thương: 100%, 78%, 60.84%, 47.4552%... Áp dụng tiếp phòng thủ, Element và các tương tác sát thương hiện hành.
-- Khi bị tấn công, có 22% cơ hội hấp thụ sát thương. Đây là hấp thụ, không phải né: không kích hoạt thưởng né và không tự thêm 22% vào chỉ số Dodge.
-- Lần hấp thụ thành công ngăn mất HP và không tiêu hao khiên đang có. Lượng hấp thụ sau giảm sát thương được cộng dồn vào bonus damage cho đòn chính kế tiếp được giải quyết; các lần bỏ lượt hoặc bị né không tiêu phần tích trữ.
-- Cấp một khiên vĩnh viễn trong trận có lượng bằng phần đã hấp thụ cho đồng đội còn sống ở đúng vị trí ngay sau thẻ. Không quay vòng về đầu đội hình nếu thẻ ở cuối; không nhảy qua vị trí đã chết để chọn người khác.
-- Khiên hấp thụ cộng dồn, không có trần số lần kích hoạt hoặc giới hạn theo max HP. DOT không tạo thêm lần hấp thụ, nhưng tương tác damage với Holy vẫn dùng đúng hệ số.
+Dùng thêm Super cùng loại chỉ nối dài thời lượng 300 giây/lọ, không cộng thêm % hiệu ứng. Các loại khác nhau được dùng cùng nhau. Potion thường đã hết hạn không được hồi sinh thêm thời gian.
 
-5. KHIÊN CỘNG THÊM VÀ KHIÊN CÓ THỜI HẠN
+Timer được lưu bằng mốc hết hạn thực, kèm số mili giây thường đang pause. Nếu Super hết trong lúc offline, potion thường tiếp tục ngay từ thời điểm Super hết hạn, không đợi đến lúc mở game mới bắt đầu chạy. Ví dụ thường còn 540 giây, Super hết ở t=360 giây thì thường hết ở t=900 giây, dù người chơi đang offline.
 
-Thêm yuno.js để tách logic hai thẻ và các lớp khiên cộng thêm khỏi app.js.
+Giao dịch chế tạo trừ 10 và cấp 1 trong một lần lưu Inventory; lỗi lưu trả lại nguyên liệu và số lượng. Dùng potion cũng hoàn tác khi không lưu được. Super Potion không được thêm vào pool rơi potion thường. Speed Battle Potion không tham gia công thức chế tạo này.
 
-Khiên Yuno giữ phần vĩnh viễn và phần 3 lượt riêng biệt. Nếu khiên tạm đã hấp thụ một phần sát thương, lúc hết hạn chỉ gỡ lượng còn lại của phần tạm. Ưu tiên tiêu hao phần khiên tạm trước phần vĩnh viễn. Các lần cấp khiên cùng thời hạn được gộp số lượng, tránh tích lũy đối tượng qua một chuỗi đòn dài.
+Inventory nâng dữ liệu lên version 3, đọc được bản cũ. Save .acrsave gồm trạng thái pause, Super, quest luân phiên, buff quest, ghim và cài đặt SFX. Giữ kiểm tra toàn vẹn và cooldown chuyển save 7 ngày hiện có.
 
-Không gỡ khiên Yuno khi một khiên Sasuke/Weather Report khác hết hạn hoặc bị xóa theo kỹ năng riêng. Giữ cách kết hợp của các khiên cũ khi không có lớp Yuno.
+5. BA THẺ TOWER MỚI
 
-Quy tắc chống sát thương tràn được giữ: đòn phá khiên không đưa lượng dư vào HP. Nội tại phản đòn, hồi sinh, chặn đòn và phá khiên đi qua luồng chiến đấu chung. Kỹ năng sao chép của Lucius có thể dùng hai nội tại mới với trạng thái riêng. Sandbox tạo runtime riêng và không ghi tiến trình thực.
+Theo cơ chế Champion đang dùng: hoàn thành milestone lần đầu cấp một bản Normal và mở pool roll của thẻ trong thời tiết tương ứng. Biên nhận chặn cấp trùng; save đã vượt milestone được đối chiếu để mở khóa. Mutation và double mutation từ roll dùng cơ chế hiện hành.
 
-6. ELEMENT ĐỘI ĐỊCH TOWER VÀ HƯỚNG DẪN CHO TỪNG LOẠI
+Xtreme Chan:
+ID tower-champion-wind; Wind Tower Floor 100.
+Nature; Secret; RNG 1 in 2.010.000; HP 210.000; ATK 21.000.
+Nội tại The Fuuto Wind:
+- Khi là đồng đội cuối cùng còn sống, một lần/trận tăng damage 50% và cộng max HP của các đồng đội đã chết vào max HP cùng HP hiện tại của mình. Dùng max HP vì HP hiện tại của đơn vị đã chết là 0.
+- Khi bị tấn công, 21% cơ hội có 21% giảm damage trong lượt tấn công kế tiếp của phe địch. Không tiêu buff chỉ vì giữa hai đòn địch có một lượt của phe mình. Không cộng dồn % giảm qua nhiều lần kích hoạt.
+- Mỗi đòn thứ 2 thay đòn thường bằng một trong bốn chiêu, xác suất đều:
+  Heat: 50% ATK; Burn 2 lượt, 30% ATK mỗi lượt.
+  Cyclone: 100% ATK lên tối đa 2 địch.
+  Lunar: 110% ATK và stun 1 lượt.
+  Joker: x2 damage.
+- Các đòn vẫn qua engine Element, né, khiên và phòng thủ; không cộng thêm một đòn thường ngoài chiêu thay thế.
 
-Theo xác nhận, ràng buộc Element mới chỉ áp dụng cho đội địch. Điều kiện chọn thẻ người chơi giữ nguyên: Normal dùng thẻ đang sở hữu; Weather Tower dùng thẻ native weather hoặc biến thể có mutation tương ứng, bao gồm double mutation. Không thêm luật đơn Element vào đội người chơi.
+Star Plantinum Requiem:
+ID tower-champion-bizare; Bizare Tower Floor 100.
+Electric; Secret; RNG 1 in 3.000.000; HP 200.000; ATK 33.000.
+Nội tại SPR:
+- Mỗi đòn có 33% cơ hội follow-up với damage của đòn thường; follow-up tiếp tục có thể nối chuỗi, không đặt trần số đòn.
+- Tự giải các debuff ngăn tấn công như stun, freeze, snail/hypnosis và chuẩn bị stun nguồn gây hiệu ứng ở lượt địch kế tiếp. Cooldown 2 lượt của phe sở hữu thẻ.
+- 33% cơ hội sống sót đòn chí tử với 1 HP; chỉ một lần thành công trong trận. Đây là sống sót, không tạo một bản hồi sinh mới.
 
-Ba loại được cập nhật:
-- Lucky: chọn Nature HOẶC Holy cho một tầng; cả 4 địch dùng đúng Element đã chọn.
-- Wind: cả 4 địch dùng Nature.
-- Bizare: chọn Dark HOẶC Electric cho một tầng; cả 4 địch dùng đúng Element đã chọn.
+Shadow The World Requiem:
+ID tower-champion-shadow-200; Shadow Tower Floor 200.
+Dark; Secret; RNG 1 in 12.000.000; HP 600.000; ATK 120.000.
+Nội tại STWR:
+- Mỗi đòn có 12% cơ hội giữ lượt cho phe mình, bỏ lượt địch sắp tới để đánh thêm.
+- Mỗi kill tăng vĩnh viễn trong trận +12% HP và +12% ATK, áp dụng nối tiếp lên thông số hiện tại.
+- Giải stun, freeze và hiệu ứng vô hiệu hóa; gây Bleed lên nguồn gây hiệu ứng trong 3 lượt, 30% ATK mỗi lượt. Cooldown 3 lượt của phe sở hữu thẻ.
+- Khi hỗ trợ và một đồng đội khác tấn công, 12% cơ hội cùng đánh: đồng đội gây 120% damage của đòn cơ bản, STWR gây 120% ATK. Đòn hỗ trợ không tạo vòng lặp gọi hỗ trợ lẫn nhau và không tăng bộ đếm đòn chính của STWR.
+- Không thể clone hoặc hồi sinh bằng bất kỳ nguồn nào. Khi chết, stun mọi địch còn sống 5 lượt.
 
-Các loại khác tiếp tục dùng ràng buộc hiện hành. Toàn bộ 14 lựa chọn đang có đều có mô tả dưới dropdown:
-- Normal: người chơi dùng thẻ sở hữu; địch không khóa một Element.
-- Raining: native Raining hoặc Wet; địch Water.
-- Snowing: native Snowing hoặc Frost; địch cùng Water hoặc cùng Nature.
-- Sunny: native Sunny hoặc Solar; địch Fire.
-- Lucky: native Lucky hoặc Clove; địch cùng Nature hoặc cùng Holy.
-- Sugar: native Sugar hoặc Sweet; địch Electric.
-- Reaper: native Reaper hoặc Hollow; địch cùng Dark hoặc cùng Holy.
-- Eclipse: native Eclipse hoặc Eclipsed; địch cùng Dark hoặc cùng Fire.
-- Wind: native Wind hoặc Storm; địch Nature.
-- Malevolent: native Malevolent hoặc Cursed; địch cùng Fire hoặc cùng Nature.
-- Tsukuyomi: native Tsukuyomi/Mangekyo hoặc Mangekyo; địch Dark.
-- Heavenly: native Heavenly hoặc Angelic; địch Holy.
-- Shadow: native Shadow hoặc Monarch; địch cùng Dark hoặc cùng Electric.
-- Bizare: native Bizare hoặc Stardust; địch cùng Dark hoặc cùng Electric.
+Thêm requiem.js cho trạng thái và các hook nội tại mới, riêng cho từng runtime chiến đấu. Bộ đếm vẫn gắn với người tấn công và không reset khi đổi mục tiêu. Hướng dẫn Tower được bổ sung milestone Floor 200 ở Shadow bên cạnh Champion Floor 100.
 
-Hint tách rõ đội người chơi và đội địch, cùng phần thưởng milestone hoặc thông tin Elite. Cập nhật ngay khi đổi lựa chọn, đặt trực tiếp dưới dòng chọn Tower, hỗ trợ đọc bằng aria-describedby và xuống dòng trên màn hình nhỏ. Normal Tower trong bản game hiện tại dùng tiến trình vô hạn.
+6. TIME TRIAL
 
-7. KHÓA ĐỘI HÌNH, TƯƠNG THÍCH SAVE VÀ KIỂM TRA
+Cả Normal Time Trial và EXP Time Trial dùng đúng 1.000 ms mỗi lượt. Speed Battle Potion tiếp tục không làm thay đổi tốc độ Time Trial.
 
-Tăng phiên bản cấu hình chọn địch lên 4. Với save cũ ở ba loại Lucky/Wind/Bizare:
-- Nếu cả đội địch đã cùng một Element hợp lệ, giữ nguyên thành phần và cập nhật metadata.
-- Nếu đội cũ không đáp ứng ràng buộc mới, chuẩn hóa bằng một đội hợp lệ một lần. Sau khi lưu, thua/retry hoặc reload đều giữ đúng đội đã khóa.
-- Giữ Floor hiện tại, coin, số thắng và tiến độ mở khóa. Không đổi công thức HP/ATK hay thưởng Tower.
+EXP Time Trial: mỗi EXP Monster bị hạ cho tỷ lệ cơ bản ngẫu nhiên từ 0,5% đến 3,0% yêu cầu EXP của Level hiện tại:
+rate = 0,005 + 0,025 x random(0..1).
+EXP = floor(EXP_cần_cho_Level_hiện_tại x rate x buff_EXP + phần_lẻ_cũ).
+Phần lẻ tiếp tục được giữ để không mất EXP do làm tròn. Achievement, thời tiết và potion EXP áp dụng đúng nhóm thưởng EXP; Super EXP thay potion EXP thường như quy tắc trên. Mức 0,5%–3,0% là trước buff.
 
-Đã kiểm tra:
-- Khởi động qua file cục bộ và HTTP ở đường dẫn con; đổi Rarity không tạo lỗi runtime.
-- Salvage Normal, mutation đơn, double mutation và tên mutation cũ; chạy lại không xóa bản cuối.
-- Đường cong N tăng thì EXP yêu cầu tăng; hơn 2,000 ca cấp EXP đối chiếu với phép cộng từng Level, gồm gần Lv.1000 và số EXP lớn.
-- Roll trùng Lv.1000 không gọi hàm yêu cầu EXP; roll, số lượng và save vẫn chạy.
-- Spirit Crown trừ đúng 4,400 coin, chặn Lv.99, tiến hóa Lv.100 giữ double mutation và đặt thẻ mới về Lv.1.
-- Lucky Floor 100 cấp Champion Normal, mở pool đúng thời tiết và không cấp trùng.
-- Khiên vĩnh viễn/tạm thời, cộng dồn, hết hạn, né, xáo đội hình, xuyên địch, giảm damage Holy và tích trữ sát thương.
-- 450 đội địch mẫu ở nhiều tầng của ba loại mới đều đúng một Element hợp lệ; retry không gọi RNG để đổi đối thủ.
-- Đối chiếu cùng seed cho 133 thẻ cũ giữ kết quả chiến đấu và số lần gọi RNG; kiểm tra runtime sao chép 134 nội tại.
-- Registry đủ 135 thẻ; save round-trip và từ chối payload bị sửa; Sandbox chạy hai thẻ mới không ghi thay đổi vào kho tiến trình.
-- Hint nằm dưới dropdown trên desktop và không gây tràn ngang ở chiều rộng mobile 390 px.
+Giữ vé 1 lần/attempt, giới hạn 300 giây, quái HP 10% max HP người chơi và ATK 0. Lv.1000 không nhận thêm EXP. Normal Time Trial vẫn 180 giây/phòng, rơi Shards và không tự thêm VNĐ/EXP. Không đổi reset Room 1 khi thua hoặc hết giờ.
 
-8. TỆP BÀN GIAO VÀ TRIỂN KHAI
+7. ÂM THANH THẺ ĐẶC BIỆT
 
-Gói chứa đủ 26 tệp sản xuất, gồm README.txt này:
-index.html, styles.css, passives.css, app.js, cards.js, passives.js,
-yuno.js, grimoire.js, levels.js, inventory.js, tower.js, timetrial.js,
-raid.js, boss_event.js, achievements.js, weathers.js, mutations.js,
-elements.js, background.js, evolution.js, quest.js, roll_view.js,
-roll_performance.js, sandbox.js, startup.js, README.txt.
+Thêm drop_audio.js. Chỉ 9 thẻ sau được phát MP3 tùy chỉnh khi roll/rơi/mở khóa thẻ:
+Alucard: assets/audio/alucard.mp3
+Lucius Zogratis: assets/audio/luciuszogratis.mp3
+Aizen Beyond: assets/audio/aizenbeyond.mp3
+Equinox: assets/audio/equinox.mp3
+Shadow The World Requiem: assets/audio/stwr.mp3
+Madara Lubu: assets/audio/madaralubu.mp3
+Wonder Of You: assets/audio/wou.mp3
+Akaza: assets/audio/akaza.mp3
+Adult Gon: assets/audio/adultgon.mp3
 
-Module mới yuno.js được tải trước passives.js. Các thay đổi khác nằm trong module đúng chức năng: levels.js lo EXP; tower.js lo chọn địch/hint; evolution.js lo công thức/nguyên liệu; boss_event.js lo shop; app.js điều phối giao diện. Giữ save .acrsave và cooldown 7 ngày hiện có.
+Có công tắc SFX ON/OFF trong menu ..., lưu riêng với Music ON/OFF. SFX tắt thì không phát âm thanh thẻ, kể cả đã có yêu cầu chờ.
 
-Upload đồng bộ toàn bộ gói, giữ đúng chữ hoa/thường của tên tệp. JS/CSS dùng cache version 20261017-yuno-1. Tải lại bằng Ctrl+F5 sau triển khai nếu còn cache cũ.
+Trước SFX: pause musictheme.mp4 ngay. Trong lúc SFX chạy, các thao tác người dùng hoặc quay lại tab không tự bật nhạc chồng lên. Khi SFX kết thúc, không tải được, bị hủy hoặc người chơi đóng cửa sổ thẻ/trận, nhạc nền được tiếp tục và tăng volume dần trong 400 ms nếu Music vẫn ON.
 
-Người dùng tự bổ sung ảnh vào đúng đường dẫn:
-assets/spiritcrown.png
-assets/cards/yunospirit.png
-assets/cards/yunospiritdemonic.png
+Chỉ giữ một SFX đang phát; SFX mới dừng SFX cũ. Cache tối đa 9 Audio object và không preload âm thanh cho mọi lượt roll. Nếu chưa có tương tác để trình duyệt cho phép phát, chỉ giữ yêu cầu gần nhất chờ thao tác người dùng. Sandbox không phát SFX thẻ. Khi tệp âm thanh thiếu hoặc bị chặn, game tiếp tục hoạt động.
 
-Không kèm Excel, asset nhị phân, script kiểm thử hoặc log trong gói bàn giao.
+8. HIỆU NĂNG, KIỂM TRA VÀ TRIỂN KHAI
+
+Quest gameplay xử lý dữ liệu nhỏ trong bộ nhớ, gộp ghi tiến độ trong 250 ms và flush trước export/pagehide. Timer giao diện theo nhịp 1 giây hiện có; không tạo một vòng animation mới. Sự kiện chọn tab, ghim và nhận thưởng dùng listener dùng chung. Giao diện Quest đóng thì không dựng lại danh sách theo roll. Giữ các tối ưu Hide Rolling Card và cache biến thể đang có.
+
+Đã kiểm tra cú pháp toàn bộ JS; khởi động HTTP tại đường dẫn con, đủ 138 thẻ đăng ký nội tại, Quest desktop/mobile không tràn ngang; nhận quest, crafting; công thức tiền Daily/Weekly; save vòng encrypt/decrypt và từ chối payload sửa; mốc mở Champion; pause/resume potion qua reload và thời gian offline; các nhánh nội tại mới và quy tắc âm thanh pause/hold/resume. Đối chiếu cùng seed cho 135 thẻ cũ giữ kết quả và số lần gọi RNG. Đã chạy 137 trường hợp sao chép nội tại và kiểm tra trận Sandbox với thẻ mới không thay đổi bất kỳ kho localStorage tiến trình nào. Tệp âm thanh/ảnh thực tế do người dùng bổ sung, kiểm tra luồng Audio bằng mock khi chưa có asset.
+
+Gói mã nguồn gồm 30 tệp:
+index.html, styles.css, passives.css, app.js, cards.js,
+passives.js, requiem.js, yuno.js, grimoire.js, levels.js,
+inventory.js, crafting.js, quests.js, quest.js, achievements.js,
+tower.js, timetrial.js, raid.js, boss_event.js, evolution.js,
+weathers.js, mutations.js, elements.js, background.js, drop_audio.js,
+roll_view.js, roll_performance.js, sandbox.js, startup.js, README.txt.
+
+Tự bổ sung các ảnh mới, đúng chữ hoa/thường:
+assets/cards/xtremechan.png
+assets/cards/spr.png
+assets/cards/stwr.png
+
+Tự bổ sung 9 MP3 theo danh sách phía trên. musictheme.mp4 vẫn ở thư mục gốc. Không tạo hoặc đóng gói asset nhị phân trong bản cập nhật này.
+
+Upload đồng bộ toàn bộ 30 tệp, giữ các asset cũ và thêm asset mới. Các script defer được xếp đúng thứ tự; requiem.js nằm trước passives.js, quests.js sau quest.js và trước app.js. JS/CSS dùng cache version 20261017-quests-1. Sau triển khai, nhấn Ctrl+F5 nếu trình duyệt còn cache bản trước.
+
+Không kèm Excel, script kiểm thử, log hoặc tệp trung gian trong gói bàn giao.

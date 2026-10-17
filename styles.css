@@ -4491,3 +4491,29 @@ body {
 #towerRewardHint { color:#f4d995; }
 #towerRewardHint:empty { display:none; }
 @media (max-width:640px) { .tower-rule-hints { grid-column:1 / -1; } }
+
+/* Unified Quest terminal: independent scrolling columns, mobile stacking. */
+.quest-board{width:min(1080px,96vw);height:min(780px,92dvh);display:flex;flex-direction:column;min-height:0;background:linear-gradient(145deg,#061b24,#080d19 60%);border:1px solid #24d9f0;box-shadow:0 0 28px #06bdd52b;padding:22px;border-radius:18px;overflow:hidden}
+.quest-board .modal-header{flex-shrink:0;border-bottom:1px solid #17cce454;padding-bottom:12px}
+.quest-board h2{color:#7df5ff}.quest-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;flex-shrink:0}
+.quest-tabs button{border:1px solid #516078;background:#172235;border-radius:20px;padding:9px 18px;color:#d4e2f3;font-weight:700}
+.quest-tabs button.is-active{background:#07556b;border-color:#2be7ff;box-shadow:0 0 12px #00d9ff40;color:#fff}
+.quest-reset{font-size:12px;color:#53d9eb;margin:9px 2px;flex-shrink:0;min-height:18px}
+.quest-board-columns{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;min-height:0;flex:1}
+.quest-board-list,.quest-board-detail{overflow:auto;min-width:0;min-height:0;scrollbar-color:#13b4c7 #09131d}
+.quest-board-list{display:flex;flex-direction:column;gap:10px;padding:3px 8px 3px 2px}
+.quest-board-row{position:relative;background:linear-gradient(130deg,#102d3b,#070f17);border:1px solid #28606d;border-radius:10px;flex-shrink:0;overflow:hidden}
+.quest-board-row.is-selected{border-color:#24e2ff;box-shadow:0 0 12px #00dcff36;background:linear-gradient(125deg,#075e72,#071a24)}
+.quest-row-select{display:grid;gap:10px;width:100%;text-align:left;background:transparent;color:#e8f8ff;border:0;border-radius:0;padding:16px 52px 15px 16px;cursor:pointer}
+.quest-row-select small{color:#35d9ed;font-size:11px;font-weight:800}.quest-row-select strong{font-size:14px;line-height:1.5}.quest-row-select span{font-size:12px;text-align:right;color:#b9f6ff}
+.quest-board progress{accent-color:#27e5e4;width:100%;height:8px;border:0;border-radius:8px;overflow:hidden}
+.quest-pin{position:absolute;right:9px;top:10px;background:#263c4a;border:1px solid #4d7787;border-radius:6px;color:#8ce7f3;padding:4px 9px;cursor:pointer}
+.quest-board-detail{padding:20px;background:linear-gradient(160deg,#06202b,#050c15);border:1px solid #255460;border-radius:10px;display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.quest-board-detail h3{margin:0;color:#eafcff}.quest-board-detail p{font-size:13px;line-height:1.65;color:#b8d3df;margin:0}.quest-board-detail button{margin-top:8px;min-height:42px;flex-shrink:0}
+.quest-reward{margin-top:auto;background:#10392f;border:1px solid #1db68a;border-radius:8px;padding:16px;color:#7cffbf;font-size:14px;line-height:1.5}
+.quest-mystery-art{width:140px;height:170px;object-fit:cover;align-self:center;border-radius:8px;border:1px solid #486070}.quest-board .quest-steps{padding-left:20px;font-size:12px;line-height:1.7;color:#9db6c9}
+@media(max-width:650px){.quest-board{padding:13px;height:94dvh}.quest-tabs{gap:5px}.quest-tabs button{padding:8px 10px;font-size:11px}.quest-board-columns{display:flex;flex-direction:column;gap:10px;overflow:auto}.quest-board-list{max-height:38vh;min-height:170px;flex-shrink:0}.quest-board-detail{min-height:260px;overflow:visible;flex-shrink:0}.quest-reward{margin-top:10px}}
+
+.quest-board progress::-webkit-progress-bar{background:#061119;border-radius:8px}.quest-board progress::-webkit-progress-value{background:linear-gradient(90deg,#0b8fba,#51f9d2);border-radius:8px}.quest-board progress::-moz-progress-bar{background:#32e7e3}
+
+.quest-buffs{font-size:11px;color:#94ffc6;margin:0 0 8px;flex-shrink:0}.quest-buffs:empty{display:none}

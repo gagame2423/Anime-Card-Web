@@ -124,7 +124,7 @@
       : allowed?.length ? `Enemy team: ${allowed.join(' OR ')}. One Element is chosen per floor; all 4 opponents share it, never a mixed team.`
       : 'Enemy team: all 6 Elements may appear; no single-Element lock. Higher floors filter out weaker cards.';
     const rewards=getFloorRewardCards(host.ALL_CARDS,key);
-    const reward=rewards.length?`Floor 100: ${rewards.map(card=>card.name).join(' / ')} • Normal Champion reward; future rolls require ${key==='normal'?'Normal weather':def?.name || key}.`:'Every 10 floors: Elite room. Tower Coins + damage-based VNĐ; no EXP.';
+    const reward=rewards.length?`${rewards.map(card=>`Floor ${card.towerFloor || 100}: ${card.name}`).join(' • ')} • Normal Champion reward; future rolls require ${key==='normal'?'Normal weather':def?.name || key}.`:'Every 10 floors: Elite room. Tower Coins + damage-based VNĐ; no EXP.';
     return {player,enemies,reward};
   }
   const aliases = { blizzard: 'frost', sacrifice: 'eclipsed' };
@@ -307,7 +307,7 @@
   function rewardRequirement(mode) { return `tower_floor_100_${weatherId(mode)}`; }
   function getProgressSnapshot() { return { ...data.cleared }; }
   function getFloorRewardCards(cards, mode) {
-    return (cards || []).filter(card => card?.unlockRequirement === rewardRequirement(mode));
+    return (cards || []).filter(card => card?.towerType===weatherId(mode) && /^tower_floor_/.test(card.unlockRequirement || '')).sort((a,b)=>(a.towerFloor||100)-(b.towerFloor||100));
   }
   function reset() { data = fresh(); persist(); }
   host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, SCALING, ENEMY_ELEMENTS, QUALITY_TIERS, SELECTION_VERSION, minimumEnemyChance, protectEnemyUnit, limitEnemyAttack, DAMAGE_PER_VND, damageSummary, battleCurrency, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, describeType, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, buildTrialOpponents, getOpponents, isEncounterRecord, validMode, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });

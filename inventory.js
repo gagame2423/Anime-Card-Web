@@ -3,15 +3,22 @@
   'use strict';
   const KEY = 'anime_card_rng_items_v1';
   const DURATION_MS = 600000;
+  const SUPER_DURATION_MS = 300000;
+  const SUPER_BASE = Object.freeze({super_luck_potion:'lucky_potion',super_rich_potion:'rich_potion',super_exp_potion:'exp_potion',super_speed_potion:'speed_potion'});
+  const SUPER_FOR = Object.freeze(Object.fromEntries(Object.entries(SUPER_BASE).map(([a,b])=>[b,a])));
   const POTIONS = Object.freeze(Object.fromEntries(Object.entries({
     lucky_potion: { name: 'Lucky Potion', icon: '🍀', description: '+25% Luck for 10 minutes', stat: 'luck', bonus: .25 },
     speed_potion: { name: 'Speed Potion', icon: '⚡', description: '+10% Roll Speed for 10 minutes', stat: 'speed', bonus: .10 },
     rich_potion: { name: 'Rich Potion', icon: '💵', description: '+25% VNĐ earned for 10 minutes', stat: 'rich', bonus: .25 },
     exp_potion: { name: 'EXP Potion', icon: '✨', description: '+25% EXP earned for 10 minutes', stat: 'exp', bonus: .25 },
+    super_luck_potion: { name:'Super Luck Potion',icon:'🍀',description:'+50% Luck for 5 minutes; pauses regular Lucky Potion.',stat:'luck',bonus:.50,tier:'epic',source:'craft' },
+    super_rich_potion: { name:'Super Rich Potion',icon:'💎',description:'+50% VNĐ for 5 minutes; pauses regular Rich Potion.',stat:'rich',bonus:.50,tier:'epic',source:'craft' },
+    super_exp_potion: { name:'Super EXP Potion',icon:'🌟',description:'+50% EXP for 5 minutes; pauses regular EXP Potion.',stat:'exp',bonus:.50,tier:'epic',source:'craft' },
+    super_speed_potion: { name:'Super Speed Potion',icon:'🌪',description:'+15% Roll Speed for 5 minutes; pauses regular Speed Potion.',stat:'speed',bonus:.15,tier:'epic',source:'craft' },
     speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes outside Time Trial. Tower / Time Trial / Raid shops only.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'shop' }
   }).map(([id, item]) => [id, Object.freeze({ id, type: 'potion', tier: 'rare', ...item })])));
   // Preserve the original four-potion battle pool; exclusive items never enter it.
-  const POTION_BY_STAT = new Map(Object.entries(POTIONS).map(([id, potion]) => [potion.stat, id]));
+  const POTION_BY_STAT = new Map(Object.entries(POTIONS).filter(([id])=>!SUPER_BASE[id]).map(([id,potion])=>[potion.stat,id]));
   const BATTLE_DROP_IDS = Object.freeze(['lucky_potion', 'speed_potion', 'rich_potion', 'exp_potion']);
   const definitions = new Map(Object.entries(POTIONS));
   const hasOwn = (object, id) => Object.prototype.hasOwnProperty.call(object, id);
@@ -48,7 +55,7 @@
       quantity: countOf(typeof raw === 'number' || typeof raw === 'string' ? raw : entry.quantity ?? entry.count),
       metadata: entry.metadata && typeof entry.metadata === 'object' ? entry.metadata : {} };
   }
-  function blank() { return { version: 2, items: Object.fromEntries(Object.keys(POTIONS).map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
+  function blank() { return { version: 3, paused: {}, items: Object.fromEntries(Object.keys(POTIONS).map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
   function read() {
     let saved;
     try { saved = sanitizeSave(JSON.parse(host.localStorage?.getItem(KEY) || 'null')); } catch (_) { saved = null; }
@@ -58,19 +65,33 @@
       for (const [id, raw] of entries) if (safeId(id)) result.items[id] = normalizeItem(id, raw);
       for (const id of Object.keys(POTIONS)) {
         const until = Number(saved.buffs?.[id]) || 0;
-        if (Number.isFinite(until) && until > Date.now()) result.buffs[id] = until;
+        if (Number.isSafeInteger(until) && until > 0) result.buffs[id] = until;
       }
+      for(const id of Object.values(SUPER_BASE)) { const ms=Number(saved.paused?.[id]); if(Number.isSafeInteger(ms)&&ms>0)result.paused[id]=ms; }
       result.misses = Math.min(10, countOf(saved.misses));
     }
     return result;
   }
   let data = read();
+  function settle(at=Date.now()){
+    let changed=false;
+    for(const [superId,baseId]of Object.entries(SUPER_BASE)){
+      const until=data.buffs[superId];
+      if(until&&until<=at){
+        if(data.paused[baseId])data.buffs[baseId]=until+data.paused[baseId];
+        delete data.paused[baseId];delete data.buffs[superId];changed=true;
+      }
+    }
+    for(const[id,until]of Object.entries(data.buffs))if(until<=at){delete data.buffs[id];changed=true;}
+    return changed;
+  }
+  settle();
   function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); return true; } catch (e) { console.warn('Inventory save unavailable', e); return false; } }
   persist(); // Migrate in place; card and tower saves are never rewritten here.
   function getItem(id, at = Date.now()) {
     if (!safeId(id) || !hasOwn(data.items, id)) return null;
     const entry = data.items[id];
-    return { ...entry, metadata: { ...entry.metadata }, ...POTIONS[id], quantity: entry.quantity, until: data.buffs[id] || 0, remaining: Math.max(0, (data.buffs[id] || 0) - at), usable: hasOwn(POTIONS, id) };
+    return { ...entry, metadata: { ...entry.metadata }, ...POTIONS[id], quantity: entry.quantity, until: data.buffs[id] || 0, remaining: Math.max(0, (data.buffs[id] || 0) - at), pausedRemaining: data.paused[id] || 0, usable: hasOwn(POTIONS, id) };
   }
   function list() { return Object.keys(data.items).map(id => getItem(id)); }
   function quantity(id) { return safeId(id) && hasOwn(data.items, id) ? data.items[id].quantity || 0 : 0; }
@@ -96,21 +117,33 @@
     if (persist()) return true;
     data.items[id].quantity += amount; return false;
   }
-  function use(id) {
-    if (!Object.prototype.hasOwnProperty.call(POTIONS, id) || quantity(id) < 1) return false;
-    data.items[id].quantity -= 1;
-    data.buffs[id] = Math.max(Date.now(), Number(data.buffs[id]) || 0) + DURATION_MS; persist(); return true;
+  function use(id, at=Date.now()) {
+    if (host.SandboxSystem?.active || !hasOwn(POTIONS,id) || quantity(id)<1) return false;
+    const before=JSON.stringify(data);settle(at);
+    data.items[id].quantity--;
+    if(SUPER_BASE[id]){
+      const base=SUPER_BASE[id],remaining=Math.max(0,(data.buffs[base]||0)-at);
+      if(remaining)data.paused[base]=(data.paused[base]||0)+remaining;
+      delete data.buffs[base];data.buffs[id]=Math.max(at,data.buffs[id]||0)+SUPER_DURATION_MS;
+    }else if(SUPER_FOR[id] && data.buffs[SUPER_FOR[id]]>at){
+      data.paused[id]=(data.paused[id]||0)+DURATION_MS;
+    }else data.buffs[id]=Math.max(at,data.buffs[id]||0)+DURATION_MS;
+    if(persist())return true;data=JSON.parse(before);return false;
   }
-  function multiplier(stat, at = Date.now()) {
-    const id = POTION_BY_STAT.get(stat);
-    return id && Number(data.buffs[id]) > at ? 1 + POTIONS[id].bonus : 1;
+  function multiplier(stat,at=Date.now()) {
+    if(settle(at))persist();
+    const base=POTION_BY_STAT.get(stat),superId=SUPER_FOR[base];
+    const id=superId&&data.buffs[superId]>at?superId:base;
+    return id&&data.buffs[id]>at?1+POTIONS[id].bonus:1;
   }
-  function combatTurnMs(defaultMs = 3000, at = Date.now()) { return Number(data.buffs.speed_battle_potion) > at ? 1000 : defaultMs; }
-  function tick(at = Date.now()) {
-    let expired = false;
-    for (const [id, until] of Object.entries(data.buffs)) if (until <= at) { delete data.buffs[id]; expired = true; }
-    if (expired) persist(); return expired;
+  function craft(id){
+    const base=SUPER_BASE[id];
+    if(host.SandboxSystem?.active||!base||quantity(base)<10||quantity(id)>=Number.MAX_SAFE_INTEGER)return false;
+    data.items[base].quantity-=10;data.items[id].quantity++;
+    if(persist())return true;data.items[base].quantity+=10;data.items[id].quantity--;return false;
   }
+  function combatTurnMs(defaultMs=3000,at=Date.now()){return Number(data.buffs.speed_battle_potion)>at?1000:defaultMs;}
+  function tick(at=Date.now()){const expired=settle(at);if(expired)persist();return expired;}
   function dropChance(dropChancePercent = 0) {
     const playerStat = Math.max(0, Math.min(20, Number(dropChancePercent) || 0));
     return Math.min(.30, (.10 + data.misses * .02) + playerStat / 100);
@@ -135,7 +168,7 @@
     if (!grid) return;
     const query = String(search).trim().toLowerCase();
     const items = list().filter(item => (category === 'all' || item.type === category) && `${item.name} ${item.description} ${item.id}`.toLowerCase().includes(query));
-    const signature = JSON.stringify(items.map(({ remaining, until, ...item }) => item));
+    const signature = JSON.stringify(items.map(({ remaining, until, pausedRemaining, ...item }) => item));
     const prior = renderStates.get(grid);
     if (!prior || prior.signature !== signature) {
       const doc = grid.ownerDocument, timers = new Map(); grid.replaceChildren();
@@ -167,10 +200,10 @@
     for (const item of items) {
       const timer = renderStates.get(grid).timers.get(item.id); if (!timer) continue;
       const seconds = Math.ceil(item.remaining / 1000);
-      timer.textContent = seconds > 0 ? `ACTIVE • ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : item.usable ? 'Not active' : 'Ready in storage';
+      timer.textContent = item.pausedRemaining > 0 ? `PAUSED • ${Math.ceil(item.pausedRemaining/1000)}s remaining (Super active)` : seconds > 0 ? `ACTIVE • ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : item.usable ? 'Not active' : 'Ready in storage';
       timer.classList.toggle('is-active', seconds > 0);
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

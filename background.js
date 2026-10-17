@@ -4,6 +4,7 @@
   'use strict';
   const doc = host.document;
   const MUSIC_KEY = 'anime_card_rng_music_muted';
+  let specialHold=false, fadeFrame=null;
   let music = null, musicPending = null, musicUnavailable = false, muted = false;
   try { muted = host.localStorage.getItem(MUSIC_KEY) === 'true'; } catch (_) {}
   function renderMusicControl() {
@@ -11,7 +12,7 @@
     if (button) { button.textContent = muted ? '♫ Music OFF' : '♫ Music ON'; button.setAttribute('aria-pressed',String(muted)); button.title = musicUnavailable ? 'Add musictheme.mp4 to the game directory, then reload.' : 'Looping background music'; }
   }
   function resumeMusic() {
-    if (!activated || leaving || muted || musicUnavailable || !host.Audio) return Promise.resolve(false);
+    if (!activated || leaving || muted || specialHold || musicUnavailable || !host.Audio) return Promise.resolve(false);
     if (musicPending) return musicPending;
     try {
       if (!music) {
@@ -19,7 +20,7 @@
         music.addEventListener('error',()=>{ musicUnavailable = true; renderMusicControl(); });
       }
       if (!music.paused) return Promise.resolve(true);
-      musicPending = Promise.resolve(music.play()).then(()=>true).catch(error=>{ if (error.name === 'NotSupportedError') musicUnavailable = true; renderMusicControl(); return false; }).finally(()=>{musicPending = null;});
+      musicPending = Promise.resolve(music.play()).then(()=>{if(specialHold||muted||leaving){music.pause();return false;}return true;}).catch(error=>{ if (error.name === 'NotSupportedError') musicUnavailable = true; renderMusicControl(); return false; }).finally(()=>{musicPending = null;});
       return musicPending;
     } catch (_) { return Promise.resolve(false); }
   }
@@ -72,7 +73,23 @@
     context = source = gain = null; pending = null;
   });
   host.BackgroundActivitySystem = Object.freeze({
-    MUSIC_KEY, configure: options => { bridge = options || {}; }, resumeAudio, resumeMusic,
+    MUSIC_KEY, holdSpecial:()=>{specialHold=true;if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;music?.pause();},
+    releaseSpecial:()=>{
+      specialHold=false;
+      const resume=()=>{
+        if(music)music.volume=0;
+        void resumeMusic().then(ok=>{
+          if(!ok||specialHold)return;
+          const start=host.performance.now();
+          const fade=now=>{if(specialHold||muted){fadeFrame=null;return;}music.volume=.35*Math.min(1,(now-start)/400);if(now-start<400)fadeFrame=host.requestAnimationFrame(fade);else fadeFrame=null;};
+          if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);
+          fadeFrame=host.requestAnimationFrame(fade);
+        });
+      };
+      // An immediate missing-SFX error can arrive before the first theme play settles.
+      if(musicPending)void musicPending.finally(resume);else resume();
+    },
+    configure: options => { bridge = options || {}; }, resumeAudio, resumeMusic,
     getMusicStatus: () => ({activated,muted,unavailable:musicUnavailable,loop:music?.loop || false,paused:music?.paused ?? true,source:music?.getAttribute("src") || "musictheme.mp4"}),
     getStatus: () => ({ supported: Boolean(audioConstructor()), activated, state: context?.state || 'inactive', silent: true })
   });
