@@ -3,11 +3,13 @@
   'use strict';
   const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
   const RECIPES = Object.freeze([
+    Object.freeze({id:'yuno-spirit',baseId:'yuno',itemId:'spirit_crown',level:100,name:'Yuno Spirit'}),
     Object.freeze({ id:'awakened-doflamingo', baseId:'doflamingo', itemId:'web_string', level:100, name:'Awakened Doflamingo' }),
     Object.freeze({ id:'sea-goddess-valkyrie', baseId:'noelle-silva', itemId:'sea_valkyrie', level:100, name:'Sea Goddess Valkyrie' }),
     Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100, name:'Prime Garp' })
   ]);
   const MATERIALS = Object.freeze([
+    Object.freeze({id:'spirit_crown',name:'Spirit Crown',type:'material',icon:'👑',image:'assets/spiritcrown.png',tier:'secret',description:'Evolve Lv.100+ Yuno into Yuno Spirit. Lucius Event Shop: 4,400 Lucius Event Coins.'}),
     Object.freeze({ id:'sea_valkyrie', name:'Sea Valkyrie', type:'material', icon:'🌊', image:'assets/mermaidscale.png', tier:'mythic', description:'Evolve Lv.100+ Noelle Silva into Sea Goddess Valkyrie. Lucius Event Shop: 4,000 Lucius Event Coins.' }),
     Object.freeze({ id:'web_string', name:'Web String', type:'material', icon:'🕸️', tier:'mythic', description:'Evolve Lv.100+ Doflamingo into Awakened Doflamingo. Marine Ford Raid Shop: 6,220 Coins.' }),
     Object.freeze({ id:'cannon_ball', name:'Cannon Ball', type:'material', icon:'💣', tier:'mythic', description:'Evolve Lv.100+ Garp into Prime Garp. Marine Ford Raid Shop: 3,899 Coins.' })

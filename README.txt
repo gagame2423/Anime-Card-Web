@@ -1,195 +1,175 @@
-NHẬT KÝ CẬP NHẬT — JULIUS VÀ LUCIUS EVENT — 17/10/2026
+NHẬT KÝ CẬP NHẬT — YUNO, EXP THEO RNG VÀ HƯỚNG DẪN TOWER
+Ngày 17/10/2026 — phiên bản cache 20261017-yuno-1
 
-Tệp này chỉ ghi các thay đổi của phiên bản hiện tại.
+Tài liệu chỉ ghi thay đổi trong bản cập nhật hiện tại.
 
-1. GIỚI HẠN LEVEL 1000 VÀ GIẢM TẢI EXP
+1. SỬA CRASH RARITY VÀ KIỂM TRA SALVAGE
 
-Giới hạn Level của thẻ là 1000. Khi tải dữ liệu hiện có hoặc nhập save .acrsave, các bản ghi thẻ vượt giới hạn được đưa về Lv.1000. Bộ đọc vẫn hỗ trợ các dạng dữ liệu cũ trong inventory, lineup và storage, sau đó hợp nhất vào cardProgress chuẩn.
+Định nghĩa rarityOrder trong phạm vi dùng chung của app.js: Common 0, Rare 1, Epic 2, Legendary 3, Mythic 4, Secret 5. Bộ chọn Rarity của Arena so sánh bậc rarity trước, sau đó so sánh độ hiếm 1 in N trong cùng bậc và tên thẻ để ổn định thứ tự. Không còn phụ thuộc biến chưa khai báo hoặc điểm tổng hợp có thể làm độ hiếm lấn át bậc rarity.
 
-Thẻ đã Lv.1000 không nhận EXP từ roll trùng, trận thường hoặc EXP Time Trial. Roll trùng vẫn tăng số lượng, nhận đúng biến thể, tăng bộ đếm và ghi tiến độ như bình thường; bỏ sớm phép tính thưởng EXP và các multiplier EXP. EXP còn dư ở Lv.1000 được xóa; phần EXP lẻ của Time Trial được dọn khi tải hoặc khi lên mức tối đa. Giao diện hiển thị MAX LEVEL.
+Đã rà soát Salvage All Extra Duplicates và giữ quy tắc theo từng khóa chuẩn cardId + mutationIds:
+- Với mỗi biến thể, chỉ salvage max(0, số lượng - 1).
+- Giữ một bản Normal nếu có Normal; giữ một bản của từng mutation và double mutation đang sở hữu.
+- Wet, Solar, Wet + Monarch và Solar + Monarch là bốn biến thể khác nhau.
+- Hai thứ tự Wet + Monarch / Monarch + Wet là cùng một tổ hợp; không được nhân đôi thành hai biến thể giả.
+- Các tên cũ Sweet/Sweat, Blizzard/Frost và Sacrifice/Eclipsed được chuẩn hóa về cùng mutation tương ứng. Chuẩn hóa tên không gộp hai mutation khác nhau.
+- Chạy salvage lại khi mỗi biến thể còn một bản sẽ không xóa thêm thẻ. Giữ công thức VNĐ mỗi bản và đồng bộ dữ liệu sở hữu như trước.
 
-Giữ công thức trước giới hạn:
-- EXP cần để tăng từ Level L: floor(100 x hệ số rarity x L).
-- Hệ số rarity: Common 1; Rare 1.6; Epic 2.4; Legendary 3.6; Mythic 5.2; Secret 8.
-- Hệ số chỉ số theo Level: 1 + 0.075 x (L - 1), với 1 <= L <= 1000.
-- Lv.1000 tương ứng x75.925 chỉ số Lv.1, trước mutation và buff trong trận.
-- Tính lượng Level tăng bằng tìm kiếm nhị phân trên tổng EXP cần, tránh vòng lặp lớn khi nhận nhiều EXP. Giới hạn an toàn của số EXP vẫn tách riêng khỏi giới hạn Level 1000.
+Đã kiểm tra toàn bộ 92 biến thể hợp lệ của một thẻ: một Normal, 13 mutation đơn và 78 tổ hợp đôi. Sau salvage, cả 92 biến thể đều còn đúng một bản.
 
-Giới hạn này không đặt trần cho Floor của Infinite Tower hoặc Room Time Trial.
+2. CÔNG THỨC EXP MỚI: ĐỘ HIẾM 1 IN N LÀ YẾU TỐ CHÍNH
 
-2. SỬA SALVAGE ALL EXTRA DUPLICATES
+levels.js là nguồn công thức chung cho yêu cầu EXP, giao diện tiến trình và cấp Level.
 
-Sửa thao tác tổng hợp từng giữ một biến thể của mỗi thẻ và salvage cả các mutation độc nhất còn lại.
+Với một thẻ roll được:
+N = mẫu số RNG gốc trong cards.js, ví dụ 2 hoặc 1,500,000.
+r = log10(N).
+A = 150 x (1 + r)^1.5.
+p = 1.30 + 0.06 x r.
+EXP cần để tăng từ Level L = floor(A x L^p).
 
-Quy tắc mới áp dụng riêng cho từng khóa thẻ + tổ hợp mutation:
-- Số bản được salvage = max(0, số lượng - 1).
-- Giữ 1 bản Normal nếu đang có Normal.
-- Giữ 1 bản của mỗi mutation và mỗi double mutation đang sở hữu.
-- Không gộp các tổ hợp mutation khác nhau thành bản trùng.
-- Giá trị VNĐ mỗi bản giữ công thức hiện hành; chỉ đổi số bản được phép salvage.
-- Thực hiện lại khi mỗi biến thể còn 1 bản sẽ không xóa thêm thẻ.
+N càng lớn thì cả hệ số A và số mũ p đều lớn hơn. Hai thẻ có cùng N dùng cùng đường cong, dù nhãn rarity khác nhau. Dùng RNG gốc; Luck, thời tiết và mutation không làm mẫu số dùng để tính EXP thay đổi theo thời điểm.
 
-Đồng bộ lại dữ liệu sở hữu và cache sau khi loại bản dư để Collection, đội hình và kiểm tra New Mutation cùng đọc đúng số lượng.
+Một số mốc chính xác, trước mọi cơ chế thưởng EXP:
+1 in 2:
+  Lv.1: 222; Lv.10: 4,630; Lv.100: 96,304; Lv.1000: 2,003,123.
+1 in 300,000, tương ứng Yuno:
+  Lv.1: 2,472; Lv.10: 105,145; Lv.100: 4,471,145; Lv.1000: 190,128,020.
+1 in 1,500,000:
+  Lv.1: 2,883; Lv.10: 135,048; Lv.100: 6,324,906; Lv.1000: 296,223,572.
+1 in 4,444,444, tương ứng Yuno Spirit Demonic:
+  Lv.1: 3,172; Lv.10: 158,586; Lv.100: 7,927,488; Lv.1000: 396,282,292.
 
-3. ARENA: SẮP XẾP VÀ HIỂN THỊ HP/ATK THỰC
+Các số ở Lv.1000 mô tả giá trị hàm yêu cầu để đối chiếu công thức; game không cho lên Lv.1001 và không nhận thêm EXP tại mức tối đa.
 
-Sắp xếp HP hoặc ATK dùng chỉ số đã áp dụng Level và mutation đang sở hữu, thay cho chỉ số gốc trong Index. Với double mutation, nhân riêng các hệ số HP và ATK của cả hai mutation.
+Thẻ 1 in 0 không được hưởng đường cong rẻ do mẫu số bằng 0. Có thể đặt levelingRate riêng trong cards.js. Yuno Spirit dùng levelingRate = 1,500,000; giá trị này chỉ dùng tính EXP, không đưa thẻ vào pool roll. Nếu chưa cấu hình, dùng N quy ước: Common 10, Rare 100, Epic 1,000, Legendary 10,000, Mythic 500,000, Secret 1,000,000. Rarity chỉ tham gia dự phòng cho nhóm thẻ không roll được.
 
-Chọn biến thể mạnh nhất theo đúng chỉ số đang sắp xếp: biến thể có HP cao nhất có thể khác biến thể có ATK cao nhất. Mỗi ô hiển thị HP, ATK và tên mutation của cùng một biến thể thực tế; không ghép HP của biến thể này với ATK của biến thể khác. Khi thêm thẻ vào đội hình, ưu tiên biến thể mạnh nhất còn đủ số lượng theo chỉ số đang chọn.
+Để đường cong khó hơn có hiệu lực, EXP roll trùng giữ ngân sách tuyệt đối của bản trước, thay vì lấy 50% yêu cầu EXP mới:
+EXP trùng cơ bản = floor(50 x hệ số rarity x L).
+Hệ số thưởng: Common 1; Rare 1.6; Epic 2.4; Legendary 3.6; Mythic 5.2; Secret 8.
+Tiếp tục nhân buff EXP của thời tiết, potion và achievement. Yêu cầu EXP tăng nhanh hơn lượng thưởng khi lên Level cao.
 
-Trong Weather Tower, chỉ so sánh các biến thể đủ điều kiện vào Tower đó. Giữ nguyên luật chọn thẻ của người chơi và kiểm tra số bản dùng trong đội hình. Tính giá trị một lần cho mỗi thẻ trong mỗi lần sắp xếp, không tính lại trong mọi phép so sánh.
+Thưởng EXP trận thường giữ ngân sách tăng theo sqrt(L) hiện hành. EXP Time Trial vẫn là chế độ luyện EXP theo phần trăm yêu cầu Level hiện tại, với vé và thời gian như trước. Tower vẫn không cho EXP.
 
-4. BỐN THẺ MỚI
+Giữ giới hạn Level 1000, bỏ sớm EXP cho thẻ tối đa và dọn EXP dư tại giới hạn. Khi load/import, giữ Level hợp lệ và số EXP tuyệt đối đã có; không hạ Level của người chơi chỉ vì đổi công thức. Thanh tiến trình được tính lại theo yêu cầu mới. Các Level vượt 1000 vẫn được clamp theo quy tắc hiện có.
 
-JULIUS
-Element: Holy. Rarity: Secret. Rate: 1 in 1,500,000.
-Lv.1: HP 200,000; ATK 15,000.
-Nguồn: hoàn thành Julius Quest; sau đó mới vào pool roll thường. Không thêm khóa thời tiết riêng cho Julius.
+Cấp EXP nhiều Level dùng tổng chi phí được cache và tìm kiếm nhị phân. Bảng có tối đa 1000 ô/thẻ, tạo khi cần vượt ngưỡng Level; thưởng nhỏ chưa đủ tăng Level không dựng bảng. Tách giới hạn số an toàn khỏi giới hạn Level, tránh lặp hàng triệu lần hoặc cấp Level theo công thức tuyến tính cũ. Kiểm tra roll trùng không còn tính yêu cầu EXP chỉ để suy ra ngân sách thưởng.
 
-Time Grimoire:
-- Khi Julius còn sống, đòn đánh vào Julius hoặc đồng đội tuyến đầu có 30% cơ hội bị phản lại người tấn công. Không hoán đổi vị trí.
-- Hai lần phản đòn liên tiếp gây 50% ATK hiện tại của Julius lên toàn bộ địch và tạo khiên bằng 50% max HP Julius cho các đồng đội, bao gồm Julius. Một lần kiểm tra phản đòn thất bại đặt lại chuỗi.
-- Khi khiên do Julius tạo cho một đồng đội khác bị phá trong 3 lượt chiến đấu kể từ lúc tạo, lưu HP hiện tại, max HP, ATK hiện tại và nội tại của đồng đội làm backup life. Chỉ lưu một lần trong trận. Khiên vẫn hoạt động sau cửa sổ 3 lượt nhưng không tạo backup mới từ lần phá khiên muộn đó.
-- Đòn chí mạng tiêu thụ backup để hồi sinh Julius một lần với chỉ số và nội tại đã lưu. ATK đã bao gồm buff không bị nhân buff lần thứ hai. Sau lần hồi sinh này, Julius không thể bị clone hay được đồng đội hồi sinh/cứu mạng bằng Marco.
-- Đòn phản lại không tiếp tục phản qua lại vô hạn giữa hai Time Grimoire.
+3. YUNO SPIRIT VÀ SPIRIT CROWN
 
-SPEED WIZARD
-Element: Electric. Rarity: Mythic. Rate: 1 in 450,000. Chỉ roll trong Wind.
-Lv.1: HP 45,000; ATK 4,500, theo thông số đã xác nhận.
+Yuno Spirit:
+- ID: yuno-spirit.
+- Element Nature; rarity Secret; rate 1 in 0, chỉ Evolution.
+- HP Lv.1: 255,500; ATK Lv.1: 19,892.
+- Ảnh: assets/cards/yunospirit.png.
 
-Godspeed:
-- Mỗi đòn có 5% cơ hội bắt đầu follow-up, gây 50% ATK. Trong cùng chuỗi, cơ hội của follow-up kế tiếp bằng một nửa lần trước: 5%, 2.5%, 1.25%... trước bonus né đòn.
-- Có 50% cơ hội né. Mỗi lần né thành công cộng 5 điểm phần trăm vào cơ hội bắt đầu follow-up cho phần còn lại của trận, nhưng bỏ lượt tấn công kế tiếp.
-- Cơ hội kiểm tra được giới hạn trong khoảng xác suất hợp lệ. Chuỗi được xử lý bằng vòng lặp, không đặt trần số follow-up cố định.
+Spirit Crown:
+- ID vật phẩm: spirit_crown; loại material, lưu trong Storage.
+- Giá: 4,400 Lucius Event Coins tại Lucius Event Shop.
+- Ảnh: assets/spiritcrown.png.
+- Trừ đúng ví Lucius; không trừ hoặc dùng thay bằng Alucard Event Coins.
 
-LUCIUS ZOGRATIS
-Element: Dark. Rarity: Secret. Rate: 1 in 0; không roll thường.
-Lv.1: HP 300,000; ATK 30,000.
-Nguồn: Lucius Event.
+Tiến hóa: Yuno Lv.100 trở lên + một bản Yuno ở biến thể đã chọn + 1 Spirit Crown => Yuno Spirit Lv.1, EXP 0. Giữ nguyên mutation hoặc double mutation của bản Yuno bị tiêu thụ. Lv.99 bị chặn; chỉ tiêu một bản thẻ và một nguyên liệu. Áp dụng giao dịch khôi phục và biên nhận tiến hóa một lần của hệ thống hiện có. Yuno Spirit không được roll thường sau tiến hóa.
 
-All Grimoire:
-- Khi vào trận, nhận một nội tại ngẫu nhiên từ đồng đội hoặc địch. Mỗi 5 đòn đánh nhận thêm một nội tại nếu còn nguồn mới hợp lệ.
-- Tối đa 5 nội tại tổng cộng, gồm All Grimoire và tối đa 4 nội tại nhận thêm. Không trùng tên nội tại. Khi không còn nguồn mới, không tạo bản trùng.
-- Mỗi nội tại sao chép giữ trạng thái, bộ đếm và dạng biến hình riêng; cùng dùng HP, ATK, khiên và trạng thái chiến đấu của Lucius. Nội tại vào trận chỉ khởi tạo một lần cho mỗi bản sao. Nội tại sao chép tiếp từ các kỹ năng đánh cắp cũng phải tuân theo giới hạn tổng này.
-- Khi Julius thật trong đội chết vĩnh viễn, Lucius nhận +50% max HP và +50% ATK một lần trong trận. Không kích hoạt khi Julius vẫn được cứu sống/hồi sinh tức thì. Nếu Dante hoặc Josuke còn khả năng hồi sinh đồng đội, chờ kết quả thay vì coi Julius đã chết vĩnh viễn ngay lúc HP về 0.
-- Mô tả trong trận liệt kê các nội tại đã nhận; badge hiển thị số nội tại hiện có.
+Spirit Wind Grimoire:
+- Khi vào trận, cấp cho toàn bộ đồng đội còn sống, gồm chính mình, khiên bằng 48% max HP hiện tại của Yuno Spirit. Khiên này không có thời hạn trong trận; vẫn tồn tại trên người nhận nếu nguồn cấp bị hạ.
+- Có 30% cơ hội né đòn. Mỗi lần né thành công cộng thêm khiên bằng 30% HP hiện tại của thẻ, không phải 30% max HP.
+- Khiên né tồn tại thêm 3 lượt chiến đấu và được gỡ ở cuối lượt thứ ba sau lúc tạo. Thời hạn tính bằng lượt, không tính bằng giây hoặc tốc độ potion.
+- Mỗi đòn tấn công có 26% cơ hội xáo thứ tự các địch còn sống, rồi gây thêm 48% ATK hiện tại lên toàn bộ địch. Đội hình gốc lưu cho lần retry Tower không bị ghi đè bởi thứ tự bị xáo trong trận.
+- Đổi mục tiêu do xáo đội hình không đặt lại bộ đếm đòn của các thẻ.
 
-SEA GODDESS VALKYRIE
-Element: Water. Rarity: Mythic. Rate: 1 in 0; chỉ nhận qua Evolution.
-Lv.1: HP 400,000; ATK 20,000.
+4. YUNO SPIRIT DEMONIC — CHAMPION LUCKY FLOOR 100
 
-Ultimate Tsunami:
-- Khi vào trận, gây 100% ATK hiện tại lên toàn bộ địch qua luồng sát thương/Element hiện hành.
-- Nhận khiên bằng floor(50% tổng HP thực tế đã gây mất), không tính phần sát thương vượt HP còn lại hoặc bị chặn hoàn toàn.
-- Khi khiên Tsunami bị phá, stun các địch còn sống trong 4 lượt.
-- Giữ cơ chế khiên hiện hành: đòn phá khiên không tràn sát thương dư vào HP.
+Thông số:
+- ID: tower-champion-lucky.
+- Element Nature; rarity Secret; rate 1 in 4,444,444.
+- HP Lv.1: 444,444; ATK Lv.1: 22,222.
+- Ảnh: assets/cards/yunospiritdemonic.png.
 
-5. JULIUS QUEST: THEO DÕI TUẦN TỰ
+Theo cơ chế Champion đã xác nhận, lần hoàn thành Lucky Tower Floor 100 cấp một bản Normal và mở khóa thẻ vĩnh viễn. Sau mở khóa, thẻ vào pool roll với rate 1 in 4,444,444 khi Lucky đang hoạt động. Không thêm thẻ vào pool khi thiếu Lucky. Save đã có tiến độ Lucky từ Floor 100 trở lên được đối chiếu với milestone mới theo cơ chế achievement; biên nhận chặn cấp lặp lại.
 
-Thêm Julius vào Quest Cards trong menu tiện ích. Artwork được hiển thị; chỉ số/nội tại vẫn được giấu theo cơ chế Quest Cards trước khi mở khóa.
+Anti Spirit Grimoire:
+- Gây x2 damage lên địch Holy, đồng thời nhận ít hơn 22% damage từ nguồn Holy. Bonus này phối hợp với matrix Element hiện hành, không đổi Element của thẻ.
+- Mỗi đòn có 44% cơ hội xuyên đội hình. Đòn chính là hit đầu với 100% ATK cơ bản; không cộng thêm một hit 100% trùng lên mục tiêu đầu.
+- Các hit xuyên tiếp theo nhân x0.78 cho mỗi hit trước đã gây sát thương: 100%, 78%, 60.84%, 47.4552%... Áp dụng tiếp phòng thủ, Element và các tương tác sát thương hiện hành.
+- Khi bị tấn công, có 22% cơ hội hấp thụ sát thương. Đây là hấp thụ, không phải né: không kích hoạt thưởng né và không tự thêm 22% vào chỉ số Dodge.
+- Lần hấp thụ thành công ngăn mất HP và không tiêu hao khiên đang có. Lượng hấp thụ sau giảm sát thương được cộng dồn vào bonus damage cho đòn chính kế tiếp được giải quyết; các lần bỏ lượt hoặc bị né không tiêu phần tích trữ.
+- Cấp một khiên vĩnh viễn trong trận có lượng bằng phần đã hấp thụ cho đồng đội còn sống ở đúng vị trí ngay sau thẻ. Không quay vòng về đầu đội hình nếu thẻ ở cuối; không nhảy qua vị trí đã chết để chọn người khác.
+- Khiên hấp thụ cộng dồn, không có trần số lần kích hoạt hoặc giới hạn theo max HP. DOT không tạo thêm lần hấp thụ, nhưng tương tác damage với Holy vẫn dùng đúng hệ số.
 
-Bốn bước, thực hiện theo thứ tự:
-1) Thắng Normal Time Trial Room 100 tổng cộng 1,000 lần.
-2) Thắng Normal Time Trial Room 100 với đội hình xuất phát gồm đúng 4 thẻ Holy tổng cộng 100 lần.
-3) Roll 10,000 lần khi Wind đang hoạt động.
-4) Thắng Lucius Event 1,000 lần.
+5. KHIÊN CỘNG THÊM VÀ KHIÊN CÓ THỜI HẠN
 
-Chỉ bước hiện tại được tính, sau khi Accept Quest. Một sự kiện hoàn tất bước không được dùng tiếp cho bước sau. Không dùng bestRoom hoặc Index có sẵn để cộng tiến độ hồi tố. Room phải đúng 100; Room 99/101, EXP Time Trial, trận thua và Sandbox không được cộng vào yêu cầu thắng Room 100. Full Holy được chụp từ đội hình gốc lúc bắt đầu, không tính clone/summon sinh ra giữa trận.
+Thêm yuno.js để tách logic hai thẻ và các lớp khiên cộng thêm khỏi app.js.
 
-Sửa dữ liệu sự kiện kết thúc Time Trial/Boss Event để chuyển rõ kết quả thắng/thua cho quest trước khi đóng màn hình trận. Giữ biên nhận sự kiện để tránh cộng lại cùng một kết quả.
+Khiên Yuno giữ phần vĩnh viễn và phần 3 lượt riêng biệt. Nếu khiên tạm đã hấp thụ một phần sát thương, lúc hết hạn chỉ gỡ lượng còn lại của phần tạm. Ưu tiên tiêu hao phần khiên tạm trước phần vĩnh viễn. Các lần cấp khiên cùng thời hạn được gộp số lượng, tránh tích lũy đối tượng qua một chuỗi đòn dài.
 
-Hoàn thành đủ bốn bước cấp một Julius Normal, ghi biên nhận thưởng và mở pool roll cho các lần sau. Việc cấp thưởng tiếp tục có cơ chế thử lại an toàn nếu lưu trữ chưa thành công.
+Không gỡ khiên Yuno khi một khiên Sasuke/Weather Report khác hết hạn hoặc bị xóa theo kỹ năng riêng. Giữ cách kết hợp của các khiên cũ khi không có lớp Yuno.
 
-6. TÁCH TIỀN BOSS EVENT VÀ THÊM LUCIUS EVENT
+Quy tắc chống sát thương tràn được giữ: đòn phá khiên không đưa lượng dư vào HP. Nội tại phản đòn, hồi sinh, chặn đòn và phá khiên đi qua luồng chiến đấu chung. Kỹ năng sao chép của Lucius có thể dùng hai nội tại mới với trạng thái riêng. Sandbox tạo runtime riêng và không ghi tiến trình thực.
 
-Mỗi Event có số coin, độ khó và số thắng riêng:
-- Alucard Event Coins: thuộc Alucard Event, tiếp tục yêu cầu Eclipse/Eclipsed.
-- Lucius Event Coins: thuộc Lucius Event, yêu cầu Raining đang hoạt động.
+6. ELEMENT ĐỘI ĐỊCH TOWER VÀ HƯỚNG DẪN CHO TỪNG LOẠI
 
-Dữ liệu Boss Event cũ được giữ nguyên toàn bộ trong ví Alucard; ví Lucius bắt đầu từ 0. Không sao chép số dư cũ sang cả hai ví. Tổng thắng cộng dồn giữa các loại vẫn dùng cho achievement Boss Event hiện có. Export/import mang theo cả hai ví.
+Theo xác nhận, ràng buộc Element mới chỉ áp dụng cho đội địch. Điều kiện chọn thẻ người chơi giữ nguyên: Normal dùng thẻ đang sở hữu; Weather Tower dùng thẻ native weather hoặc biến thể có mutation tương ứng, bao gồm double mutation. Không thêm luật đơn Element vào đội người chơi.
 
-Chọn loại trong Arena > Boss Event. Giữ thể thức 5 thẻ người chơi đấu một boss, độ khó 1–1000 và Speed Battle Potion hoạt động bình thường. Không thêm cây nâng cấp chỉ số. Khóa lựa chọn Event trong lúc đánh; đổi loại sau trận giữ lại đội hình chuẩn bị hợp lệ.
+Ba loại được cập nhật:
+- Lucky: chọn Nature HOẶC Holy cho một tầng; cả 4 địch dùng đúng Element đã chọn.
+- Wind: cả 4 địch dùng Nature.
+- Bizare: chọn Dark HOẶC Electric cho một tầng; cả 4 địch dùng đúng Element đã chọn.
 
-Lucius Event ở Difficulty 1:
-- Boss: Lucius Zogratis.
-- HP 1,000,000; ATK 50,000.
-- Hệ số độ khó D: S(D) = 1 + 0.075 x (D - 1).
-- HP boss = round(1,000,000 x S); ATK boss = round(50,000 x S), trước hiệu ứng nội tại trong trận.
+Các loại khác tiếp tục dùng ràng buộc hiện hành. Toàn bộ 14 lựa chọn đang có đều có mô tả dưới dropdown:
+- Normal: người chơi dùng thẻ sở hữu; địch không khóa một Element.
+- Raining: native Raining hoặc Wet; địch Water.
+- Snowing: native Snowing hoặc Frost; địch cùng Water hoặc cùng Nature.
+- Sunny: native Sunny hoặc Solar; địch Fire.
+- Lucky: native Lucky hoặc Clove; địch cùng Nature hoặc cùng Holy.
+- Sugar: native Sugar hoặc Sweet; địch Electric.
+- Reaper: native Reaper hoặc Hollow; địch cùng Dark hoặc cùng Holy.
+- Eclipse: native Eclipse hoặc Eclipsed; địch cùng Dark hoặc cùng Fire.
+- Wind: native Wind hoặc Storm; địch Nature.
+- Malevolent: native Malevolent hoặc Cursed; địch cùng Fire hoặc cùng Nature.
+- Tsukuyomi: native Tsukuyomi/Mangekyo hoặc Mangekyo; địch Dark.
+- Heavenly: native Heavenly hoặc Angelic; địch Holy.
+- Shadow: native Shadow hoặc Monarch; địch cùng Dark hoặc cùng Electric.
+- Bizare: native Bizare hoặc Stardust; địch cùng Dark hoặc cùng Electric.
 
-Tái kiểm tra Raining trước mỗi lần Continue/Auto Continue. Nếu Raining hết hạn hoặc không còn hoạt động, dừng lượt tiếp theo và hiển thị điều kiện thiếu. Không tự bỏ yêu cầu thời tiết khi đã thắng một lần. Trận đang diễn ra được xử lý theo luật hiện hành.
+Hint tách rõ đội người chơi và đội địch, cùng phần thưởng milestone hoặc thông tin Elite. Cập nhật ngay khi đổi lựa chọn, đặt trực tiếp dưới dòng chọn Tower, hỗ trợ đọc bằng aria-describedby và xuống dòng trên màn hình nhỏ. Normal Tower trong bản game hiện tại dùng tiến trình vô hạn.
 
-Coin thắng trận dùng đường cong Raid được thích nghi cho từng ví Event:
-- t = ((D - 1) / 999)^0.85.
-- Coin cơ bản tối thiểu = round(1 + 69 x t).
-- Coin cơ bản tối đa = round(1 + 99 x t).
-- Chọn số nguyên trong khoảng này; Difficulty 1 cho 1 coin, Difficulty 1000 cho 70–100 coin trước Drop Multiplier.
-- Drop Multiplier và làm tròn xác suất của hệ thống vật phẩm tiếp tục áp dụng cho coin.
-- Không nhận VNĐ, EXP, potion hoặc item thường từ kết quả Boss Event.
+7. KHÓA ĐỘI HÌNH, TƯƠNG THÍCH SAVE VÀ KIỂM TRA
 
-Drop riêng Lucius Event:
-- p(D) = 0.005 + 0.045 x (D - 1) / 999.
-- Difficulty 1: 0.5% drop Lucius Zogratis.
-- Difficulty 1000: 5% drop Lucius Zogratis.
-- Các độ khó giữa hai mốc tăng tuyến tính. Theo xác nhận, cả hai mốc đều drop Lucius; tên Alucard ở mốc đầu của yêu cầu ban đầu là ghi nhầm.
-- Áp dụng hệ thống mutation/double mutation theo thời tiết đang hoạt động khi nhận drop. Lucius không được thêm vào roll thường.
-- Drop Alucard của Alucard Event giữ công thức cũ; không chuyển sang ví hoặc bảng drop Lucius.
+Tăng phiên bản cấu hình chọn địch lên 4. Với save cũ ở ba loại Lucky/Wind/Bizare:
+- Nếu cả đội địch đã cùng một Element hợp lệ, giữ nguyên thành phần và cập nhật metadata.
+- Nếu đội cũ không đáp ứng ràng buộc mới, chuẩn hóa bằng một đội hợp lệ một lần. Sau khi lưu, thua/retry hoặc reload đều giữ đúng đội đã khóa.
+- Giữ Floor hiện tại, coin, số thắng và tiến độ mở khóa. Không đổi công thức HP/ATK hay thưởng Tower.
 
-Lưu phần thưởng chờ xử lý theo ID lượt và loại Event; khôi phục sau reload mà không cấp thẻ hai lần. Mua shop trừ đúng ví của loại đang chọn.
+Đã kiểm tra:
+- Khởi động qua file cục bộ và HTTP ở đường dẫn con; đổi Rarity không tạo lỗi runtime.
+- Salvage Normal, mutation đơn, double mutation và tên mutation cũ; chạy lại không xóa bản cuối.
+- Đường cong N tăng thì EXP yêu cầu tăng; hơn 2,000 ca cấp EXP đối chiếu với phép cộng từng Level, gồm gần Lv.1000 và số EXP lớn.
+- Roll trùng Lv.1000 không gọi hàm yêu cầu EXP; roll, số lượng và save vẫn chạy.
+- Spirit Crown trừ đúng 4,400 coin, chặn Lv.99, tiến hóa Lv.100 giữ double mutation và đặt thẻ mới về Lv.1.
+- Lucky Floor 100 cấp Champion Normal, mở pool đúng thời tiết và không cấp trùng.
+- Khiên vĩnh viễn/tạm thời, cộng dồn, hết hạn, né, xáo đội hình, xuyên địch, giảm damage Holy và tích trữ sát thương.
+- 450 đội địch mẫu ở nhiều tầng của ba loại mới đều đúng một Element hợp lệ; retry không gọi RNG để đổi đối thủ.
+- Đối chiếu cùng seed cho 133 thẻ cũ giữ kết quả chiến đấu và số lần gọi RNG; kiểm tra runtime sao chép 134 nội tại.
+- Registry đủ 135 thẻ; save round-trip và từ chối payload bị sửa; Sandbox chạy hai thẻ mới không ghi thay đổi vào kho tiến trình.
+- Hint nằm dưới dropdown trên desktop và không gây tràn ngang ở chiều rộng mobile 390 px.
 
-7. SEA VALKYRIE VÀ EVOLUTION MỚI
+8. TỆP BÀN GIAO VÀ TRIỂN KHAI
 
-Lucius Event Shop thêm Sea Valkyrie với giá 4,000 Lucius Event Coins. Đây là nguyên liệu trong Storage, dùng ảnh assets/mermaidscale.png. Không bán nguyên liệu này bằng Alucard Event Coins.
+Gói chứa đủ 26 tệp sản xuất, gồm README.txt này:
+index.html, styles.css, passives.css, app.js, cards.js, passives.js,
+yuno.js, grimoire.js, levels.js, inventory.js, tower.js, timetrial.js,
+raid.js, boss_event.js, achievements.js, weathers.js, mutations.js,
+elements.js, background.js, evolution.js, quest.js, roll_view.js,
+roll_performance.js, sandbox.js, startup.js, README.txt.
 
-Các potion của shop Event giữ giá hiện hành: Rich, EXP, Luck, Speed giá 10 coin của loại Event; Speed Battle Potion giá 25 coin. Mua potion không đổi số dư ví Event khác.
+Module mới yuno.js được tải trước passives.js. Các thay đổi khác nằm trong module đúng chức năng: levels.js lo EXP; tower.js lo chọn địch/hint; evolution.js lo công thức/nguyên liệu; boss_event.js lo shop; app.js điều phối giao diện. Giữ save .acrsave và cooldown 7 ngày hiện có.
 
-Công thức tiến hóa:
-Noelle Silva Lv.100 trở lên + 1 bản thẻ gốc ở biến thể đã chọn + 1 Sea Valkyrie
-=> Sea Goddess Valkyrie Lv.1, EXP 0, giữ đúng mutation hoặc double mutation của bản Noelle bị tiêu thụ.
+Upload đồng bộ toàn bộ gói, giữ đúng chữ hoa/thường của tên tệp. JS/CSS dùng cache version 20261017-yuno-1. Tải lại bằng Ctrl+F5 sau triển khai nếu còn cache cũ.
 
-Lv.99 không được tiến hóa. Chỉ tiêu đúng một bản Noelle và một nguyên liệu. Giữ giao dịch có bản khôi phục để không mất thẻ/item nếu thao tác ghi dữ liệu bị lỗi. Áp dụng biên nhận tiến hóa một lần của hệ thống Evolution hiện có. Thẻ kết quả không vào pool roll thường.
+Người dùng tự bổ sung ảnh vào đúng đường dẫn:
+assets/spiritcrown.png
+assets/cards/yunospirit.png
+assets/cards/yunospiritdemonic.png
 
-8. MODULE, TỆP VÀ KIỂM TRA BÀN GIAO
-
-Thêm grimoire.js để tách logic kỹ năng của bốn thẻ mới. passives.js nối các hook sát thương, khiên, hồi sinh và điều phối nội tại sao chép. Runtime sao chép được cách ly theo từng trận, bao gồm engine riêng của Sandbox; không ghi các đối tượng chiến đấu vào save.
-
-Các phần cập nhật: levels.js, app.js, cards.js, passives.js, grimoire.js, quest.js, boss_event.js, timetrial.js, evolution.js, startup.js, index.html và README.txt.
-
-Gói đầy đủ gồm 25 tệp sản xuất:
-index.html
-styles.css
-passives.css
-app.js
-cards.js
-passives.js
-grimoire.js
-inventory.js
-tower.js
-timetrial.js
-raid.js
-boss_event.js
-achievements.js
-weathers.js
-mutations.js
-elements.js
-background.js
-evolution.js
-quest.js
-levels.js
-roll_view.js
-roll_performance.js
-sandbox.js
-startup.js
-README.txt
-
-JS/CSS dùng mã cache 20261017-lucius-1, đường dẫn tương đối và script defer có thứ tự. Triển khai đồng bộ toàn bộ gói, đặc biệt grimoire.js phải nằm cạnh index.html; sau đó tải lại bằng Ctrl+F5 nếu trình duyệt còn giữ bản cũ.
-
-Không kèm Excel, script kiểm thử, log hoặc asset nhị phân. Người dùng tự đặt artwork vào các đường dẫn:
-assets/cards/julius.png
-assets/cards/speedwizard.png
-assets/cards/lucius.png
-assets/cards/seagoddessvalkyrie.png
-assets/mermaidscale.png
-
-Đã kiểm tra cú pháp JavaScript, khởi động file cục bộ và HTTP ở đường dẫn con, clamp save/import, bỏ tính EXP cho roll trùng Lv.1000, giữ từng biến thể khi salvage, sắp xếp Arena, bốn bước quest, ví Event riêng, giới hạn drop, tiến hóa có double mutation và cách ly Sandbox. Các ca kiểm tra kỹ năng gồm phản đòn/backup Julius, cửa sổ 3 lượt, Godspeed, nội tại sao chép, bonus khi Julius chết vĩnh viễn và khiên Tsunami. Đối chiếu hồi quy chiến đấu với cùng seed cho 129 thẻ cũ; bộ registry kiểm tra đủ 133 thẻ hiện tại.
-
-Giữ bảo vệ save .acrsave và hai cooldown 7 ngày; không thay công thức cân bằng Tower, cơ chế kho khóa đối thủ, Element, Raid, các thưởng Time Trial cũ hoặc tối ưu Hide Rolling Card.
+Không kèm Excel, asset nhị phân, script kiểm thử hoặc log trong gói bàn giao.

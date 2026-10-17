@@ -6,7 +6,7 @@
     alucard:Object.freeze({name:'Alucard Event',coinName:'Alucard Event Coins',weatherId:'eclipse',weatherName:'Eclipse (Eclipsed)',bossHp:666666,bossAtk:66666,cardId:CARD_ID}),
     lucius:Object.freeze({name:'Lucius Event',coinName:'Lucius Event Coins',weatherId:'raining',weatherName:'Raining',bossHp:1000000,bossAtk:50000,cardId:'boss-event-lucius'})
   });
-  const offers=type=>type==='lucius'?[...SHOP,{id:'sea_valkyrie',cost:4000}]:SHOP;
+  const offers=type=>type==='lucius'?[...SHOP,{id:'sea_valkyrie',cost:4000},{id:'spirit_crown',cost:4400}]:SHOP;
   const SHOP=Object.freeze(['rich_potion','exp_potion','lucky_potion','speed_potion','speed_battle_potion'].map(id=>Object.freeze({id,cost:id==='speed_battle_potion'?25:10})));
   const LEVEL_GROWTH=.075;
   const object=v=>Boolean(v&&typeof v==='object'&&!Array.isArray(v));

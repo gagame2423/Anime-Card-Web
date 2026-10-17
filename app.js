@@ -35,6 +35,8 @@ const COIN_MULTI_CURVE = 0.02;
 const COIN_MULTI_EXPONENT = 1.20;
 const COIN_MULTI_COST_FACTOR = 1.45;
 
+const rarityOrder = Object.freeze({Common:0,Rare:1,Epic:2,Legendary:3,Mythic:4,Secret:5});
+
 const CARD_RARITY_EXP_MULTIPLIERS = Object.freeze({
   Common: 1,
   Rare: 1.6,
@@ -43,7 +45,6 @@ const CARD_RARITY_EXP_MULTIPLIERS = Object.freeze({
   Mythic: 5.2,
   Secret: 8
 });
-const CARD_LEVEL_BASE_EXP = 100;
 const CARD_LEVEL_STAT_GROWTH = 0.075; // 7.5% HP/ATK per level (requested 5–10% range)
 const CARD_LEVEL_MAX = window.CardLevelSystem.MAX_LEVEL; // Hard gameplay cap shared by all player EXP sources.
 
@@ -409,10 +410,10 @@ function grantCardExperience(cardId, amount) {
 }
 
 function getDuplicateCardRollExperience(cardOrId) {
-  const id = typeof cardOrId === "object" ? cardOrId.id : cardOrId;
-  if (state.cardProgress?.[id]?.level >= CARD_LEVEL_MAX) return 0;
-  const info = getCardLevelInfo(cardOrId);
-  return Math.max(1, Math.floor(info.required * 0.50 * (1 + getWeatherBonus("exp")) * (window.InventorySystem?.multiplier("exp") || 1) * (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0))));
+  const card=typeof cardOrId==='object'?cardOrId:getCardById(cardOrId),id=card?.id || cardOrId;
+  if(state.cardProgress?.[id]?.level>=CARD_LEVEL_MAX)return 0;
+  const level=window.CardLevelSystem.normalizeLevel(state.cardProgress?.[id]?.level);
+  return Math.max(1,Math.floor(window.CardLevelSystem.duplicateReward(card,level) * (1+getWeatherBonus('exp')) * (window.InventorySystem?.multiplier('exp')||1) * (1+(window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts)||0))));
 }
 
 function calculateCardRollExperience(card, mutations = []) {
@@ -3000,11 +3001,7 @@ function renderBattleTeamSlots() {
 }
 
 function getBattleCardRarityValue(card) {
-  const rarity = String(card?.rarity || 'Common');
-  const rarityScore = Number(rarityOrder[rarity] || 0);
-  const salvageValue = getSalvageValue(card, []);
-  const chanceValue = Number(card?.chance) || 0;
-  return rarityScore * 1_000_000 + salvageValue * 100 + chanceValue;
+  return rarityOrder[String(card?.rarity || 'Common')] ?? -1;
 }
 
 function getStrongestBattleVariant(card, stat = 'atk') {
@@ -3028,7 +3025,7 @@ function getFilteredSortedBattleCards() {
     const name = () => a.name.localeCompare(b.name);
     if (sortMode === 'element') return window.ElementSystem.compare(a,b) || name();
     if (sortMode === 'name') return name();
-    if (sortMode === 'rarity') return getBattleCardRarityValue(b) - getBattleCardRarityValue(a) || name();
+    if (sortMode === 'rarity') return getBattleCardRarityValue(b) - getBattleCardRarityValue(a) || (Number(b.chance)||0)-(Number(a.chance)||0) || name();
     return values.get(b.id) - values.get(a.id) || name();
   });
   return cards;
@@ -3509,7 +3506,7 @@ function getBattleCardExperienceRewards(mode, random = Math.random) {
   const ids = [...new Set((battleState?.setup?.team || []).map(slot => normalizeCardId(slot?.cardId)).filter(Boolean))];
   const cards = ids.filter(id => getCardById(id) && getOwnedCardCount(id) > 0 && getCardLevelInfo(id).level < CARD_LEVEL_MAX).map(cardId => {
     const { required, level } = getCardLevelInfo(cardId);
-    // EXP grows sublinearly; required EXP retains its existing linear curve.
+    // Reward budgets grow sublinearly; requirements follow the new RNG-rate curve.
     const baseExperience = Math.max(1, Math.floor(baseRoll * getCardLevelRarityMultiplier(cardId) * Math.sqrt(level)));
     return { cardId, required, level, baseExperience, experience: getScaledExpReward(baseExperience) };
   });
@@ -4117,7 +4114,7 @@ function startBattle(useExistingSetup = true) {
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
   appendBattleLog(isBossEventBattle() ? `${getBattleModeLabel()} • ${window.BossEventSystem.TYPES[getBossEventType()].weatherName} entry window • Type-specific coins and exclusive card only.` : isRaidBattle() ? `${getBattleModeLabel()} • 10 preset bosses • Raid Coins only, with exclusive secret-card rolls.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.LIMITS[mode] / 1000}s limit • Speed Battle Potion ignored.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
-  if (!isTimeTrialBattle() && !isRaidBattle() && !isBossEventBattle()) appendBattleLog(isTowerBattle() ? `Tower weather-themed enemy appearances are weighted at 75%, not exclusive.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
+  if (!isTimeTrialBattle() && !isRaidBattle() && !isBossEventBattle()) appendBattleLog(isTowerBattle() ? `Tower enemy elements follow the selected type; player native-weather / mutation entry rules remain separate.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
   appendBattleLog(`First strike begins in ${getBattleTurnMs() / 1000} seconds. ${teamSize} player fighter${teamSize === 1 ? '' : 's'} vs ${enemyTeam.length} enemies.`, 'player');
   renderBattleStats();
   if (isBossEventBattle()) renderBossEventControls();
@@ -4458,7 +4455,10 @@ function renderTowerControls() {
   const mode = getTowerWeatherMode();
   const floor = tower.nextFloor(mode);
   if (els.towerFloorDisplay) els.towerFloorDisplay.textContent = `Floor ${floor} • ∞${tower.isElite(floor) ? ' • ELITE' : ''}`;
-  if (els.towerWeatherRules) els.towerWeatherRules.textContent = mode === 'normal' ? 'Normal Tower: any owned card or mutation is eligible.' : 'Weather Tower: only native weather cards or matching Mutation / Double Mutation may be deployed.';
+  const hints=tower.describeType(mode,WEATHERS);
+  setCachedText(els.towerWeatherRules,hints.player);
+  setViewText('towerEnemyRules',hints.enemies);
+  setViewText('towerRewardHint',hints.reward);
   if (els.battleStartButton && isTower && tower.completed(mode)) els.battleStartButton.disabled = true;
 }
 function renderTowerShop() {

@@ -24,7 +24,7 @@
   const passiveScopes = new WeakMap();
   let phaseUnit = null, activeCombat = null;
   const compositeChains = new WeakSet();
-  const SHARED_PASSIVE_FIELDS = new Set(('attackCount ownAttackCount baseAtkAtBattleStart displayAtkBonusPct displayHpBonusPct flatAtkBonusDisplay atkBonusPct maxHpBonusPct damageReductionPct critChanceBonus critDamageBonus stunTurns freezeTurns incomingImmuneTurns weakenAttackTurns weakenAttackPct snailTurns burn bleed shield shieldKind invincibleTurns passiveImmune noDodgeAgainstUnit incomingVulnerabilityTurns incomingVulnerabilityPct passiveSuppressionTurns passiveSuppressedUntilDeath suppressionAppliedTurn activeTags lastCrit lastDodge lastPassiveTrigger lastActionLabel lastFacingEnemy initialLineupIndex brotherSoul grimoireShield').split(' '));
+  const SHARED_PASSIVE_FIELDS = new Set(('attackCount ownAttackCount baseAtkAtBattleStart displayAtkBonusPct displayHpBonusPct flatAtkBonusDisplay atkBonusPct maxHpBonusPct damageReductionPct critChanceBonus critDamageBonus stunTurns freezeTurns incomingImmuneTurns weakenAttackTurns weakenAttackPct snailTurns burn bleed shield shieldKind invincibleTurns passiveImmune noDodgeAgainstUnit incomingVulnerabilityTurns incomingVulnerabilityPct passiveSuppressionTurns passiveSuppressedUntilDeath suppressionAppliedTurn activeTags lastCrit lastDodge lastPassiveTrigger lastActionLabel lastFacingEnemy initialLineupIndex brotherSoul grimoireShield yunoShields').split(' '));
 
   // Passive definitions are derived directly from the loaded cards.js database.
   // No duplicate passive descriptions or balance values are maintained here.
@@ -319,7 +319,7 @@
     }
     function hit(bs, source, target, damage, options = {}) {
       if (!isAlive(target) || !(damage > 0)) return { damage: 0, killed: false };
-      const amount = window.ElementSystem.damage(source, target, Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1))));
+      const amount = window.ElementSystem.damage(source, target, Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1) * yuno.offensive(source,target))));
       if (raidSecrets.block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       if (!options.championCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) {
         const reflected = damageUnit(bs, target, source, Math.max(1, Math.floor(getBaseAtk(source) * .50)), { passiveAttack: true, championCounter: true });
@@ -327,7 +327,8 @@
         return { damage: 0, killed: false, reflected: true };
       }
       if (amount >= target.hp && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, amount, options)) return { damage: 0, killed: false };
-      const result = damageUnit(bs, source, target, amount, { passiveAttack: true, championSkill: true, ...options, raidBlockChecked: true, elementApplied: true });
+      const result = damageUnit(bs, source, target, amount, { passiveAttack: true, championSkill: true, ...options, raidBlockChecked: true, elementApplied: true, yunoDamageApplied:true });
+      if(result.absorbed || (result.dodged&&yuno.dodgeChance(target)))return result;
       onHitTaken(bs, target, source, { hit: true, damage: result.damage, championCounter: options.championCounter });
       if (result.killed) { onKill(bs, source, target); onTeammateDeath(bs, target); }
       return result;
@@ -362,7 +363,7 @@
       const c = state(unit); if (!target || c.enemy === target) return;
       c.enemy = target; c.mode = Math.random() < 0.5 ? 'naruto' : 'sasuke'; c.modeAttacks ??= c.attacks;
       if (c.mode === 'sasuke') { for (const clone of c.clones) { clone.championDismissed = true; clone.hp = 0; clone.defeated = true; } c.clones = []; }
-      else if (ensureRuntime(unit).shieldKind === 'sasuke') { ensureRuntime(unit).shield = 0; ensureRuntime(unit).shieldKind = ''; c.shieldTurns = 0; }
+      else if (ensureRuntime(unit).shieldKind === 'sasuke') { yuno.clearLegacyShield(unit); ensureRuntime(unit).shieldKind = ''; c.shieldTurns = 0; }
       log(unit, `Datebayo • ${c.mode.toUpperCase()}`);
     }
     function protect(bs, unit) {
@@ -514,7 +515,7 @@
           for (const summon of c.clones) { summon.championDismissed = true; summon.hp = 0; summon.defeated = true; }
           ensureRuntime(unit).effectivePassiveId = stolen;
           if (ensureRuntime(unit).shieldKind === 'sasuke') {
-            ensureRuntime(unit).shield = 0; ensureRuntime(unit).shieldKind = '';
+            yuno.clearLegacyShield(unit); ensureRuntime(unit).shieldKind = '';
             removeActiveTag(unit, 'sasuke-shield');
           }
           const retainedEffects = { attacks: c.attacks, modeAttacks: c.modeAttacks, heresy: c.heresy || 0, iceCrown: Boolean(c.iceCrown), darkRevives: c.darkRevives || 0 };
@@ -574,7 +575,7 @@
       for (const unit of phaseUnits(bs)) {
         const c = state(unit);
         if (id(unit) === 'tsukuyomi' && isAlive(unit)) duo(bs, unit, activeDefender(bs, unit));
-        if (c.shieldTurns > 0 && bs.turnCount > c.shieldCreatedAt) { c.shieldTurns--; if (!c.shieldTurns && ensureRuntime(unit).shieldKind === 'sasuke') { ensureRuntime(unit).shield = 0; ensureRuntime(unit).shieldKind = ''; } }
+        if (c.shieldTurns > 0 && bs.turnCount > c.shieldCreatedAt) { c.shieldTurns--; if (!c.shieldTurns && ensureRuntime(unit).shieldKind === 'sasuke') { yuno.clearLegacyShield(unit); ensureRuntime(unit).shieldKind = ''; } }
         if (c.iceTurns > 0 && bs.turnCount > c.iceStartedAt && isAlive(unit)) { c.iceTurns--; if (!c.iceTurns) { unit.championPermanentDeath = true; unit.hp = 0; unit.defeated = true; death(bs, unit, null); log(unit, 'Ice King afterlife ended'); } }
       }
     }
@@ -609,11 +610,11 @@
       if (!isAlive(source) || !isAlive(target) || !(amount > 0)) return { damage: 0, killed: false };
       if (block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       const heresyFactor = options.raidCounter && champions.state(source).heresy > 0 ? .91 : 1;
-      const value = window.ElementSystem.damage(source, target, Math.max(1, Math.floor(amount * heresyFactor))), before = target.hp;
+      const value = window.ElementSystem.damage(source, target, Math.max(1, Math.floor(amount * heresyFactor * yuno.offensive(source,target)))), before = target.hp;
       if (!options.raidCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) return hit(bs, target, source, getBaseAtk(source) * .50, { raidCounter: true });
       if (value >= before && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, value, options)) { recordBattleDamage(bs, source, target, before); return { damage: 0, killed: false }; }
-      const result = damageUnit(bs, source, target, value, { passiveAttack: true, raidSkill: true, ...options, raidBlockChecked: true, elementApplied: true });
-      if (result.raidBlocked) return result;
+      const result = damageUnit(bs, source, target, value, { passiveAttack: true, raidSkill: true, ...options, raidBlockChecked: true, elementApplied: true, yunoDamageApplied:true });
+      if (result.raidBlocked || result.absorbed || (result.dodged&&yuno.dodgeChance(target))) return result;
       onHitTaken(bs, target, source, { hit: true, damage: result.damage, championCounter: Boolean(options.raidCounter) });
       burn(bs, source, target, { ...result, hit: true });
       if (result.killed) { onKill(bs, source, target); onTeammateDeath(bs, target); }
@@ -1074,7 +1075,11 @@
     if (!includeSuppressed && passiveSuppressed(unit)) return [];
     return [...new Set([root?.effectivePassiveId || cardIdOf(unit), ...(root?.grimoire?.copies || []).map(copy => copy.id)].filter(Boolean))];
   }
-  function hasPassive(unit, key) { return passiveIds(unit).includes(key); }
+  function hasPassive(unit,key) {
+    if(!unit||passiveSuppressed(unit))return false;
+    const root=unit.passiveState;
+    return (root?.effectivePassiveId||cardIdOf(unit))===key || Boolean(root?.grimoire?.copies?.some(copy=>copy.id===key));
+  }
   function passiveRuntimeFor(unit,key) { const root=unit?.passiveState || ensureRuntime(unit); return root.grimoire?.copies?.find(copy=>copy.id===key)?.view || root; }
   function skillState(unit,key) {
     const root=unit?.passiveState || ensureRuntime(unit);
@@ -1118,6 +1123,13 @@
     enemyFront:activeDefender,attack:(...args)=>performAttack(...args),hpBonus:applyMaxHpBonus,atkBonus:applyPermanentAtkBonus,
     copyEntry:activateCopy,
     reflectHit(bs,source,target,amount,meta) { const result=damageUnit(bs,source,target,amount,meta); if(result.killed){onKill(bs,source,target);onTeammateDeath(bs,target);} return result; }
+  });
+
+  const yuno = window.createYunoSkills({
+    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,
+    all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,enemyTeam:enemyTeamOf,
+    atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,log:safeLog,
+    indices:ensureCurrentIndices,hit:(...args)=>champions.hit(...args)
   });
 
   // Multiplex hooks only for units that own copied passives. Each copy keeps
@@ -1390,7 +1402,7 @@
       case 'diavolo': chance = 0.35; break;
       default: break;
     }
-    chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit), questSkills.isMadara(unit) ? .10 : 0, grimoire.dodgeChance(unit));
+    chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit), questSkills.isMadara(unit) ? .10 : 0, grimoire.dodgeChance(unit),yuno.dodgeChance(unit));
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0);
     if (getEffectivePassiveCardId(unit) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0 || runtime.noDodgeAgainstUnit) chance = 0;
@@ -1477,7 +1489,7 @@
       case 'diavolo': chance = 0.35; break;
       default: break;
     }
-    chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target), questSkills.isMadara(target) ? .10 : 0, grimoire.dodgeChance(target));
+    chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target), questSkills.isMadara(target) ? .10 : 0, grimoire.dodgeChance(target),yuno.dodgeChance(target));
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0);
     if (getEffectivePassiveCardId(target) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0) chance = 0;
@@ -1499,7 +1511,7 @@
       const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
       const remaining = [];
       for (const effect of list) {
-        const dmg = Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : 1))));
+        const dmg = Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : 1)) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)));
         if (dmg > 0 && isAlive(unit)) {
           const before = unit.hp;
           const absorbed = absorbShieldDamage(unit, dmg, battleState, effect.source);
@@ -1588,7 +1600,8 @@
   function addShield(unit, amount, kind = 'shield') {
     const runtime = ensureRuntime(unit);
     const value = Math.max(0, Math.floor(Number(amount) || 0));
-    runtime.shield = Math.max(runtime.shield, value);
+    const layers=yuno.layerTotal(unit);
+    runtime.shield = layers + Math.max(0,runtime.shield-layers,value);
     runtime.shieldKind = kind;
     addActiveTag(unit, `${kind}-shield`);
   }
@@ -1598,6 +1611,7 @@
     let remaining = Math.max(0, Number(amount) || 0);
     if (runtime.shield <= 0) return remaining;
     const blocked = Math.min(runtime.shield, remaining);
+    yuno.consumeLayers(unit,blocked);
     runtime.shield -= blocked;
     remaining -= blocked;
     if (runtime.shield <= 0) {
@@ -1646,17 +1660,17 @@
   }
 
   function deferFatality(battleState, target) {
-    return Boolean(grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+    return Boolean(yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
     if (!target || !isAlive(target)) return { damage: 0, killed: false, reflected: false };
     if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
-    if (!grimoire.dodgeChance(target) && questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
+    if (!grimoire.dodgeChance(target) && !yuno.dodgeChance(target) && questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
     if (grimoire.reflect(battleState, attacker, target, amount, meta)) return {damage:0,killed:false,reflected:true};
-    if (meta.passiveAttack && !meta.dodgeChecked && grimoire.dodgeChance(target) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
+    if (meta.passiveAttack && !meta.dodgeChecked && (grimoire.dodgeChance(target)||yuno.dodgeChance(target)) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
     const targetRuntime = ensureRuntime(target);
-    const fatalityDeferred = deferFatality(battleState, target);
+    const fatalityDeferred = deferFatality(battleState, target) || yuno.offensive(attacker,target)!==1;
     const source = attacker || null;
 
     if (targetRuntime.invincibleTurns > 0 || targetRuntime.hakariInvincible > 0) {
@@ -1674,15 +1688,16 @@
     if (!isAlive(target)) return { damage: 0, killed: true };
     let remaining = meta.elementApplied ? Math.max(0, Number(amount) || 0) : window.ElementSystem.damage(source, target, amount);
     if (targetRuntime.incomingVulnerabilityTurns > 0) remaining *= 1 + targetRuntime.incomingVulnerabilityPct;
+    remaining *= (meta.yunoDamageApplied?1:yuno.offensive(source,target)) * yuno.defensive(source,target);
     const shielded = remaining > 0 && targetRuntime.shield > 0;
-    remaining = absorbShieldDamage(target, remaining, battleState, source);
-
     const reduction = clamp(
       Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
       (hasPassive(target,'aquaman') && host.isWeatherActive?.('Raining') ? 0.50 : 0),
       0,
       0.95
     );
+    if(yuno.absorb(battleState,source,target,remaining*(1-reduction),meta))return {damage:0,killed:false,absorbed:true,reflected:false};
+    remaining = absorbShieldDamage(target,remaining,battleState,source);
     remaining *= (1 - reduction);
     const calamityProtected = !meta.championRedirect && Boolean(champions.guardianFor(battleState, target));
     remaining = champions.redirect(battleState, target, attacker, remaining, meta);
@@ -1896,6 +1911,7 @@
     expansion.entry(battleState,unit);
     questSkills.entry(battleState,unit);
     grimoire.entry(battleState,unit);
+    yuno.entry(battleState,unit);
   }
 
   function beforeAttack(battleState, attacker, target) {
@@ -2520,6 +2536,7 @@
     expansion.dodge(battleState, defender, attacker);
     questSkills.dodge(battleState, defender, attacker);
     grimoire.dodge(battleState, defender);
+    yuno.dodge(battleState, defender);
     raidSecrets.dodge(battleState, defender, attacker);
     const runtime = ensureRuntime(defender);
     runtime.dodgeStreak += 1;
@@ -3045,12 +3062,13 @@
       let incomingDamage = computeWeakenedAtk(attacker) * passiveAttackMultiplier(preview, target, battleState, options);
       incomingDamage *= questSkills.multiplier(attacker, target) * expansion.multiplier(attacker, target, battleState) * champions.multiplier(attacker, target, options) * (Number(options.damageMultiplier) || 1);
       if (champions.state(attacker).heresy > 0) incomingDamage *= .91;
-      incomingDamage = window.ElementSystem.damage(attacker, target, incomingDamage);
+      incomingDamage = window.ElementSystem.damage(attacker, target, (incomingDamage+yuno.nextDamage(attacker,false))*yuno.offensive(attacker,target));
       onDodge(battleState, target, attacker, { chainDepth: options.chainDepth || 0, incomingDamage });
       champions.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
       expansion.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
       raidSecrets.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false, attackDamage: incomingDamage }, options);
       questSkills.afterAttack(battleState, attacker, target, {damage:0,hit:false}, options);
+      yuno.afterAttack(battleState,attacker,target,{damage:0,hit:false},options);
       return { hit: false, dodged: true, killed: false, damage: 0 };
     }
 
@@ -3059,12 +3077,14 @@
       const result = damageUnit(battleState, target, attacker, reflected, { passiveAttack: true, passiveBypass: true });
       safeLog(`[PASSIVE] ${target.display?.name || 'Asta'} reflected a passive attack for ${reflected.toLocaleString('en-US')} damage.`, 'passive');
       questSkills.afterAttack(battleState, attacker, target, {...result,hit:true,reflected:true}, options);
+      yuno.afterAttack(battleState,attacker,target,{...result,hit:false,reflected:true},options);
       return { hit: true, reflected: true, critical: false, killed: result.killed, damage: result.damage };
     }
 
     if (champions.state(attacker).heresy > 0 && Math.random() < .03) {
       expansion.afterAttack(battleState,attacker,target,{hit:false,damage:0},options);
       questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options);
+      yuno.afterAttack(battleState,attacker,target,{hit:false,damage:0},options);
       return { hit:false,missed:true,damage:0 };
     }
     const critStats = getCritStats(attacker);
@@ -3080,8 +3100,9 @@
 
     multiplier *= champions.multiplier(attacker, target, { ...options, critical }) * expansion.multiplier(attacker, target, battleState) * questSkills.multiplier(attacker, target);
     if (champions.state(attacker).heresy > 0) multiplier *= .91;
-    let rawDamage = Math.max(attacker.sandboxAllowZeroAttack ? 0 : 1, Math.floor(baseAttack * multiplier));
+    let rawDamage = Math.max(attacker.sandboxAllowZeroAttack ? 0 : 1, Math.floor(baseAttack * multiplier + yuno.nextDamage(attacker)));
     const attackDamage = rawDamage;
+    rawDamage=Math.floor(rawDamage*yuno.offensive(attacker,target));
     rawDamage = window.ElementSystem.damage(attacker, target, rawDamage);
     const damageReduction = clamp(ensureRuntime(target).damageReductionPct, 0, 0.95);
     rawDamage = Math.max(attacker.sandboxAllowZeroAttack ? 0 : 1, Math.floor(rawDamage * (1 - damageReduction)));
@@ -3096,7 +3117,7 @@
       : false;
 
     if (!fatalityPrevented) {
-      result = damageUnit(battleState, attacker, target, rawDamage, { ...options, passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true, elementApplied: true, dodgeChecked: true });
+      result = damageUnit(battleState, attacker, target, rawDamage, { ...options, passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true, elementApplied: true, dodgeChecked: true, yunoDamageApplied:true });
       result.critical = critical;
       result.hit = true;
     } else {
@@ -3106,7 +3127,16 @@
       result = { damage: 0, killed: false, preventedFatality: true, critical, hit: true };
     }
 
-    if (result.reflected || result.dodged) { ensureCurrentIndices(battleState); return {...result,hit:false,target,attacker}; }
+    if (result.absorbed) {
+      const outcome={hit:false,damage:0,absorbed:true};
+      champions.afterAttack(battleState,attacker,target,outcome,options);
+      expansion.afterAttack(battleState,attacker,target,outcome,options);
+      raidSecrets.afterAttack(battleState,attacker,target,{...outcome,attackDamage},options);
+      questSkills.afterAttack(battleState,attacker,target,outcome,options);
+      yuno.afterAttack(battleState,attacker,target,outcome,options);
+      ensureCurrentIndices(battleState);return {...result,hit:false,target,attacker};
+    }
+    if (result.reflected || result.dodged) { yuno.afterAttack(battleState,attacker,target,{...result,hit:false},options);ensureCurrentIndices(battleState); return {...result,hit:false,target,attacker}; }
     if (result.raidBlocked) { questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { ...result, hit: false, target, attacker }; }
 
     ensureRuntime(attacker).lastCrit = critical;
@@ -3141,6 +3171,7 @@
 
     questSkills.afterAttack(battleState,attacker,target,result,options);
     alucard.applyBleed(battleState,attacker,target,{...result,hit:true});
+    yuno.afterAttack(battleState,attacker,target,{...result,hit:true},options);
 
     // Build/refresh dynamic indices after AOE or clone/revive actions.
     ensureCurrentIndices(battleState);
@@ -3219,7 +3250,7 @@
       if (runtime.weatherShield > 0 && runtime.weatherShieldExpiresAt > 0 && battleState.turnCount >= runtime.weatherShieldExpiresAt + 1) {
         runtime.weatherShield = 0;
         if (runtime.shieldKind === 'weather') {
-          runtime.shield = 0;
+          yuno.clearLegacyShield(unit);
           runtime.shieldKind = '';
           removeActiveTag(unit, 'weather-shield');
           safeLog(`[PASSIVE] ${unit.display?.name || 'Weather Report'} weather shield expired.`, 'passive');
@@ -3390,6 +3421,7 @@
     expansion.endTurn(battleState, actor);
     questSkills.endTurn(battleState, actor);
     grimoire.endTurn(battleState);
+    yuno.endTurn(battleState);
     ensureCurrentIndices(battleState);
     const winner = checkBattleWinner(battleState);
     return winner ? { ended: true, winner } : { ended: false, winner: null };
@@ -3743,6 +3775,7 @@
 
 
   const PASSIVE_TRIGGER_CLASSIFICATION = Object.freeze({
+    "yuno-spirit":Object.freeze(["ON_BATTLE_START","ON_DODGE","ON_CARD_ATTACK_STRIKE"]),
     julius:Object.freeze(["TEAM_SUPPORT","ON_FATALITY","ON_SHIELD_BREAK"]),
     "speed-wizard":Object.freeze(["ON_DODGE","ON_CARD_ATTACK_STRIKE"]),
     "boss-event-lucius":Object.freeze(["ON_BATTLE_START","EVERY_NTH_ATTACK","ON_TEAMMATE_DEATH"]),
@@ -3855,6 +3888,7 @@
   // Explicit coverage registry for auditing. It mirrors the uploaded
   // cards.js IDs, not a second set of passive data.
   const PASSIVE_HANDLERS = Object.freeze({
+    "yuno-spirit":true,
     julius:true,"speed-wizard":true,"boss-event-lucius":true,"sea-goddess-valkyrie":true,
     ...Object.fromEntries([...questSkills.ids].map(id => [id, true])),
     [alucard.ID]: true,
@@ -3981,6 +4015,7 @@
     };
   }
 
+  yuno.afterAttack=multiplex(yuno.afterAttack,1);
   runOnEntry=multiplex(runOnEntry,1);
   beforeAttack=multiplex(beforeAttack,1);
   applyHitEffects=multiplex(applyHitEffects,1);

@@ -4482,3 +4482,12 @@ body {
 
 /* Hidden rolling never animates its progress indicator. */
 .progress-fill.is-static { animation: none !important; transition: none !important; box-shadow: none; }
+
+/* Per-type rules immediately below the Tower selector. */
+.tower-rule-hints { grid-column:1 / 3; min-width:0; color:#c4cbe7; font-size:12px; line-height:1.55; }
+.tower-rule-hints p { margin:0; overflow-wrap:anywhere; }
+.tower-rule-hints p + p { margin-top:4px; }
+#towerEnemyRules { color:#b9e6d7; }
+#towerRewardHint { color:#f4d995; }
+#towerRewardHint:empty { display:none; }
+@media (max-width:640px) { .tower-rule-hints { grid-column:1 / -1; } }

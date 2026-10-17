@@ -3,11 +3,12 @@
   'use strict';
   const KEY = 'anime_card_rng_tower_v1';
   const POTION_COST = 25;
-  const SELECTION_VERSION = 3;
+  const SELECTION_VERSION = 4;
   const ENEMY_ELEMENTS = Object.freeze(Object.fromEntries(Object.entries({
     raining: ['Water'], snowing: ['Water', 'Nature'], sunny: ['Fire'], sugar: ['Electric'],
     reaper: ['Dark', 'Holy'], eclipse: ['Dark', 'Fire'], malevolent: ['Fire', 'Nature'],
-    tsukuyomi: ['Dark'], mangekyo: ['Dark'], heavenly: ['Holy'], shadow: ['Dark', 'Electric']
+    tsukuyomi: ['Dark'], mangekyo: ['Dark'], heavenly: ['Holy'], shadow: ['Dark', 'Electric'],
+    lucky: ['Nature','Holy'], wind: ['Nature'], bizare: ['Dark','Electric']
   }).map(([id, elements]) => [id, Object.freeze(elements)])));
   const QUALITY_TIERS = Object.freeze([[1, 0], [26, 100], [51, 1000], [76, 10000], [101, 100000], [201, 500000], [301, 1000000], [501, 2000000]].map(Object.freeze));
   function minimumEnemyChance(floor) {
@@ -71,10 +72,11 @@
     if (!structural) return false;
     // Existing locked encounters survive the update until the floor is cleared.
     if (record.selectionVersion === undefined) return true;
-    if (![2, SELECTION_VERSION].includes(record.selectionVersion)) return false;
+    if (![2, 3, SELECTION_VERSION].includes(record.selectionVersion)) return false;
     const allowed = mode && ENEMY_ELEMENTS[String(mode).toLowerCase()];
+    const legacyNewType = record.selectionVersion < 4 && ['lucky','wind','bizare'].includes(String(mode).toLowerCase()) && record.element === null;
     if (record.element !== null && !host.ElementSystem.TYPES.includes(record.element)) return false;
-    if (mode && (allowed ? !allowed.includes(record.element) : record.element !== null)) return false;
+    if (!legacyNewType && mode && (allowed ? !allowed.includes(record.element) : record.element !== null)) return false;
     return record.lineup.every(slot => {
       const card = cards.find(card => card.id === slot.cardId);
       const legacyWhitebeard = record.selectionVersion === 2 && slot.cardId === 'whitebeard' && record.element === 'Dark';
@@ -111,6 +113,20 @@
   function completed() { return false; } // Compatibility: infinite towers never complete.
   function isElite(floor) { return floor >= 1 && floor % 10 === 0; }
   function weatherList(weathers) { return [{ id: 'normal', name: 'Normal Tower' }, ...(weathers || []).filter(w => w && w.id).map(w => ({ id: weatherId(w.id), name: `${w.name} Tower` }))]; }
+  function describeType(mode, weathers = []) {
+    const key=weatherId(mode), def=weatherDefinition(key,weathers), allowed=ENEMY_ELEMENTS[key];
+    const mutation=weatherMutation(def);
+    const player=key==='normal' || key==='infinite'
+      ? 'Your team: any owned card or Mutation / Double Mutation. 4 cards required; floors continue infinitely.'
+      : def ? `Your team: 4 owned cards native to ${def.name}, or variants with ${mutation?.name || def.mutationId || def.name} Mutation (Double Mutations count). Any Element meeting this weather rule is allowed.`
+      : 'Your team: this type has no configured deployment rule; choose an available Tower type.';
+    const enemies=allowed?.length===1 ? `Enemy team: all 4 opponents use ${allowed[0]}.`
+      : allowed?.length ? `Enemy team: ${allowed.join(' OR ')}. One Element is chosen per floor; all 4 opponents share it, never a mixed team.`
+      : 'Enemy team: all 6 Elements may appear; no single-Element lock. Higher floors filter out weaker cards.';
+    const rewards=getFloorRewardCards(host.ALL_CARDS,key);
+    const reward=rewards.length?`Floor 100: ${rewards.map(card=>card.name).join(' / ')} • Normal Champion reward; future rolls require ${key==='normal'?'Normal weather':def?.name || key}.`:'Every 10 floors: Elite room. Tower Coins + damage-based VNĐ; no EXP.';
+    return {player,enemies,reward};
+  }
   const aliases = { blizzard: 'frost', sacrifice: 'eclipsed' };
   function tokens(value) {
     if (Array.isArray(value)) return value.flatMap(tokens);
@@ -225,6 +241,16 @@
     if (!validMode(id)) return [];
     if (f !== nextFloor(id)) return buildOpponents(cards, f, id, weathers, random);
     let record = data.encounters[id];
+    // Upgrade these three newly constrained types once. Keep an already-valid
+    // composition; regenerate an incompatible legacy floor, then lock it again.
+    if (record && record.selectionVersion !== SELECTION_VERSION && ['lucky','wind','bizare'].includes(id)) {
+      const elements=new Set(record.lineup.map(slot=>cards.find(card=>card.id===slot.cardId)?.element));
+      const element=[...elements][0];
+      if(elements.size===1 && ENEMY_ELEMENTS[id].includes(element)) {
+        for(const slot of record.lineup){const card=cards.find(card=>card.id===slot.cardId);slot.selectionChance ||= Number(card.chance)>0?Number(card.chance):1000000;}
+        record.element=element;record.selectionVersion=SELECTION_VERSION;persist();
+      } else record=null;
+    }
     if (!record || record.floor !== f || !isEncounterRecord(record, id) || record.lineup.some(slot => !cards.some(card => card.id === slot.cardId))) {
       const generated = buildOpponents(cards, f, id, weathers, random);
       if (generated.length !== 4) return generated;
@@ -284,5 +310,5 @@
     return (cards || []).filter(card => card?.unlockRequirement === rewardRequirement(mode));
   }
   function reset() { data = fresh(); persist(); }
-  host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, SCALING, ENEMY_ELEMENTS, QUALITY_TIERS, SELECTION_VERSION, minimumEnemyChance, protectEnemyUnit, limitEnemyAttack, DAMAGE_PER_VND, damageSummary, battleCurrency, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, buildTrialOpponents, getOpponents, isEncounterRecord, validMode, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });
+  host.TowerSystem = Object.freeze({ KEY, flush: persist, POTION_COST, SHOP_ITEMS, SCALING, ENEMY_ELEMENTS, QUALITY_TIERS, SELECTION_VERSION, minimumEnemyChance, protectEnemyUnit, limitEnemyAttack, DAMAGE_PER_VND, damageSummary, battleCurrency, rewardRequirement, getProgressSnapshot, getFloorRewardCards, nextFloor, completed, isElite, weatherList, describeType, matchWeather, eligiblePlayerCard, floorStats, buildOpponents, buildTrialOpponents, getOpponents, isEncounterRecord, validMode, previewRewards, recordVictory, purchasePotion, reset, get coins() { return data.coins; }, get victories() { return data.victories; }, getProgress: mode => data.cleared[weatherId(mode)] || 0 });
 })(window);

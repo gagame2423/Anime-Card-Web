@@ -1795,6 +1795,47 @@ CARDS.push(...[
     }
   }
 ]);
+// Yuno evolution and Lucky Tower champion.
+CARDS.push(...[
+  {
+    "id": "yuno-spirit",
+    "name": "Yuno Spirit",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 0,
+    "levelingRate": 1500000,
+    "evolutionOnly": true,
+    "stats": {
+      "hp": 255500,
+      "atk": 19892
+    },
+    "image": "assets/cards/yunospirit.png",
+    "passive": {
+      "name": "Spirit Wind Grimoire",
+      "description": "On entry, shield all living allies, including self, for 48% of this card’s max HP; no expiry.\n30% dodge. Each dodge adds a shield equal to 30% current HP for 3 turns.\nEach attack has a 26% chance to shuffle living enemies and hit all enemies for 48% current ATK."
+    }
+  },
+  {
+    "id": "tower-champion-lucky",
+    "name": "Yuno Spirit Demonic",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 4444444,
+    "requiredWeather": "Lucky",
+    "towerType": "lucky",
+    "towerFloor": 100,
+    "unlockRequirement": "tower_floor_100_lucky",
+    "stats": {
+      "hp": 444444,
+      "atk": 22222
+    },
+    "image": "assets/cards/yunospiritdemonic.png",
+    "passive": {
+      "name": "Anti Spirit Grimoire",
+      "description": "Deal x2 damage to Holy enemies; take 22% less damage from Holy enemies.\nEach attack has a 44% chance to pierce the enemy lineup: 100% current ATK on the first hit, then x0.78 damage per subsequent hit.\nWhen attacked, 22% chance to absorb damage instead of taking it. Add the absorbed amount to the next attack and grant the ally directly behind a permanent shield of that amount; shields stack without cap."
+    }
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 
