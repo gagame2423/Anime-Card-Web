@@ -21,6 +21,10 @@
 
   let host = { ...initialHost };
   let passiveLogSequence = 0;
+  const passiveScopes = new WeakMap();
+  let phaseUnit = null, activeCombat = null;
+  const compositeChains = new WeakSet();
+  const SHARED_PASSIVE_FIELDS = new Set(('attackCount ownAttackCount baseAtkAtBattleStart displayAtkBonusPct displayHpBonusPct flatAtkBonusDisplay atkBonusPct maxHpBonusPct damageReductionPct critChanceBonus critDamageBonus stunTurns freezeTurns incomingImmuneTurns weakenAttackTurns weakenAttackPct snailTurns burn bleed shield shieldKind invincibleTurns passiveImmune noDodgeAgainstUnit incomingVulnerabilityTurns incomingVulnerabilityPct passiveSuppressionTurns passiveSuppressedUntilDeath suppressionAppliedTurn activeTags lastCrit lastDodge lastPassiveTrigger lastActionLabel lastFacingEnemy initialLineupIndex brotherSoul grimoireShield').split(' '));
 
   // Passive definitions are derived directly from the loaded cards.js database.
   // No duplicate passive descriptions or balance values are maintained here.
@@ -68,11 +72,12 @@
   }
   function getEffectivePassiveCardId(unit) {
     if (passiveSuppressed(unit)) return '';
-    return String(unit?.passiveState?.effectivePassiveId || cardIdOf(unit)).trim();
+    return String(passiveScopes.get(unit)?.id || unit?.passiveState?.effectivePassiveId || cardIdOf(unit)).trim();
   }
 
   function getPassiveCard(unit) {
     const effectiveId = getEffectivePassiveCardId(unit);
+    if(effectiveId==='grimoire-empty-backup')return {id:effectiveId,passive:{name:'No Passive',description:'The stored backup had no passive.'}};
     return host.getCardById?.(effectiveId) || cardOf(unit);
   }
 
@@ -184,7 +189,7 @@
     // cardState is the explicit per-card runtime state. Keep passiveState as a
     // backwards-compatible alias so older code/data cannot drift.
     unit.cardState = unit.passiveState;
-    return unit.passiveState;
+    return passiveScopes.get(unit)?.copy?.view || unit.passiveState;
   }
 
   function ensureCardState(unit) {
@@ -201,6 +206,8 @@
       ...(Array.isArray(battleState?.enemyTeam) ? battleState.enemyTeam : [])
     ].filter(Boolean);
   }
+
+  function phaseUnits(bs) { return phaseUnit ? [phaseUnit] : allUnits(bs); }
 
   function isAlive(unit) {
     return Boolean(unit && !unit.defeated && Number(unit.hp) > 0);
@@ -284,8 +291,8 @@
     const atk = unit => computeWeakenedAtk(unit);
     const pick = list => list[Math.min(list.length - 1, Math.floor(Math.random() * list.length))];
     const rand = (min, max) => min + Math.min(max - min, Math.floor(Math.random() * (max - min + 1)));
-    const uncloneable = unit => ([prefix + 'reaper','boss-event-alucard'].includes(cardIdOf(unit)) || id(unit) === 'reaper' || getEffectivePassiveCardId(unit) === 'boss-event-alucard') || Boolean(unit?.championPermanentDeath);
-    const noExternalRevive = unit => ([prefix + 'reaper', prefix + 'snowing', 'alexander-anderson'].includes(cardIdOf(unit)) || ensureRuntime(unit).effectivePassiveId === 'alexander-anderson' || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath);
+    const uncloneable = unit => ([prefix + 'reaper','boss-event-alucard'].includes(cardIdOf(unit)) || id(unit) === 'reaper' || getEffectivePassiveCardId(unit) === 'boss-event-alucard') || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || hasPassive(unit,prefix+'reaper') || hasPassive(unit,'boss-event-alucard');
+    const noExternalRevive = unit => ([prefix + 'reaper', prefix + 'snowing', 'alexander-anderson'].includes(cardIdOf(unit)) || ensureRuntime(unit).effectivePassiveId === 'alexander-anderson' || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || [prefix+'reaper',prefix+'snowing','alexander-anderson'].some(key=>hasPassive(unit,key));
     function log(unit, text) { ensureRuntime(unit).lastPassiveTrigger = text; safeLog(`[CHAMPION] ${unit.display?.name || unit.card?.name}: ${text}`, 'passive'); }
     function describe(unit) {
       if (!unit) return null;
@@ -303,7 +310,7 @@
       return result;
     }
     function summon(bs, owner, hp, attack, kind, victim = null) {
-      if (!canCreateCompanion(owner) || (victim && (isGeneratedUnit(victim) || uncloneable(victim) || (!isAlive(victim) && noExternalRevive(victim))))) return null;
+      if ((owner?.grimoireRevived && kind==='duo') || !canCreateCompanion(owner) || (victim && (isGeneratedUnit(victim) || uncloneable(victim) || (!isAlive(victim) && noExternalRevive(victim))))) return null;
       const card = victim?.card || { id: `champion-${kind}-summon`, name: kind === 'ghost' ? 'Ghost' : 'Naruto Clone', element: owner.card?.element, passive: null, stats: { hp, atk: attack }, image: owner.card?.image };
       const unit = { card, mutations: [...(owner.mutations || [])], display: { name: victim ? `${victim.display?.name || card.name} • Dark Aurora` : card.name, hp, atk: attack }, hp: Math.max(1, Math.floor(hp)), maxHp: Math.max(1, Math.floor(hp)), atk: Math.max(1, Math.floor(attack)), defeated: false, isClone: kind !== 'converted', isSummoned: true, isTemporaryAlly: true, championSummonType: kind, championOwner: owner, level: owner.level || 1 };
       if (bs.mode === 'tower' && bs.enemyTeam.includes(owner)) window.TowerSystem?.protectEnemyUnit(unit);
@@ -452,6 +459,7 @@
     function fatal(bs, unit) {
       const code = id(unit), c = state(unit);
       if (unit.championPermanentDeath) return false;
+      if (grimoire.fatal(bs, unit)) return true;
       if (raidSecrets.rescue(bs, unit, {fatal:true})) return true;
       if (code === 'snowing' && c.iceTurns > 0) { unit.hp = Math.min(unit.hp, 1); unit.defeated = false; return true; }
       if (isBleeding(unit)) return false;
@@ -469,7 +477,7 @@
       const owner = unit.championOwner;
       if (!unit.championDismissed && unit.championSummonType === 'duo' && isAlive(owner)) heal(owner, owner.maxHp * .10, 'NARUTO CLONE', bs, owner);
       const reviver = !isGeneratedUnit(unit) && !noExternalRevive(unit) && !isBleeding(unit) && (c.darkRevives || 0) < 2
-        ? alliesOf(bs, unit, false).find(ally => canCreateCompanion(ally) && (!passiveSuppressed(ally) && (cardIdOf(ally) === prefix + 'shadow' || id(ally) === 'shadow'))) : null;
+        ? alliesOf(bs, unit, false).find(ally => canCreateCompanion(ally) && (!passiveSuppressed(ally) && (cardIdOf(ally) === prefix + 'shadow' || hasPassive(ally,prefix+'shadow')))) : null;
       if (reviver) {
         const team = teamOf(bs, unit), key = team === bs.playerTeam ? 'playerIndex' : 'enemyIndex';
         // Capture the next living fighter before reviving/moving the victim.
@@ -481,6 +489,7 @@
         refreshUnitDisplay(unit); log(reviver, `Dark Aurora • original teammate reserve revival ${c.darkRevives}/2`); return true;
       }
       expansion.death(bs, unit, attacker);
+      grimoire.death(bs, unit);
       host.onUnitDefeated?.(bs, unit, attacker);
       questSkills.turn(bs);
       if (id(unit) === 'snowing') {
@@ -493,7 +502,7 @@
     }
     function kill(bs, unit, victim) {
       const c = state(unit);
-      for (const ally of alliesOf(bs, unit)) if (id(ally) === 'eclipse' && state(ally).protected === unit) heal(ally, ally.maxHp * .80, 'CALAMITY', bs, ally);
+      for (const ally of alliesOf(bs, unit)) if (!passiveScopes.get(unit)?.copy && hasPassive(ally,prefix+'eclipse') && passiveRuntimeFor(ally,prefix+'eclipse').champion?.protected === unit) heal(ally, ally.maxHp * .80, 'CALAMITY', bs, ally);
       if (canCreateCompanion(unit) && !passiveSuppressed(unit) && !isGeneratedUnit(victim) && (id(unit) === 'shadow' || cardIdOf(unit) === prefix + 'shadow') && isAlive(unit) && Math.random() < .29 && !uncloneable(victim) && !noExternalRevive(victim)) {
         const stolen = getEffectivePassiveCardId(victim), converted = summon(bs, unit, unit.maxHp, unit.atk, 'converted', victim);
         if (converted) {
@@ -524,7 +533,7 @@
       }
     }
     function guardianFor(bs, target) {
-      return alliesOf(bs, target, false).find(v => id(v) === 'eclipse' && state(v).protected === target) || null;
+      return alliesOf(bs, target, false).find(v => hasPassive(v,prefix+'eclipse') && passiveRuntimeFor(v,prefix+'eclipse').champion?.protected === target) || null;
     }
     function redirect(bs, target, attacker, amount, meta) {
       if (meta.championRedirect || amount <= 0) return amount;
@@ -552,7 +561,7 @@
       return amount - redirected;
     }
     function turn(bs, attacker) {
-      for (const unit of allUnits(bs).filter(isAlive)) {
+      for (const unit of phaseUnits(bs).filter(isAlive)) {
         entry(bs, unit); const code = id(unit), c = state(unit);
         if (code === 'eclipse') protect(bs, unit);
         if (code === 'tsukuyomi') duo(bs, unit, activeDefender(bs, unit));
@@ -562,7 +571,7 @@
     }
     function endTurn(bs, attacker) {
       if (attacker) { const c = state(attacker); if (c.heresy > 0) c.heresy--; if (c.reverting > 0) c.reverting--; }
-      for (const unit of allUnits(bs)) {
+      for (const unit of phaseUnits(bs)) {
         const c = state(unit);
         if (id(unit) === 'tsukuyomi' && isAlive(unit)) duo(bs, unit, activeDefender(bs, unit));
         if (c.shieldTurns > 0 && bs.turnCount > c.shieldCreatedAt) { c.shieldTurns--; if (!c.shieldTurns && ensureRuntime(unit).shieldKind === 'sasuke') { ensureRuntime(unit).shield = 0; ensureRuntime(unit).shieldKind = ''; } }
@@ -570,7 +579,7 @@
       }
     }
     function rewards(bs, profile) {
-      const aqua = (bs.playerTeam || []).some(unit => id(unit) === 'raining' && state(unit).aqua === 'rewards');
+      const aqua = (bs.playerTeam || []).some(unit => hasPassive(unit,prefix+'raining') && passiveRuntimeFor(unit,prefix+'raining').champion?.aqua === 'rewards');
       if (aqua) { profile.reward = Math.floor(profile.reward * 1.5); profile.experience = Math.floor(profile.experience * 1.5); profile.dropRateBonus = Number((profile.dropRateBonus * 1.5).toFixed(2)); profile.passiveMultiplier *= 1.5; }
       return profile;
     }
@@ -594,7 +603,7 @@
     function burn(bs, unit, target, outcome) {
       if (!outcome.hit || !(outcome.damage > 0) || !isAlive(target) || !sourcePassiveAllowed(target, unit)) return;
       if (id(unit) === 'raid-secret-ace' && Math.random() < .10) addDot(target, 'burn', 3, Math.max(1, Math.floor(atk(unit))), unit);
-      if (ensureRuntime(unit).brotherSoul && Math.random() < .10) addDot(target, 'burn', 1, Math.max(1, Math.floor(atk(unit))), unit);
+      if (!passiveScopes.get(unit)?.copy && ensureRuntime(unit).brotherSoul && Math.random() < .10) addDot(target, 'burn', 1, Math.max(1, Math.floor(atk(unit))), unit);
     }
     function hit(bs, source, target, amount, options = {}) {
       if (!isAlive(source) || !isAlive(target) || !(amount > 0)) return { damage: 0, killed: false };
@@ -612,15 +621,15 @@
     }
     function block(bs, attacker, target, meta) {
       if (meta.raidBlockChecked || meta.raidCounter || meta.championRedirect || !isAlive(attacker)) return false;
-      const marco = alliesOf(bs, target, false).find(unit => id(unit) === 'raid-secret-marco');
+      const marco = alliesOf(bs, target, false).find(unit => hasPassive(unit,'raid-secret-marco'));
       if (!marco || Math.random() >= .10) return false;
       safeLog(`[PASSIVE] ${marco.display?.name || 'Marco'} blocked the teammate's attack and counters for 200% ATK.`, 'passive');
       hit(bs, marco, attacker, atk(marco) * 2, { raidCounter: true });
       return true;
     }
     function rescuer(bs, target) {
-      if (!target || target.championPermanentDeath) return null;
-      return alliesOf(bs, target, false).find(unit => id(unit) === 'raid-secret-marco' && !state(unit).rescued) || null;
+      if (!target || target.championPermanentDeath || target.grimoireRevived) return null;
+      return alliesOf(bs, target, false).find(unit => hasPassive(unit,'raid-secret-marco') && !passiveRuntimeFor(unit,'raid-secret-marco').raidSecret?.rescued) || null;
     }
     function canRescue(bs, target) { return Boolean(rescuer(bs, target)); }
     function rescue(bs, target, options = {}) {
@@ -630,7 +639,7 @@
       if (at < 0 || from < 0) return false;
       // Claim before any heal/counter hook. Fatal rescue prevents death rather
       // than invoking the defeated unit's revival/death/kill handlers.
-      state(marco).rescued = true;
+      (passiveRuntimeFor(marco,'raid-secret-marco').raidSecret ||= {}).rescued = true;
       target.hp = Math.max(1, target.hp); target.defeated = false;
       [team[at], team[from]] = [team[from], team[at]];
       heal(target, Math.max(0, target.maxHp - target.hp), 'PHOENIX RESCUE', bs, marco);
@@ -658,7 +667,7 @@
       safeLog('[PASSIVE] Ace granted Brother Soul: 10% Burn chance, 1 turn, 100% ally ATK.', 'passive');
     }
     function turn(bs) {
-      for (const unit of allUnits(bs).filter(isAlive)) {
+      for (const unit of phaseUnits(bs).filter(isAlive)) {
         rescue(bs, unit);
         if (id(unit) !== 'raid-secret-mihawk' || Math.random() >= .25) continue;
         const c = state(unit), runtime = ensureRuntime(unit);
@@ -667,7 +676,7 @@
       }
     }
     function endTurn(bs) {
-      for (const unit of allUnits(bs)) {
+      for (const unit of phaseUnits(bs)) {
         const c = state(unit), runtime = ensureRuntime(unit);
         if (c.hakiTurns > 0 && --c.hakiTurns === 0) {
           runtime.atkBonusPct = Math.max(0, runtime.atkBonusPct - 2.50); runtime.displayAtkBonusPct = Math.max(0, runtime.displayAtkBonusPct - 2.50);
@@ -745,7 +754,7 @@
       return id(unit) === 'akaza' && (!bs || victim === selectStrongestEnemy(bs,unit)) ? 1.5 : 1;
     }
     function summon(bs, unit, ratio, kind) {
-      if (!canCreateCompanion(unit)) return null;
+      if (unit.grimoireRevived || !canCreateCompanion(unit)) return null;
       const c = state(unit); c.clones = c.clones.filter(isAlive);
       if (kind === 'd4c' && c.clones.length >= 10) return null;
       const hp = Math.max(1, Math.floor(unit.maxHp * ratio)), attack = Math.max(1, Math.floor(atk(unit) * ratio));
@@ -817,14 +826,15 @@
       state(victim).deathNotified = true;
       if (victim.expansionCloneType === 'ito' && !victim.expansionSacrificed && isAlive(attacker) && sourcePassiveAllowed(attacker,victim)) setStatus(attacker,'stunTurns',2,victim);
       for (const observer of allUnits(bs).filter(isAlive)) {
-        if (id(observer) === 'tohth' && state(observer).marked === victim && !state(observer).markPaid) {
-          state(observer).markPaid = true;
+        const observed=passiveRuntimeFor(observer,'tohth').expansion;
+        if (hasPassive(observer,'tohth') && observed?.marked === victim && !observed.markPaid) {
+          observed.markPaid = true;
           for (const ally of alliesOf(bs,observer)) applyPermanentAtkBonus(ally,.189);
         }
       }
     }
     function turn(bs) {
-      for (const unit of allUnits(bs).filter(isAlive)) {
+      for (const unit of phaseUnits(bs).filter(isAlive)) {
         const c = state(unit);
         if (id(unit) === 'awakened-doflamingo' && c.first && !c.turn10Used && bs.turnCount >= 10) {
           c.turn10Used = true; champions.area(bs,unit,enemiesOf(bs,unit),atk(unit)*10);
@@ -852,7 +862,7 @@
     const ID='boss-event-alucard',chains=new WeakMap();
     const active=unit=>getEffectivePassiveCardId(unit)===ID;
     const state=unit=>ensureRuntime(unit).hermes ||= {revived:false,clones:[],streak:0};
-    function linked(bs,unit,options){return Boolean(options.hermesToken&&chains.get(unit)===options.hermesToken&&active(unit)&&teamOf(bs,unit)===(bs.turn==='player'?bs.playerTeam:bs.enemyTeam));}
+    function linked(bs,unit,options){return Boolean(options.hermesToken&&chains.get(unit)===options.hermesToken&&hasPassive(unit,ID)&&teamOf(bs,unit)===(bs.turn==='player'?bs.playerTeam:bs.enemyTeam));}
     function applyBleed(bs,unit,target,result){
       if(active(unit)&&getCardAttackCount(unit)%2===0&&result.hit&&!result.reflected&&result.damage>0&&isAlive(target)&&sourcePassiveAllowed(target,unit))addDot(target,'bleed',1,computeWeakenedAtk(unit)*.66,unit);
     }
@@ -872,11 +882,11 @@
     function attack(bs,unit,target,options){
       const token={},c=state(unit);chains.set(unit,token);c.streak=0;
       try{
-        const first=performAttack(bs,unit,target,{...options,hermesToken:token});
+        const first=options.grimoireInitialResult || performAttack(bs,unit,target,{...options,hermesToken:token});
         if(first.skipped||first.outOfTurn||(!first.hit&&!first.dodged&&!first.missed)||getCardAttackCount(unit)<6)return first;
         while(isAlive(unit)&&active(unit)&&enemiesOf(bs,unit).length&&Math.random()<.66){
           const enemy=isAlive(target)?target:activeDefender(bs,unit);if(!enemy)break;
-          const result=performAttack(bs,unit,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:.33,chainDepth:0,hermesToken:token});
+          const result=performAttack(bs,unit,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:.33,chainDepth:0,hermesToken:token,grimoireDriver:options.grimoireDriver});
           if(result.skipped||result.outOfTurn)break;
           heal(unit,unit.maxHp*.03,'BIRD OF HERMES',bs,unit);
           if(result.hit&&!result.reflected&&result.damage>0){c.streak++;if(c.streak===6){clone(bs,unit);c.streak=0;}}
@@ -898,7 +908,7 @@
     function bleedMultiplier(bs,source){
       if(!source)return 1;
       const actor=bs.turn==='player'?bs.player:bs.enemy;
-      return alliesOf(bs,source,false).some(ally=>active(ally)&&ally!==actor)?1.5:1;
+      return alliesOf(bs,source,false).some(ally=>hasPassive(ally,ID)&&ally!==actor)?1.5:1;
     }
     return {ID,active,state,linked,attack,applyBleed,revive,bleedMultiplier};
   })();
@@ -945,14 +955,14 @@
     }
     function lastStanding(bs,unit) {
       const c=state(unit);
-      if(!isMadara(unit)||c.lastStandUsed||!isAlive(unit)||!canCreateCompanion(unit)||alliesOf(bs,unit,false).length)return;
+      if(!isMadara(unit)||unit.grimoireRevived||c.lastStandUsed||!isAlive(unit)||!canCreateCompanion(unit)||alliesOf(bs,unit,false).length)return;
       c.lastStandUsed=true;
       const dead=teamOf(bs,unit).filter(v=>v!==unit&&!isAlive(v)&&!isGeneratedUnit(v)&&!champions.uncloneable(v));
       const hp=unit.maxHp*.5,attack=computeWeakenedAtk(unit)*.5,shield=unit.maxHp*.5;
       for(let i=0;i<3;i++){const victim=pick(dead);summon(bs,unit,hp,attack,'Divine Steed Clone',victim?(ensureRuntime(victim).effectivePassiveId||cardIdOf(victim)):null,shield);}
       safeLog('[PASSIVE] Divine Steed summoned 3 Clones with 50% stats and 50% Madara max HP shields.','passive');
     }
-    function turn(bs) { for(const unit of [...allUnits(bs)].filter(isAlive))lastStanding(bs,unit); }
+    function turn(bs) { for(const unit of [...phaseUnits(bs)].filter(isAlive))lastStanding(bs,unit); }
     function kill(bs,unit,victim) {
       if(id(unit)!=='sung-jin-woo'||isAlive(victim))return;
       if(!isGeneratedUnit(victim)&&!champions.uncloneable(victim))summon(bs,unit,victim.maxHp*.5,computeWeakenedAtk(victim)*.5,'Shadow');
@@ -1033,7 +1043,7 @@
     function attack(bs,unit,target,options) {
       const token={};chains.set(unit,token);
       try {
-        const first=performAttack(bs,unit,target,{...options,questChainToken:token});
+        const first=options.grimoireInitialResult || performAttack(bs,unit,target,{...options,questChainToken:token});
         if(first.skipped||first.outOfTurn||(!first.hit&&!first.dodged&&!first.missed))return first;
         let count=0;
         while(isAlive(unit)&&activeChain(unit)&&enemiesOf(bs,unit).length){
@@ -1042,7 +1052,7 @@
           if(Math.random()>=(madara?.5:.77))break;
           const enemy=isAlive(target)?target:activeDefender(bs,unit);if(!enemy)break;
           count++;
-          const result=performAttack(bs,unit,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:madara?1:.77,chainDepth:0,questChainToken:token,questCalled:options.questCalled});
+          const result=performAttack(bs,unit,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:madara?1:.77,chainDepth:0,questChainToken:token,questCalled:options.questCalled,grimoireDriver:options.grimoireDriver});
           if(result.skipped||result.outOfTurn)break;
           if(result.hit&&!result.reflected&&result.damage>0&&isAlive(enemy)&&sourcePassiveAllowed(enemy,unit))addDot(enemy,'bleed',madara?3:count,computeWeakenedAtk(unit)*(madara?.25:.07),unit);
           target=enemy;
@@ -1057,6 +1067,90 @@
     }
     return {ids,state,id,entry,isMadara,activeChain,linked,attack,dodge,passiveDodge,turn,kill,multiplier,damaged,spell,attackOptions,afterAttack,endTurn};
   })();
+
+
+  function passiveIds(unit, includeSuppressed = false) {
+    const root = unit?.passiveState;
+    if (!includeSuppressed && passiveSuppressed(unit)) return [];
+    return [...new Set([root?.effectivePassiveId || cardIdOf(unit), ...(root?.grimoire?.copies || []).map(copy => copy.id)].filter(Boolean))];
+  }
+  function hasPassive(unit, key) { return passiveIds(unit).includes(key); }
+  function passiveRuntimeFor(unit,key) { const root=unit?.passiveState || ensureRuntime(unit); return root.grimoire?.copies?.find(copy=>copy.id===key)?.view || root; }
+  function skillState(unit,key) {
+    const root=unit?.passiveState || ensureRuntime(unit);
+    const copy=root.grimoire?.copies?.find(copy=>copy.id===key);
+    const holder=copy?copy.state:root;
+    return holder.grimoire ||= {copies:[],initialized:false,streak:0,followChance:.05};
+  }
+  function addPassiveCopy(unit, key) {
+    if (!key || passiveIds(unit).includes(key)) return null;
+    const root = unit.passiveState || ensureRuntime(unit);
+    if ((root.grimoire?.copies?.length || 0) >= 4) return null;
+    const definition=SOURCE_CARDS.find(card=>card.id===key);
+    if(!definition?.passive?.name)return null;
+    if(definition?.passive?.name && passiveIds(unit).some(id=>SOURCE_CARDS.find(card=>card.id===id)?.passive?.name===definition.passive.name))return null;
+    const copy = { id:key, state:ensureRuntime({card:unit.card,hp:unit.hp,atk:unit.atk}), view:null };
+    copy.view = new Proxy(root, {
+      get(target, field) { return field === 'effectivePassiveId' ? copy.id : SHARED_PASSIVE_FIELDS.has(field) ? target[field] : copy.state[field]; },
+      set(target, field, value) {
+        if (field==='effectivePassiveId' && value && value!==copy.id) {
+          const gained=addPassiveCopy(unit,value);
+          if(gained&&activeCombat)activateCopy(activeCombat,unit,gained);
+        }
+        if (SHARED_PASSIVE_FIELDS.has(field)) target[field] = value; else copy.state[field] = value; return true;
+      },
+      deleteProperty(target,field) { return SHARED_PASSIVE_FIELDS.has(field)?delete target[field]:delete copy.state[field]; }
+    });
+    (root.grimoire ||= {copies:[]}).copies.push(copy);
+    return copy;
+  }
+  function withPassive(unit, copy, callback) {
+    const previous = passiveScopes.get(unit);
+    passiveScopes.set(unit, { id:copy?.id || unit.passiveState?.effectivePassiveId || cardIdOf(unit), copy });
+    try { return callback(); } finally { if (previous) passiveScopes.set(unit,previous); else passiveScopes.delete(unit); }
+  }
+  function activateCopy(bs,unit,copy) { withPassive(unit,copy,()=>{runOnEntry(bs,unit);champions.entry(bs,unit);expansion.entry(bs,unit);}); }
+  const grimoire = window.createGrimoireSkills({
+    runtime:ensureRuntime,id:getEffectivePassiveCardId,alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,
+    atk:computeWeakenedAtk,hit:(...args)=>champions.hit(...args),shield:addShield,status:setStatus,refresh:refreshUnitDisplay,
+    log:safeLog,random:()=>Math.random(),hasPassive,passiveIds,skillState,canFutureRevive:(bs,target)=>!champions.noExternalRevive(target)&&alliesOf(bs,target,false).some(unit=>!unit.passiveState?.passiveSuppressedUntilDeath&&((passiveIds(unit,true).includes('dante-limbus')&&(passiveRuntimeFor(unit,'dante-limbus').reviveCount||0)<1)||(passiveIds(unit,true).includes('josuke')&&!passiveRuntimeFor(unit,'josuke').expansion?.revived))),addCopy:addPassiveCopy,replaceCopies:(unit,ids)=>{unit.passiveState.grimoire.copies=[];for(const key of ids)addPassiveCopy(unit,key);},card:key=>host.getCardById?.(key)||SOURCE_CARDS.find(card=>card.id===key),
+    frontline:(bs,unit)=>firstLiving(teamOf(bs,unit),bs.playerTeam.includes(unit)?bs.playerIndex:bs.enemyIndex),
+    enemyFront:activeDefender,attack:(...args)=>performAttack(...args),hpBonus:applyMaxHpBonus,atkBonus:applyPermanentAtkBonus,
+    copyEntry:activateCopy,
+    reflectHit(bs,source,target,amount,meta) { const result=damageUnit(bs,source,target,amount,meta); if(result.killed){onKill(bs,source,target);onTeammateDeath(bs,target);} return result; }
+  });
+
+  // Multiplex hooks only for units that own copied passives. Each copy keeps
+  // private counters/forms; HP, shields, debuffs and combat buffs stay shared.
+  function multiplex(fn, index, combine='last') {
+    return function(...args) {
+      const unit=args[index], copies=unit?.passiveState?.grimoire?.copies;
+      if (!copies?.length || passiveScopes.has(unit) || passiveSuppressed(unit)) return fn(...args);
+      const views=[null,...copies]; let result;
+      for(const copy of views) {
+        const value=withPassive(unit,copy,()=>fn(...args));
+        if(combine==='some' && value) return value;
+        if(combine==='product') result=(result??1)*(value??1);
+        else if(combine==='max') result=Math.max(result||0,value||0);
+        else if(combine==='crit') result=result?{chance:Math.max(result.chance,value.chance),multiplier:Math.max(result.multiplier,value.multiplier)}:value;
+        else if(value!==undefined) result=value;
+      }
+      return result;
+    };
+  }
+  function multiplexPhase(fn, actorIndex=-1) {
+    return function(bs,...rest) {
+      if(phaseUnit)return fn(bs,...rest);
+      const units=allUnits(bs), result=fn(bs,...rest);
+      for(const unit of units) for(const copy of [...(unit.passiveState?.grimoire?.copies||[])]) {
+        if(passiveSuppressed(unit))continue;
+        const previous=phaseUnit;phaseUnit=unit;
+        try { withPassive(unit,copy,()=>{const args=[...rest];if(actorIndex>=0)args[actorIndex]=rest[actorIndex]===unit?unit:null;fn(bs,...args);}); }
+        finally {phaseUnit=previous;}
+      }
+      return result;
+    };
+  }
 
   function isTeamDefeated(team, includeReserves = false) {
     // Tower's queue includes every spawned fighter, including passive clones.
@@ -1222,10 +1316,10 @@
   function passiveImmuneToSource(target, source) {
     const targetRuntime = ensureRuntime(target);
     if (targetRuntime?.passiveImmune) return true;
-    if (getEffectivePassiveCardId(target) === 'starter-secret') return true;
+    if (hasPassive(target,'starter-secret')) return true;
     const targetHp = Math.max(0, Number(target?.hp) || 0);
     const targetMax = Math.max(1, Number(target?.maxHp) || 1);
-    if (getEffectivePassiveCardId(target) === 'erza' && targetHp < targetMax * 0.50) return true;
+    if (hasPassive(target,'erza') && targetHp < targetMax * 0.50) return true;
     return false;
   }
 
@@ -1296,7 +1390,7 @@
       case 'diavolo': chance = 0.35; break;
       default: break;
     }
-    chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit), questSkills.isMadara(unit) ? .10 : 0);
+    chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit), questSkills.isMadara(unit) ? .10 : 0, grimoire.dodgeChance(unit));
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0);
     if (getEffectivePassiveCardId(unit) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0 || runtime.noDodgeAgainstUnit) chance = 0;
@@ -1353,9 +1447,10 @@
   function getPassiveTooltipData(unit) {
     const runtime = ensureRuntime(unit);
     const passive = champions.describe(unit) || getPassive(unit);
+    const copied = (unit?.passiveState?.grimoire?.copies || []).map(copy => host.getCardById?.(copy.id)?.passive).filter(Boolean);
     return {
-      name: String(passive?.name || 'Passive'),
-      description: String(passive?.description || ''),
+      name: [passive?.name || 'Passive', ...copied.map(p=>p.name)].join(' + '),
+      description: [passive?.description || '', ...copied.map(p=>p.name+'\n'+p.description)].join('\n\n'),
       status: runtime.lastPassiveTrigger ? `Triggered: ${runtime.lastPassiveTrigger}` : 'Active'
     };
   }
@@ -1382,7 +1477,7 @@
       case 'diavolo': chance = 0.35; break;
       default: break;
     }
-    chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target), questSkills.isMadara(target) ? .10 : 0);
+    chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target), questSkills.isMadara(target) ? .10 : 0, grimoire.dodgeChance(target));
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0);
     if (getEffectivePassiveCardId(target) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0) chance = 0;
@@ -1509,6 +1604,7 @@
       const kind = runtime.shieldKind;
       runtime.shieldKind = '';
       removeActiveTag(unit, `${kind}-shield`);
+      grimoire.shieldBroken(battleState, unit, kind);
       if (kind === 'weather') {
         const sourceUnit = source;
         if (sourceUnit && sourcePassiveAllowed(unit, sourceUnit) && cardIdOf(unit) !== cardIdOf(sourceUnit)) {
@@ -1550,13 +1646,15 @@
   }
 
   function deferFatality(battleState, target) {
-    return Boolean(ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+    return Boolean(grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
     if (!target || !isAlive(target)) return { damage: 0, killed: false, reflected: false };
     if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
-    if (questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
+    if (!grimoire.dodgeChance(target) && questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
+    if (grimoire.reflect(battleState, attacker, target, amount, meta)) return {damage:0,killed:false,reflected:true};
+    if (meta.passiveAttack && !meta.dodgeChecked && grimoire.dodgeChance(target) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
     const targetRuntime = ensureRuntime(target);
     const fatalityDeferred = deferFatality(battleState, target);
     const source = attacker || null;
@@ -1581,7 +1679,7 @@
 
     const reduction = clamp(
       Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
-      (getEffectivePassiveCardId(target) === 'aquaman' && host.isWeatherActive?.('Raining') ? 0.50 : 0),
+      (hasPassive(target,'aquaman') && host.isWeatherActive?.('Raining') ? 0.50 : 0),
       0,
       0.95
     );
@@ -1621,7 +1719,7 @@
   function shouldReflectPassiveAttack(target, attacker, options = {}) {
     if (!target || !attacker || !options.passiveAttack) return false;
     if (passiveImmuneToSource(target, attacker)) return false;
-    return Math.random() < 0.50 && getEffectivePassiveCardId(target) === 'asta';
+    return Math.random() < 0.50 && hasPassive(target,'asta');
   }
 
   function selectStrongestEnemy(battleState, unit) {
@@ -1643,6 +1741,9 @@
   }
 
   function runOnEntry(battleState, unit) {
+    const copy=passiveScopes.get(unit)?.copy;
+    if(copy?.entryInitialized)return;
+    if(copy)copy.entryInitialized=true;
     const id = getEffectivePassiveCardId(unit);
     const runtime = ensureRuntime(unit);
     const team = teamOf(battleState, unit);
@@ -1794,6 +1895,7 @@
     if (cardIdOf(unit) === 'yuta-okkotsu') runtime.firstFatalityUsed = false;
     expansion.entry(battleState,unit);
     questSkills.entry(battleState,unit);
+    grimoire.entry(battleState,unit);
   }
 
   function beforeAttack(battleState, attacker, target) {
@@ -2417,6 +2519,7 @@
     champions.dodge(battleState, defender, attacker, outcome);
     expansion.dodge(battleState, defender, attacker);
     questSkills.dodge(battleState, defender, attacker);
+    grimoire.dodge(battleState, defender);
     raidSecrets.dodge(battleState, defender, attacker);
     const runtime = ensureRuntime(defender);
     runtime.dodgeStreak += 1;
@@ -2536,7 +2639,7 @@
     if (champions.death(battleState, victim, null) || isAlive(victim) || champions.uncloneable(victim)) return;
     const team = teamOf(battleState, victim);
     if (isGeneratedUnit(victim)) return;
-    const jinUnits = aliveUnits(team).filter(unit => canCreateCompanion(unit) && getEffectivePassiveCardId(unit) === 'jin-mori');
+    const jinUnits = aliveUnits(team).filter(unit => canCreateCompanion(unit) && hasPassive(unit,'jin-mori'));
     for (const jin of jinUnits) {
       createJinMoriCloneForDeadTeammate(battleState, jin, victim);
     }
@@ -2632,7 +2735,7 @@
 
       case 'builderman': {
         const builder = aliveUnits(teamOf(battleState, killer))
-          .find(candidate => getEffectivePassiveCardId(candidate) === 'builderman');
+          .find(candidate => hasPassive(candidate,'builderman'));
         if (builder) {
           const builderRuntime = ensureRuntime(builder);
           const saved = Math.max(0, Number(builderRuntime.builderTowerAtk) || 0);
@@ -2677,7 +2780,7 @@
 
     // Builderman converts saved tower power when any allied unit secures a kill.
     if (id !== 'builderman') {
-      const builder = aliveUnits(teamOf(battleState, killer)).find(candidate => getEffectivePassiveCardId(candidate) === 'builderman');
+      const builder = aliveUnits(teamOf(battleState, killer)).find(candidate => hasPassive(candidate,'builderman'));
       if (builder) {
         const builderRuntime = ensureRuntime(builder);
         const saved = Math.max(0, Number(builderRuntime.builderTowerAtk) || 0);
@@ -2696,6 +2799,7 @@
   function onFatalityAttempt(battleState, target, attacker, incomingDamage, context = {}) {
     if (!target || !attacker) return false;
     if (target.championPermanentDeath) return false;
+    if (grimoire.fatal(battleState, target)) return true;
     if (raidSecrets.rescue(battleState, target, {fatal:true})) return true;
     const runtime = ensureRuntime(target);
     const id = getEffectivePassiveCardId(target);
@@ -2752,7 +2856,7 @@
     // with the defeated teammate's passive. The clone does not count as a
     // teammate for subsequent triggers.
     const metalCooler = aliveUnits(teamOf(battleState, target))
-      .find(ally => canCreateCompanion(ally) && getEffectivePassiveCardId(ally) === 'metal-cooler');
+      .find(ally => canCreateCompanion(ally) && hasPassive(ally,'metal-cooler'));
     if (metalCooler && target !== metalCooler && !isGeneratedUnit(target) && !champions.uncloneable(target) && incomingDamage >= Math.max(1, Number(target.hp) || 0)) {
       const mr = ensureRuntime(metalCooler);
       if (canCreateCompanion(metalCooler)) {
@@ -2778,7 +2882,7 @@
   function maybeRedirectTarget(battleState, attacker, defender) {
     if (!attacker || !defender || !isAlive(defender)) return defender;
     const team = teamOf(battleState, defender);
-    const seaBeast = aliveUnits(team).find(candidate => candidate !== defender && getEffectivePassiveCardId(candidate) === 'sea-beast');
+    const seaBeast = aliveUnits(team).find(candidate => candidate !== defender && hasPassive(candidate,'sea-beast'));
     const activeDefenderUnit = activeDefender(battleState, attacker);
     const canIntercept = seaBeast && defender === activeDefenderUnit && sourcePassiveAllowed(seaBeast, attacker);
     if (canIntercept) {
@@ -2842,9 +2946,34 @@
   ]));
 
   function performAttack(battleState, attacker, requestedTarget, options = {}) {
+    const driverScope = options.grimoireDriver && passiveScopes.get(attacker);
+    if (driverScope) {
+      passiveScopes.delete(attacker);
+      try { return performAttack(battleState,attacker,requestedTarget,options); }
+      finally { passiveScopes.set(attacker,driverScope); }
+    }
+    const copies = attacker?.passiveState?.grimoire?.copies;
+    if (copies?.length && !compositeChains.has(attacker) && !passiveScopes.has(attacker)) {
+      compositeChains.add(attacker);
+      try {
+        const first=performAttack(battleState,attacker,requestedTarget,options);
+        if (first.skipped || first.outOfTurn || options.isFollowUp) return first;
+        for (const copy of [...copies]) {
+          if (!isAlive(attacker) || passiveSuppressed(attacker) || !enemiesOf(battleState,attacker).length) break;
+          withPassive(attacker,copy,()=>{
+            const driverOptions={...options,grimoireInitialResult:first,grimoireDriver:true};
+            if (questSkills.activeChain(attacker)) questSkills.attack(battleState,attacker,requestedTarget,driverOptions);
+            else if (alucard.active(attacker)) alucard.attack(battleState,attacker,requestedTarget,driverOptions);
+            else if (getEffectivePassiveCardId(attacker)==='speed-wizard') grimoire.attack(battleState,attacker,requestedTarget,driverOptions);
+          });
+        }
+        return first;
+      } finally { compositeChains.delete(attacker); ensureCurrentIndices(battleState); }
+    }
     if (!battleState || !attacker || !isAlive(attacker)) return { hit: false, killed: false, damage: 0 };
     if (attacker.isExpMonster) return { hit: false, killed: false, damage: 0, trainingDummy: true };
     ensureRuntime(attacker);
+    if (getEffectivePassiveCardId(attacker)==='speed-wizard' && !options.godspeedToken && !options.grimoireDriver) return grimoire.attack(battleState,attacker,requestedTarget,options);
     if (questSkills.activeChain(attacker) && !options.questChainToken) return questSkills.attack(battleState,attacker,requestedTarget,options);
     if (alucard.active(attacker) && !options.hermesToken) return alucard.attack(battleState,attacker,requestedTarget,options);
 
@@ -2852,7 +2981,7 @@
     // inside the same initiating turn; explicit support/interceptor attacks
     // are the only other legal out-of-turn combat actions.
     const passiveId = getEffectivePassiveCardId(attacker);
-    const isLinkedFollowUp = Boolean(options.isFollowUp) && (isScheduledTurnAttacker(battleState, attacker) || alucard.linked(battleState,attacker,options) || questSkills.linked(battleState,attacker,options));
+    const isLinkedFollowUp = Boolean(options.isFollowUp) && (isScheduledTurnAttacker(battleState, attacker) || alucard.linked(battleState,attacker,options) || questSkills.linked(battleState,attacker,options) || grimoire.linked(attacker,options));
     const isExplicitSupportAction = Boolean(options.outOfTurnPassive || options.linkedAttack) && OUT_OF_TURN_SUPPORT_IDS.has(passiveId);
     const isRootAttack = (Number(options.chainDepth) || 0) === 0 && !options.isFollowUp && !options.isCounter;
     const isCounter = Boolean(options.isCounter);
@@ -2878,6 +3007,9 @@
     const attackState = ensureRuntime(attacker);
     attackState.ownAttackCount = Math.max(0, Number(attackState.ownAttackCount) || 0) + 1;
     attackState.attackCount = attackState.ownAttackCount;
+    grimoire.countedAttack(battleState, attacker);
+    if (!isAlive(attacker)) return {hit:false,damage:0,killed:false};
+    if (!isAlive(target)) { target=activeDefender(battleState,attacker); if(!isAlive(target))return {hit:false,damage:0,killed:true}; }
 
     options = questSkills.attackOptions(attacker, options);
     const spell = questSkills.spell(battleState, attacker, target, options);
@@ -2964,7 +3096,7 @@
       : false;
 
     if (!fatalityPrevented) {
-      result = damageUnit(battleState, attacker, target, rawDamage, { passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true, elementApplied: true, dodgeChecked: true });
+      result = damageUnit(battleState, attacker, target, rawDamage, { ...options, passiveAttack: Boolean(options.passiveAttack), passiveBypass: Boolean(options.passiveBypass), raidBlockChecked: true, elementApplied: true, dodgeChecked: true });
       result.critical = critical;
       result.hit = true;
     } else {
@@ -2974,6 +3106,7 @@
       result = { damage: 0, killed: false, preventedFatality: true, critical, hit: true };
     }
 
+    if (result.reflected || result.dodged) { ensureCurrentIndices(battleState); return {...result,hit:false,target,attacker}; }
     if (result.raidBlocked) { questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { ...result, hit: false, target, attacker }; }
 
     ensureRuntime(attacker).lastCrit = critical;
@@ -3031,12 +3164,14 @@
       return { skipped: true };
     }
 
+    const skipGodspeed = grimoire.skipTurn(attacker);
     const actorStatus = tickStatusEffects(battleState, attacker);
+    if (skipGodspeed) { safeLog('[PASSIVE] Godspeed skips this attack turn after dodging.', 'status'); return {skipped:true}; }
     return actorStatus;
   }
 
   function resolvePassiveTurnEffects(battleState, attacker) {
-    const all = allUnits(battleState);
+    const all = phaseUnits(battleState);
     for (const unit of all) {
       if (!isAlive(unit)) continue;
       const isAttacker = unit === attacker;
@@ -3136,7 +3271,7 @@
       }
 
       // Clear one-turn/short debuffs after their duration naturally expires.
-      if (runtime.weakenAttackTurns > 0) {
+      if (!passiveScopes.get(unit)?.copy && runtime.weakenAttackTurns > 0) {
         runtime.weakenAttackTurns -= 1;
         if (runtime.weakenAttackTurns <= 0) runtime.weakenAttackPct = 0;
       }
@@ -3254,6 +3389,7 @@
     raidSecrets.endTurn(battleState);
     expansion.endTurn(battleState, actor);
     questSkills.endTurn(battleState, actor);
+    grimoire.endTurn(battleState);
     ensureCurrentIndices(battleState);
     const winner = checkBattleWinner(battleState);
     return winner ? { ended: true, winner } : { ended: false, winner: null };
@@ -3267,6 +3403,7 @@
     if (questSkills.id(unit) === 'frieren') badges.push({icon:'✦',label:`MANA ${questSkills.state(unit).mana}%`,tone:'passive',category:'passive'});
     if (questSkills.id(unit) === 'sung-jin-woo') badges.push({icon:'✦',label:`SYSTEMS ${questSkills.state(unit).bonus.toUpperCase()} • ${questSkills.state(unit).clones.filter(isAlive).length} Shadows`,tone:'passive',category:'passive'});
     if (questSkills.id(unit) === 'alexander-anderson' && questSkills.state(unit).lowHpUsed) badges.push({icon:'✦',label:'CRUCIFIX',tone:'passive',category:'passive'});
+    if(runtime.grimoire?.copies?.length)badges.push({icon:'✦',label:`ALL GRIMOIRE ${1+runtime.grimoire.copies.length}/5`,tone:'passive',category:'passive'});
     if (alucard.active(unit)) badges.push({icon:"🩸",label:`HERMES • ${getCardAttackCount(unit)} attacks • ${alucard.state(unit).clones.filter(isAlive).length}/3 Clones`,tone:"passive",category:"passive"});
     if (isBleeding(unit)) badges.push({ icon: '🩸', label: 'BLEED • HEAL BLOCKED', tone: 'bleed', category: 'status', status: 'Anti-heal' });
     const atkDisplayPct = Math.round((Math.max(0, Number(runtime.displayAtkBonusPct) || 0) + Math.max(0, Number(runtime.temporaryAtkBonusPct) || 0)) * 100);
@@ -3324,8 +3461,8 @@
     const profile = { ...rewardProfile };
     const playerTeam = Array.isArray(battleState?.playerTeam) ? battleState.playerTeam.filter(Boolean) : [];
     let multiplier = 1;
-    if (playerTeam.some(unit => getEffectivePassiveCardId(unit) === 'nami')) multiplier *= 2;
-    if (playerTeam.some(unit => getEffectivePassiveCardId(unit) === 'hakari-jackpot')) multiplier *= 2;
+    if (playerTeam.some(unit => hasPassive(unit,'nami'))) multiplier *= 2;
+    if (playerTeam.some(unit => hasPassive(unit,'hakari-jackpot'))) multiplier *= 2;
     profile.reward = Math.floor((Number(profile.reward) || 0) * multiplier);
     profile.experience = Math.floor((Number(profile.experience) || 0) * multiplier);
     profile.dropRateBonus = Number(((Number(profile.dropRateBonus) || 0) * multiplier).toFixed(2));
@@ -3341,7 +3478,7 @@
   function onVictory(battleState) {
     if (battleState?.sandbox || battleState?.mode === 'sandbox') return;
     const playerTeam = aliveUnits(battleState?.playerTeam || []);
-    const sailor = playerTeam.find(unit => getEffectivePassiveCardId(unit) === 'sailor-moon');
+    const sailor = playerTeam.find(unit => hasPassive(unit,'sailor-moon'));
     if (sailor && getBattleModeFromState(battleState) === '1v1' && Math.random() < 0.20) {
       host.addRandomCommonUncommonWeather?.(180);
       safeLog(`[PASSIVE] Sailor Moon added a random Common/Uncommon Weather for 3 minutes.`, 'passive');
@@ -3606,6 +3743,10 @@
 
 
   const PASSIVE_TRIGGER_CLASSIFICATION = Object.freeze({
+    julius:Object.freeze(["TEAM_SUPPORT","ON_FATALITY","ON_SHIELD_BREAK"]),
+    "speed-wizard":Object.freeze(["ON_DODGE","ON_CARD_ATTACK_STRIKE"]),
+    "boss-event-lucius":Object.freeze(["ON_BATTLE_START","EVERY_NTH_ATTACK","ON_TEAMMATE_DEATH"]),
+    "sea-goddess-valkyrie":Object.freeze(["ON_BATTLE_START","ON_SHIELD_BREAK"]),
     ...Object.fromEntries([...questSkills.ids].map(id => [id, Object.freeze(["QUEST_CARD_ISOLATED_HOOKS"])])),
     [alucard.ID]: Object.freeze(["EVERY_NTH_ATTACK","ON_FATALITY","TEAM_SUPPORT"]),
     ...Object.fromEntries([...expansion.ids].map(id => [id, Object.freeze(["ON_CARD_ATTACK_STRIKE", "ON_CARD_DEFEND_OR_HIT"])])),
@@ -3714,6 +3855,7 @@
   // Explicit coverage registry for auditing. It mirrors the uploaded
   // cards.js IDs, not a second set of passive data.
   const PASSIVE_HANDLERS = Object.freeze({
+    julius:true,"speed-wizard":true,"boss-event-lucius":true,"sea-goddess-valkyrie":true,
     ...Object.fromEntries([...questSkills.ids].map(id => [id, true])),
     [alucard.ID]: true,
     ...Object.fromEntries([...expansion.ids].map(id => [id, true])),
@@ -3839,6 +3981,36 @@
     };
   }
 
+  runOnEntry=multiplex(runOnEntry,1);
+  beforeAttack=multiplex(beforeAttack,1);
+  applyHitEffects=multiplex(applyHitEffects,1);
+  onCritical=multiplex(onCritical,1);
+  onDodge=multiplex(onDodge,1);
+  onHitTaken=multiplex(onHitTaken,1);
+  onKill=multiplex(onKill,1);
+  onFatalityAttempt=multiplex(onFatalityAttempt,1,'some');
+  passiveAttackMultiplier=multiplex(passiveAttackMultiplier,0,'product');
+  getCritStats=multiplex(getCritStats,0,'crit');
+  getDodgeChance=multiplex(getDodgeChance,0,'max');
+  getDisplayDodgeChance=multiplex(getDisplayDodgeChance,0,'max');
+  expansion.reduction=multiplex(expansion.reduction,0,'max');
+  questSkills.spell=multiplex(questSkills.spell,1,'some');
+  questSkills.passiveDodge=multiplex(questSkills.passiveDodge,1,'some');
+  alucard.applyBleed=multiplex(alucard.applyBleed,1);
+  alucard.revive=multiplex(alucard.revive,1,'some');
+  raidSecrets.death=multiplex(raidSecrets.death,1);
+  { const original=expansion.target; expansion.target=function(bs,unit,fallback,options){let result=fallback;for(const copy of [null,...(unit.passiveState?.grimoire?.copies||[])]){const value=withPassive(unit,copy,()=>original(bs,unit,result,options));if(value)result=value;}return result;}; }
+  resolvePassiveTurnEffects=multiplexPhase(resolvePassiveTurnEffects);
+  for(const [module,methods] of [[champions,['entry','beforeAttack','incoming','dodge','afterAttack','hitTaken','kill']], [raidSecrets,['dodge','afterAttack']], [expansion,['entry','beforeAttack','afterAttack','hitTaken','dodge','kill']], [questSkills,['entry','dodge','kill','afterAttack','damaged']]]) {
+    for(const method of methods) if(typeof module[method]==='function')module[method]=multiplex(module[method],1);
+  }
+  for(const module of [champions,expansion,questSkills])if(module.multiplier)module.multiplier=multiplex(module.multiplier,0,'product');
+  for(const module of [champions,raidSecrets,expansion])module.dodgeChance=multiplex(module.dodgeChance,0,'max');
+  for(const module of [champions,expansion])module.fatal=multiplex(module.fatal,1,'some');
+  for(const module of [champions,raidSecrets,expansion,questSkills])module.turn=multiplexPhase(module.turn);
+  champions.endTurn=multiplexPhase(champions.endTurn,0);
+  raidSecrets.endTurn=multiplexPhase(raidSecrets.endTurn);
+
   return Object.freeze({
     createIsolated: options => createPassiveRuntime(options),
     BASE_CRIT_CHANCE,
@@ -3849,6 +4021,7 @@
     applyRuntimeLevelGrowth,
     beginBattle(battleState) {
       if (!battleState) return;
+      activeCombat = battleState;
       battleState.turnCounter = 0;
       battleState.turnCount = 0;
       battleState.passiveCashBonus = 0;
@@ -3885,10 +4058,12 @@
     getPassiveName,
     getPassiveDescription(unit) {
       const passive = champions.describe(unit) || getPassive(unit);
+      const copied = (unit?.passiveState?.grimoire?.copies || []).map(copy => host.getCardById?.(copy.id)?.passive).filter(Boolean);
       const description = {
         name: String(passive?.name || 'Passive'),
         description: String(passive?.description || '')
       };
+      for(const extra of copied){description.name += ' + ' + extra.name; description.description += '\n\n' + extra.name + '\n' + extra.description;}
       if (ensureRuntime(unit)?.brotherSoul) {
         description.name += ' + Brother Soul';
         description.description += '\n\nBrother Soul\nEach successful attack has a separate 10% chance to apply Burn for 1 target turn, dealing 100% of this card\'s current ATK. Brother Soul lasts for the match; each Burn lasts 1 target turn and stacks with this card\'s other Burn effects.';

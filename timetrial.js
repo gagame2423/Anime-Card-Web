@@ -45,7 +45,7 @@
   function requirePersist() { if (!persist()) throw new Error('Không thể lưu Time Trial. Chưa thể tiếp tục thao tác.'); }
   function registerTicket() { host.InventorySystem?.registerItem(TICKET); }
   registerTicket(); persist();
-  function configure(options = {}) { bridge = options; }
+  function configure(options = {}) { bridge = options; let changed = false; for (const id of Object.keys(data.xpCarry)) if (bridge.getLevelInfo?.(id)?.level >= host.CardLevelSystem.MAX_LEVEL && data.xpCarry[id]) { data.xpCarry[id] = 0; changed = true; } if (changed) persist(); }
   function detach() {
     if (deadlineTimer !== null) host.clearTimeout(deadlineTimer);
     deadlineTimer = null; activeBattle = null;
@@ -129,9 +129,9 @@
       if (isExp(battle.mode) && unit.isExpMonster) {
         const info = bridge.getLevelInfo?.(run.cardId);
         if (!info) throw new Error('Không tìm thấy thông số EXP của thẻ đang luyện.');
+        if (info.level < host.CardLevelSystem.MAX_LEVEL) {
         const baseRate = .001 + .009 * Math.max(0, Math.min(1, Number(random()) || 0));
         const rate = baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1);
-        if (info.level < host.CardLevelSystem.MAX_LEVEL) {
           const exact = info.required * rate + (data.xpCarry[run.cardId] || 0);
           const amount = Math.floor(exact), carry = exact - amount;
           const result = bridge.grantExperience?.(run.cardId, amount, run.owner);
@@ -225,5 +225,6 @@
     configure, isMode, isExp, canEnter, roomStats, shardRange, enemies, start, prepareAfterEntry, afterTurn, finish, abort,
     expired, remaining, checkDeadline, detach, purchase, renderShop, validSave, reset, flush: persist,
     getXpCarry: id => data.xpCarry[id] || 0,
+    clearXpCarry: id => { if (!data.xpCarry[id]) return true; const before=data.xpCarry[id]; delete data.xpCarry[id]; if(persist())return true; data.xpCarry[id]=before;return false; },
     get room() { return data.room; }, get bestRoom() { return data.bestRoom; }, get shards() { return data.shards; }, interrupted });
 })(window);

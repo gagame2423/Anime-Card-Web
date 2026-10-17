@@ -3,6 +3,12 @@
   'use strict';
   const KEY = 'anime_card_rng_quests_v1';
   const QUESTS = Object.freeze([
+    { id: 'julius', steps: [
+      {kind:'battle',target:1000,mode:'time-trial',room:100,won:true,text:'Clear Normal Time Trial Room 100 1,000 times.'},
+      {kind:'battle',target:100,mode:'time-trial',room:100,won:true,fullElement:'Holy',text:'Clear Normal Time Trial Room 100 with 4 Holy cards 100 times.'},
+      {kind:'roll',target:10000,weather:'wind',text:'Roll 10,000 times during Wind weather.'},
+      {kind:'battle',target:1000,mode:'boss-event',event:'lucius',won:true,text:'Defeat Lucius Event 1,000 times.'}
+    ] },
     { id: 'sung-jin-woo', steps: [
       { kind: 'battle', target: 1000, mode: '1v1', weather: 'shadow', text: 'Complete 1,000 1v1 battles in Shadow weather.' },
       { kind: 'roll', target: 10000, weather: 'shadow', text: 'Roll 10,000 times in Shadow weather.' },
@@ -58,7 +64,7 @@
     return true;
   }
   function matches(step, e) {
-    return (!step.mode || step.mode === e.mode) && (!step.weather || e.weatherIds?.includes(step.weather)) &&
+    return (step.won === undefined || step.won === e.won) && (!step.room || step.room === e.room) && (!step.fullElement || (e.teamElements?.length === 4 && e.teamElements.every(element => element === step.fullElement))) && (!step.mode || step.mode === e.mode) && (!step.weather || e.weatherIds?.includes(step.weather)) &&
       (!step.teammate || e.teamIds?.includes(step.teammate)) && (!step.card || step.card === e.cardId) &&
       (!step.mutation || e.mutationIds?.includes(step.mutation)) && (!step.event || step.event === e.eventType) &&
       (!step.minDifficulty || e.difficulty >= step.minDifficulty);
@@ -87,7 +93,7 @@
     if (data.sequence >= Number.MAX_SAFE_INTEGER) throw Error('Quest event limit reached.');
     data.sequence++;
     if (!persist()) { data.sequence--; throw Error('Không thể lưu lượt theo dõi quest.'); }
-    return { id: String(data.sequence), startedAt: battle.startedAt, mode: battle.mode, weatherIds: [...weatherIds], teamIds: battle.playerTeam.map(u => u.card.id), eventType: battle.bossEvent?.type, difficulty: battle.bossEvent?.difficulty, defeatSequence: 0 };
+    return { id: String(data.sequence), startedAt: battle.startedAt, mode: battle.mode, weatherIds: [...weatherIds], teamIds: battle.playerTeam.map(u => u.card.id), teamElements: battle.playerTeam.filter(u => !u.isClone && !u.isSummoned && !u.isTemporaryAlly).map(u => u.card.element), eventType: battle.bossEvent?.type, difficulty: battle.bossEvent?.difficulty, defeatSequence: 0 };
   }
   const snapshot = id => data.quests[id] ? JSON.parse(JSON.stringify(data.quests[id])) : null;
   function render(grid) {

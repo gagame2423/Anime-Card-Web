@@ -45,7 +45,7 @@ const CARD_RARITY_EXP_MULTIPLIERS = Object.freeze({
 });
 const CARD_LEVEL_BASE_EXP = 100;
 const CARD_LEVEL_STAT_GROWTH = 0.075; // 7.5% HP/ATK per level (requested 5–10% range)
-const CARD_LEVEL_MAX = window.CardLevelSystem.MAX_LEVEL; // Numeric precision guard, no gameplay level cap.
+const CARD_LEVEL_MAX = window.CardLevelSystem.MAX_LEVEL; // Hard gameplay cap shared by all player EXP sources.
 
 const FALLBACK_ART_DATA_URL = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Cdefs%3E%3ClinearGradient id%3D%22g%22 x1%3D%220%22 y1%3D%220%22 x2%3D%221%22 y2%3D%221%22%3E%3Cstop stop-color%3D%22%23141a2a%22%2F%3E%3Cstop offset%3D%221%22 stop-color%3D%22%23080b14%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22url(%23g)%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%2Csans-serif%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E";
 
@@ -334,7 +334,7 @@ function normalizeCardProgressRecords(rawProgress) {
     const source = rawRecord && typeof rawRecord === "object" ? rawRecord : { level: rawRecord };
     const level = Math.min(CARD_LEVEL_MAX, Math.max(1, Math.floor(Number(source.level) || 1)));
     const exp = Math.max(0, Math.floor(Number(source.exp) || 0));
-    output[cardId] = { level, exp };
+    output[cardId] = { level, exp: level >= CARD_LEVEL_MAX ? 0 : exp };
   }
   return output;
 }
@@ -366,6 +366,7 @@ function mergeLegacyPlayerCardProgress(parsed, progress) {
   // Only player-card containers: enemy levels, Raid difficulty, item counts
   // and upgrade levels are deliberately outside the migration's scope.
   for (const field of ['inventory', 'lineup', 'lineups', 'storage', 'collection', 'cards', 'unlockedCards', 'equipment']) scan(parsed[field]);
+  for (const record of Object.values(progress)) if (record.level >= CARD_LEVEL_MAX) record.exp = 0;
   return progress;
 }
 
@@ -374,9 +375,9 @@ function getCardLevelInfo(cardOrId) {
   const cardId = normalizeCardId(card?.id ?? cardOrId);
   const source = state?.cardProgress?.[cardId];
   const level = Math.min(CARD_LEVEL_MAX, Math.max(1, Math.floor(Number(source?.level) || 1)));
-  const exp = Math.max(0, Math.floor(Number(source?.exp) || 0)) + (level < CARD_LEVEL_MAX ? window.TimeTrialSystem?.getXpCarry(cardId) || 0 : 0);
+  const exp = level >= CARD_LEVEL_MAX ? 0 : Math.max(0, Math.floor(Number(source?.exp) || 0)) + (window.TimeTrialSystem?.getXpCarry(cardId) || 0);
   const required = getCardLevelExpRequired(card || cardId, level);
-  return { cardId, level, exp, required, progress: Math.min(1, required > 0 ? exp / required : 0) };
+  return { cardId, level, exp, required, maxed: level >= CARD_LEVEL_MAX, progress: level >= CARD_LEVEL_MAX ? 1 : Math.min(1, required > 0 ? exp / required : 0) };
 }
 
 function getCardLevelStatMultiplier(cardOrId) {
@@ -395,16 +396,21 @@ function ensureCardProgress(cardId) {
 function grantCardExperience(cardId, amount) {
   if (window.SandboxSystem?.active) return {gained:0,level:getCardLevelInfo(cardId).level,levelUps:0};
   const normalizedId = normalizeCardId(cardId);
+  if (state.cardProgress?.[normalizedId]?.level >= CARD_LEVEL_MAX) return {gained:0,level:CARD_LEVEL_MAX,levelUps:0};
   const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
   if (!normalizedId || safeAmount <= 0 || !getCardById(normalizedId)) return { gained: 0, level: getCardLevelInfo(normalizedId).level, levelUps: 0 };
 
   const progress = ensureCardProgress(normalizedId);
   if (!progress) return { gained: 0, level: 1, levelUps: 0 };
 
-  return window.CardLevelSystem.grant(progress, getCardById(normalizedId), safeAmount);
+  const result = window.CardLevelSystem.grant(progress, getCardById(normalizedId), safeAmount);
+  if (result.level >= CARD_LEVEL_MAX) window.TimeTrialSystem?.clearXpCarry(normalizedId);
+  return result;
 }
 
 function getDuplicateCardRollExperience(cardOrId) {
+  const id = typeof cardOrId === "object" ? cardOrId.id : cardOrId;
+  if (state.cardProgress?.[id]?.level >= CARD_LEVEL_MAX) return 0;
   const info = getCardLevelInfo(cardOrId);
   return Math.max(1, Math.floor(info.required * 0.50 * (1 + getWeatherBonus("exp")) * (window.InventorySystem?.multiplier("exp") || 1) * (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0))));
 }
@@ -1634,7 +1640,7 @@ function rollCard(source = "manual") {
       const duplicateXp = ownedBeforeRoll
         ? getDuplicateCardRollExperience(result.card)
         : 0;
-      const rollExp = ownedBeforeRoll
+      const rollExp = state.cardProgress?.[cardId]?.level >= CARD_LEVEL_MAX ? 0 : ownedBeforeRoll
         ? duplicateXp
         : calculateCardRollExperience(result.card, mutations);
       const levelResult = grantCardExperience(cardId, rollExp);
@@ -2292,7 +2298,7 @@ function renderCollection() {
       levelLabel.textContent = owned ? `Lv. ${levelInfo.level}` : "Lv. —";
       const expText = document.createElement("span");
       expText.className = "card-level-mini__exp";
-      expText.textContent = owned ? `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP` : "";
+      expText.textContent = owned ? levelInfo.maxed ? "MAX LEVEL" : `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP` : "";
       const expTrack = document.createElement("div");
       expTrack.className = "card-level-mini__track";
       const expFill = document.createElement("div");
@@ -2406,15 +2412,6 @@ function salvageExtraDuplicates(cardId) {
   return { removed, cash };
 }
 
-function getVariantRetentionScore(card, entry) {
-  if (!card || !entry) return 0;
-  const display = getBattleVariantDisplay(card, entry);
-  const rank = getVariantRank(entry);
-  const salvage = getSalvageValue(card, entry.mutations);
-  const stats = (Number(display?.hp) || 0) + ((Number(display?.atk) || 0) * 2);
-  return (rank * 1_000_000_000) + (salvage * 10_000) + stats;
-}
-
 function salvageAllExtraDuplicates() {
   let removed = 0;
   let cash = 0;
@@ -2423,14 +2420,8 @@ function salvageAllExtraDuplicates() {
     const variants = getVariantEntries(card.id);
     if (!variants.length) continue;
 
-    const keeper = [...variants].sort((a, b) =>
-      getVariantRetentionScore(card, b) - getVariantRetentionScore(card, a) ||
-      a.key.localeCompare(b.key)
-    )[0];
-
     for (const entry of variants) {
-      const keepCount = entry.key === keeper.key ? 1 : 0;
-      const extras = Math.max(0, entry.count - keepCount);
+      const extras = Math.max(0, entry.count - 1);
       if (!extras) continue;
       const result = salvageVariantCopies(card.id, entry.key, extras);
       removed += result.removed;
@@ -2530,7 +2521,7 @@ function renderPreview() {
   const display = getDisplayCard(card, variant.mutations);
   const levelInfo = getCardLevelInfo(card);
   if (els.previewLevel) els.previewLevel.textContent = `Lv. ${levelInfo.level}`;
-  if (els.previewExpText) els.previewExpText.textContent = `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP`;
+  if (els.previewExpText) els.previewExpText.textContent = levelInfo.maxed ? "MAX LEVEL" : `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP`;
   if (els.previewExpBar) els.previewExpBar.style.width = `${Math.round(levelInfo.progress * 100)}%`;
   if (els.previewSalvageButton) els.previewSalvageButton.disabled = variant.count <= 0;
   if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = !getPreviewVariants(card.id).some(entry => entry.count > 1);
@@ -2812,7 +2803,7 @@ function isTimeTrialBattle() { return Boolean(window.TimeTrialSystem?.isMode(get
 function getBattleTurnMs() { return isTimeTrialBattle() ? window.TimeTrialSystem.TURN_MS : window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
 function getBattleModeLabel() {
   const timing = `${getBattleTurnMs() / 1000}s TURNS`;
-  if (isBossEventBattle()) return `ALUCARD EVENT • DIFF ${battleState?.bossEvent?.difficulty || window.BossEventSystem.snapshot(getBossEventType()).difficulty} • 5 vs 1 • ${timing}`;
+  if (isBossEventBattle()) return `${window.BossEventSystem.TYPES[getBossEventType()].name.toUpperCase()} • DIFF ${battleState?.bossEvent?.difficulty || window.BossEventSystem.snapshot(getBossEventType()).difficulty} • 5 vs 1 • ${timing}`;
   if (isRaidBattle()) return `MARINE FORD RAID • DIFF ${battleState?.raid?.difficulty || window.RaidSystem.snapshot(getRaidType()).difficulty} • 4 vs 10 • ${timing}`;
   if (isTimeTrialBattle()) return `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP TIME TRIAL • 1V1' : `TIME TRIAL • ROOM ${battleState?.trial?.room || window.TimeTrialSystem.room} • 4V4`} • ${timing}`;
   return isTowerBattle() ? `TOWER ${battleState?.towerFloor || window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1} • 4V4 • ${timing}` : `${isOneVsOneBattle() ? '1V1' : '4V4'} • ${timing}`;
@@ -2929,7 +2920,8 @@ function getAvailableBattleVariantCount(variantKey, excludeIndex = -1) {
 }
 
 function chooseFirstAvailableBattleVariant(cardId, excludeIndex = -1) {
-  return getBattleVariantEntries(cardId).find(entry => getAvailableBattleVariantCount(entry.key, excludeIndex) > 0) || null;
+  const card=getCardById(cardId),stat=els.cardSortSelect?.value==='hp'?'hp':'atk';
+  return getBattleVariantEntries(cardId).filter(entry=>getAvailableBattleVariantCount(entry.key,excludeIndex)>0).map(entry=>({entry,value:getBattleVariantDisplay(card,entry)[stat]})).sort((a,b)=>b.value-a.value||a.entry.key.localeCompare(b.entry.key))[0]?.entry || null;
 }
 
 function isBattleSetupValid(team = getBattleSetupTeam()) {
@@ -3015,29 +3007,30 @@ function getBattleCardRarityValue(card) {
   return rarityScore * 1_000_000 + salvageValue * 100 + chanceValue;
 }
 
+function getStrongestBattleVariant(card, stat = 'atk') {
+  let best = null;
+  for (const entry of getBattleVariantEntries(card.id)) {
+    const display = getBattleVariantDisplay(card, entry);
+    if (!best || display[stat] > best.display[stat] || (display[stat] === best.display[stat] && entry.key < best.entry.key)) best = { entry, display };
+  }
+  return best;
+}
+
 function getFilteredSortedBattleCards() {
   const query = String(els.cardSearchInput?.value || '').trim().toLowerCase();
   const sortMode = String(els.cardSortSelect?.value || 'atk');
   const element = els.battleElementFilter?.value || 'all';
-  const cards = [...getUnlockedBattleCards()].filter(card => {
-    const name = String(card?.name || '').toLowerCase();
-    return (element === 'all' || card.element === element) && (!query || name.includes(query));
+  const cards = getUnlockedBattleCards().filter(card => (element === 'all' || card.element === element) && (!query || card.name.toLowerCase().includes(query)));
+  // Compute once per card per render, never inside the sort comparator.
+  const stat = sortMode === 'hp' ? 'hp' : 'atk';
+  const values = new Map(cards.map(card => [card.id, getStrongestBattleVariant(card, stat)?.display[stat] || 0]));
+  cards.sort((a,b) => {
+    const name = () => a.name.localeCompare(b.name);
+    if (sortMode === 'element') return window.ElementSystem.compare(a,b) || name();
+    if (sortMode === 'name') return name();
+    if (sortMode === 'rarity') return getBattleCardRarityValue(b) - getBattleCardRarityValue(a) || name();
+    return values.get(b.id) - values.get(a.id) || name();
   });
-
-  cards.sort((a, b) => {
-    if (sortMode === 'element') return window.ElementSystem.compare(a, b) || String(a?.name || '').localeCompare(String(b?.name || ''));
-    if (sortMode === 'hp') {
-      return (Number(b?.stats?.hp) || 0) - (Number(a?.stats?.hp) || 0) || String(a?.name || '').localeCompare(String(b?.name || ''));
-    }
-    if (sortMode === 'name') {
-      return String(a?.name || '').localeCompare(String(b?.name || ''));
-    }
-    if (sortMode === 'rarity') {
-      return getBattleCardRarityValue(b) - getBattleCardRarityValue(a) || String(a?.name || '').localeCompare(String(b?.name || ''));
-    }
-    return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0) || String(a?.name || '').localeCompare(String(b?.name || ''));
-  });
-
   return cards;
 }
 
@@ -3080,7 +3073,7 @@ function populateBattleFighterSelect() {
     button.dataset.cardId = card.id;
 
     const variants = getBattleVariantEntries(card.id);
-    const firstEntry = variants[0];
+    const firstEntry = getStrongestBattleVariant(card, els.cardSortSelect?.value === 'hp' ? 'hp' : 'atk')?.entry || variants[0];
     const display = firstEntry ? getBattleVariantDisplay(card, firstEntry) : getDisplayCard(card, []);
 
     const media = document.createElement('div');
@@ -3101,7 +3094,7 @@ function populateBattleFighterSelect() {
     const stats = document.createElement('span');
     stats.textContent = `HP ${display.hp.toLocaleString('en-US')} • ATK ${display.atk.toLocaleString('en-US')}`;
     const variantCount = document.createElement('small');
-    variantCount.textContent = `${selectedIndexes.length ? `${selectedIndexes.length} slot${selectedIndexes.length > 1 ? 's' : ''} ` : ''}${variants.length} variant${variants.length === 1 ? '' : 's'} unlocked`;
+    variantCount.textContent = `${selectedIndexes.length ? `${selectedIndexes.length} slot${selectedIndexes.length > 1 ? 's' : ''} ` : ''}${variants.length} variant${variants.length === 1 ? '' : 's'} unlocked • ${firstEntry ? getBattleVariantLabel(firstEntry) : 'Normal'}`;
     body.append(title, stats, variantCount);
 
     button.append(media, body);
@@ -3253,7 +3246,7 @@ function renderBattleModePicker() {
   renderTowerControls();
   renderTimeTrialControls(); renderRaidControls(); renderBossEventControls();
   if (els.battleStartButton) {
-    els.battleStartButton.textContent = isBossEventBattle() ? 'Challenge Alucard • 5 cards' : isRaidBattle() ? 'Enter Marine Ford Raid • 1 Key' : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start Time Trial Room ${window.TimeTrialSystem.room}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+    els.battleStartButton.textContent = isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? 'Enter Marine Ford Raid • 1 Key' : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start Time Trial Room ${window.TimeTrialSystem.room}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
   }
 }
 
@@ -3612,7 +3605,7 @@ function renderBattleCombatant(side, unit) {
   if (levelEl) levelEl.textContent = `Lv. ${levelInfo.level}`;
   if (expTextEl) expTextEl.textContent = side === 'enemy'
     ? `NPC • ${levelInfo.required.toLocaleString('en-US')} EXP base`
-    : `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP`;
+    : levelInfo.maxed ? "MAX LEVEL" : `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP`;
   if (expBarEl) expBarEl.style.width = `${Math.round((levelInfo.progress || 0) * 100)}%`;
 
   renderMutationBadges(mutationBadges, unit?.mutations);
@@ -4123,10 +4116,11 @@ function startBattle(useExistingSetup = true) {
   if (els.battleLog) els.battleLog.innerHTML = '';
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
-  appendBattleLog(isBossEventBattle() ? `${getBattleModeLabel()} • Eclipse entry window • Boss Event Coins and Alucard only.` : isRaidBattle() ? `${getBattleModeLabel()} • 10 preset bosses • Raid Coins only, with exclusive secret-card rolls.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.LIMITS[mode] / 1000}s limit • Speed Battle Potion ignored.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
+  appendBattleLog(isBossEventBattle() ? `${getBattleModeLabel()} • ${window.BossEventSystem.TYPES[getBossEventType()].weatherName} entry window • Type-specific coins and exclusive card only.` : isRaidBattle() ? `${getBattleModeLabel()} • 10 preset bosses • Raid Coins only, with exclusive secret-card rolls.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.LIMITS[mode] / 1000}s limit • Speed Battle Potion ignored.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
   if (!isTimeTrialBattle() && !isRaidBattle() && !isBossEventBattle()) appendBattleLog(isTowerBattle() ? `Tower weather-themed enemy appearances are weighted at 75%, not exclusive.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
   appendBattleLog(`First strike begins in ${getBattleTurnMs() / 1000} seconds. ${teamSize} player fighter${teamSize === 1 ? '' : 's'} vs ${enemyTeam.length} enemies.`, 'player');
   renderBattleStats();
+  if (isBossEventBattle()) renderBossEventControls();
   scheduleNextBattleTurn();
 }
 
@@ -4170,10 +4164,10 @@ function executeBattleTurn() {
 // implemented in inventory.js and tower.js.
 // ============================================================
 function grantTimeTrialExperience(cardId, amount, owner) {
-  const before = JSON.parse(JSON.stringify(state));
-  const oldMultiplier = getCardLevelStatMultiplier(cardId);
   const info = getCardLevelInfo(cardId);
   if (!amount || info.level >= CARD_LEVEL_MAX) return { gained: 0, level: info.level, levelUps: 0 };
+  const before = JSON.parse(JSON.stringify(state));
+  const oldMultiplier = getCardLevelStatMultiplier(cardId);
   const result = grantCardExperience(cardId, amount);
   state.experience += result.gained;
   if (!saveState()) { state = before; return null; }
@@ -4209,21 +4203,23 @@ function renderBossEventControls() {
   document.getElementById('bossEventControls')?.classList.toggle('hidden',!active);
   if(!active)return;
   const progress=event.snapshot(type),range=event.coinRange(progress.difficulty),boss=event.enemies(type)[0];
-  const entry=getActiveWeatherEntries().find(w=>w.weatherId==='eclipse');
-  setViewText('bossEventAvailability', progress.available?`OPEN • Eclipse/Eclipsed • ${entry?formatWeatherCountdown(getWeatherRemainingSeconds(entry)):''}`:'CLOSED • Requires Eclipse (Eclipsed) weather');
+  const def=event.TYPES[type],native=getCardById(def.cardId);
+  const typeSelect=document.getElementById('bossEventTypeSelect');if(typeSelect){typeSelect.value=type;typeSelect.disabled=isBattleMatchActive();}
+  const entry=getActiveWeatherEntries().find(w=>w.weatherId===def.weatherId);
+  setViewText('bossEventAvailability', progress.available?`OPEN • ${def.weatherName} • ${entry?formatWeatherCountdown(getWeatherRemainingSeconds(entry)):''}`:`CLOSED • Requires ${def.weatherName} weather`);
   const slider=document.getElementById('bossEventDifficulty');if (!slider) return;slider.value=progress.difficulty;slider.disabled=isBattleMatchActive();
   syncDifficultyNumber('bossEvent', progress.difficulty);
   setViewText('bossEventDifficultyValue', `${progress.difficulty} • Boss Lv.${progress.difficulty}`);
-  setViewText('bossEventBalance', `${progress.coins.toLocaleString('en-US')} Boss Event Coins`);
-  setViewText('bossEventRules', `5 player cards vs 1 Alucard • Victory: ${range.min}–${range.max} Boss Event Coins • ${(event.cardChance(progress.difficulty)*100).toFixed(2)}% Alucard drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`);
+  setViewText('bossEventBalance', `${progress.coins.toLocaleString('en-US')} ${def.coinName}`);
+  setViewText('bossEventRules', `5 player cards vs 1 ${native.name} • Victory: ${range.min}–${range.max} ${def.coinName} • ${(event.cardChance(progress.difficulty,type)*100).toFixed(2)}% ${native.name} drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`);
   setViewText('bossEventStats', `Boss HP ${boss.maxHp.toLocaleString('en-US')} • ATK ${boss.atk.toLocaleString('en-US')} • Speed Battle Potion applies. Weather is checked again before every Continue.`);
   if(!isBattleMatchActive())els.battleStartButton.disabled=!isBattleSetupValid()||!event.canEnter(type);
-  if(battleState?.finished){const can=canReplayBattleTeam();els.battleAutoAgainButton.disabled=!can;els.battleAutoAgainButton.textContent=can?'Continue Alucard Event':'Requires Eclipse weather';if(!can)clearAutoContinueBattleTimer();}
+  if(battleState?.finished){const can=canReplayBattleTeam();els.battleAutoAgainButton.disabled=!can;els.battleAutoAgainButton.textContent=can?`Continue ${def.name}`:`Requires ${def.weatherName} weather`;if(!can)clearAutoContinueBattleTimer();}
 }
 function renderBossEventShop() {
   const event=window.BossEventSystem,type=getBossEventType();
   setViewText('bossEventShopTitle', `${event.TYPES[type].name} Shop`);
-  setViewText('bossEventShopBalance', `${event.snapshot(type).coins.toLocaleString('en-US')} Boss Event Coins • No stat upgrades`);
+  setViewText('bossEventShopBalance', `${event.snapshot(type).coins.toLocaleString('en-US')} ${event.TYPES[type].coinName} • No stat upgrades`);
   event.renderShop(document.getElementById('bossEventShopGrid'),type,()=>{renderBossEventShop();renderBossEventControls();renderPotionInventory();});
 }
 function finishBossEventBattle(won) {
@@ -4232,18 +4228,19 @@ function finishBossEventBattle(won) {
   try {summary=window.BossEventSystem.finish(battleState,won);}
   catch(error){summary={won:false,coins:0,card:null,type:battleState.bossEvent.type,difficulty:battleState.bossEvent.difficulty,error:error.message};appendBattleLog(error.message,'defeat');}
   if(!summary)return;
-  if (!summary.error) recordQuestBattleCompletion(battleState);
+  if (!summary.error) { battleState.questResultWon = summary.won; recordQuestBattleCompletion(battleState); }
   clearAutoContinueBattleTimer();clearBattleTurnTimer();clearBattleAnimationTimers();
   battleState.finished=true;battleState.isBattling=false;battleState.outcome=summary.won?'victory':'defeat';
   const card=summary.card?getCardById(summary.card.cardId):null,mutations=summary.card?.mutationIds.map(id=>MUTATION_BY_ID[id]?.name||id).join(' + ');
+  const def=window.BossEventSystem.TYPES[summary.type],native=getCardById(def.cardId);
   const body=document.getElementById('bossEventSummary');
-  body.textContent=`Alucard Event • Difficulty ${summary.difficulty}\nBoss Event Coins: +${summary.coins} • Drop x${(summary.dropMultiplier||1).toFixed(2)}\n${card?`Exclusive card: ${mutations?`[${mutations}] `:''}${card.name}\n`:''}No VNĐ • No EXP • No ordinary drops${summary.error?`\n${summary.error}`:''}`;
+  body.textContent=`${def.name} • Difficulty ${summary.difficulty}\n${def.coinName}: +${summary.coins} • Drop x${(summary.dropMultiplier||1).toFixed(2)}\n${card?`Exclusive card: ${mutations?`[${mutations}] `:''}${card.name}\n`:''}No VNĐ • No EXP • No ordinary drops${summary.error?`\n${summary.error}`:''}`;
   body.classList.remove('hidden');document.getElementById('bossEventResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent=summary.won?'🩸 BOSS DEFEATED':'🩸 EVENT ATTEMPT ENDED';
-  els.battleResultText.textContent=summary.error||(summary.won?'Alucard and all remaining enemies were defeated.':'Your collection is preserved. Eclipse is required for the next attempt.');
+  els.battleResultText.textContent=summary.error||(summary.won?`${native.name} and all remaining enemies were defeated.`:`Your collection is preserved. ${def.weatherName} is required for the next attempt.`);
   els.battleResultPower.textContent=getBattleModeLabel();
-  for(const [id,label]of Object.entries({battleResultBaseLabel:'Boss Event Coins',battleResultTimeLabel:'Boss level',battleResultLevelLabel:'Alucard drop chance'}))setViewText(id, label);
-  els.battleResultBaseValue.textContent=String(summary.coins);els.battleResultTimeBonus.textContent=`Lv.${summary.difficulty}`;els.battleResultLevelDiff.textContent=`${(window.BossEventSystem.cardChance(summary.difficulty)*100).toFixed(2)}%`;
+  for(const [id,label]of Object.entries({battleResultBaseLabel:def.coinName,battleResultTimeLabel:'Boss level',battleResultLevelLabel:`${native.name} drop chance`}))setViewText(id, label);
+  els.battleResultBaseValue.textContent=String(summary.coins);els.battleResultTimeBonus.textContent=`Lv.${summary.difficulty}`;els.battleResultLevelDiff.textContent=`${(window.BossEventSystem.cardChance(summary.difficulty,summary.type)*100).toFixed(2)}%`;
   els.battleResultCash.textContent='0 VNĐ';els.battleResultExp.textContent='0 EXP';els.battleResultDropRate.textContent='0%';els.battleResultLossStatus.textContent='NONE';
   refreshAchievements();updateStats();renderCollection();renderPotionInventory();renderBossEventControls();
   if(!document.getElementById('bossEventShopModal')?.classList.contains('hidden'))renderBossEventShop();
@@ -4252,7 +4249,11 @@ function finishBossEventBattle(won) {
 }
 document.getElementById('bossEventShopOpenButton')?.addEventListener('click',()=>openModal('bossEventShopModal'));
 document.getElementById('bossEventResultShopButton')?.addEventListener('click',()=>openModal('bossEventShopModal'));
-document.getElementById('bossEventTypeSelect')?.addEventListener('change',()=>{renderBossEventControls();renderBattleSelection();});
+document.getElementById('bossEventTypeSelect')?.addEventListener('change',()=>{
+  if(isBattleMatchActive()){document.getElementById('bossEventTypeSelect').value=battleState.bossEvent.type;return;}
+  const team=getBattleSetupTeam().map(slot=>({...slot}));
+  resetBattleView('boss-event');battleState.setup.team=team;renderBattleSelection();renderBossEventControls();
+});
 document.getElementById('bossEventDifficulty')?.addEventListener('input',event=>{window.BossEventSystem.setDifficulty(getBossEventType(),event.target.value);renderBossEventControls();});
 
 function hasRaidSecret(cardId) {
@@ -4311,7 +4312,7 @@ function finishRaidBattle(won) {
   try { summary = window.RaidSystem.finish(battleState, won); }
   catch (error) { summary = { won: false, coins: 0, secret: null, type: battleState.raid.type, difficulty: battleState.raid.difficulty, error: error.message }; appendBattleLog(error.message, 'defeat'); }
   if (!summary) return;
-  if (!summary.error) recordQuestBattleCompletion(battleState);
+  if (!summary.error) { battleState.questResultWon = summary.won; recordQuestBattleCompletion(battleState); }
   clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
   battleState.finished = true; battleState.isBattling = false; battleState.outcome = summary.won ? 'victory' : 'defeat';
   const secret = summary.secret ? getCardById(summary.secret.cardId) : null;
@@ -4383,7 +4384,7 @@ function finishTimeTrialBattle(won, reason = '') {
     appendBattleLog(error.message, 'defeat');
   }
   if (!summary) return;
-  if (summary.reason !== 'save-error') recordQuestBattleCompletion(battleState);
+  if (summary.reason !== 'save-error') { battleState.questResultWon = summary.won; recordQuestBattleCompletion(battleState); }
   clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
   battleState.finished = true; battleState.isBattling = false;
   battleState.outcome = summary.won ? 'victory' : 'defeat';
@@ -4899,7 +4900,7 @@ function recordQuestBattleCompletion(battle) {
   if (battle?.sandbox || battle?.mode === 'sandbox' || window.SandboxSystem?.active) return;
   if (!battle?.questContext || battle.questCompletionRecorded || ['surrender', 'aborted'].includes(battle.outcome)) return;
   battle.questCompletionRecorded = true;
-  window.QuestSystem.record('battle', battle.questContext);
+  window.QuestSystem.record('battle', { ...battle.questContext, won: battle.questResultWon ?? (battle.outcome === 'victory'), room: battle.trial?.room, teamElements: battle.questContext.teamElements });
 }
 function recordQuestEnemyDefeat(battle, victim, source) {
   if (battle?.sandbox || battle?.mode === 'sandbox' || window.SandboxSystem?.active) return;

@@ -1721,6 +1721,80 @@ const QUEST_UPDATE_CARDS = [
   }
 ];
 CARDS.push(...QUEST_UPDATE_CARDS);
+// Lucius update: explicit progression sources and weather locks.
+CARDS.push(...[
+  {
+    "id": "julius",
+    "name": "Julius",
+    "element": "Holy",
+    "rarity": "Secret",
+    "chance": 1500000,
+    "requiredWeather": null,
+    "questOnly": true,
+    "unlockRequirement": "quest_card_julius",
+    "stats": {
+      "hp": 200000,
+      "atk": 15000
+    },
+    "image": "assets/cards/julius.png",
+    "passive": {
+      "name": "Time Grimoire",
+      "description": "While alive: 30% chance to reflect attacks against Julius or the active ally. Two consecutive reflections deal 50% ATK to all enemies and shield allies for 50% Julius max HP.\nAn ally shield breaking within 3 turns stores their current stats and passive as one backup life per match. Fatal damage consumes it to revive Julius; after this revival, cannot be cloned or revived by allies."
+    }
+  },
+  {
+    "id": "speed-wizard",
+    "name": "Speed Wizard",
+    "element": "Electric",
+    "rarity": "Mythic",
+    "chance": 450000,
+    "requiredWeather": "Wind",
+    "stats": {
+      "hp": 45000,
+      "atk": 4500
+    },
+    "image": "assets/cards/speedwizard.png",
+    "passive": {
+      "name": "Godspeed",
+      "description": "5% chance per attack to follow up for 50% ATK; each successive follow-up halves its trigger chance.\n50% dodge. Each dodge adds +5% follow-up chance for the match, but skips the next attack turn."
+    }
+  },
+  {
+    "id": "boss-event-lucius",
+    "name": "Lucius Zogratis",
+    "element": "Dark",
+    "rarity": "Secret",
+    "chance": 0,
+    "bossEventOnly": true,
+    "eventType": "lucius",
+    "stats": {
+      "hp": 300000,
+      "atk": 30000
+    },
+    "image": "assets/cards/lucius.png",
+    "passive": {
+      "name": "All Grimoire",
+      "description": "On entry and every 5 attacks, gain a random ally/enemy passive. No duplicates; maximum 5 passives including All Grimoire.\nWhen an allied Julius dies permanently, gain +50% HP and ATK once per match."
+    }
+  },
+  {
+    "id": "sea-goddess-valkyrie",
+    "name": "Sea Goddess Valkyrie",
+    "element": "Water",
+    "rarity": "Mythic",
+    "chance": 0,
+    "evolutionOnly": true,
+    "stats": {
+      "hp": 400000,
+      "atk": 20000
+    },
+    "image": "assets/cards/seagoddessvalkyrie.png",
+    "passive": {
+      "name": "Ultimate Tsunami",
+      "description": "On entry: deal 100% ATK to all enemies and gain a shield equal to 50% total HP damage dealt.\nWhen this shield breaks, stun all enemies for 4 turns."
+    }
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 
