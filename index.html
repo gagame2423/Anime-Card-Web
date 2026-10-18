@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261018-reagan-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261018-reagan-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261018-equipment-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261018-equipment-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -383,16 +383,21 @@
   </div>
   <!-- ITEMS: separate persistence from card ownership -->
   <div id="inventoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="inventoryModalTitle">
-    <section class="modal-panel module-modal"><header class="modal-header"><div><p class="eyebrow">PERSISTENT STORAGE</p><h2 id="inventoryModalTitle">🎒 Item Storage</h2></div><button data-close-modal="inventoryModal" class="modal-close" type="button" aria-label="Close inventory">×</button></header>
-      <p class="module-description">Your items, neatly stacked. Use potions for 10-minute bonuses; active timers continue across reloads.</p>
-      <p class="module-description" id="dropChanceDisplay">Drop Chance: 0% • Battle-win potion chance: 10%</p>
-      <div class="inventory-toolbar">
-        <label class="inventory-search"><span>Search items</span><input id="inventorySearch" type="search" placeholder="Name or description…" autocomplete="off"></label>
-        <label class="inventory-filter"><span>Category</span><select id="inventoryCategory"><option value="all">All items</option></select></label>
+    <section class="modal-panel module-modal storage-modal">
+      <header class="modal-header storage-header"><div><p class="eyebrow">PERSISTENT STORAGE</p><h2 id="inventoryModalTitle">Item Storage</h2></div><button data-close-modal="inventoryModal" class="modal-close" type="button" aria-label="Close inventory">×</button></header>
+      <div class="storage-body">
+        <nav class="storage-sidebar" aria-label="Storage categories" role="tablist">
+          <button type="button" role="tab" class="is-active" aria-selected="true" data-storage-tab="items">Items</button>
+          <button type="button" role="tab" aria-selected="false" data-storage-tab="portals">Portals</button>
+          <button type="button" role="tab" aria-selected="false" data-storage-tab="equipment">Equipment</button>
+          <p data-storage-equipped class="storage-current-slot">Equipment slot: empty · 0 / 1</p>
+        </nav>
+        <div class="storage-center"><label class="storage-search" for="inventorySearch"><span class="sr-only">Search items</span><input id="inventorySearch" type="search" placeholder="Search..." autocomplete="off"></label><div id="potionInventoryList" class="storage-grid" aria-label="Stored items"></div><p id="dropChanceDisplay" class="storage-status"></p></div>
+        <aside class="storage-detail"><div><h3 data-storage-title>Select an item</h3><p data-storage-type class="storage-type"></p><p data-storage-owned></p></div><div data-storage-art class="storage-detail-art"></div><p data-storage-description class="storage-description"></p><p data-storage-timer class="storage-timer"></p><div class="storage-detail-actions"><button type="button" data-storage-action hidden>Use Potion</button><button type="button" data-storage-info class="storage-source-button" disabled aria-label="View selected item sources">◉ Source Info</button></div></aside>
       </div>
-      <div id="potionInventoryList" class="inventory-grid" aria-label="Stored items"></div>
     </section>
   </div>
+  <div id="itemSourceModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="itemSourceTitle"><section class="modal-panel module-modal item-source-modal"><header class="modal-header"><h2 id="itemSourceTitle">Item Sources</h2><button type="button" class="modal-close" data-close-modal="itemSourceModal" aria-label="Close item sources">×</button></header><ul id="itemSourceList" class="item-source-list"></ul></section></div>
   <!-- TOWER SHOP -->
   <div id="towerShopModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="towerShopTitle">
     <section class="modal-panel module-modal"><header class="modal-header"><div><p class="eyebrow">FLOOR REWARDS</p><h2 id="towerShopTitle">🏰 Tower Shop</h2></div><button data-close-modal="towerShopModal" class="modal-close" type="button" aria-label="Close tower shop">×</button></header>
@@ -847,35 +852,37 @@
     </section>
   </div>
 
-  <script defer src="./startup.js?v=20261018-reagan-1"></script>
-  <script defer src="./mutations.js?v=20261018-reagan-1"></script>
-  <script defer src="./weathers.js?v=20261018-reagan-1"></script>
-  <script defer src="./cards.js?v=20261018-reagan-1"></script>
-  <script defer src="./elements.js?v=20261018-reagan-1"></script>
-  <script defer src="./background.js?v=20261018-reagan-1"></script>
-  <script defer src="./levels.js?v=20261018-reagan-1"></script>
-  <script defer src="./roll_performance.js?v=20261018-reagan-1"></script>
-  <script defer src="./roll_view.js?v=20261018-reagan-1"></script>
-  <script defer src="./grimoire.js?v=20261018-reagan-1"></script>
-  <script defer src="./yuno.js?v=20261018-reagan-1"></script>
-  <script defer src="./requiem.js?v=20261018-reagan-1"></script>
-  <script defer src="./reagan.js?v=20261018-reagan-1"></script>
-  <script defer src="./passives.js?v=20261018-reagan-1"></script>
-  <script defer src="./inventory.js?v=20261018-reagan-1"></script>
-  <script defer src="./tower.js?v=20261018-reagan-1"></script>
-  <script defer src="./timetrial.js?v=20261018-reagan-1"></script>
-  <script defer src="./raid.js?v=20261018-reagan-1"></script>
-  <script defer src="./boss_event.js?v=20261018-reagan-1"></script>
-  <script defer src="./achievements.js?v=20261018-reagan-1"></script>
-  <script defer src="./evolution.js?v=20261018-reagan-1"></script>
-  <script defer src="./quest.js?v=20261018-reagan-1"></script>
-  <script defer src="./quests.js?v=20261018-reagan-1"></script>
-  <script defer src="./crafting.js?v=20261018-reagan-1"></script>
-  <script defer src="./drop_audio.js?v=20261018-reagan-1"></script>
-  <script defer src="./sandbox.js?v=20261018-reagan-1"></script>
+  <script defer src="./startup.js?v=20261018-equipment-1"></script>
+  <script defer src="./mutations.js?v=20261018-equipment-1"></script>
+  <script defer src="./weathers.js?v=20261018-equipment-1"></script>
+  <script defer src="./cards.js?v=20261018-equipment-1"></script>
+  <script defer src="./elements.js?v=20261018-equipment-1"></script>
+  <script defer src="./background.js?v=20261018-equipment-1"></script>
+  <script defer src="./levels.js?v=20261018-equipment-1"></script>
+  <script defer src="./roll_performance.js?v=20261018-equipment-1"></script>
+  <script defer src="./roll_view.js?v=20261018-equipment-1"></script>
+  <script defer src="./grimoire.js?v=20261018-equipment-1"></script>
+  <script defer src="./yuno.js?v=20261018-equipment-1"></script>
+  <script defer src="./requiem.js?v=20261018-equipment-1"></script>
+  <script defer src="./reagan.js?v=20261018-equipment-1"></script>
+  <script defer src="./passives.js?v=20261018-equipment-1"></script>
+  <script defer src="./inventory.js?v=20261018-equipment-1"></script>
+  <script defer src="./tower.js?v=20261018-equipment-1"></script>
+  <script defer src="./timetrial.js?v=20261018-equipment-1"></script>
+  <script defer src="./raid.js?v=20261018-equipment-1"></script>
+  <script defer src="./boss_event.js?v=20261018-equipment-1"></script>
+  <script defer src="./achievements.js?v=20261018-equipment-1"></script>
+  <script defer src="./evolution.js?v=20261018-equipment-1"></script>
+  <script defer src="./equipment.js?v=20261018-equipment-1"></script>
+  <script defer src="./quest.js?v=20261018-equipment-1"></script>
+  <script defer src="./quests.js?v=20261018-equipment-1"></script>
+  <script defer src="./crafting.js?v=20261018-equipment-1"></script>
+  <script defer src="./drop_audio.js?v=20261018-equipment-1"></script>
+  <script defer src="./sandbox.js?v=20261018-equipment-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script defer src="./potion_hud.js?v=20261018-reagan-1"></script>
-  <script defer src="./settings.js?v=20261018-reagan-1"></script>
-  <script defer src="./app.js?v=20261018-reagan-1"></script>
+  <script defer src="./potion_hud.js?v=20261018-equipment-1"></script>
+  <script defer src="./settings.js?v=20261018-equipment-1"></script>
+  <script defer src="./storage.js?v=20261018-equipment-1"></script>
+  <script defer src="./app.js?v=20261018-equipment-1"></script>
 </body>
 </html>

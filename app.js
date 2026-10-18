@@ -413,7 +413,7 @@ function getDuplicateCardRollExperience(cardOrId) {
   const card=typeof cardOrId==='object'?cardOrId:getCardById(cardOrId),id=card?.id || cardOrId;
   if(state.cardProgress?.[id]?.level>=CARD_LEVEL_MAX)return 0;
   const level=window.CardLevelSystem.normalizeLevel(state.cardProgress?.[id]?.level);
-  return Math.max(1,Math.floor(window.CardLevelSystem.duplicateReward(card,level) * (1+getWeatherBonus('exp')) * (window.InventorySystem?.multiplier('exp')||1) * (1+(window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts)||0))));
+  return Math.max(1,Math.floor(window.CardLevelSystem.duplicateReward(card,level) * (1+getWeatherBonus('exp')) * (window.InventorySystem?.multiplier('exp')||1) * (1+(window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts)||0)) * (window.EquipmentSystem?.expMultiplier()||1)));
 }
 
 function calculateCardRollExperience(card, mutations = []) {
@@ -1034,7 +1034,7 @@ function loadState() {
 }
 
 function saveState(canonicalOwnership = false) {
-  if (isImportingSave || window.SandboxSystem?.active) return false;
+  if (isImportingSave || window.SandboxSystem?.active || window.EquipmentSystem?.blocked) return false;
   try {
     // Rolls already update all three canonical ownership stores together.
     if (!canonicalOwnership) syncOwnershipRecords();
@@ -1064,11 +1064,11 @@ function loadGame() {
 // ============================================================
 
 function getLuckMultiplier() {
-  return (1 + state.upgrades.luck * LUCK_FACTOR + (window.AchievementSystem?.getLuckBonus(state.achievementRewardReceipts) || 0) + getWeatherBonus("luck") + (window.QuestsSystem?.bonus("luck") || 0)) * (window.InventorySystem?.multiplier("luck") || 1);
+  return (1 + state.upgrades.luck * LUCK_FACTOR + (window.AchievementSystem?.getLuckBonus(state.achievementRewardReceipts) || 0) + getWeatherBonus("luck") + (window.EquipmentSystem?.bonuses().luck || 0) + (window.QuestsSystem?.bonus("luck") || 0)) * (window.InventorySystem?.multiplier("luck") || 1);
 }
 
 function getCooldownMs() {
-  return BASE_COOLDOWN_MS / ((1 + state.upgrades.rollSpeed * SPEED_FACTOR + getWeatherBonus("rollSpeed")) * (window.InventorySystem?.multiplier("speed") || 1));
+  return BASE_COOLDOWN_MS / ((1 + state.upgrades.rollSpeed * SPEED_FACTOR + getWeatherBonus("rollSpeed")) * (window.InventorySystem?.multiplier("speed") || 1) * (1 + (window.EquipmentSystem?.bonuses().rollSpeed || 0)));
 }
 
 function getUpgradeCost(baseCost, level) {
@@ -1164,7 +1164,7 @@ function chooseWeatherByTier() {
 
 function triggerWeatherRoll(eventSecond) {
   state.weather.lastSchedulerSecond = eventSecond;
-  if (Math.random() >= WEATHER_CONFIG.WEATHER_TRIGGER_CHANCE) return false;
+  if (Math.random() >= Math.min(1, WEATHER_CONFIG.WEATHER_TRIGGER_CHANCE + (window.EquipmentSystem?.bonuses().weather || 0))) return false;
 
   const weather = chooseWeatherByTier();
   if (!weather) return false;
@@ -1261,7 +1261,7 @@ function renderWeatherHud(force = false) {
     chip.className = "weather-chip";
     chip.style.setProperty("--weather-color", weather.color);
     const tier = WEATHER_TIERS[weather.tier];
-    chip.title = `${window.WeatherSystem.describe(weather)}\n${weather.mutation.description} • Mutation success: ${MUTATION_SUCCESS_RATES[weather.tier]*100}%`;
+    chip.title = `${window.WeatherSystem.describe(weather)}\n${weather.mutation.description} • Mutation success: ${(window.MutationSystem.successChance(weather,window.EquipmentSystem?.mutationMultiplier()||1)*100).toFixed(2).replace(/\.?0+$/,'')}%`;
 
     chip.innerHTML = `
       <span class="weather-chip__icon">${weather.icon}</span>
@@ -1452,7 +1452,7 @@ function drawCardFromPool() {
 }
 
 function rollMutations() {
-  return window.MutationSystem.roll(getActiveWeatherDefinitions());
+  return window.MutationSystem.roll(getActiveWeatherDefinitions(), Math.random, window.EquipmentSystem?.mutationMultiplier() || 1);
 }
 function getWeatherBonus(stat) {
   return window.WeatherSystem.bonus(getActiveWeatherDefinitions(), stat);
@@ -1614,7 +1614,7 @@ function renderMutationBadges(container, mutations) {
 function rollCard(source = "manual") {
   // HARD GATE: no trigger can bypass the cooldown, including keyboard,
   // programmatic calls, or Auto Roll.
-  if (isCooldownActive || window.SandboxSystem?.active) return false;
+  if (isCooldownActive || window.SandboxSystem?.active || window.EquipmentSystem?.blocked) return false;
   if (source === "auto" && !isAutoRolling) return false;
 
   // Lock immediately so a second synchronous event cannot enter.
@@ -2592,14 +2592,14 @@ function closeVariantMenu() {
 // STATS + UPGRADES
 // ============================================================
 
-function getExpMultiplier() {
+function getExpMultiplier(source = 'all') {
   const level = Math.max(0, Math.floor(Number(state?.upgrades?.expMulti) || 0));
-  return (1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE) + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("exp") || 1) * (1 + getWeatherBonus("exp"));
+  return (1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE) + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("exp") || 1) * (1 + getWeatherBonus("exp")) * (window.EquipmentSystem?.expMultiplier(source) || 1);
 }
 
-function getCoinMultiplier(includeWeather = true) {
+function getCoinMultiplier(includeWeather = true, source = 'all') {
   const level = Math.max(0, Math.floor(Number(state?.upgrades?.coinMulti) || 0));
-  return (1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE) + (window.AchievementSystem?.getCoinBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("rich") || 1) * (includeWeather ? 1 + getWeatherBonus("coins") : 1);
+  return (1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE) + (window.AchievementSystem?.getCoinBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("rich") || 1) * (includeWeather ? 1 + getWeatherBonus("coins") : 1) * (window.EquipmentSystem?.moneyMultiplier(source) || 1);
 }
 
 function getProgressionUpgradeCost(type, level) {
@@ -2614,9 +2614,9 @@ function getScaledCoinReward(baseValue) {
   return Math.max(0, Math.floor(base * getCoinMultiplier()));
 }
 
-function getScaledExpReward(baseValue) {
+function getScaledExpReward(baseValue, source = 'all') {
   const base = Math.max(0, Math.floor(Number(baseValue) || 0));
-  return Math.max(0, Math.floor(base * getExpMultiplier()));
+  return Math.max(0, Math.floor(base * getExpMultiplier(source)));
 }
 
 function updateStats() {
@@ -3513,7 +3513,7 @@ function getBattleCardExperienceRewards(mode, random = Math.random) {
     const { required, level } = getCardLevelInfo(cardId);
     // Reward budgets grow sublinearly; requirements follow the new RNG-rate curve.
     const baseExperience = Math.max(1, Math.floor(baseRoll * getCardLevelRarityMultiplier(cardId) * Math.sqrt(level)));
-    return { cardId, required, level, baseExperience, experience: getScaledExpReward(baseExperience) };
+    return { cardId, required, level, baseExperience, experience: getScaledExpReward(baseExperience, 'arena') };
   });
   return { cards };
 }
@@ -3531,7 +3531,7 @@ function getBattleRewardProfile(playerPower, enemyPower) {
   const damage = mode === 'tower' ? window.TowerSystem.damageSummary(battleState) : null;
   const baseValue = damage ? window.TowerSystem.battleCurrency(damage.total) : getBattleEnemySalvageBase();
   const rawCoins = damage ? baseValue : baseValue * timeMultiplier * levelDiffMultiplier;
-  const reward = Math.max(0, Math.floor(Math.floor(rawCoins) * getCoinMultiplier(false)));
+  const reward = Math.max(0, Math.floor(Math.floor(rawCoins) * getCoinMultiplier(false, 'arena')));
   return {
     mode, reward, experience: cardExperience.cards.reduce((sum, card) => sum + card.experience, 0),
     cardExperienceRewards: cardExperience.cards,
@@ -4007,7 +4007,7 @@ function endBattle(playerWon) {
 
 function startBattle(useExistingSetup = true) {
   clearAutoContinueBattleTimer();
-  if (isBattleMatchActive() || isImportingSave || window.SandboxSystem?.active) return;
+  if (isBattleMatchActive() || isImportingSave || window.SandboxSystem?.active || window.EquipmentSystem?.blocked) return;
   if (isBossEventBattle()) syncGameClockToNow();
   const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
   if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
@@ -4344,7 +4344,7 @@ function renderTimeTrialControls() {
   setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`);
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
   setViewText('timeTrialRules', exp
-    ? '1-second turns • 1 Ticket per attempt • 300s • 0 ATK EXP Monsters • 0.5%–3.0% current-level EXP per kill • No VNĐ, Shards or items. Auto Continue uses another Ticket. EXP and Drop bonuses apply to their respective rewards.'
+    ? '1-second turns • 1 Ticket per attempt • 300s • 0 ATK EXP Monsters • 0.1%–1.5% current-level EXP per kill • No VNĐ, Shards or items. Auto Continue uses another Ticket. EXP and Drop bonuses apply to their respective rewards.'
     : '2-second turns • 180s per room • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
   const timer = document.getElementById('timeTrialTimer');
   timer?.classList.toggle('hidden', !active || !battleState?.trial || battleState.finished);
@@ -4404,7 +4404,7 @@ function finishTimeTrialBattle(won, reason = '') {
     battleResultTimeLabel: 'Time limit', battleResultLevelLabel: 'Turn interval' })) setViewText(id, text);
   els.battleResultBaseValue.textContent = String(summary.exp ? summary.monsters : summary.shards);
   els.battleResultTimeBonus.textContent = `${trial.LIMITS[battleState.mode] / 1000}s`;
-  els.battleResultLevelDiff.textContent = '2s • fixed'; els.battleResultCash.textContent = '0 VNĐ';
+  els.battleResultLevelDiff.textContent = `${trial.turnMs(battleState.mode)/1000}s • fixed`; els.battleResultCash.textContent = '0 VNĐ';
   els.battleResultExp.textContent = summary.exp ? `+${summary.experience} EXP` : '0 EXP';
   els.battleResultDropRate.textContent = '+0.00%'; els.battleResultLossStatus.textContent = 'NONE — COLLECTION PRESERVED';
   const replayable = canReplayBattleTeam();
@@ -4419,33 +4419,9 @@ function finishTimeTrialBattle(won, reason = '') {
 
 function renderPotionInventory() {
   if (!els.inventoryModal || els.inventoryModal.classList.contains('hidden')) return;
-  const inventory = window.InventorySystem;
-  if (!inventory) return;
-  const chance = inventory.dropChance(state.dropChance || 0);
-  if (els.dropChanceDisplay) els.dropChanceDisplay.textContent = `Drop Chance stat: +${Number(state.dropChance || 0).toFixed(2)}% • Next potion chance: ${Math.round(chance * 100)}% • Pity: ${inventory.getPity()} misses • Item amounts x${inventory.getDropMultiplier().toFixed(2)}`;
-  const grid = els.potionInventoryList;
-  if (!grid) return;
-  const category = els.inventoryCategory;
-  if (category) {
-    const types = [...new Set(['potion', 'currency', 'material', 'gear', 'ticket', ...inventory.list().map(item => item.type)])];
-    const selected = category.value || 'all', signature = JSON.stringify(types);
-    if (category.dataset.types !== signature) {
-      category.replaceChildren();
-      for (const type of ['all', ...types]) {
-        const option = document.createElement('option'); option.value = type;
-        option.textContent = type === 'all' ? 'All items' : type[0].toUpperCase() + type.slice(1); category.append(option);
-      }
-      category.value = types.includes(selected) ? selected : 'all'; category.dataset.types = signature;
-    }
-  }
-  inventory.renderGrid(grid, {
-    search: els.inventorySearch?.value || '', category: category?.value || 'all',
-    onUse: id => {
-      updateStats(); renderUpgradeShop(); renderPotionInventory(); window.PotionHudSystem?.render();
-      if (id === 'speed_battle_potion' && battleState?.isBattling && !battleState.finished && !isTimeTrialBattle()) scheduleNextBattleTurn();
-    }
-  });
+  window.StorageSystem?.render(els.inventoryModal);
 }
+
 function renderTowerControls() {
   const tower = window.TowerSystem;
   if (!tower) return;
@@ -4618,7 +4594,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.EquipmentSystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4626,7 +4602,7 @@ function setSaveTransferStatus(message, failed = false) {
 }
 function buildGameSaveExport() {
   syncGameClockToNow(); refreshAchievements(); window.InventorySystem?.tick();
-  if (![window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
+  if (![window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.EquipmentSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
   if (!saveState()) throw new Error('Your progress could not be saved. Please try again.');
   const storage = {};
   for (const key of getGameSaveKeys()) {
@@ -4730,6 +4706,8 @@ function validateSaveRecord(key, value) {
     ensure(window.QuestsSystem.validSave(value), 'invalid Daily / Weekly quest board or timed reward.');
   } else if (key === window.QuestSystem.KEY) {
     ensure(window.QuestSystem.validSave(value), 'invalid accepted quest progress or reward receipt.');
+  } else if (key === window.EquipmentSystem.KEY) {
+    ensure(window.EquipmentSystem.validSave(value), 'invalid equipment slot or unfinished crafting transaction.');
   } else if (key === window.EvolutionSystem.KEY) {
     ensure(window.EvolutionSystem.validSave(value), "unfinished or invalid evolution transaction.");
   } else if (key === window.BossEventSystem.KEY) {
@@ -4774,6 +4752,8 @@ function parseGameSaveImport(text) {
   for (const legacyKey of LEGACY_STORAGE_KEYS) if (result[legacyKey]) result[legacyKey] = JSON.stringify(normalizeState(JSON.parse(result[legacyKey])));
   const itemKey = window.InventorySystem.KEY;
   result[itemKey] = JSON.stringify(window.InventorySystem.sanitizeSave(JSON.parse(result[itemKey])));
+  const equipment = storage[window.EquipmentSystem.KEY];
+  if(equipment?.equipped){const items=JSON.parse(result[itemKey]).items;const owned=Array.isArray(items)?items.find(item=>item.id===equipment.equipped):items[equipment.equipped];if(Number(typeof owned==='object'?owned?.quantity??owned?.count:owned)<1||!owned)throw Error('Equipped item is not owned in this save.');}
   return result;
 }
 async function importGameSave(input) {
@@ -4820,7 +4800,25 @@ async function importGameSave(input) {
 }
 
 // Evolution changes a cloned save first; no live ownership changes before commit.
-function canEvolveNow() { return !window.SandboxSystem?.active && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
+function canEvolveNow() { return !window.EquipmentSystem?.blocked && !window.SandboxSystem?.active && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
+function prepareEquipmentCraft(recipe, selected) {
+  if(!canEvolveNow()||state.currency<recipe.cost)throw Error('Finish the current battle or check VNĐ.');
+  if(!saveState()||!window.InventorySystem.flush())throw Error('Unable to save before crafting.');
+  const mainBefore=localStorage.getItem(STORAGE_KEY),itemsBefore=localStorage.getItem(window.InventorySystem.KEY),original=state;
+  let mainAfter;
+  try{
+    state=JSON.parse(mainBefore);
+    recipe.cards.forEach((requirement,index)=>{
+      const variant=getVariantEntries(requirement.cardId).find(v=>v.key===selected[index]?.key&&v.count>=requirement.quantity);
+      if(!variant||!window.EquipmentSystem.matches(requirement,variant)||decrementOwnershipVariant(requirement.cardId,variant.key,requirement.quantity)!==requirement.quantity)throw Error('Required card variant is no longer available.');
+    });
+    state.currency-=recipe.cost;syncOwnershipRecords();mainAfter=JSON.stringify(state);
+  }finally{state=original;window.RollPerformanceSystem?.invalidateOwnership();}
+  const items=JSON.parse(itemsBefore),entry=items.items[recipe.id];
+  if(!entry||entry.quantity>=Number.MAX_SAFE_INTEGER)throw Error('Equipment stack unavailable.');
+  entry.quantity++;
+  return {mainBefore,mainAfter,itemsBefore,itemsAfter:JSON.stringify(items)};
+}
 function evolutionComplete(recipe) { return state.achievementRewardReceipts?.['evolution_' + recipe.id] === true || getOwnedCardCount(recipe.id) > 0; }
 function prepareEvolution(recipe, variantKey) {
   if (!canEvolveNow() || evolutionComplete(recipe)) throw new Error('Thẻ này đã tiến hóa hoặc game đang bận.');
@@ -4862,7 +4860,7 @@ function applyQuestBoardReward(receipt,reward) {
   const previous=JSON.parse(JSON.stringify(state));
   try {
     let earned=0;
-    if(reward.money){earned=Math.min(Number.MAX_SAFE_INTEGER-state.currency,Math.floor(state.currency*reward.money));state.currency+=earned;}
+    if(reward.money){earned=Math.min(Number.MAX_SAFE_INTEGER-state.currency,window.EquipmentSystem.scaleMoney(state.currency*reward.money));state.currency+=earned;}
     if(reward.weather){
       const choices=WEATHERS.filter(w=>reward.weather.includes(w.tier));
       const weather=choices[Math.floor(Math.random()*choices.length)];if(!weather)return false;
@@ -4889,7 +4887,7 @@ function applyAchievementReward(achievement) {
       state.mutations[key] = Math.max(0, Number(state.mutations[key]) || 0) + 1;
       state.inventory[key] = { id, cardId: id, mutation: '', mutationIds: [], count: Math.max(0, Number(state.inventory[key]?.count) || 0) + 1 };
     }
-    const currency = Math.max(0, Number(reward.currency) || 0);
+    const currency = window.EquipmentSystem.scaleMoney(Math.max(0, Number(reward.currency) || 0));
     state.currency += currency;
     state.achievementRewardReceipts[achievement.id] = true;
     if (!saveState()) throw new Error('The reward could not be saved.');
@@ -4970,6 +4968,7 @@ document.getElementById('questCloseButton')?.addEventListener('click', () => clo
 
 
 function globalTick() {
+  if(window.EquipmentSystem?.blocked)return;
   if (isImportingSave) return;
   window.PotionHudSystem?.render();
   if (window.SandboxSystem?.active) return;
@@ -5188,7 +5187,7 @@ function resetGame() {
   try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
   renderAutoContinueBattleToggle();
   returnToLobby();
-  window.InventorySystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.();
+  window.InventorySystem?.reset(); window.EquipmentSystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.();
 
   clearCooldownExpiryTimer();
   clearBattleTurnTimer();
@@ -5654,15 +5653,18 @@ function initializeGameViews() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeGameViews, {once:true});
 else initializeGameViews();
+if(window.EquipmentSystem?.blocked)window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover the pending equipment craft before playing.');
 window.EvolutionSystem.configure({ canAct: canEvolveNow, prepare: prepareEvolution, onCommit: onEvolutionCommitted, describe: recipe => ({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(" + ") || "Normal"}))}) });
-window.InventorySystem.configure({ getDropMultiplier: () => (window.AchievementSystem?.getDropMultiplier(state.achievementRewardReceipts) || 1) + (window.QuestsSystem?.bonus('drop') || 0) });
+window.InventorySystem.configure({ getDropMultiplier: () => (window.AchievementSystem?.getDropMultiplier(state.achievementRewardReceipts) || 1) + (window.QuestsSystem?.bonus('drop') || 0) + (window.EquipmentSystem?.bonuses().drop || 0) });
+window.EquipmentSystem.configure({canAct:canEvolveNow,money:()=>state.currency,variants:getVariantEntries,prepare:prepareEquipmentCraft,onCommit:onEvolutionCommitted,onChange:()=>{updateStats();renderUpgradeShop();renderClockAndWeather(true);renderPotionInventory();},onBlocked:()=>{isAutoRolling=false;clearCooldownExpiryTimer();window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover your pending equipment craft.');}});
+window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!window.SandboxSystem?.active&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished&&!isTimeTrialBattle())scheduleNextBattleTurn();}});
 window.CraftingSystem.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 window.QuestsSystem.mount(document.getElementById('questModal'));
 window.QuestsSystem.configure({clock:()=>state.weather.gameSeconds,snapshot:()=>({rolls:state.totalRolls,bestRoom:window.TimeTrialSystem.bestRoom}),canAct:canEvolveNow,isImporting:()=>isImportingSave,reward:applyQuestBoardReward,onChange:()=>{updateStats();renderClockAndWeather(true);refreshAchievements();}});
 window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreeze: () => { if (!isImportingSave && !window.SandboxSystem?.active) { syncGameClockToNow(); saveState(); } } });
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
-window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => (window.InventorySystem?.multiplier("exp") || 1) * (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (1 + getWeatherBonus("exp")), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
+window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => (window.InventorySystem?.multiplier("exp") || 1) * (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (1 + getWeatherBonus("exp")) * (window.EquipmentSystem?.expMultiplier("arena") || 1), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
 refreshAchievements();

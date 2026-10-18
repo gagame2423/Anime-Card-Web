@@ -227,12 +227,13 @@ const MUTATION_TIERS = Object.freeze({ normal: Object.freeze({ id: 'normal', nam
 const canonicalMutationMap = Object.fromEntries(MUTATIONS.map(m => [m.id, m]));
 const MUTATION_BY_ID = Object.freeze({ ...canonicalMutationMap, sweet: canonicalMutationMap.sweat, blizzard: canonicalMutationMap.frost, sacrifice: canonicalMutationMap.eclipsed });
 (function(host) {
-  function roll(weathers, random = Math.random) {
+  function roll(weathers, random = Math.random, multiplier = 1) {
     const candidates = [...new Map(weathers.filter(w => w?.mutation).map(w => [w.mutation.id, w])).values()];
     // Shuffle before independent trials: when >2 succeed, no weather wins by list order.
     for (let i = candidates.length - 1; i > 0; i--) { const j = Math.min(i, Math.floor(random() * (i + 1))); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
-    return candidates.filter(w => random() < MUTATION_SUCCESS_RATES[w.tier]).slice(0, 2).map(w => w.mutation).sort((a,b) => a.tier.rank-b.tier.rank);
+    return candidates.filter(w => random() < successChance(w, multiplier)).slice(0, 2).map(w => w.mutation).sort((a,b) => a.tier.rank-b.tier.rank);
   }
+  function successChance(weather,multiplier=1) { return Math.min(.25, Math.max(0,(MUTATION_SUCCESS_RATES[weather?.tier]||0)*Math.max(1,Number(multiplier)||1))); }
   function factors(mutations) { return (mutations || []).reduce((s, m) => { const def = MUTATION_BY_ID[typeof m === 'string' ? m : m?.id]; if (def) { s.hp *= def.hpMultiplier; s.atk *= def.atkMultiplier; } return s; }, { hp: 1, atk: 1 }); }
-  Object.assign(host, { MUTATIONS, MUTATION_TIERS, MUTATION_BY_ID, MUTATION_SUCCESS_RATES, MutationSystem: Object.freeze({ roll, factors }) });
+  Object.assign(host, { MUTATIONS, MUTATION_TIERS, MUTATION_BY_ID, MUTATION_SUCCESS_RATES, MutationSystem: Object.freeze({ roll, factors, successChance }) });
 })(window);

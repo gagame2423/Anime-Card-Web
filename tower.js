@@ -3,7 +3,7 @@
   'use strict';
   const KEY = 'anime_card_rng_tower_v1';
   const POTION_COST = 25;
-  const SELECTION_VERSION = 4;
+  const SELECTION_VERSION = 5;
   const ENEMY_ELEMENTS = Object.freeze(Object.fromEntries(Object.entries({
     raining: ['Water'], snowing: ['Water', 'Nature'], sunny: ['Fire'], sugar: ['Electric'],
     reaper: ['Dark', 'Holy'], eclipse: ['Dark', 'Fire'], malevolent: ['Fire', 'Nature'],
@@ -72,7 +72,7 @@
     if (!structural) return false;
     // Existing locked encounters survive the update until the floor is cleared.
     if (record.selectionVersion === undefined) return true;
-    if (![2, 3, SELECTION_VERSION].includes(record.selectionVersion)) return false;
+    if (![2, 3, 4, SELECTION_VERSION].includes(record.selectionVersion)) return false;
     const allowed = mode && ENEMY_ELEMENTS[String(mode).toLowerCase()];
     const legacyNewType = record.selectionVersion < 4 && ['lucky','wind','bizare'].includes(String(mode).toLowerCase()) && record.element === null;
     if (record.element !== null && !host.ElementSystem.TYPES.includes(record.element)) return false;
@@ -218,16 +218,21 @@
     // its strongest available candidates without unlocking another element.
     const minimum = Math.min(minimumEnemyChance(floor), Math.max(...candidates.map(entry => entry.chance)));
     const qualified = candidates.filter(entry => entry.chance >= minimum);
-    function weighted(pool) {
-      const total = pool.reduce((sum, entry) => sum + 1 / entry.chance, 0);
-      let draw = Math.max(0, Math.min(1, Number(random()) || 0)) * total;
-      for (const entry of pool) { draw -= 1 / entry.chance; if (draw < 0) return entry; }
-      return pool[pool.length - 1];
-    }
+    const used = new Set();
     return Array.from({ length: 4 }, (_, slot) => {
-      const boss = slot === 3, elite = isElite(floor);
-      const rolePool = qualified.filter(entry => elite ? rarityRank(entry.card) >= 4 : boss ? rarityRank(entry.card) >= 3 : rarityRank(entry.card) <= 3);
-      const selected = weighted(rolePool.length ? rolePool : qualified), card = selected.card;
+      const boss = slot === 3;
+      // High floors must not collapse to one Legendary minion (e.g. Noelle).
+      // Every qualified card can appear in any role. Boss slots favor higher
+      // rarity gently, without excluding Secret / unrollable cards elsewhere.
+      const unused = qualified.filter(entry => !used.has(entry.card.id));
+      const source = unused.length ? unused : qualified;
+      const rolePool = source.map(entry => ({...entry, weight:
+        Math.pow(entry.chance, -.15) * (boss ? 1 + .25 * rarityRank(entry.card) : 1)}));
+      const total = rolePool.reduce((sum,entry)=>sum+entry.weight,0);
+      let draw = Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0))*total;
+      let selected=rolePool[rolePool.length-1];
+      for(const entry of rolePool){draw-=entry.weight;if(draw<0){selected=entry;break;}}
+      const card=selected.card;used.add(card.id);
       const matchingMutation = weatherMutation(weatherDefinition(mode, weathers));
       const mutations = weatherId(mode) !== 'normal' && matchingMutation && random() < .75 ? [matchingMutation] : [];
       const stats = floorStats(floor, boss);
@@ -243,7 +248,7 @@
     let record = data.encounters[id];
     // Upgrade these three newly constrained types once. Keep an already-valid
     // composition; regenerate an incompatible legacy floor, then lock it again.
-    if (record && record.selectionVersion !== SELECTION_VERSION && ['lucky','wind','bizare'].includes(id)) {
+    if (record && record.selectionVersion < 4 && ['lucky','wind','bizare'].includes(id)) {
       const elements=new Set(record.lineup.map(slot=>cards.find(card=>card.id===slot.cardId)?.element));
       const element=[...elements][0];
       if(elements.size===1 && ENEMY_ELEMENTS[id].includes(element)) {

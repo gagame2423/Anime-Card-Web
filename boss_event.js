@@ -24,7 +24,7 @@
     const p=v.pendingReward;if(p===null)return true;
     if(!validAttempt(p)||!object(v.events[p.type])||!v.activeAttempt||p.id!==v.activeAttempt.id||p.type!==v.activeAttempt.type||p.startedAt!==v.activeAttempt.startedAt||p.difficulty!==v.activeAttempt.difficulty)return false;
     const range=coinRange(p.difficulty);
-    if(!integer(p.baseCoins,range.min,range.max)||!Number.isFinite(p.dropMultiplier)||p.dropMultiplier<1||p.dropMultiplier>2.35)return false;
+    if(!integer(p.baseCoins,range.min,range.max)||!Number.isFinite(p.dropMultiplier)||p.dropMultiplier<1||p.dropMultiplier>host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER)return false;
     const exact=Number((p.baseCoins*p.dropMultiplier).toFixed(8));
     if(!integer(p.coins,Math.floor(exact),Math.ceil(exact)))return false;
     return p.card===null||(object(p.card)&&p.card.cardId===TYPES[p.type].cardId&&Array.isArray(p.card.mutationIds)&&p.card.mutationIds.length<=2&&new Set(p.card.mutationIds).size===p.card.mutationIds.length&&p.card.mutationIds.every(id=>typeof id==='string'&&Object.hasOwn(host.MUTATION_BY_ID,id)));

@@ -2,6 +2,9 @@
 (function (host) {
   'use strict';
   const KEY = 'anime_card_rng_items_v1';
+  // Two quest effects per period can overlap when claimed across a reset boundary.
+  // Achievements (1 + .45 + .90), quests (2*.10 + 2*.25), one sword (.333).
+  const MAX_KNOWN_DROP_MULTIPLIER = 3.383 + 1e-8;
   const DURATION_MS = 600000;
   const SUPER_DURATION_MS = 300000;
   const SUPER_BASE = Object.freeze({super_luck_potion:'lucky_potion',super_rich_potion:'rich_potion',super_exp_potion:'exp_potion',super_speed_potion:'speed_potion'});
@@ -221,5 +224,5 @@
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);
