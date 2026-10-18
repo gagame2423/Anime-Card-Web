@@ -1,185 +1,116 @@
-NHẬT KÝ CẬP NHẬT — QUEST, CHẾ TẠO POTION VÀ TOWER REQUIEM
-Phiên bản: 20261017-quests-1
+NHẬT KÝ CẬP NHẬT — SETTINGS, CRAFTING VÀ REAGAN RIDLEY
+Phiên bản: 20261018-reagan-1
 
-Tài liệu chỉ ghi các thay đổi của bản cập nhật này. Không kèm lịch sử các bản cũ.
+Tài liệu chỉ ghi các thay đổi trong bản cập nhật này.
 
-1. GIAO DIỆN VÀ MODULE QUEST
+1. ÂM THANH TRONG GAME SETTINGS
 
-Thêm quests.js để quản lý bộ quest luân phiên, reset theo Game Time, tiến độ, phần thưởng, timer buff và giao diện. quest.js tiếp tục phụ trách các Card Quest tuần tự đang có; trạng thái đã Accept, bước hiện tại và thẻ đã mở khóa được giữ nguyên.
+Chuyển hai nút Music và SFX từ menu tiện ích trên màn hình chính vào Game Settings. Không tạo bản sao của nút hoặc gắn nhiều listener cho cùng thao tác. Tùy chọn Show Active Potions HUD vẫn nằm trong Settings và giữ nguyên chức năng.
 
-Trong menu ..., Quest Cards được đổi thành Quests. Giao diện theo bố cục ảnh mẫu:
-- Daily, Weekly, Story · Card Quests và Permanent.
-- Danh sách bên trái có tiêu đề, thời gian còn lại, nút ghim, thanh tiến độ và số hoàn thành/mục tiêu.
-- Bên phải có mô tả, phần trăm hoàn thành, phần thưởng và nút nhận.
-- Story tích hợp các Card Quest hiện có; chỉ hiện ảnh và yêu cầu, không lộ HP, ATK hoặc nội tại của thẻ bí ẩn.
-- Permanent truy cập các achievement hiện hành và nhận phần thưởng vĩnh viễn.
-- Tông nền tối, viền cyan, thanh tiến độ phát sáng. Mobile chuyển thành các vùng cuộn để truy cập đầy đủ danh sách và chi tiết.
-- Buff Luck/Drop từ quest hiển thị thời gian còn lại ngay trong cửa sổ Quest.
+Thêm thanh âm lượng và ô nhập số riêng cho Music/SFX: 0%–100%, bước 1%. Hai ô của mỗi loại đồng bộ với nhau; thay đổi áp dụng ngay cả khi âm thanh đang phát. Giá trị ngoài khoảng được giới hạn về 0%–100%; ô trống không bị lưu thành mức âm lượng sai. Mặc định Music 35%, SFX 80% khi save chưa có tùy chọn mới.
 
-Reset Daily tại các mốc Game Time 86.400 giây: 24h, 48h, 72h...
-Reset Weekly tại các mốc Game Time 604.800 giây: 7 ngày, 14 ngày...
-Đây là mốc của đồng hồ game, không phải nửa đêm theo múi giờ. Game Time vẫn chạy 1:1 với thời gian thực và tính cả khoảng thời gian rời game theo cơ chế hiện có. Khi bỏ qua nhiều chu kỳ, chỉ tạo bộ quest của chu kỳ hiện tại, không phát thưởng cho các chu kỳ đã trôi qua.
+Lưu các tùy chọn bằng các khóa hiện có và hai khóa âm lượng mới:
+- anime_card_rng_music_muted: bật/tắt Music, giữ tương thích save cũ.
+- anime_card_rng_sfx_enabled: bật/tắt SFX, giữ tương thích save cũ.
+- anime_card_rng_music_volume: số từ 0 đến 1.
+- anime_card_rng_sfx_volume: số từ 0 đến 1.
 
-Mỗi nhóm có đúng 3 quest, lấy ngẫu nhiên không trùng từ 7 lựa chọn. Bộ đã chọn và tiến độ được lưu. Reload không reroll. Khi reset, quest chưa nhận thưởng của chu kỳ cũ hết hiệu lực; buff đã nhận vẫn chạy đến thời điểm hết hạn riêng.
+Cả bốn tùy chọn được đưa vào bản xuất .acrsave. Khi import, công tắc phải là boolean và âm lượng phải là số hữu hạn trong khoảng 0–1. Reload giữ lựa chọn đã lưu. Không thay định dạng bảo vệ save, checksum hoặc cooldown xuất/nhập độc lập 7 ngày.
 
-Các mục tiêu phụ thuộc tài khoản được chốt lúc bộ quest được tạo:
-- Daily Roll: max(1, round(0,10 x tổng roll hiện có)).
-- Weekly Roll: max(1, round(1,00 x tổng roll hiện có)).
-- Daily Time Trial: max(1, round(0,70 x phòng cao nhất)).
-- Weekly Time Trial: max(1, round(1,15 x phòng cao nhất)).
-- Không thay mục tiêu giữa chu kỳ khi người chơi roll thêm hoặc phá kỷ lục.
-- Theo xác nhận, Time Trial chỉ tính thắng đúng phòng mục tiêu 5 lần qua các lượt chạy; thắng phòng cao hơn không cộng vào quest này; không tính EXP Time Trial vào quest vượt phòng.
+Giữ cơ chế phát sau tương tác đầu tiên và danh sách chín thẻ có SFX riêng. Khi phát SFX đặc biệt, Music tạm dừng; khi SFX kết thúc hoặc modal đóng, Music tiếp tục với fade 400 ms về đúng âm lượng người chơi đã chọn. Không trở về mức cố định 35% sau SFX. Tắt SFX dừng hiệu ứng hiện tại và trả lại Music theo tùy chọn Music.
 
-2. DAILY QUEST — CHỌN 3 TRONG 7
+settings.js chỉ điều phối giao diện; background.js và drop_audio.js tiếp tục quản lý phát âm thanh, trạng thái và lưu tùy chọn. Không thêm interval để cập nhật Settings. Modal có vùng cuộn và bố cục phù hợp màn hình nhỏ.
 
-1) Hạ 200 địch ở các chế độ thực: +1 Luck trong 4 giờ.
-2) Thắng phòng Time Trial đạt mục tiêu Daily 5 lần: một thời tiết Common/Uncommon ngẫu nhiên trong 4 giờ.
-3) Thắng 25 Raid ở difficulty > 10: cộng thêm 50% số VNĐ hiện có khi nhận, tổng VNĐ trở thành x1.5.
-4) Thắng 5 Boss Event ở difficulty > 5: +0.10 Drop Multiplier trong 4 giờ.
-5) Roll đủ mục tiêu Daily: +1 Luck trong 4 giờ.
-6) Thắng 50 trận 1v1 thường: cộng thêm 50% VNĐ hiện có khi nhận.
-7) Gặp 3 thời tiết Rare khác nhau trong chu kỳ: một thời tiết Uncommon/Rare ngẫu nhiên trong 3 giờ.
+2. CRAFTING CHỈ HIỆN CÔNG THỨC HỢP LỆ
 
-Daily #7 chỉ tính mỗi loại Rare một lần trong chu kỳ. Nhiều lần gặp cùng Shadow không thay thế cho 3 loại khác nhau.
+Danh sách Crafting lấy đầu ra từ các công thức đã đăng ký và chỉ nhận công thức có item đầu ra/nguyên liệu hợp lệ. Không ghép thêm danh sách vật liệu từ Evolution Shop vào grid.
 
-3. WEEKLY QUEST — CHỌN 3 TRONG 7
+Các item chỉ mua tại shop, gồm Spirit Crown, Sea Valkyrie, Web String và Cannon Ball, không còn xuất hiện như item có thể craft. Chúng vẫn tồn tại trong Storage, shop và Evolution theo nguồn/giá cũ. Việc một nguyên liệu potion thường được bán ở shop không làm mất công thức dùng nguyên liệu đó.
 
-1) Hạ 10.000 địch: +1 Luck trong 48 giờ.
-2) Thắng phòng Time Trial đạt mục tiêu Weekly 5 lần: một thời tiết Uncommon/Rare ngẫu nhiên trong 48 giờ.
-3) Thắng 500 Raid ở difficulty > 250: cộng thêm 500% VNĐ hiện có khi nhận.
-4) Thắng 500 Boss Event ở difficulty > 50: +0.25 Drop Multiplier trong 48 giờ.
-5) Roll đủ mục tiêu Weekly: +1 Luck trong 48 giờ.
-6) Thắng 500 trận 1v1 thường: cộng thêm 500% VNĐ hiện có khi nhận.
-7) Gặp tổng cộng 36 lần thời tiết Uncommon/Rare: một thời tiết Rare ngẫu nhiên trong 36 giờ.
-
-Theo xác nhận: “+500%” nghĩa là cộng thêm x5 số dư, tổng sau nhận là x6, không phải tổng x5. Ví dụ đang có 1.000 VNĐ thì nhận Weekly tiền sẽ thành 6.000 VNĐ. Sau đó nhận Daily +50% sẽ thành 9.000 VNĐ. Không nhân phần thưởng tiền này với Rich Potion hoặc các hệ số thu nhập khác.
-
-Theo xác nhận: quest 1v1 dùng chế độ 1v1 thường có sẵn, không tạo một hệ thống PvP trực tuyến mới.
-
-Weekly #7 cộng từng lần thời tiết xuất hiện từ bộ lập lịch, được tính lặp cùng loại ở các lần xuất hiện khác nhau. Chỉ đọc lại HUD, reload hoặc cập nhật countdown không tạo lượt gặp mới. Thời tiết nhận từ phần thưởng quest không tự tạo thêm tiến độ gặp thời tiết.
-
-Chọn thời tiết thưởng ngẫu nhiên đều giữa các loại thuộc các tier được phép. Nếu loại đó đang hoạt động, kéo thời điểm hết hạn lên ít nhất bằng thời hạn thưởng, không làm ngắn timer đang dài hơn.
-
-Luck quest là cộng vào hệ số Luck trước hệ số potion. Các buff Luck còn hạn cộng với nhau. Bonus Drop được cộng vào hệ số Drop dùng chung; ví dụ x1.20 +0.10 = x1.30. Nó tác động lượng vật phẩm, Shards, Coin và Key thông qua hệ thống drop hiện hành, không tăng VNĐ/EXP và không tự tăng xác suất thẻ Secret.
-
-Theo dõi chỉ từ sự kiện mới của chế độ thực. Sandbox không tăng kill, roll, thắng trận, quest hoặc achievement; không nhận thưởng quest trong Sandbox. Trận thua không được tính là thắng, surrender/aborted không tính hoàn thành. Một sự kiện gửi lặp bị chặn. Kẻ địch clone/summon không được dùng để farm kill quest. Card Quest vẫn chỉ theo dõi sau Accept và từng bước theo thứ tự.
-
-4. CHẾ TẠO SUPER POTION
-
-Thêm crafting.js và mục Crafting trong menu ...:
+Bốn công thức hiện có:
 10 Lucky Potion -> 1 Super Luck Potion.
 10 Rich Potion -> 1 Super Rich Potion.
 10 EXP Potion -> 1 Super EXP Potion.
 10 Speed Potion -> 1 Super Speed Potion.
 
-Các ID mới:
-super_luck_potion, super_rich_potion, super_exp_potion, super_speed_potion.
-Lucky Potion là tên vật phẩm Luck Potion thường đang có trong game.
+Giữ Search, Owned, Required Items, Craft 1x, phí 0 VNĐ và giao dịch nguyên tử trong inventory.js. Chọn công thức vẫn hiển thị số nguyên liệu đang có/số cần. Related Card trống đối với consumable. Không tự tạo công thức hoặc nguyên liệu mới cho vật liệu mua từ shop.
 
-Thông số:
-- Super Luck: Luck x1.50 trong 300 giây.
-- Super Rich: VNĐ thu được x1.50 trong 300 giây.
-- Super EXP: EXP thu được x1.50 trong 300 giây.
-- Super Speed: tốc độ roll x1.15 trong 300 giây; cooldown chia cho 1.15.
+3. REAGAN RIDLEY — NORMAL TOWER TẦNG 200
 
-Một Super Potion thay hệ số của potion thường cùng loại, không nhân hai hệ số với nhau. Khi dùng Super, thời gian còn lại của potion thường được chuyển sang trạng thái PAUSED. Super hết hạn thì potion thường tiếp tục từ phần thời gian còn lại đó. Dùng thêm potion thường khi Super đang chạy sẽ cộng thời lượng vào phần đang pause; không kích hoạt hai buff cùng loại đồng thời.
+ID: tower-champion-normal-200.
+Tên: Reagan Ridley.
+Rarity: Secret.
+Element: Electric, cùng hệ với Champion Normal Tower hiện có.
+HP Level 1: 200.000.
+ATK Level 1: 16.900.
+RNG: 1 trong 1.692.007.
+Artwork tham chiếu: assets/cards/reaganridley.png.
 
-Dùng thêm Super cùng loại chỉ nối dài thời lượng 300 giây/lọ, không cộng thêm % hiệu ứng. Các loại khác nhau được dùng cùng nhau. Potion thường đã hết hạn không được hồi sinh thêm thời gian.
+Tích hợp vào cơ chế Champion đang có bằng towerType normal, towerFloor 200 và unlockRequirement tower_floor_200_normal. Vượt tầng 200 mở khóa và cấp một bản Normal; sau đó thẻ vào pool roll với RNG trên khi thời tiết Normal đang hoạt động. Mốc đã hoàn thành ở save cũ được đối chiếu khi tải; receipt ngăn cấp lặp lại. Hint của Normal Tower và danh sách achievement tự đọc thông tin thẻ mới từ cards.js.
 
-Timer được lưu bằng mốc hết hạn thực, kèm số mili giây thường đang pause. Nếu Super hết trong lúc offline, potion thường tiếp tục ngay từ thời điểm Super hết hạn, không đợi đến lúc mở game mới bắt đầu chạy. Ví dụ thường còn 540 giây, Super hết ở t=360 giây thì thường hết ở t=900 giây, dù người chơi đang offline.
+Mad Scientist — hỗ trợ và robot:
+- “Vào trận” để hiến tế được hiểu là lên tuyến đầu, không phải lúc bắt đầu trận khi Reagan còn ở hàng sau.
+- Khi còn sống và không phải đơn vị đang hành động, đếm lượt của phe Reagan. Mỗi 3 lượt phe mình tạo một robot ở tuyến đầu. Lượt của phe đối phương không tăng bộ đếm này.
+- Robot xuất hiện sau khi hành động hiện tại kết thúc, để không làm mất lượt của đồng đội đang đánh. Robot trở thành mục tiêu tuyến đầu và sẵn sàng hành động ở lượt tiếp theo của phe mình.
+- HP robot = floor(10% max HP hiện tại của Reagan), tối thiểu 1.
+- ATK robot = floor(10% ATK hiện tại của Reagan sau buff/debuff), tối thiểu 1.
+- Không nhân lại Level hoặc Mutation lần thứ hai. Robot dùng Element của Reagan và giữ thông tin Mutation để hiển thị.
+- Tối đa 10 robot đang sống mỗi phe. Đây là giới hạn đang hoạt động, không phải hạn ngạch triệu hồi trọn trận: khi robot chết, đợt triệu hồi hợp lệ sau có thể tạo robot thay thế.
+- Robot không mang Mad Scientist và không tạo robot con. Các cơ chế clone/summon khác giữ quy tắc hiện có.
 
-Giao dịch chế tạo trừ 10 và cấp 1 trong một lần lưu Inventory; lỗi lưu trả lại nguyên liệu và số lượng. Dùng potion cũng hoàn tác khi không lưu được. Super Potion không được thêm vào pool rơi potion thường. Speed Battle Potion không tham gia công thức chế tạo này.
+AI:
+- Thay đòn đánh thường bằng một đợt đánh toàn bộ địch còn sống, mỗi mục tiêu nhận damage bằng 100% ATK robot trước khi áp dụng Element, shield và các cơ chế phòng thủ.
+- Mỗi kill hồi cho robot và Reagan lượng HP bằng 10% max HP Reagan. HP không vượt max HP; không hồi sinh đơn vị đã chết; Bleed tiếp tục chặn hồi HP.
+- Đòn AI dùng pipeline combat chung để tính sát thương, chí tử, hồi sinh, kill và các tương tác phòng thủ. Robot còn sống tiếp tục tham chiến hợp lệ, kể cả khi chỉ còn robot trong trận thường.
 
-Inventory nâng dữ liệu lên version 3, đọc được bản cũ. Save .acrsave gồm trạng thái pause, Super, quest luân phiên, buff quest, ghim và cài đặt SFX. Giữ kiểm tra toàn vẹn và cooldown chuyển save 7 ngày hiện có.
+Hiến tế và Robot Armor:
+- Khi lên tuyến đầu lần đầu trong trận, Reagan lập tức hiến tế thay vì đánh thường. Một đồng đội ngẫu nhiên còn sống nhận Robot Armor; nếu không còn đồng đội sống thì không có người nhận.
+- Robot Armor bổ sung vào nội tại sẵn có, không thay thế nội tại gốc.
+- +25% ATK; giảm 50% sát thương nhận vào khi nội tại không bị khóa.
+- Mỗi 2 đòn tấn công của người nhận, đánh tối đa 2 địch ngẫu nhiên khác nhau, mỗi địch nhận 50% ATK hiện tại của người nhận. Nếu chỉ còn 1 địch thì đánh 1 mục tiêu.
+- Giảm sát thương được xét trước cơ chế chí tử/hồi sinh để không kích hoạt hồi sinh sớm khi damage thực tế chưa chí tử.
+- Cờ hiến tế và Robot Armor là dữ liệu runtime của trận, không lưu vào thẻ sở hữu. Không cấp lặp buff bằng việc gọi lại render hoặc kiểm tra đội hình.
 
-5. BA THẺ TOWER MỚI
+reagan.js chứa toàn bộ logic kỹ năng mới; passives.js chỉ nối các hook đội hình, lượt, đánh, kill, phòng thủ và mô tả. Không thêm reward, quest hoặc thao tác lưu trong module này; Sandbox tiếp tục dùng engine riêng.
 
-Theo cơ chế Champion đang dùng: hoàn thành milestone lần đầu cấp một bản Normal và mở pool roll của thẻ trong thời tiết tương ứng. Biên nhận chặn cấp trùng; save đã vượt milestone được đối chiếu để mở khóa. Mutation và double mutation từ roll dùng cơ chế hiện hành.
+4. SỬA CLONE NARUTO X SASUKE TRONG EXP TIME TRIAL
 
-Xtreme Chan:
-ID tower-champion-wind; Wind Tower Floor 100.
-Nature; Secret; RNG 1 in 2.010.000; HP 210.000; ATK 21.000.
-Nội tại The Fuuto Wind:
-- Khi là đồng đội cuối cùng còn sống, một lần/trận tăng damage 50% và cộng max HP của các đồng đội đã chết vào max HP cùng HP hiện tại của mình. Dùng max HP vì HP hiện tại của đơn vị đã chết là 0.
-- Khi bị tấn công, 21% cơ hội có 21% giảm damage trong lượt tấn công kế tiếp của phe địch. Không tiêu buff chỉ vì giữa hai đòn địch có một lượt của phe mình. Không cộng dồn % giảm qua nhiều lần kích hoạt.
-- Mỗi đòn thứ 2 thay đòn thường bằng một trong bốn chiêu, xác suất đều:
-  Heat: 50% ATK; Burn 2 lượt, 30% ATK mỗi lượt.
-  Cyclone: 100% ATK lên tối đa 2 địch.
-  Lunar: 110% ATK và stun 1 lượt.
-  Joker: x2 damage.
-- Các đòn vẫn qua engine Element, né, khiên và phòng thủ; không cộng thêm một đòn thường ngoài chiêu thay thế.
+Dãy EXP Monster được xử lý như một lượt luyện liên tục cho việc chọn Naruto/Sasuke. Thay đối tượng dummy sau mỗi kill không còn tự reroll chế độ và xóa clone vừa sinh. Các trận ngoài EXP Time Trial vẫn đổi chế độ theo địch như trước; chuyển sang Sasuke vẫn xóa clone Naruto đúng nội tại.
 
-Star Plantinum Requiem:
-ID tower-champion-bizare; Bizare Tower Floor 100.
-Electric; Secret; RNG 1 in 3.000.000; HP 200.000; ATK 33.000.
-Nội tại SPR:
-- Mỗi đòn có 33% cơ hội follow-up với damage của đòn thường; follow-up tiếp tục có thể nối chuỗi, không đặt trần số đòn.
-- Tự giải các debuff ngăn tấn công như stun, freeze, snail/hypnosis và chuẩn bị stun nguồn gây hiệu ứng ở lượt địch kế tiếp. Cooldown 2 lượt của phe sở hữu thẻ.
-- 33% cơ hội sống sót đòn chí tử với 1 HP; chỉ một lần thành công trong trận. Đây là sống sót, không tạo một bản hồi sinh mới.
+Nếu địch bị hạ trước khi clone đánh hỗ trợ, hành động clone được giữ trong hàng đợi runtime. Time Trial ghi thưởng cho dummy đã chết đúng một lần, tạo dummy tiếp theo rồi giải quyết lần lượt các đòn hỗ trợ đang chờ. Nếu clone hạ tiếp dummy, dummy đó cũng chỉ được tính thưởng một lần trước khi thay mới. Không thêm lượt, không tiêu thêm vé, không lưu hàng đợi vào save.
 
-Shadow The World Requiem:
-ID tower-champion-shadow-200; Shadow Tower Floor 200.
-Dark; Secret; RNG 1 in 12.000.000; HP 600.000; ATK 120.000.
-Nội tại STWR:
-- Mỗi đòn có 12% cơ hội giữ lượt cho phe mình, bỏ lượt địch sắp tới để đánh thêm.
-- Mỗi kill tăng vĩnh viễn trong trận +12% HP và +12% ATK, áp dụng nối tiếp lên thông số hiện tại.
-- Giải stun, freeze và hiệu ứng vô hiệu hóa; gây Bleed lên nguồn gây hiệu ứng trong 3 lượt, 30% ATK mỗi lượt. Cooldown 3 lượt của phe sở hữu thẻ.
-- Khi hỗ trợ và một đồng đội khác tấn công, 12% cơ hội cùng đánh: đồng đội gây 120% damage của đòn cơ bản, STWR gây 120% ATK. Đòn hỗ trợ không tạo vòng lặp gọi hỗ trợ lẫn nhau và không tăng bộ đếm đòn chính của STWR.
-- Không thể clone hoặc hồi sinh bằng bất kỳ nguồn nào. Khi chết, stun mọi địch còn sống 5 lượt.
+Clone giữ 10% max HP và ATK của chủ lúc sinh, tồn tại qua các lần thay dummy và có thể gây sát thương/hạ địch. Giữ Normal Time Trial 2.000 ms/lượt, EXP Time Trial 1.000 ms/lượt; Speed Battle Potion không đổi hai timer này. Card Level 1000 vẫn không nhận thêm EXP. Không thay quy tắc quest hoặc reward của các mode khác.
 
-Thêm requiem.js cho trạng thái và các hook nội tại mới, riêng cho từng runtime chiến đấu. Bộ đếm vẫn gắn với người tấn công và không reset khi đổi mục tiêu. Hướng dẫn Tower được bổ sung milestone Floor 200 ở Shadow bên cạnh Champion Floor 100.
+5. MODIFIED FILES NOTE
 
-6. TIME TRIAL
+Danh sách đầy đủ 13 tệp được tạo, sửa hoặc refactor trong bản cập nhật này:
 
-Cả Normal Time Trial và EXP Time Trial dùng đúng 1.000 ms mỗi lượt. Speed Battle Potion tiếp tục không làm thay đổi tốc độ Time Trial.
+1) settings.js — TẠO MỚI: điều phối slider/ô nhập âm lượng trong Settings, đồng bộ giao diện với module âm thanh.
+2) background.js — thêm âm lượng Music có lưu; áp dụng trực tiếp và fade về mức đã chọn sau SFX.
+3) drop_audio.js — thêm âm lượng SFX có lưu và cập nhật âm lượng hiệu ứng đang phát.
+4) crafting.js — chỉ dựng catalog từ công thức hợp lệ; loại vật liệu chỉ mua tại shop khỏi grid.
+5) cards.js — thêm Reagan Ridley, chỉ số, Element, RNG, điều kiện Normal Tower 200 và mô tả Mad Scientist.
+6) reagan.js — TẠO MỚI: robot, AI, giới hạn robot đang sống, hiến tế và Robot Armor trong runtime combat.
+7) passives.js — nối hook Reagan/Armor; giữ robot trong hàng đợi chiến đấu; xử lý clone Naruto và hành động hỗ trợ chờ trong EXP Time Trial.
+8) timetrial.js — nối bước ghi thưởng/thay dummy/giải quyết hành động clone; giữ timer theo mode.
+9) app.js — thêm âm lượng vào export/import và validator; nối Settings và callback hỗ trợ Time Trial.
+10) index.html — chuyển Music/SFX vào Settings, thêm slider/ô số, tải settings.js và reagan.js theo đúng thứ tự defer, đổi cache version.
+11) styles.css — bố cục âm thanh Settings, ô số, slider và vùng cuộn responsive; giới hạn CSS công tắc cho checkbox.
+12) startup.js — thêm chẩn đoán thiếu SettingsSystem hoặc createReaganSkills khi triển khai thiếu tệp.
+13) README.txt — changelog hiện tại và danh sách thay đổi này.
 
-EXP Time Trial: mỗi EXP Monster bị hạ cho tỷ lệ cơ bản ngẫu nhiên từ 0,5% đến 3,0% yêu cầu EXP của Level hiện tại:
-rate = 0,005 + 0,025 x random(0..1).
-EXP = floor(EXP_cần_cho_Level_hiện_tại x rate x buff_EXP + phần_lẻ_cũ).
-Phần lẻ tiếp tục được giữ để không mất EXP do làm tròn. Achievement, thời tiết và potion EXP áp dụng đúng nhóm thưởng EXP; Super EXP thay potion EXP thường như quy tắc trên. Mức 0,5%–3,0% là trước buff.
+Không cần sửa tower.js hoặc achievements.js: hai module đang lấy điều kiện/mốc thưởng Champion trực tiếp từ cards.js. Các module không nêu trong danh sách giữ nguyên nội dung và vẫn được đóng gói đầy đủ để triển khai đồng bộ.
 
-Giữ vé 1 lần/attempt, giới hạn 300 giây, quái HP 10% max HP người chơi và ATK 0. Lv.1000 không nhận thêm EXP. Normal Time Trial vẫn 180 giây/phòng, rơi Shards và không tự thêm VNĐ/EXP. Không đổi reset Room 1 khi thua hoặc hết giờ.
+6. KIỂM TRA VÀ BÀN GIAO
 
-7. ÂM THANH THẺ ĐẶC BIỆT
+Đã kiểm tra cú pháp JavaScript, thứ tự script, tên tệp phân biệt chữ hoa/thường, DOM ID và chạy game qua HTTP ở đường dẫn con.
 
-Thêm drop_audio.js. Chỉ 9 thẻ sau được phát MP3 tùy chỉnh khi roll/rơi/mở khóa thẻ:
-Alucard: assets/audio/alucard.mp3
-Lucius Zogratis: assets/audio/luciuszogratis.mp3
-Aizen Beyond: assets/audio/aizenbeyond.mp3
-Equinox: assets/audio/equinox.mp3
-Shadow The World Requiem: assets/audio/stwr.mp3
-Madara Lubu: assets/audio/madaralubu.mp3
-Wonder Of You: assets/audio/wou.mp3
-Akaza: assets/audio/akaza.mp3
-Adult Gon: assets/audio/adultgon.mp3
+Đã kiểm tra Settings lưu qua reload, áp dụng âm lượng ngay, hai điều khiển đồng bộ, âm lượng 0%–100%, cấu hình trong .acrsave và từ chối giá trị sai. Luồng tạm dừng/tiếp tục Music sau SFX được kiểm tra bằng đối tượng audio giả lập; tệp nhạc/âm thanh thực tế vẫn do chủ game cung cấp.
 
-Có công tắc SFX ON/OFF trong menu ..., lưu riêng với Music ON/OFF. SFX tắt thì không phát âm thanh thẻ, kể cả đã có yêu cầu chờ.
+Đã kiểm tra Crafting có đúng 4 công thức, tìm vật liệu shop không ra kết quả, tiêu 10 potion nhận 1 Super Potion. Giao diện Settings được kiểm tra trên desktop và mobile 390 px.
 
-Trước SFX: pause musictheme.mp4 ngay. Trong lúc SFX chạy, các thao tác người dùng hoặc quay lại tab không tự bật nhạc chồng lên. Khi SFX kết thúc, không tải được, bị hủy hoặc người chơi đóng cửa sổ thẻ/trận, nhạc nền được tiếp tục và tăng volume dần trong 400 ms nếu Music vẫn ON.
+Đã kiểm tra Reagan ở hàng sau và tuyến đầu, robot đánh AOE, hồi HP khi kill, giới hạn 10 đang sống và tạo thay thế sau khi robot chết, không sinh robot đệ quy. Đã kiểm tra Armor +25% ATK, 50% giảm damage và đòn bổ sung mỗi 2 lần đánh; giảm damage không kích hoạt hồi sinh Aizen sớm. Đã kiểm tra mốc Normal 200 cấp đúng một bản Normal và mở pool/hint phù hợp.
 
-Chỉ giữ một SFX đang phát; SFX mới dừng SFX cũ. Cache tối đa 9 Audio object và không preload âm thanh cho mọi lượt roll. Nếu chưa có tương tác để trình duyệt cho phép phát, chỉ giữ yêu cầu gần nhất chờ thao tác người dùng. Sandbox không phát SFX thẻ. Khi tệp âm thanh thiếu hoặc bị chặn, game tiếp tục hoạt động.
+Đã kiểm tra nhiều chu kỳ EXP Monster với clone còn sống, có gây damage/kill và không tính thưởng lặp; Level 1000 không gọi cấp thêm EXP. Đối chiếu cùng seed cho toàn bộ 138 thẻ cũ trong bài kiểm tra combat giữ nguyên kết quả. Sandbox chạy, thoát và không thay đổi dữ liệu lưu trong kiểm tra cách ly.
 
-8. HIỆU NĂNG, KIỂM TRA VÀ TRIỂN KHAI
-
-Quest gameplay xử lý dữ liệu nhỏ trong bộ nhớ, gộp ghi tiến độ trong 250 ms và flush trước export/pagehide. Timer giao diện theo nhịp 1 giây hiện có; không tạo một vòng animation mới. Sự kiện chọn tab, ghim và nhận thưởng dùng listener dùng chung. Giao diện Quest đóng thì không dựng lại danh sách theo roll. Giữ các tối ưu Hide Rolling Card và cache biến thể đang có.
-
-Đã kiểm tra cú pháp toàn bộ JS; khởi động HTTP tại đường dẫn con, đủ 138 thẻ đăng ký nội tại, Quest desktop/mobile không tràn ngang; nhận quest, crafting; công thức tiền Daily/Weekly; save vòng encrypt/decrypt và từ chối payload sửa; mốc mở Champion; pause/resume potion qua reload và thời gian offline; các nhánh nội tại mới và quy tắc âm thanh pause/hold/resume. Đối chiếu cùng seed cho 135 thẻ cũ giữ kết quả và số lần gọi RNG. Đã chạy 137 trường hợp sao chép nội tại và kiểm tra trận Sandbox với thẻ mới không thay đổi bất kỳ kho localStorage tiến trình nào. Tệp âm thanh/ảnh thực tế do người dùng bổ sung, kiểm tra luồng Audio bằng mock khi chưa có asset.
-
-Gói mã nguồn gồm 30 tệp:
-index.html, styles.css, passives.css, app.js, cards.js,
-passives.js, requiem.js, yuno.js, grimoire.js, levels.js,
-inventory.js, crafting.js, quests.js, quest.js, achievements.js,
-tower.js, timetrial.js, raid.js, boss_event.js, evolution.js,
-weathers.js, mutations.js, elements.js, background.js, drop_audio.js,
-roll_view.js, roll_performance.js, sandbox.js, startup.js, README.txt.
-
-Tự bổ sung các ảnh mới, đúng chữ hoa/thường:
-assets/cards/xtremechan.png
-assets/cards/spr.png
-assets/cards/stwr.png
-
-Tự bổ sung 9 MP3 theo danh sách phía trên. musictheme.mp4 vẫn ở thư mục gốc. Không tạo hoặc đóng gói asset nhị phân trong bản cập nhật này.
-
-Upload đồng bộ toàn bộ 30 tệp, giữ các asset cũ và thêm asset mới. Các script defer được xếp đúng thứ tự; requiem.js nằm trước passives.js, quests.js sau quest.js và trước app.js. JS/CSS dùng cache version 20261017-quests-1. Sau triển khai, nhấn Ctrl+F5 nếu trình duyệt còn cache bản trước.
-
-Không kèm Excel, script kiểm thử, log hoặc tệp trung gian trong gói bàn giao.
+Gói đầy đủ gồm 33 tệp nguồn sản xuất, tính cả README.txt. Không kèm Excel, asset ảnh/âm thanh, script kiểm thử hoặc log. Giữ assets hiện có và tự bổ sung artwork Reagan đúng đường dẫn trên. Upload đồng bộ toàn bộ nguồn; cache version JS/CSS là 20261018-reagan-1. Sau triển khai dùng Ctrl+F5 nếu trình duyệt còn giữ cache cũ.

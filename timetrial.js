@@ -3,7 +3,8 @@
   'use strict';
   const KEY = 'anime_card_rng_timetrial_v1';
   const MODES = Object.freeze({ normal: 'time-trial', exp: 'exp-time-trial' });
-  const TURN_MS = 1000;
+  const TURN_MS = Object.freeze({ [MODES.normal]: 2000, [MODES.exp]: 1000 });
+  function turnMs(mode) { return TURN_MS[mode] || 2000; }
   const LIMITS = Object.freeze({ [MODES.normal]: 180000, [MODES.exp]: 300000 });
   const TICKET_ID = 'exp_time_trial_ticket';
   const TICKET = Object.freeze({ id: TICKET_ID, name: 'EXP Time Trial Ticket', type: 'ticket',
@@ -156,10 +157,19 @@
     settle(battle);
     if (!isExp(battle.mode)) return resolution;
     if (resolution.winner === 'enemy') return resolution;
-    if (battle.enemyTeam.every(unit => unit.defeated || unit.hp <= 0)) {
-      battle.enemyTeam = [monster(battle.trial.owner)]; battle.enemyIndex = 0; battle.enemy = battle.enemyTeam[0];
-      battle.turn = side === 'player' ? 'enemy' : 'player';
-    }
+    const advanceEnemy = () => {
+      if (expired(battle) || battle.finished) return false;
+      // Reward each defeated dummy exactly once before replacing it. The
+      // battle engine has already emitted its normal death/quest callbacks.
+      settle(battle);
+      if (battle.enemyTeam.every(unit => unit.defeated || unit.hp <= 0)) {
+        battle.enemyTeam = [monster(battle.trial.owner)]; battle.enemyIndex = 0; battle.enemy = battle.enemyTeam[0];
+        battle.turn = side === 'player' ? 'enemy' : 'player';
+      }
+      return true;
+    };
+    advanceEnemy();
+    bridge.resolveCompanions?.(battle, advanceEnemy);
     return { ended: false, winner: null };
   }
   function prepareAfterEntry(battle) {
@@ -221,7 +231,7 @@
     }
   }
   function reset() { detach(); data = fresh(); registerTicket(); persist(); }
-  host.TimeTrialSystem = Object.freeze({ KEY, MODES, TURN_MS, LIMITS, TICKET_ID, TICKET, SHOP_ITEMS,
+  host.TimeTrialSystem = Object.freeze({ KEY, MODES, TURN_MS, turnMs, LIMITS, TICKET_ID, TICKET, SHOP_ITEMS,
     configure, isMode, isExp, canEnter, roomStats, shardRange, enemies, start, prepareAfterEntry, afterTurn, finish, abort,
     expired, remaining, checkDeadline, detach, purchase, renderShop, validSave, reset, flush: persist,
     getXpCarry: id => data.xpCarry[id] || 0,

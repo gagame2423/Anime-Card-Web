@@ -92,7 +92,7 @@
       const q=host.QuestSystem.snapshot(d.id),card=host.ALL_CARDS.find(c=>c.id===d.id),step=q&&d.steps[q.step];
       return {id:`card:${d.id}`,title:card.name,description:step?.text||(!q?'Accept to start this sequential Card Quest. No retroactive progress.':'All steps completed. Normal card and future rolls unlocked.'),progress:q?Math.min(d.steps.length,q.step)+(step?q.progress/step.target:0):0,target:d.steps.length,reward:'Normal card • Standard pool unlock',claimed:q?.rewarded,card,definition:d,snapshot:q};
     });
-    return (host.AchievementSystem?.list()||[]).map(a=>({id:`achievement:${a.id}`,title:a.title,description:a.title,progress:Math.min(a.progress,a.target),target:a.target,reward:a.reward.cardName||Object.entries(a.reward).map(([key,value])=>key==='currency'?`${fmt(value)} VNĐ`:key==='luckBonus'?`+${value} Luck`:key==='expBonus'?`+${value} EXP multiplier`:key==='coinBonus'?`+${value} VNĐ multiplier`:key==='dropBonus'?`+${value} Drop multiplier`:'').filter(Boolean).join(' • ')||'Permanent milestone reward',claimed:a.claimed,achievement:a}));
+    return [];
   }
   function countdown(seconds){const n=Math.max(0,Math.ceil(seconds));return `${Math.floor(n/3600)}h ${Math.floor(n%3600/60)}m ${n%60}s`;}
   function set(node,text){if(node&&node.textContent!==String(text))node.textContent=String(text);}
@@ -100,16 +100,16 @@
     if(!root)return;
     ui={root,tabs:root.querySelector('[data-quest-tabs]'),list:root.querySelector('[data-quest-list]'),detail:root.querySelector('[data-quest-detail]'),timer:root.querySelector('[data-quest-reset]'),rows:new Map()};
     if(!ui.tabs||!ui.list||!ui.detail){ui=null;return;}
-    ui.tabs.addEventListener('click',e=>{const b=e.target.closest('[data-quest-tab]');if(!b)return;tab=b.dataset.questTab;selected=null;renderedRevision=-1;render();});
+    ui.tabs.addEventListener('click',e=>{const b=e.target.closest('[data-quest-tab]');if(!b)return;if(!['daily','weekly','story'].includes(b.dataset.questTab))return;tab=b.dataset.questTab;selected=null;renderedRevision=-1;render();});
     ui.list.addEventListener('click',e=>{const pin=e.target.closest('[data-quest-pin]'),row=e.target.closest('[data-quest-id]');if(!row)return;if(pin){const id=row.dataset.questId;data.pins=data.pins.includes(id)?data.pins.filter(p=>p!==id):[...data.pins,id];changed();}else selected=row.dataset.questId;renderedRevision=-1;render();});
     ui.detail.addEventListener('click',e=>{const button=e.target.closest('[data-quest-action]');if(!button)return;const [kind,id]=selected.split(':');
-      if(kind==='card'){host.QuestSystem.accept(id);revision++;}else if(kind==='achievement'){host.AchievementSystem.claim(id);bridge.onChange?.();revision++;}else if(!claim(kind,id))host.alert('Unable to claim quest reward. Check save storage and battle state.');
+      if(kind==='card'){host.QuestSystem.accept(id);revision++;}else if(!claim(kind,id))host.alert('Unable to claim quest reward. Check save storage and battle state.');
       renderedRevision=-1;render();
     });
   }
   function render(){
     if(!ui||ui.root.classList.contains('hidden'))return;
-    const period=PERIODS[tab];set(ui.timer,period?`Resets in ${countdown((data.cycles[tab].index+1)*period-nowClock())}`:tab==='story'?'Card Quests • Sequential • Accept before tracking':'Permanent achievements • No reset');
+    const period=PERIODS[tab];set(ui.timer,period?`Resets in ${countdown((data.cycles[tab].index+1)*period-nowClock())}`:'Card Quests • Sequential • Accept before tracking');
     for(const node of ui.list.querySelectorAll('[data-row-timer]'))set(node,period?countdown((data.cycles[tab].index+1)*period-nowClock()):'No reset');
     const buffs=ui.root.querySelector('[data-quest-buffs]');set(buffs,data.effects.filter(e=>e.until>Date.now()).map(e=>`${e.stat==='luck'?`+${e.bonus} Luck`:`+${Math.round(e.bonus*100)}% Drops`} • ${countdown((e.until-Date.now())/1000)}`).join(' | '));
     if(renderedRevision===revision)return;renderedRevision=revision;
@@ -120,7 +120,7 @@
     for(const item of items){
       const row=document.createElement('article');row.className='quest-board-row'+(item.id===selected?' is-selected':'');row.dataset.questId=item.id;
       const select=document.createElement('button');select.type='button';select.className='quest-row-select';select.dataset.questId=item.id;
-      const label=document.createElement('small');label.textContent=tab==='story'?'Card Quest':tab==='permanent'?'Permanent':`${tab.toUpperCase()} QUEST`;
+      const label=document.createElement('small');label.textContent=tab==='story'?'Card Quest':`${tab.toUpperCase()} QUEST`;
       const title=document.createElement('strong');title.textContent=item.title;
       const progress=document.createElement('progress');progress.max=item.target;progress.value=item.progress;
       const amount=document.createElement('span');amount.textContent=item.claimed?'✓ Claimed':`${fmt(Math.floor(item.progress))} / ${fmt(item.target)}`;

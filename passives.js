@@ -274,6 +274,7 @@
     if (nextEnemy) battleState.enemyIndex = Math.max(0, enemyTeam.indexOf(nextEnemy));
     battleState.player = nextPlayer;
     battleState.enemy = nextEnemy;
+    reagan.frontline(battleState);
   }
 
 
@@ -361,6 +362,9 @@
     }
     function duo(bs, unit, target) {
       const c = state(unit); if (!target || c.enemy === target) return;
+      // EXP Monsters form one continuous training encounter. Replacing a dummy
+      // must not reroll Naruto into Sasuke and dismiss newly created clones.
+      if (bs.mode === 'exp-time-trial' && target.isExpMonster && c.enemy?.isExpMonster && c.mode) { c.enemy = target; return; }
       c.enemy = target; c.mode = Math.random() < 0.5 ? 'naruto' : 'sasuke'; c.modeAttacks ??= c.attacks;
       if (c.mode === 'sasuke') { for (const clone of c.clones) { clone.championDismissed = true; clone.hp = 0; clone.defeated = true; } c.clones = []; }
       else if (ensureRuntime(unit).shieldKind === 'sasuke') { yuno.clearLegacyShield(unit); ensureRuntime(unit).shieldKind = ''; c.shieldTurns = 0; }
@@ -439,7 +443,12 @@
       if (code === 'tsukuyomi') {
         if (c.mode === 'naruto') {
           if (c.modeAttacks % 3 === 0) { const clone = summon(bs, unit, unit.maxHp * .10, atk(unit) * .10, 'duo'); if (clone) c.clones.push(clone); }
-          for (const clone of c.clones.filter(isAlive)) { const enemy = isAlive(target) ? target : activeDefender(bs, unit); if (enemy) hit(bs, clone, enemy, atk(clone)); }
+          c.clones = c.clones.filter(isAlive);
+          for (const clone of c.clones) {
+            const enemy = isAlive(target) ? target : activeDefender(bs, unit);
+            if (isAlive(enemy)) hit(bs, clone, enemy, atk(clone));
+            else if (bs.mode === 'exp-time-trial' && bs.trial) (bs.trialCompanionActions ||= []).push({owner:unit,clone,duoState:c});
+          }
         } else if (c.modeAttacks % 2 === 0) area(bs, unit, enemiesOf(bs, unit), atk(unit) * .50);
       }
       if (code === 'heavenly' && c.attacks % 2 === 0) {
@@ -817,7 +826,7 @@
         const clone = c.clones.find(isAlive); if (!clone) return false;
         clone.expansionSacrificed = true; clone.hp = 0; clone.defeated = true; unit.hp = Math.max(1,Math.floor(unit.maxHp*.10)); unit.defeated = false; return true;
       }
-      if (code === 'akaza') { unit.hp = 1; unit.defeated = false; applyPermanentAtkBonus(unit,.10); return true; }
+      if (code === 'akaza' && !unit.akazaSurvivalUsed) { unit.akazaSurvivalUsed = true; c.akazaSurvivalUsed = true; unit.hp = 1; unit.defeated = false; applyPermanentAtkBonus(unit,.10); return true; }
       return false;
     }
     function kill(bs, unit) {
@@ -1139,6 +1148,13 @@
     status:setStatus,dot:addDot,refresh:refreshUnitDisplay,log:safeLog,enemyFront:activeDefender,stunned:isUnitStunned,
     hpBonus:applyMaxHpBonus,atkBonus:applyPermanentAtkBonus,attack:(...args)=>performAttack(...args)});
 
+  const reagan=window.createReaganSkills({runtime:ensureRuntime,passiveRuntimeFor,alive:isAlive,all:allUnits,
+    allies:alliesOf,enemies:enemiesOf,team:teamOf,has:hasPassive,atk:computeWeakenedAtk,hit:(...args)=>champions.hit(...args),
+    heal,refresh:refreshUnitDisplay,random:()=>Math.random(),log:safeLog,atkBonus:applyPermanentAtkBonus,
+    generated:isGeneratedUnit,suppressed:passiveSuppressed,indices:ensureCurrentIndices,
+    front:(bs,lineup)=>firstLiving(lineup,lineup===bs.playerTeam?bs.playerIndex:bs.enemyIndex),
+    death:(bs,unit)=>onTeammateDeath(bs,unit)});
+
   // Multiplex hooks only for units that own copied passives. Each copy keeps
   // private counters/forms; HP, shields, debuffs and combat buffs stay shared.
   function multiplex(fn, index, combine='last') {
@@ -1174,7 +1190,7 @@
   function isTeamDefeated(team, includeReserves = false) {
     // Tower's queue includes every spawned fighter, including passive clones.
     // Retain the existing Arena rule for temporary allies outside Tower.
-    return !aliveUnits(team).some(unit => includeReserves || !unit.isClone);
+    return !aliveUnits(team).some(unit => includeReserves || !unit.isClone || Boolean(unit.reaganOwner));
   }
 
   function appendTeamUnit(team, unit) {
@@ -1457,7 +1473,7 @@
       currentHp,
       maxHp,
       dodgePct: getDisplayDodgeChance(unit),
-      damageReductionPct: clamp((Number(runtime.damageReductionPct) || 0) + (Number(runtime.raidHakiReduction) || 0) + requiem.reduction(activeCombat,unit), 0, .95) * 100,
+      damageReductionPct: clamp((Number(runtime.damageReductionPct) || 0) + (Number(runtime.raidHakiReduction) || 0) + requiem.reduction(activeCombat,unit) + reagan.reduction(unit), 0, .95) * 100,
       shield,
       shieldPct: Math.min(100, (shield / maxHp) * 100),
       effects
@@ -1668,7 +1684,7 @@
   }
 
   function deferFatality(battleState, target) {
-    return Boolean(yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+    return Boolean(reagan.reduction(target) || yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
@@ -1699,7 +1715,7 @@
     remaining *= (meta.yunoDamageApplied?1:yuno.offensive(source,target)) * yuno.defensive(source,target);
     const shielded = remaining > 0 && targetRuntime.shield > 0;
     const reduction = clamp(
-      requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
+      reagan.reduction(target) + requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
       (hasPassive(target,'aquaman') && host.isWeatherActive?.('Raining') ? 0.50 : 0),
       0,
       0.95
@@ -2678,6 +2694,7 @@
 
   function onKill(battleState, killer, victim, context = {}) {
     if (!killer || !victim) return;
+    reagan.kill(battleState,killer,victim);
     requiem.kill(battleState,killer,victim);
     champions.kill(battleState, killer, victim);
     expansion.kill(battleState, killer, victim);
@@ -3042,9 +3059,12 @@
     attackState.ownAttackCount = Math.max(0, Number(attackState.ownAttackCount) || 0) + 1;
     attackState.attackCount = attackState.ownAttackCount;
     grimoire.countedAttack(battleState, attacker);
+    reagan.countedAttack(battleState,attacker,options);
     if (!isAlive(attacker)) return {hit:false,damage:0,killed:false};
     if (!isAlive(target)) { target=activeDefender(battleState,attacker); if(!isAlive(target))return {hit:false,damage:0,killed:true}; }
 
+    const robotAttack=reagan.attack(battleState,attacker);
+    if(robotAttack)return robotAttack;
     options=requiem.prepare(battleState,attacker,target,options);
     options = questSkills.attackOptions(attacker, options);
     const spell = questSkills.spell(battleState, attacker, target, options);
@@ -3440,7 +3460,8 @@
   function resolveTurn(battleState) {
     if (!battleState || battleState.finished) return { ended: true, winner: null };
     ensureCurrentIndices(battleState);
-    const actor = battleState.turn === 'player' ? battleState.player : battleState.enemy;
+    const actedSide=battleState.turn;
+    const actor = actedSide === 'player' ? battleState.player : battleState.enemy;
     const resolution = resolveBaseTurn(battleState);
     champions.endTurn(battleState, actor);
     raidSecrets.endTurn(battleState);
@@ -3448,6 +3469,7 @@
     questSkills.endTurn(battleState, actor);
     grimoire.endTurn(battleState);
     yuno.endTurn(battleState);
+    reagan.endTurn(battleState,actor,actedSide);
     ensureCurrentIndices(battleState);
     const winner = checkBattleWinner(battleState);
     return winner ? { ended: true, winner } : { ended: false, winner: null };
@@ -4117,6 +4139,17 @@
     },
     resolveTurn,
     performAttack,
+    resolveTrialCompanions(bs,advanceEnemy) {
+      if(bs?.mode!=='exp-time-trial'||!bs.trial||bs.finished)return;
+      const pending=bs.trialCompanionActions||[];bs.trialCompanionActions=[];
+      for(const {owner,clone,duoState} of pending){
+        if(!isAlive(owner)||!isAlive(clone)||duoState?.mode!=='naruto')continue;
+        if(!advanceEnemy())break;
+        const target=activeDefender(bs,clone);
+        if(isAlive(target))champions.hit(bs,clone,target,computeWeakenedAtk(clone));
+      }
+      advanceEnemy();ensureCurrentIndices(bs);
+    },
     getPassiveStatusBadges,
     getCombatStatusSummary,
     getDisplayDodgeChance,
@@ -4134,7 +4167,7 @@
         description.name += ' + Brother Soul';
         description.description += '\n\nBrother Soul\nEach successful attack has a separate 10% chance to apply Burn for 1 target turn, dealing 100% of this card\'s current ATK. Brother Soul lasts for the match; each Burn lasts 1 target turn and stacks with this card\'s other Burn effects.';
       }
-      return description;
+      return reagan.describe(unit,description);
     },
     getPassiveDefinition(cardId) {
       const id = String(cardId || '').trim();

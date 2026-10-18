@@ -4,6 +4,9 @@
   'use strict';
   const doc = host.document;
   const MUSIC_KEY = 'anime_card_rng_music_muted';
+  const VOLUME_KEY = 'anime_card_rng_music_volume';
+  let volume = .35;
+  try { const raw=host.localStorage.getItem(VOLUME_KEY); const saved=JSON.parse(raw); if(raw!==null&&typeof saved==='number'&&Number.isFinite(saved)&&saved>=0&&saved<=1)volume=saved; } catch (_) {}
   let specialHold=false, fadeFrame=null;
   let music = null, musicPending = null, musicUnavailable = false, muted = false;
   try { muted = host.localStorage.getItem(MUSIC_KEY) === 'true'; } catch (_) {}
@@ -16,7 +19,7 @@
     if (musicPending) return musicPending;
     try {
       if (!music) {
-        music = new host.Audio('musictheme.mp4'); music.loop = true; music.preload = 'none'; music.volume = .35;
+        music = new host.Audio('musictheme.mp4'); music.loop = true; music.preload = 'none'; music.volume = volume;
         music.addEventListener('error',()=>{ musicUnavailable = true; renderMusicControl(); });
       }
       if (!music.paused) return Promise.resolve(true);
@@ -73,7 +76,9 @@
     context = source = gain = null; pending = null;
   });
   host.BackgroundActivitySystem = Object.freeze({
-    MUSIC_KEY, holdSpecial:()=>{specialHold=true;if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;music?.pause();},
+    MUSIC_KEY, VOLUME_KEY,
+    setVolume:value=>{const next=Number(value);if(!Number.isFinite(next))return;volume=Math.max(0,Math.min(1,next));if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;if(music)music.volume=volume;try{host.localStorage.setItem(VOLUME_KEY,JSON.stringify(volume));}catch(_){}},
+    get volume(){return volume;}, holdSpecial:()=>{specialHold=true;if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;music?.pause();},
     releaseSpecial:()=>{
       specialHold=false;
       const resume=()=>{
@@ -81,7 +86,7 @@
         void resumeMusic().then(ok=>{
           if(!ok||specialHold)return;
           const start=host.performance.now();
-          const fade=now=>{if(specialHold||muted){fadeFrame=null;return;}music.volume=.35*Math.min(1,(now-start)/400);if(now-start<400)fadeFrame=host.requestAnimationFrame(fade);else fadeFrame=null;};
+          const fade=now=>{if(specialHold||muted){fadeFrame=null;return;}music.volume=volume*Math.min(1,(now-start)/400);if(now-start<400)fadeFrame=host.requestAnimationFrame(fade);else fadeFrame=null;};
           if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);
           fadeFrame=host.requestAnimationFrame(fade);
         });
@@ -90,7 +95,7 @@
       if(musicPending)void musicPending.finally(resume);else resume();
     },
     configure: options => { bridge = options || {}; }, resumeAudio, resumeMusic,
-    getMusicStatus: () => ({activated,muted,unavailable:musicUnavailable,loop:music?.loop || false,paused:music?.paused ?? true,source:music?.getAttribute("src") || "musictheme.mp4"}),
+    getMusicStatus: () => ({activated,muted,volume,unavailable:musicUnavailable,loop:music?.loop || false,paused:music?.paused ?? true,source:music?.getAttribute("src") || "musictheme.mp4"}),
     getStatus: () => ({ supported: Boolean(audioConstructor()), activated, state: context?.state || 'inactive', silent: true })
   });
 })(window);

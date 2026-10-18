@@ -94,6 +94,22 @@
     return { ...entry, metadata: { ...entry.metadata }, ...POTIONS[id], quantity: entry.quantity, until: data.buffs[id] || 0, remaining: Math.max(0, (data.buffs[id] || 0) - at), pausedRemaining: data.paused[id] || 0, usable: hasOwn(POTIONS, id) };
   }
   function list() { return Object.keys(data.items).map(id => getItem(id)); }
+  // Pure HUD snapshot: expired Super timers can be resolved without writing a save in Sandbox.
+  function activeEffects(at=Date.now()) {
+    const result=[];
+    for(const [id,potion] of Object.entries(POTIONS)) {
+      let until=Number(data.buffs[id])||0;
+      const superId=SUPER_FOR[id],superUntil=superId?(Number(data.buffs[superId])||0):0;
+      if(superUntil>at)continue;
+      if(superId && superUntil && data.paused[id])until=superUntil+data.paused[id];
+      if(until<=at)continue;
+      const baseId=SUPER_BASE[id];
+      result.push({id,name:potion.name,icon:potion.icon,image:data.items[id]?.image||'',stat:potion.stat,bonus:potion.bonus,
+        super:Boolean(baseId),until,remaining:until-at,pausedRemaining:baseId?(data.paused[baseId]||0):0});
+    }
+    return result;
+  }
+
   function quantity(id) { return safeId(id) && hasOwn(data.items, id) ? data.items[id].quantity || 0 : 0; }
   function registerItem(item) {
     if (!item || !safeId(item.id) || hasOwn(POTIONS, item.id)) return false;
@@ -205,5 +221,5 @@
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

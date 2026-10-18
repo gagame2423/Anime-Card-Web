@@ -1578,7 +1578,7 @@ const EXPANSION_CARDS = [
     "image": "assets/cards/akaza.png",
     "passive": {
       "name": "Destructive Demon Art",
-      "description": "Target the enemy with the highest ATK and deal x1.5 damage.\nStarting behind slot 1: swap with slot 1, gain +50% ATK and +25% max HP. Starting in slot 1: each attack also hits a second enemy.\nSurvive fatal hits at 1 HP. Each kill or survived fatal hit grants +10% current ATK. Bleed blocks survival."
+      "description": "Target the enemy with the highest ATK and deal x1.5 damage.\nStarting behind slot 1: swap with slot 1, gain +50% ATK and +25% max HP. Starting in slot 1: each attack also hits a second enemy.\nSurvive only 1 fatal hit at 1 HP per match. This survival and each kill grant +10% current ATK. Bleed blocks survival."
     },
     "requiredWeather": "Malevolent"
   },
@@ -1899,6 +1899,17 @@ CARDS.push(...[
     }
   }
 ]);
+// Normal Tower Floor 200 champion; artwork is supplied by the game owner.
+CARDS.push({
+  id: 'tower-champion-normal-200', name: 'Reagan Ridley', element: 'Electric', rarity: 'Secret',
+  chance: 1692007, requiredWeather: 'Normal', towerType: 'normal', towerFloor: 200,
+  unlockRequirement: 'tower_floor_200_normal', stats: {hp: 200000, atk: 16900},
+  image: 'assets/cards/reaganridley.png',
+  passive: {name: 'Mad Scientist', description:
+    'While supporting, every 3 allied turns create a frontline robot with 10% current max HP / ATK; max 10 active robots per side.\n'+
+    'AI: replace attacks with 100% ATK damage to all enemies. Each kill heals the robot and Reagan for 10% of Reagan’s max HP.\n'+
+    'On reaching the frontline, sacrifice self and grant one random living teammate Robot Armor: 50% damage reduction, +25% ATK; every 2 attacks blast up to 2 random enemies for 50% ATK each.'}
+});
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

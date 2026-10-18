@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261017-quests-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261017-quests-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261018-reagan-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261018-reagan-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -65,10 +65,9 @@
             <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
             <button id="saveManagerOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Export or import save"><span class="nav-icon">⇄</span><span><small>BACKUP</small><strong>Save</strong></span></button>
             <button id="craftingOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚗</span><span><small>UPGRADE</small><strong>Crafting</strong></span></button>
-            <button id="sfxToggleButton" class="ghost-button" type="button" aria-pressed="true">🔊 SFX ON</button>
             <button id="questOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">?</span><span><small>DISCOVER</small><strong>Quests</strong></span></button>
             <button id="evolutionOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">✧</span><span><small>TRANSFORM</small><strong>Evolution</strong></span></button>
-            <button id="musicToggleButton" class="ghost-button" type="button" aria-pressed="false">♫ Music ON</button>
+            <button id="settingsOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚙</span><span><small>PREFERENCES</small><strong>Game Settings</strong></span></button>
             <button id="resetButton" class="ghost-button" type="button">Reset</button>
           </div>
         </details>
@@ -773,10 +772,10 @@
   <div id="timeTrialModeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="timeTrialModeTitle">
     <section class="modal-panel module-modal">
       <header class="modal-header"><div><p class="eyebrow">CHOOSE YOUR CHALLENGE</p><h2 id="timeTrialModeTitle">⏱ Time Trial</h2></div><button class="modal-close" data-close-modal="timeTrialModeModal" type="button" aria-label="Close Time Trial selector">×</button></header>
-      <p class="module-description">Fixed 1-second turns • Speed Battle Potion does not apply</p>
+      <p class="module-description">Normal: 2-second turns • EXP: 1-second turns • Speed Battle Potion does not apply</p>
       <div class="time-trial-mode-options" role="group" aria-label="Time Trial type">
-        <button class="battle-mode-option" type="button" data-time-trial-type="time-trial" aria-pressed="false"><strong>⏱ Normal Time Trial</strong><span>4v4 • 3 minutes per room<br>3 random Minions + 1 Boss • Time Trial Shards<br>Defeat or timeout resets to Room 1</span></button>
-        <button class="battle-mode-option" type="button" data-time-trial-type="exp-time-trial" aria-pressed="false"><strong>✨ EXP Time Trial</strong><span>1v1 • 5 minutes<br>0 ATK EXP Monsters • Costs 1 EXP Time Trial Ticket<br>Ticket is consumed when the battle starts</span></button>
+        <button class="battle-mode-option" type="button" data-time-trial-type="time-trial" aria-pressed="false"><strong>⏱ Normal Time Trial</strong><span>4v4 • 2-second turns • 3 minutes per room<br>3 random Minions + 1 Boss • Time Trial Shards<br>Defeat or timeout resets to Room 1</span></button>
+        <button class="battle-mode-option" type="button" data-time-trial-type="exp-time-trial" aria-pressed="false"><strong>✨ EXP Time Trial</strong><span>1v1 • 1-second turns • 5 minutes<br>0 ATK EXP Monsters • Costs 1 EXP Time Trial Ticket<br>Ticket is consumed when the battle starts</span></button>
       </div>
       <p id="timeTrialModeTickets" class="module-description"></p>
     </section>
@@ -791,13 +790,37 @@
     <section class="modal-panel quest-board" role="dialog" aria-modal="true" aria-labelledby="questTitle">
       <header class="modal-header"><h2 id="questTitle">✦ Quests</h2><button type="button" id="questCloseButton" class="modal-close" aria-label="Close quests">×</button></header>
       <nav class="quest-tabs" data-quest-tabs role="tablist" aria-label="Quest category">
-        <button type="button" role="tab" data-quest-tab="daily">Daily</button><button type="button" role="tab" data-quest-tab="weekly">Weekly</button><button type="button" role="tab" data-quest-tab="story">Story · Card Quests</button><button type="button" role="tab" data-quest-tab="permanent">Permanent</button>
+        <button type="button" role="tab" data-quest-tab="daily">Daily</button><button type="button" role="tab" data-quest-tab="weekly">Weekly</button><button type="button" role="tab" data-quest-tab="story">Story · Card Quests</button>
       </nav>
       <p class="quest-reset" data-quest-reset role="status"></p><p class="quest-buffs" data-quest-buffs></p>
       <div class="quest-board-columns"><div class="quest-board-list" data-quest-list aria-label="Quest list"></div><aside class="quest-board-detail" data-quest-detail aria-label="Quest information"></aside></div>
     </section>
   </div>
-  <div id="craftingModal" class="modal-backdrop hidden"><section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="craftingTitle"><header class="modal-header"><h2 id="craftingTitle">⚗ Potion Crafting</h2><button type="button" class="modal-close" data-close-modal="craftingModal" aria-label="Close crafting">×</button></header><p>Upgrade 10 regular potions into 1 Super Potion. Super bonuses replace the regular potion bonus and pause its timer.</p><div id="craftingGrid" class="module-grid"></div></section></div>
+  <div id="craftingModal" class="modal-backdrop hidden">
+    <section class="modal-panel crafting-modal" role="dialog" aria-modal="true" aria-labelledby="craftingTitle">
+      <header class="modal-header"><h2 id="craftingTitle">✦ Crafting</h2><button type="button" class="modal-close" data-close-modal="craftingModal" aria-label="Close crafting">×</button></header>
+      <div class="crafting-layout">
+        <section class="crafting-selector" aria-label="Item selector">
+          <label class="crafting-search"><span class="sr-only">Search crafting items</span><input data-crafting-search id="craftingSearch" type="search" placeholder="Search..." autocomplete="off"></label>
+          <div id="craftingGrid" class="crafting-grid" data-crafting-grid></div>
+        </section>
+        <section class="crafting-details" aria-label="Item details and requirements">
+          <div class="crafting-detail-scroll">
+            <div class="crafting-item-header"><div data-crafting-visual></div><div class="crafting-item-copy"><h3 data-crafting-title>Select an item</h3><small data-crafting-category></small><p data-crafting-description></p><strong data-crafting-owned></strong></div></div>
+            <section class="crafting-section"><h3>Related Card</h3><div class="crafting-related" data-crafting-related aria-label="Related Card"></div></section>
+            <section class="crafting-section"><h3>Required Items</h3><div class="crafting-ingredients" data-crafting-ingredients aria-label="Required Items"></div></section>
+          </div>
+          <footer class="crafting-footer"><p data-crafting-status role="status"></p><button type="button" class="crafting-craft-button" data-crafting-craft><span>Craft 1x</span><span class="crafting-cost"><i aria-hidden="true">₫</i><span data-crafting-cost>0 VNĐ</span></span></button></footer>
+        </section>
+      </div>
+    </section>
+  </div>
+  <div id="settingsModal" class="modal-backdrop hidden"><section class="modal-panel module-modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><header class="modal-header"><h2 id="settingsTitle">⚙ Game Settings</h2><button type="button" class="modal-close" data-close-modal="settingsModal" aria-label="Close Game Settings">×</button></header><div class="settings-audio-section"><h3>Audio</h3>
+    <div class="settings-audio-toggle"><span>Background Music</span><button id="musicToggleButton" class="ghost-button" type="button" aria-pressed="false">♫ Music ON</button></div>
+    <div class="settings-volume-row"><label for="musicVolumeRange">Music Volume</label><input id="musicVolumeRange" type="range" min="0" max="100" step="1" value="35"><label class="sr-only" for="musicVolumeNumber">Music volume percent</label><input id="musicVolumeNumber" type="number" min="0" max="100" step="1" value="35"><span>%</span></div>
+    <div class="settings-audio-toggle"><span>Special Card SFX</span><button id="sfxToggleButton" class="ghost-button" type="button" aria-pressed="true">SFX ON</button></div>
+    <div class="settings-volume-row"><label for="sfxVolumeRange">SFX Volume</label><input id="sfxVolumeRange" type="range" min="0" max="100" step="1" value="80"><label class="sr-only" for="sfxVolumeNumber">SFX volume percent</label><input id="sfxVolumeNumber" type="number" min="0" max="100" step="1" value="80"><span>%</span></div>
+  </div><label class="settings-switch-row" for="showActivePotionsHudToggle"><span><strong>Show Active Potions HUD</strong><small>Show active potion icons and remaining time at the bottom-right.</small></span><input id="showActivePotionsHudToggle" type="checkbox" role="switch" checked></label></section></div>
   <div id="evolutionModal" class="modal-backdrop hidden"><section class="modal-panel module-modal evolution-modal" role="dialog" aria-modal="true" aria-labelledby="evolutionTitle"><header class="modal-header"><h2 id="evolutionTitle">✧ Evolution</h2><button type="button" id="evolutionCloseButton" class="modal-close" aria-label="Close evolution">×</button></header><p id="evolutionStatus" role="status">Choose the exact mutation variant to sacrifice.</p><div id="evolutionGrid" class="module-shop-grid"></div></section></div>
 
   <div id="bossEventShopModal" class="modal-backdrop hidden">
@@ -824,31 +847,35 @@
     </section>
   </div>
 
-  <script defer src="./startup.js?v=20261017-quests-1"></script>
-  <script defer src="./mutations.js?v=20261017-quests-1"></script>
-  <script defer src="./weathers.js?v=20261017-quests-1"></script>
-  <script defer src="./cards.js?v=20261017-quests-1"></script>
-  <script defer src="./elements.js?v=20261017-quests-1"></script>
-  <script defer src="./background.js?v=20261017-quests-1"></script>
-  <script defer src="./levels.js?v=20261017-quests-1"></script>
-  <script defer src="./roll_performance.js?v=20261017-quests-1"></script>
-  <script defer src="./roll_view.js?v=20261017-quests-1"></script>
-  <script defer src="./grimoire.js?v=20261017-quests-1"></script>
-  <script defer src="./yuno.js?v=20261017-quests-1"></script>
-  <script defer src="./requiem.js?v=20261017-quests-1"></script>
-  <script defer src="./passives.js?v=20261017-quests-1"></script>
-  <script defer src="./inventory.js?v=20261017-quests-1"></script>
-  <script defer src="./tower.js?v=20261017-quests-1"></script>
-  <script defer src="./timetrial.js?v=20261017-quests-1"></script>
-  <script defer src="./raid.js?v=20261017-quests-1"></script>
-  <script defer src="./boss_event.js?v=20261017-quests-1"></script>
-  <script defer src="./achievements.js?v=20261017-quests-1"></script>
-  <script defer src="./evolution.js?v=20261017-quests-1"></script>
-  <script defer src="./quest.js?v=20261017-quests-1"></script>
-  <script defer src="./quests.js?v=20261017-quests-1"></script>
-  <script defer src="./crafting.js?v=20261017-quests-1"></script>
-  <script defer src="./drop_audio.js?v=20261017-quests-1"></script>
-  <script defer src="./sandbox.js?v=20261017-quests-1"></script>
-  <script defer src="./app.js?v=20261017-quests-1"></script>
+  <script defer src="./startup.js?v=20261018-reagan-1"></script>
+  <script defer src="./mutations.js?v=20261018-reagan-1"></script>
+  <script defer src="./weathers.js?v=20261018-reagan-1"></script>
+  <script defer src="./cards.js?v=20261018-reagan-1"></script>
+  <script defer src="./elements.js?v=20261018-reagan-1"></script>
+  <script defer src="./background.js?v=20261018-reagan-1"></script>
+  <script defer src="./levels.js?v=20261018-reagan-1"></script>
+  <script defer src="./roll_performance.js?v=20261018-reagan-1"></script>
+  <script defer src="./roll_view.js?v=20261018-reagan-1"></script>
+  <script defer src="./grimoire.js?v=20261018-reagan-1"></script>
+  <script defer src="./yuno.js?v=20261018-reagan-1"></script>
+  <script defer src="./requiem.js?v=20261018-reagan-1"></script>
+  <script defer src="./reagan.js?v=20261018-reagan-1"></script>
+  <script defer src="./passives.js?v=20261018-reagan-1"></script>
+  <script defer src="./inventory.js?v=20261018-reagan-1"></script>
+  <script defer src="./tower.js?v=20261018-reagan-1"></script>
+  <script defer src="./timetrial.js?v=20261018-reagan-1"></script>
+  <script defer src="./raid.js?v=20261018-reagan-1"></script>
+  <script defer src="./boss_event.js?v=20261018-reagan-1"></script>
+  <script defer src="./achievements.js?v=20261018-reagan-1"></script>
+  <script defer src="./evolution.js?v=20261018-reagan-1"></script>
+  <script defer src="./quest.js?v=20261018-reagan-1"></script>
+  <script defer src="./quests.js?v=20261018-reagan-1"></script>
+  <script defer src="./crafting.js?v=20261018-reagan-1"></script>
+  <script defer src="./drop_audio.js?v=20261018-reagan-1"></script>
+  <script defer src="./sandbox.js?v=20261018-reagan-1"></script>
+  <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
+  <script defer src="./potion_hud.js?v=20261018-reagan-1"></script>
+  <script defer src="./settings.js?v=20261018-reagan-1"></script>
+  <script defer src="./app.js?v=20261018-reagan-1"></script>
 </body>
 </html>
