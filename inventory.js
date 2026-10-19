@@ -58,7 +58,7 @@
       quantity: countOf(typeof raw === 'number' || typeof raw === 'string' ? raw : entry.quantity ?? entry.count),
       metadata: entry.metadata && typeof entry.metadata === 'object' ? entry.metadata : {} };
   }
-  function blank() { return { version: 3, paused: {}, items: Object.fromEntries(Object.keys(POTIONS).map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
+  function blank() { return { version: 3, receipts: {}, paused: {}, items: Object.fromEntries(Object.keys(POTIONS).map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
   function read() {
     let saved;
     try { saved = sanitizeSave(JSON.parse(host.localStorage?.getItem(KEY) || 'null')); } catch (_) { saved = null; }
@@ -71,6 +71,7 @@
         if (Number.isSafeInteger(until) && until > 0) result.buffs[id] = until;
       }
       for(const id of Object.values(SUPER_BASE)) { const ms=Number(saved.paused?.[id]); if(Number.isSafeInteger(ms)&&ms>0)result.paused[id]=ms; }
+      for(const [stream,receipt]of Object.entries(saved.receipts||{}))if(/^[a-z0-9_]{1,40}$/.test(stream)&&typeof receipt==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(receipt))result.receipts[stream]=receipt;
       result.misses = Math.min(10, countOf(saved.misses));
     }
     return result;
@@ -128,6 +129,16 @@
     data.items[id].quantity = Math.min(Number.MAX_SAFE_INTEGER, before + countOf(count));
     if (persist()) return true;
     data.items[id].quantity = before; return false;
+  }
+  // Bounded per-source receipt: item count and receipt commit in the same store.
+  function grantOnce(stream,receipt,id,count=1){
+    if(!/^[a-z0-9_]{1,40}$/.test(stream)||typeof receipt!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(receipt)||!safeId(id)||!Number.isSafeInteger(count)||count<1)return false;
+    if(data.receipts[stream]===receipt)return true;
+    const before=JSON.stringify(data);
+    if(!hasOwn(data.items,id))data.items[id]=normalizeItem(id);
+    data.items[id].quantity=Math.min(Number.MAX_SAFE_INTEGER,quantity(id)+count);
+    data.receipts[stream]=receipt;
+    if(persist())return true;data=JSON.parse(before);return false;
   }
   function remove(id, count = 1) {
     const amount = countOf(count);
@@ -224,5 +235,5 @@
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

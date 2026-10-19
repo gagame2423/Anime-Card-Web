@@ -5,6 +5,7 @@
   const MODES = Object.freeze({ normal: 'time-trial', exp: 'exp-time-trial' });
   const TURN_MS = Object.freeze({ [MODES.normal]: 2000, [MODES.exp]: 1000 });
   function turnMs(mode) { return TURN_MS[mode] || 2000; }
+  const EXP_RATE = Object.freeze({min:.001,max:.015});
   const LIMITS = Object.freeze({ [MODES.normal]: 180000, [MODES.exp]: 300000 });
   const TICKET_ID = 'exp_time_trial_ticket';
   const TICKET = Object.freeze({ id: TICKET_ID, name: 'EXP Time Trial Ticket', type: 'ticket',
@@ -131,14 +132,17 @@
         const info = bridge.getLevelInfo?.(run.cardId);
         if (!info) throw new Error('Không tìm thấy thông số EXP của thẻ đang luyện.');
         if (info.level < host.CardLevelSystem.MAX_LEVEL) {
-        const baseRate = .001 + .014 * Math.max(0, Math.min(1, Number(random()) || 0));
-        const rate = baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1);
+        const baseRate = EXP_RATE.min + (EXP_RATE.max-EXP_RATE.min) * Math.max(0, Math.min(1, Number(random()) || 0));
+        const rate = Math.max(EXP_RATE.min,Math.min(EXP_RATE.max,baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1)));
           const exact = info.required * rate + (data.xpCarry[run.cardId] || 0);
-          const amount = Math.floor(exact), carry = exact - amount;
+          const rounded = Math.floor(exact), carry = exact - rounded;
+          // Integer EXP must stay inside the final range as well. Requirements
+          // are always >=150, so this integer interval is non-empty.
+          const amount = Math.max(Math.ceil(info.required*EXP_RATE.min),Math.min(Math.floor(info.required*EXP_RATE.max),rounded));
           const result = bridge.grantExperience?.(run.cardId, amount, run.owner);
           if (!result) throw new Error('Không thể lưu EXP. Lượt thử đã dừng để bảo vệ tiến độ.');
           data.xpCarry[run.cardId] = result.level >= host.CardLevelSystem.MAX_LEVEL ? 0 : carry;
-          run.experience += result.gained; run.progressPercent += rate * 100; run.levelUps += result.levelUps;
+          run.experience += result.gained; run.progressPercent += amount / info.required * 100; run.levelUps += result.levelUps;
         }
         run.monsters++;
       } else if (!isExp(battle.mode) && unit.isTrialRoomEnemy) {
@@ -231,7 +235,7 @@
     }
   }
   function reset() { detach(); data = fresh(); registerTicket(); persist(); }
-  host.TimeTrialSystem = Object.freeze({ KEY, MODES, TURN_MS, turnMs, LIMITS, TICKET_ID, TICKET, SHOP_ITEMS,
+  host.TimeTrialSystem = Object.freeze({ KEY, MODES, TURN_MS, turnMs, EXP_RATE, LIMITS, TICKET_ID, TICKET, SHOP_ITEMS,
     configure, isMode, isExp, canEnter, roomStats, shardRange, enemies, start, prepareAfterEntry, afterTurn, finish, abort,
     expired, remaining, checkDeadline, detach, purchase, renderShop, validSave, reset, flush: persist,
     getXpCarry: id => data.xpCarry[id] || 0,

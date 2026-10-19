@@ -53,7 +53,7 @@
   function labelField(label, input) { const node = create('label'); node.append(create('span',label),input); return node; }
   function selectCard(config, side) {
     const select = create('select'); select.setAttribute('aria-label', `${side} card`);
-    for (const c of [...cards()].sort((a,b)=>a.name.localeCompare(b.name))) { const option = create('option',c.name); option.value = c.id; option.selected = c.id === config.cardId; select.append(option); }
+    for (const c of [...cards()].filter(c=>host.CategorySystem.matches(c,config.categoryFilter)).sort((a,b)=>a.name.localeCompare(b.name))) { const option = create('option',c.name); option.value = c.id; option.selected = c.id === config.cardId; select.append(option); }
     select.addEventListener('change',()=>{ config.cardId=select.value; config.hp=null;config.atk=null;renderSetup(side); }); return select;
   }
   function mutationSelect(config, index, side) {
@@ -76,7 +76,10 @@
       const box=create('article',undefined,'sandbox-slot');box.dataset.slotUid=String(config.uid);
       const head=create('div',undefined,'sandbox-slot-head');head.append(create('strong',`Slot ${index+1}`));
       const remove=create('button','Remove','ghost-button');remove.type='button';remove.addEventListener('click',()=>{setup[side].splice(index,1);renderSetup(side);});head.append(remove);box.append(head);
-      box.append(labelField('Card (full Index)',selectCard(config,side)));
+      const category=create('select');host.CategorySystem.mount(category);category.value=config.categoryFilter||'all';
+      category.setAttribute('aria-label',side+' slot '+(index+1)+' Category');
+      category.addEventListener('change',()=>{config.categoryFilter=category.value;const pool=cards().filter(card=>host.CategorySystem.matches(card,config.categoryFilter));if(!pool.some(card=>card.id===config.cardId)&&pool.length){config.cardId=pool[0].id;config.hp=null;config.atk=null;}renderSetup(side);});
+      box.append(labelField('Category',category),labelField('Card (full Index)',selectCard(config,side)));
       const mutations=create('div',undefined,'sandbox-fields');mutations.append(labelField('Mutation 1',mutationSelect(config,0,side)),labelField('Mutation 2',mutationSelect(config,1,side)));box.append(mutations);
       const base=defaults(config),fields=create('div',undefined,'sandbox-fields sandbox-stat-fields');
       fields.append(labelField('Level',numericInput(config.level,`${side} slot ${index+1} Level`,1,host.CardLevelSystem.MAX_LEVEL,n=>{config.level=host.CardLevelSystem.normalizeLevel(n);config.hp=null;config.atk=null;renderSetup(side);})),labelField('Max HP',numericInput(config.hp ?? base.hp,`${side} slot ${index+1} HP`,1,STAT_LIMIT,n=>{config.hp=Math.floor(n);renderSetup(side);})),labelField('ATK',numericInput(config.atk ?? base.atk,`${side} slot ${index+1} ATK`,0,STAT_LIMIT,n=>{config.atk=Math.floor(n);renderSetup(side);})));

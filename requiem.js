@@ -78,7 +78,7 @@
   function chain(bs,u,target,options={}){
    const result=options.grimoireInitialResult || api.attack(bs,u,target,{...options,requiemChain:true});
    if(result.skipped||result.outOfTurn||options.isFollowUp)return result;
-   while(alive(u)&&has(u,SPR)&&enemies(bs,u).length&&random()<.33){
+   while(alive(u)&&has(u,SPR)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.33)){
     target=alive(target)?target:api.enemyFront(bs,u);
     const next=api.attack(bs,u,target,{...options,isFollowUp:true,requiemChain:true,chainDepth:0});if(next.skipped||next.outOfTurn)break;
    }

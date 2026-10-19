@@ -216,6 +216,8 @@ const els = {
   battleFighterGrid: document.getElementById("battleFighterGrid"),
   cardSearchInput: document.getElementById("cardSearchInput"),
   cardSortSelect: document.getElementById("cardSortSelect"),
+  battleCategoryFilter: document.getElementById("battleCategoryFilter"),
+  collectionCategoryFilter: document.getElementById("collectionCategoryFilter"),
   battleElementFilter: document.getElementById("battleElementFilter"),
   collectionElementFilter: document.getElementById("collectionElementFilter"),
   battleVariantGrid: document.getElementById("battleVariantGrid"),
@@ -1997,6 +1999,7 @@ function getFilteredCards() {
   const element = els.collectionElementFilter?.value || "all";
   const filteredCards = ALL_CARDS.filter(card => {
     if (element !== "all" && card.element !== element) return false;
+    if (!window.CategorySystem.matches(card,els.collectionCategoryFilter?.value)) return false;
     try {
       const normalizedId = normalizeCardId(card?.id);
       const safeName = String(card?.name || "Unknown Card");
@@ -2008,7 +2011,7 @@ function getFilteredCards() {
         .map(id => String(MUTATION_BY_ID?.[id]?.name || id));
       const mutationText = [...ownedMutationText, ...baseMutationText].join(" ").toLowerCase();
 
-      const searchText = `${safeName} ${safePassive} ${mutationText}`.toLowerCase();
+      const searchText = `${safeName} ${safePassive} ${mutationText} ${card.category.join(" ")}`.toLowerCase();
       const searchMatch = !query || searchText.includes(query);
 
       return searchMatch && cardMatchesMutationFilter({ ...card, id: normalizedId }, filter);
@@ -2029,6 +2032,7 @@ function getFilteredCards() {
       const nameA = String(a?.name || "Unknown Card");
       const nameB = String(b?.name || "Unknown Card");
 
+      if (sort === "category") return window.CategorySystem.compare(a,b) || nameA.localeCompare(nameB);
       if (sort === "element") return window.ElementSystem.compare(a, b) || nameA.localeCompare(nameB);
       if (sort === "name") return nameA.localeCompare(nameB);
       if (sort === "atk") return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0);
@@ -2396,7 +2400,7 @@ function salvageVariantCopies(cardId, variantKey, copies = 1) {
   const cash = Math.max(0, cashPerCopy * actualRemoved);
   const scaledCash = getScaledCoinReward(cash);
   state.currency = Math.max(0, Number(state.currency) || 0) + scaledCash;
-  window.AchievementSystem?.recordCurrencyEarned(scaledCash);
+  recordEarnedCurrency(scaledCash);
   refreshAchievements();
   return { removed: actualRemoved, cash: scaledCash, baseCash: cash };
 }
@@ -2810,7 +2814,7 @@ function getBattleTurnMs() { return isTimeTrialBattle() ? window.TimeTrialSystem
 function getBattleModeLabel() {
   const timing = `${getBattleTurnMs() / 1000}s TURNS`;
   if (isBossEventBattle()) return `${window.BossEventSystem.TYPES[getBossEventType()].name.toUpperCase()} • DIFF ${battleState?.bossEvent?.difficulty || window.BossEventSystem.snapshot(getBossEventType()).difficulty} • 5 vs 1 • ${timing}`;
-  if (isRaidBattle()) return `MARINE FORD RAID • DIFF ${battleState?.raid?.difficulty || window.RaidSystem.snapshot(getRaidType()).difficulty} • 4 vs 10 • ${timing}`;
+  if (isRaidBattle()) return `${window.RaidSystem.TYPES[getRaidType()].name.toUpperCase()} • DIFF ${battleState?.raid?.difficulty || window.RaidSystem.snapshot(getRaidType()).difficulty} • 4 vs 10 • ${timing}`;
   if (isTimeTrialBattle()) return `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP TIME TRIAL • 1V1' : `TIME TRIAL • ROOM ${battleState?.trial?.room || window.TimeTrialSystem.room} • 4V4`} • ${timing}`;
   return isTowerBattle() ? `TOWER ${battleState?.towerFloor || window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1} • 4V4 • ${timing}` : `${isOneVsOneBattle() ? '1V1' : '4V4'} • ${timing}`;
 }
@@ -3022,12 +3026,13 @@ function getFilteredSortedBattleCards() {
   const query = String(els.cardSearchInput?.value || '').trim().toLowerCase();
   const sortMode = String(els.cardSortSelect?.value || 'atk');
   const element = els.battleElementFilter?.value || 'all';
-  const cards = getUnlockedBattleCards().filter(card => (element === 'all' || card.element === element) && (!query || card.name.toLowerCase().includes(query)));
+  const cards = getUnlockedBattleCards().filter(card => (element === 'all' || card.element === element) && window.CategorySystem.matches(card,els.battleCategoryFilter?.value) && (!query || `${card.name} ${card.category.join(' ')}`.toLowerCase().includes(query)));
   // Compute once per card per render, never inside the sort comparator.
   const stat = sortMode === 'hp' ? 'hp' : 'atk';
   const values = new Map(cards.map(card => [card.id, getStrongestBattleVariant(card, stat)?.display[stat] || 0]));
   cards.sort((a,b) => {
     const name = () => a.name.localeCompare(b.name);
+    if (sortMode === 'category') return window.CategorySystem.compare(a,b) || name();
     if (sortMode === 'element') return window.ElementSystem.compare(a,b) || name();
     if (sortMode === 'name') return name();
     if (sortMode === 'rarity') return getBattleCardRarityValue(b) - getBattleCardRarityValue(a) || (Number(b.chance)||0)-(Number(a.chance)||0) || name();
@@ -3248,7 +3253,7 @@ function renderBattleModePicker() {
   renderTowerControls();
   renderTimeTrialControls(); renderRaidControls(); renderBossEventControls();
   if (els.battleStartButton) {
-    els.battleStartButton.textContent = isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? 'Enter Marine Ford Raid • 1 Key' : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start Time Trial Room ${window.TimeTrialSystem.room}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+    els.battleStartButton.textContent = isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • 1 Key` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start Time Trial Room ${window.TimeTrialSystem.room}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
   }
 }
 
@@ -3891,7 +3896,7 @@ function finishBattle(playerWon) {
       }));
       const experience = cardExperienceRewards.reduce((sum, entry) => sum + entry.experience, 0);
       state.currency = Math.max(0, Number(state.currency) || 0) + reward;
-      window.AchievementSystem?.recordCurrencyEarned(reward);
+      recordEarnedCurrency(reward);
       window.AchievementSystem?.recordBattleWin();
       const dropRateBonus = Number.isFinite(Number(rewardProfile.dropRateBonus)) ? Math.max(0, Number(rewardProfile.dropRateBonus)) : 0;
       state.experience = Math.max(0, Number(state.experience) || 0) + experience;
@@ -4287,11 +4292,12 @@ function renderRaidControls() {
   if (!raid) return;
   const controls = document.getElementById('raidControls'); controls?.classList.toggle('hidden', !isRaidBattle());
   const type = getRaidType(), progress = raid.snapshot(type), range = raid.coinRange(progress.difficulty);
+  const typeSelect=document.getElementById('raidTypeSelect');if(typeSelect)typeSelect.disabled=isBattleMatchActive();
   const slider = document.getElementById('raidDifficulty'); if (!controls || !slider) return; slider.value = progress.difficulty; slider.disabled = isBattleMatchActive();
   syncDifficultyNumber('raid', progress.difficulty);
   setViewText('raidDifficultyValue', `${progress.difficulty} • Enemy Lv.${progress.difficulty}`);
-  setViewText('raidBalances', `${window.InventorySystem.quantity(raid.KEY_ITEM.id)} Keys • ${progress.coins.toLocaleString('en-US')} Coins • Team HP/ATK +${progress.upgradeLevel}%`);
-  setViewText('raidRules', `4 player cards vs 10 preset bosses • 1 Key per entry • Victory: ${range.min}–${range.max} Marine Ford Coins • ${(raid.secretChance(progress.difficulty) * 100).toFixed(2)}% secret roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`);
+  setViewText('raidBalances', `${window.InventorySystem.quantity(raid.TYPES[type].keyId)} Keys • ${progress.coins.toLocaleString('en-US')} Coins • Team HP/ATK +${progress.upgradeLevel}%`);
+  setViewText('raidRules', `4 player cards vs 10 preset bosses • 1 Key per entry • Victory: ${range.min}–${range.max} ${raid.TYPES[type].coinName} • ${((type==='holy_grail'?raid.excaliburChance(progress.difficulty):raid.secretChance(progress.difficulty)) * 100).toFixed(2)}% ${type==='holy_grail'?'Excalibur Sword':'secret card'} roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`);
   const list = document.getElementById('raidEnemyPreview'); if (!list) return; list.replaceChildren();
   for (const enemy of raid.preview(type)) { const li = document.createElement("li"); li.textContent = `${enemy.card.name} • Lv.${enemy.level} • HP ${enemy.hpMin.toLocaleString("en-US")}–${enemy.hpMax.toLocaleString("en-US")} • ATK ${enemy.atkMin.toLocaleString("en-US")}–${enemy.atkMax.toLocaleString("en-US")}`; list.append(li); }
   if (isRaidBattle() && !isBattleMatchActive()) els.battleStartButton.disabled = !isBattleSetupValid() || !raid.canEnter(type);
@@ -4300,7 +4306,7 @@ function renderRaidControls() {
 function renderRaidShop() {
   const raid = window.RaidSystem, type = getRaidType(), progress = raid.snapshot(type);
   setViewText('raidShopTitle', `${raid.TYPES[type].name} Shop`);
-  setViewText('raidShopBalance', `${progress.coins.toLocaleString('en-US')} Marine Ford Coins • Team HP/ATK +${progress.upgradeLevel}%`);
+  setViewText('raidShopBalance', `${progress.coins.toLocaleString('en-US')} ${raid.TYPES[type].coinName} • Team HP/ATK +${progress.upgradeLevel}%`);
   raid.renderShop(document.getElementById('raidShopGrid'), type, () => {
     renderRaidShop(); renderRaidControls(); renderPotionInventory();
     if (battleState && !isBattleMatchActive()) renderBattleSelection();
@@ -4320,7 +4326,7 @@ function finishRaidBattle(won) {
   const secret = summary.secret ? getCardById(summary.secret.cardId) : null;
   const mutationLabel = summary.secret?.mutationIds.length ? ` [${summary.secret.mutationIds.map(id => MUTATION_BY_ID[id]?.name || id).join(' + ')}]` : '';
   const body = document.getElementById('raidSummary');
-  body.textContent = `Marine Ford Raid • Difficulty ${summary.difficulty}\nRaid Coins: +${summary.coins} • Drop x${(summary.dropMultiplier || 1).toFixed(2)}\n${secret ? `Exclusive card: ${secret.name}${mutationLabel}\n` : ''}No VNĐ • No EXP • No ordinary drops${summary.error ? `\n${summary.error}` : ''}`; body.classList.remove('hidden');
+  body.textContent = `${window.RaidSystem.TYPES[summary.type].name} • Difficulty ${summary.difficulty}\nRaid Coins: +${summary.coins} • Drop x${(summary.dropMultiplier || 1).toFixed(2)}\n${secret ? `Exclusive card: ${secret.name}${mutationLabel}\n` : ''}${summary.item ? `Excalibur Sword +${summary.item.quantity}\n` : ''}No VNĐ • No EXP • No ordinary drops${summary.error ? `\n${summary.error}` : ''}`; body.classList.remove('hidden');
   document.getElementById('raidResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '⚓ RAID COMPLETE' : '⚓ RAID ENDED';
   els.battleResultText.textContent = summary.error || (summary.won ? 'The entire boss lineup and all remaining enemies were defeated.' : 'Your collection is preserved. A new entry costs another Key.');
@@ -4330,7 +4336,7 @@ function finishRaidBattle(won) {
   els.battleResultCash.textContent = '0 VNĐ'; els.battleResultExp.textContent = '0 EXP'; els.battleResultDropRate.textContent = '0%'; els.battleResultLossStatus.textContent = 'NONE';
   refreshAchievements(); updateStats(); renderCollection(); renderRaidControls(); renderPotionInventory();
   if (!document.getElementById('raidShopModal')?.classList.contains('hidden')) renderRaidShop();
-  const replayable = canReplayBattleTeam(); els.battleAutoAgainButton.disabled = !replayable; els.battleAutoAgainButton.textContent = replayable ? 'Raid Again • 1 Key' : 'Need a Marine Ford Raid Key';
+  const replayable = canReplayBattleTeam(); els.battleAutoAgainButton.disabled = !replayable; els.battleAutoAgainButton.textContent = replayable ? 'Raid Again • 1 Key' : `Need ${window.InventorySystem.getItem(window.RaidSystem.TYPES[getRaidType()].keyId)?.name || 'Raid Key'}`;
   els.battleArena.classList.add('hidden'); setBattleModalLock(false); els.battleVictory.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat'); els.battleVictory.classList.add(summary.won ? 'battle-result--victory' : 'battle-result--defeat'); els.battleVictory.setAttribute('aria-hidden', 'false');
   if (replayable) scheduleAutoContinueBattle();
 }
@@ -4465,8 +4471,8 @@ function renderTowerShop() {
 // A client-side embedded key cannot provide server-grade anti-cheat.
 // ============================================================
 const SECRET_SALT = 'ANIME_CARD_RNG_SECURE_SECRET_KEY_2026';
-const SAVE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-const SAVE_COOLDOWN_KEYS = Object.freeze({ export: 'save_cooldown_export', import: 'save_cooldown_import' });
+// Accepted only for old-save compatibility; never exported, enforced or updated.
+const LEGACY_SAVE_TRANSFER_KEYS = Object.freeze(['save_cooldown_export','save_cooldown_import']);
 const SAVE_TRANSFER_LOCK = 'anime_card_rng_save_transfer';
 const SAVE_DATA_MAX_BYTES = 10 * 1024 * 1024;
 const SAVE_FILE_MAX_BYTES = 32 * 1024 * 1024;
@@ -4531,41 +4537,13 @@ async function decryptGameSave(encoded) {
     return payload.data;
   } catch (error) { if (error.code === 'SAVE_CRYPTO_ERROR') throw error; throw saveIntegrityError(); }
 }
-function readSaveActionTimestamp(action) {
-  const key = SAVE_COOLDOWN_KEYS[action];
-  if (!key) throw new Error('Thao tác chuyển save không hợp lệ.');
-  const raw = localStorage.getItem(key);
-  if (raw === null) return 0;
-  const value = Number(raw);
-  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(value) || value < 0) throw new Error('Lịch sử cooldown chuyển save không hợp lệ. Thao tác đã bị chặn.');
-  return value;
-}
-function getSaveCooldownRemaining(action, at = Date.now()) {
-  const lastAction = readSaveActionTimestamp(action);
-  return lastAction > 0 ? Math.max(0, lastAction + SAVE_COOLDOWN_MS - at) : 0;
-}
-function formatSaveCooldown(remainingMs) {
-  const daysExact = (remainingMs / 86400000).toLocaleString('vi-VN', { maximumFractionDigits: 8 });
-  let seconds = Math.ceil(remainingMs / 1000);
-  const days = Math.floor(seconds / 86400); seconds %= 86400;
-  const hours = Math.floor(seconds / 3600); seconds %= 3600;
-  const minutes = Math.floor(seconds / 60); seconds %= 60;
-  return `${daysExact} ngày (${days} ngày ${hours} giờ ${minutes} phút ${seconds} giây)`;
-}
-function assertSaveCooldownAllowed(action) {
-  const remaining = getSaveCooldownRemaining(action);
-  if (remaining > 0) throw new Error(`Chưa thể ${action === 'export' ? 'xuất' : 'nhập'} save. Còn ${formatSaveCooldown(remaining)} trong thời gian chờ 7 ngày.`);
-}
 function showSaveTransferError(error) {
   const message = error?.message || String(error);
   setSaveTransferStatus(message, true); window.alert(message);
 }
-function renderSaveTransferCooldowns() {
-  for (const action of ['export', 'import']) {
-    const label = document.getElementById(action === 'export' ? 'saveExportCooldown' : 'saveImportCooldown');
-    if (!label) continue;
-    try { const remaining = getSaveCooldownRemaining(action); label.textContent = remaining > 0 ? `Còn ${formatSaveCooldown(remaining)}` : 'Có thể thực hiện • cooldown riêng 7 ngày'; }
-    catch (error) { label.textContent = error.message; }
+function renderSaveTransferAvailability() {
+  for (const id of ['saveExportAvailability','saveImportAvailability']) {
+    const label=document.getElementById(id);if(label)label.textContent='Không có thời gian chờ giữa các lần chuyển save.';
   }
 }
 function setSaveTransferBusy(busy) {
@@ -4582,11 +4560,10 @@ async function withSaveTransfer(action, operation) {
     if (!navigator.locks?.request) throw new Error('Trình duyệt chưa hỗ trợ Web Locks để khóa chuyển save giữa các tab. Thao tác đã bị chặn an toàn.');
     return await navigator.locks.request(SAVE_TRANSFER_LOCK, { ifAvailable: true }, async lock => {
       if (!lock) throw new Error('Một tab khác đang chuyển save. Vui lòng đợi rồi thử lại.');
-      assertSaveCooldownAllowed(action);
       return await operation();
     });
   } catch (error) { showSaveTransferError(error); return false; }
-  finally { setSaveTransferBusy(false); renderSaveTransferCooldowns(); }
+  finally { setSaveTransferBusy(false); renderSaveTransferAvailability(); }
 }
 
 // ============================================================
@@ -4594,7 +4571,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.EquipmentSystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, SAVE_COOLDOWN_KEYS.export, SAVE_COOLDOWN_KEYS.import, AUTO_CONTINUE_STORAGE_KEY];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.EquipmentSystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4607,31 +4584,22 @@ function buildGameSaveExport() {
   const storage = {};
   for (const key of getGameSaveKeys()) {
     const value = localStorage.getItem(key);
-    if (value !== null) storage[key] = Object.values(SAVE_COOLDOWN_KEYS).includes(key) ? readSaveActionTimestamp(key === SAVE_COOLDOWN_KEYS.export ? 'export' : 'import') : JSON.parse(value);
+    if (value !== null) storage[key] = JSON.parse(value);
   }
   return { format: 'anime-card-rng-save', version: 1, exportedAt: new Date().toISOString(), storage };
 }
 async function exportGameSave() {
   return withSaveTransfer('export', async () => {
     const bundle = buildGameSaveExport(), actionAt = Date.now();
-    bundle.storage[SAVE_COOLDOWN_KEYS.export] = actionAt;
     const protectedText = await encryptGameSave(JSON.stringify(bundle));
-    assertSaveCooldownAllowed('export');
     const blob = new Blob([protectedText], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob), anchor = document.createElement('a');
-    const previousTimestamp = localStorage.getItem(SAVE_COOLDOWN_KEYS.export);
     anchor.href = url; anchor.download = `anime-card-save-${new Date(actionAt).toISOString().slice(0, 10)}.acrsave`;
     document.body.append(anchor);
-    try {
-      // Reserve persistence before dispatch; rollback if download dispatch fails.
-      localStorage.setItem(SAVE_COOLDOWN_KEYS.export, String(actionAt));
-      anchor.click();
-    } catch (error) {
-      try { if (previousTimestamp === null) localStorage.removeItem(SAVE_COOLDOWN_KEYS.export); else localStorage.setItem(SAVE_COOLDOWN_KEYS.export, previousTimestamp); }
-      catch (_) { throw new Error('Không thể khôi phục lịch sử cooldown sau lỗi xuất save.'); }
-      throw new Error('Không thể xuất save: ' + error.message);
-    } finally { anchor.remove(); window.setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 1000); }
-    setSaveTransferStatus('Đã tạo và gửi tệp .acrsave tới trình duyệt. Lần xuất tiếp theo sau 7 ngày; thời gian chờ nhập được tính riêng.');
+    try { anchor.click(); }
+    catch (error) { throw new Error('Không thể xuất save: ' + error.message); }
+    finally { anchor.remove(); window.setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 1000); }
+    setSaveTransferStatus('Đã tạo và gửi tệp .acrsave tới trình duyệt. Có thể xuất hoặc nhập tiếp ngay.');
     return true;
   });
 }
@@ -4641,7 +4609,6 @@ function validateSaveRecord(key, value) {
   const number = (item, label, integer = true) => ensure((typeof item === 'number' || (typeof item === 'string' && item.trim() !== '')) && Number.isFinite(Number(item)) && Number(item) >= 0 && (!integer || Number.isSafeInteger(Number(item))), `${label} must be a nonnegative ${integer ? 'integer' : 'number'}.`);
   const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
   const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
-  if (Object.values(SAVE_COOLDOWN_KEYS).includes(key)) { number(value, 'thời điểm chuyển save'); return value; }
   if ([window.BackgroundActivitySystem.VOLUME_KEY, window.DropAudioSystem.VOLUME_KEY].includes(key)) { ensure(typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1, 'Audio volume must be between 0 and 1.'); return value; }
   if (key === AUTO_CONTINUE_STORAGE_KEY || key === (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card') || key === window.BackgroundActivitySystem.MUSIC_KEY || key === window.DropAudioSystem.KEY || key === window.PotionHudSystem.KEY) { ensure(typeof value === 'boolean', 'Auto Continue must be a boolean.'); return value; }
   ensure(object(value), 'expected a JSON object.');
@@ -4686,6 +4653,7 @@ function validateSaveRecord(key, value) {
       } else number(entry, 'item quantity');
     }
     if ('buffs' in value) counts(value.buffs, 'potion expiry');
+    if ('receipts' in value) { ensure(object(value.receipts),'invalid item receipts'); for(const [stream,receipt]of Object.entries(value.receipts))ensure(/^[a-z0-9_]{1,40}$/.test(stream)&&typeof receipt==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(receipt),'invalid item receipt'); }
     if ('paused' in value) counts(value.paused, 'paused potion duration');
     if ('misses' in value) number(value.misses, 'pity');
   } else if (key === window.TowerSystem.KEY) {
@@ -4742,11 +4710,11 @@ function parseGameSaveImport(text) {
     if (file.format !== 'anime-card-rng-save' || file.version !== 1 || !object(file.storage)) throw new Error('Unsupported save format or version.');
     storage = file.storage;
     const keys = getGameSaveKeys();
-    for (const key of Object.keys(storage)) if (!keys.includes(key)) throw new Error(`Unsupported game store: ${key}`);
+    for (const key of Object.keys(storage)) if (!keys.includes(key) && !LEGACY_SAVE_TRANSFER_KEYS.includes(key)) throw new Error(`Unsupported game store: ${key}`);
     for (const key of keys.slice(0, 4)) if (!(key in storage)) throw new Error('The save is incomplete: a game data store is missing.');
   } else { throw new Error('Save bảo vệ phải chứa đầy đủ gói dữ liệu game.'); }
   const result = {};
-  for (const [key, entry] of Object.entries(storage)) result[key] = JSON.stringify(validateSaveRecord(key, entry));
+  for (const [key, entry] of Object.entries(storage)) if(!LEGACY_SAVE_TRANSFER_KEYS.includes(key)) result[key] = JSON.stringify(validateSaveRecord(key, entry));
   // Use the existing migration/ownership sanitizer for the authoritative card save.
   result[STORAGE_KEY] = JSON.stringify(normalizeState(JSON.parse(result[STORAGE_KEY])));
   for (const legacyKey of LEGACY_STORAGE_KEYS) if (result[legacyKey]) result[legacyKey] = JSON.stringify(normalizeState(JSON.parse(result[legacyKey])));
@@ -4768,13 +4736,7 @@ async function importGameSave(input) {
     }
     const dataString = await decryptGameSave(text);
     const imported = parseGameSaveImport(dataString);
-    assertSaveCooldownAllowed('import');
-    // Imported history cannot shorten either timestamp already on this browser.
-    const incomingExport = Number(imported[SAVE_COOLDOWN_KEYS.export] || 0);
-    const incomingImport = Number(imported[SAVE_COOLDOWN_KEYS.import] || 0);
-    imported[SAVE_COOLDOWN_KEYS.export] = String(Math.max(readSaveActionTimestamp('export'), incomingExport));
-    imported[SAVE_COOLDOWN_KEYS.import] = String(Math.max(readSaveActionTimestamp('import'), incomingImport, Date.now()));
-    const keys = getGameSaveKeys(), previous = new Map(keys.map(key => [key, localStorage.getItem(key)]));
+    const keys = [...getGameSaveKeys(),...LEGACY_SAVE_TRANSFER_KEYS], previous = new Map(keys.map(key => [key, localStorage.getItem(key)]));
     isImportingSave = true;
     try {
       for (const key of keys) {
@@ -4785,7 +4747,7 @@ async function importGameSave(input) {
       let restored = true;
       for (const [key, value] of previous) try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (_) { restored = false; }
       isImportingSave = false;
-      throw new Error(restored ? 'Không thể ghi save. Tiến độ và cooldown trước đó đã được khôi phục.' : 'Không thể ghi/khôi phục dữ liệu do bộ nhớ trình duyệt không khả dụng.');
+      throw new Error(restored ? 'Không thể ghi save. Tiến độ trước đó đã được khôi phục.' : 'Không thể ghi/khôi phục dữ liệu do bộ nhớ trình duyệt không khả dụng.');
     }
     isAutoRolling = false;
     if (els.autoRollToggle) els.autoRollToggle.checked = false;
@@ -4854,6 +4816,10 @@ function getAchievementSnapshot() {
   return { uniqueCards: getUniqueCount(), totalRolls: state.totalRolls, currency: state.currency,
     knownBossWins: window.BossEventSystem?.totalWins() || 0, knownBattleWins: window.TowerSystem?.victories || 0, knownRaidWins: window.RaidSystem?.totalWins() || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {}, timeTrialRoom: window.TimeTrialSystem?.bestRoom || 0 };
 }
+function recordEarnedCurrency(amount) {
+  window.AchievementSystem?.recordCurrencyEarned(amount);
+  window.QuestSystem?.currencyEarned(amount);
+}
 function applyQuestBoardReward(receipt,reward) {
   if(!canEvolveNow())return false;
   if(state.achievementRewardReceipts?.[receipt])return true;
@@ -4869,7 +4835,7 @@ function applyQuestBoardReward(receipt,reward) {
     }
     state.achievementRewardReceipts ||= {};state.achievementRewardReceipts[receipt]=true;
     if(!saveState())throw Error('Unable to save quest reward.');
-    if(earned)window.AchievementSystem?.recordCurrencyEarned(earned);return true;
+    if(earned)recordEarnedCurrency(earned);return true;
   }catch(error){state=previous;console.warn(error.message);return false;}
 }
 
@@ -4891,7 +4857,7 @@ function applyAchievementReward(achievement) {
     state.currency += currency;
     state.achievementRewardReceipts[achievement.id] = true;
     if (!saveState()) throw new Error('The reward could not be saved.');
-    if (currency) window.AchievementSystem?.recordCurrencyEarned(currency);
+    if (currency) recordEarnedCurrency(currency);
     if(reward.cardId)window.DropAudioSystem?.play(reward.cardId);
     return true;
   } catch (error) { state = previous; console.warn('Achievement reward save failed', error); return false; }
@@ -4930,13 +4896,15 @@ function recordQuestBattleCompletion(battle) {
   window.QuestSystem.record('battle', { ...battle.questContext, won: battle.questResultWon ?? (battle.outcome === 'victory'), room: battle.trial?.room, teamElements: battle.questContext.teamElements });
 }
 function recordQuestEnemyDefeat(battle, victim, source) {
+  const keys=window.RaidSystem.rollFateKey(battle,victim,source);
+  if(keys)appendBattleLog(`Holy Grail Raid Key +${keys} • Fate enemy drop.`, 'victory');
   if (battle?.sandbox || battle?.mode === 'sandbox' || window.SandboxSystem?.active) return;
   if (!battle?.questContext || !battle.enemyTeam.includes(victim) || !battle.playerTeam.includes(source) || victim.isClone || victim.isSummoned || victim.isTemporaryAlly) return;
   const seen = battle.questDefeatSeen ||= new WeakSet();
   if (seen.has(victim)) return;
   seen.add(victim);
   const context = battle.questContext;
-  window.QuestSystem.record('defeat', { ...context, id: `${context.id}_${++context.defeatSequence}`, cardId: victim.card.id, weatherIds: getActiveWeatherDefinitions().map(w => w.id) });
+  window.QuestSystem.record('defeat', { ...context, id: `${context.id}_${++context.defeatSequence}`, cardId: victim.card.id, cardCategories:[...(victim.card.category||[])], weatherIds: getActiveWeatherDefinitions().map(w => w.id) });
 }
 function syncDifficultyNumber(prefix, value) {
   const input = document.getElementById(prefix + 'DifficultyNumber');
@@ -4972,7 +4940,6 @@ function globalTick() {
   if (isImportingSave) return;
   window.PotionHudSystem?.render();
   if (window.SandboxSystem?.active) return;
-  if (els.saveManagerModal && !els.saveManagerModal.classList.contains('hidden')) renderSaveTransferCooldowns();
   refreshAchievements(!(window.RollViewSystem?.enabled && isAutoRolling));
   const now = Date.now();
   const previous = Number(state.weather.lastRealTimestamp);
@@ -5072,7 +5039,7 @@ function openModal(id) {
     setViewText('timeTrialModeTickets', `${window.InventorySystem.quantity(window.TimeTrialSystem.TICKET_ID)} EXP Time Trial Tickets in Storage • Select a type, then choose your lineup in Arena.`);
     modal.querySelector('[data-time-trial-type]')?.focus();
   }
-  if (id === "saveManagerModal") renderSaveTransferCooldowns();
+  if (id === "saveManagerModal") renderSaveTransferAvailability();
   if (id === "cardPreviewModal") renderPreview();
   if (id === "battleModal") resetBattleView();
 }
@@ -5589,7 +5556,7 @@ document.getElementById('timeTrialShopOpenButton')?.addEventListener('click', ()
 document.getElementById('timeTrialResultShopButton')?.addEventListener('click', () => openModal('timeTrialShopModal'));
 document.getElementById('raidShopOpenButton')?.addEventListener('click', () => openModal('raidShopModal'));
 document.getElementById('raidResultShopButton')?.addEventListener('click', () => openModal('raidShopModal'));
-document.getElementById('raidTypeSelect')?.addEventListener('change', () => { renderRaidControls(); renderBattleSelection(); });
+document.getElementById('raidTypeSelect')?.addEventListener('change', event => { if(isBattleMatchActive()){event.target.value=battleState.raid.type;return;} clearAutoContinueBattleTimer();if(battleState)delete battleState.raid;renderBattleModePicker();renderBattleSelection(); });
 document.getElementById('raidDifficulty')?.addEventListener('input', event => {
   window.RaidSystem.setDifficulty(getRaidType(), event.target.value); renderRaidControls();
 });
@@ -5600,7 +5567,7 @@ document.getElementById('saveManagerOpenButton')?.addEventListener('click', () =
 document.getElementById('exportSaveButton')?.addEventListener('click', exportGameSave);
 document.getElementById('importSaveButton')?.addEventListener('click', () => {
   if (saveTransferBusy) return;
-  try { assertSaveCooldownAllowed('import'); document.getElementById('importSaveInput')?.click(); }
+  try { document.getElementById('importSaveInput')?.click(); }
   catch (error) { showSaveTransferError(error); }
 });
 document.getElementById('importSaveInput')?.addEventListener('change', async event => {
@@ -5678,3 +5645,9 @@ renderCollection();
 renderUpgradeShop();
 renderCooldownUI(Date.now());
 startGlobalLoop();
+
+// Registry-driven filters include future categories without duplicated HTML options.
+window.CategorySystem.mount(els.collectionCategoryFilter);
+window.CategorySystem.mount(els.battleCategoryFilter);
+els.collectionCategoryFilter?.addEventListener("change",renderCollection);
+els.battleCategoryFilter?.addEventListener("change",populateBattleFighterSelect);

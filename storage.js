@@ -21,7 +21,9 @@
     if(inventory.BATTLE_DROP_IDS.includes(id))result.push('Regular / Tower battle victories: potion pool, 10% base + pity and Drop Chance stat, capped at 30%; one of 4 standard potions.');
     for(const offer of host.TowerSystem.SHOP_ITEMS)if(offer.id===id)result.push('Tower Shop: '+format(offer.cost)+' Tower Coins.');
     for(const offer of host.TimeTrialSystem.SHOP_ITEMS)if(offer.id===id)result.push('Time Trial Shop: '+format(offer.cost)+' Time Trial Shards.');
-    for(const offer of host.RaidSystem.SHOP)if(offer.id===id)result.push('Marine Ford Raid Shop: '+format(offer.cost)+' Marine Ford Raid Coins.');
+    for(const [type,def]of Object.entries(host.RaidSystem.TYPES))for(const offer of host.RaidSystem.offers(type))if(offer.id===id)result.push(def.name+' Shop: '+format(offer.cost)+' '+def.coinName+'.');
+    if(id===host.RaidSystem.GRAIL_KEY.id)result.push('50% chance per Fate-category enemy defeated in regular 1v1 / 4v4 battles. Generated units and Sandbox excluded.');
+    if(id==='excalibur_sword')result.push('Holy Grail Raid victory: 0.8% at difficulty 1, rising linearly to 8% at difficulty 1000.');
     for(const [type,def]of Object.entries(host.BossEventSystem.TYPES))for(const offer of host.BossEventSystem.offers(type))if(offer.id===id)result.push(def.name+' Shop: '+format(offer.cost)+' '+def.coinName+'.');
     if(id===host.RaidSystem.KEY_ITEM.id)result.push('10% chance after a regular 1v1 or 4v4 victory. Not a Tower, Time Trial, Raid or Boss Event drop.');
     if(!result.length)result.push(item?.metadata?.source||'No acquisition source is currently registered for this item.');

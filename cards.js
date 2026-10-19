@@ -13,7 +13,7 @@ const CARDS = [
   {
     id: "starter-common",
     element: "Nature",
-    name: "Naruto Kid",
+    name: "Naruto Kid", category: ["Protagonist", "Hero", "Ninja", "Human"],
     rarity: "Common",
     chance: 2,
     requiredWeather: null,
@@ -27,7 +27,7 @@ const CARDS = [
   {
     id: "normal-demon",
     element: "Dark",
-    name: "Normal Demon",
+    name: "Normal Demon", category: ["Villian", "Unhuman", "Brutal"],
     rarity: "Common",
     chance: 3,
     requiredWeather: null,
@@ -41,7 +41,7 @@ const CARDS = [
   {
     id: "sasuke-kid",
     element: "Electric",
-    name: "Sasuke Kid",
+    name: "Sasuke Kid", category: ["AntiHero", "Ninja", "Human"],
     rarity: "Common",
     chance: 4,
     requiredWeather: null,
@@ -55,7 +55,7 @@ const CARDS = [
   {
     id: "deku-mc",
     element: "Nature",
-    name: "Powerless Guy",
+    name: "Powerless Guy", category: ["Human", "Alternative", "Supporter"],
     rarity: "Common",
     chance: 5,
     requiredWeather: null,
@@ -69,7 +69,7 @@ const CARDS = [
   {
     id: "starter-rare",
     element: "Holy",
-    name: "Ichigo Young",
+    name: "Ichigo Young", category: ["Protagonist", "Hero", "Human", "Swordman", "Reaper"],
     rarity: "Rare",
     chance: 10,
     requiredWeather: null,
@@ -83,7 +83,7 @@ const CARDS = [
   {
     id: "gon-kid",
     element: "Nature",
-    name: "Gon Kid",
+    name: "Gon Kid", category: ["Protagonist", "Hero", "Human", "Hunter"],
     rarity: "Rare",
     chance: 25,
     requiredWeather: null,
@@ -97,7 +97,7 @@ const CARDS = [
   {
     id: "tanjiro",
     element: "Water",
-    name: "Tanjiro",
+    name: "Tanjiro", category: ["Protagonist", "Hero", "Human", "DemonSlayer", "Swordman"],
     rarity: "Rare",
     chance: 40,
     requiredWeather: null,
@@ -111,7 +111,7 @@ const CARDS = [
   {
     id: "starter-epic",
     element: "Nature",
-    name: "Luffy Kid",
+    name: "Luffy Kid", category: ["Protagonist", "Hero", "Pirate", "Human", "Captain"],
     rarity: "Epic",
     chance: 50,
     requiredWeather: null,
@@ -125,7 +125,7 @@ const CARDS = [
   {
     id: "six-seven",
     element: "Dark",
-    name: "Six Seven",
+    name: "Six Seven", category: ["Alternative", "Supporter"],
     rarity: "Epic",
     chance: 67,
     requiredWeather: null,
@@ -139,7 +139,7 @@ const CARDS = [
   {
     id: "kaneki-ghoul",
     element: "Fire",
-    name: "Kaneki",
+    name: "Kaneki", category: ["Protagonist", "AntiHero", "Unhuman", "Brutal"],
     rarity: "Epic",
     chance: 80,
     requiredWeather: null,
@@ -153,7 +153,7 @@ const CARDS = [
   {
     id: "the-trapper",
     element: "Dark",
-    name: "The Trapper",
+    name: "The Trapper", category: ["Villian", "VideoGame", "Brutal", "Hunter"],
     rarity: "Epic",
     chance: 100,
     requiredWeather: null,
@@ -167,7 +167,7 @@ const CARDS = [
   {
     id: "nezuko",
     element: "Fire",
-    name: "Nezuko",
+    name: "Nezuko", category: ["Unhuman", "Supporter", "DemonSlayer"],
     rarity: "Epic",
     chance: 190,
     requiredWeather: null,
@@ -181,7 +181,7 @@ const CARDS = [
   {
     id: "buggy",
     element: "Water",
-    name: "Buggy",
+    name: "Buggy", category: ["Pirate", "Human", "AntiVillian", "Supporter"],
     rarity: "Epic",
     chance: 234,
     requiredWeather: null,
@@ -195,7 +195,7 @@ const CARDS = [
   {
     id: "bounty-hunter",
     element: "Nature",
-    name: "Bounty Hunter",
+    name: "Bounty Hunter", category: ["Hunter", "Human", "Alternative", "Brutal"],
     rarity: "Epic",
     chance: 300,
     requiredWeather: null,
@@ -209,7 +209,7 @@ const CARDS = [
   {
     id: "jotaro-kujo",
     element: "Nature",
-    name: "Jotaro Kujo",
+    name: "Jotaro Kujo", category: ["JoJo", "Protagonist", "Hero", "Human"],
     rarity: "Epic",
     chance: 500,
     requiredWeather: null,
@@ -223,7 +223,7 @@ const CARDS = [
   {
     id: "hakari",
     element: "Nature",
-    name: "Hakari",
+    name: "Hakari", category: ["Jujutsu", "Protagonist", "Human", "Brutal"],
     rarity: "Epic",
     chance: 777,
     requiredWeather: null,
@@ -237,7 +237,7 @@ const CARDS = [
   {
     id: "saber",
     element: "Water",
-    name: "Saber",
+    name: "Saber", category: ["Fate", "Hero", "Protagonist", "Swordman"],
     rarity: "Epic",
     chance: 800,
     requiredWeather: null,
@@ -251,7 +251,7 @@ const CARDS = [
   {
     id: "jonathan-joestar",
     element: "Electric",
-    name: "Jonathan Joestar",
+    name: "Jonathan Joestar", category: ["JoJo", "Protagonist", "Hero", "Human"],
     rarity: "Epic",
     chance: 900,
     requiredWeather: null,
@@ -265,7 +265,7 @@ const CARDS = [
   {
     id: "starter-legendary",
     element: "Electric",
-    name: "Son Goku",
+    name: "Son Goku", category: ["DragonWarrior", "Protagonist", "Hero", "Unhuman"],
     rarity: "Legendary",
     chance: 1000,
     requiredWeather: null,
@@ -279,7 +279,7 @@ const CARDS = [
   {
     id: "vegeta",
     element: "Water",
-    name: "Vegeta",
+    name: "Vegeta", category: ["DragonWarrior", "AntiHero", "Unhuman", "Brutal", "PlanetDestroyer"],
     rarity: "Legendary",
     chance: 1001,
     requiredWeather: null,
@@ -293,7 +293,7 @@ const CARDS = [
   {
     id: "kakashi",
     element: "Electric",
-    name: "Kakashi",
+    name: "Kakashi", category: ["Ninja", "Human", "Hero", "Captain"],
     rarity: "Legendary",
     chance: 4900,
     requiredWeather: null,
@@ -307,7 +307,7 @@ const CARDS = [
   {
     id: "kr-kuuga",
     element: "Nature",
-    name: "Kamen Rider Kuuga",
+    name: "Kamen Rider Kuuga", category: ["Hero", "Protagonist", "Unhuman"],
     rarity: "Legendary",
     chance: 20000,
     requiredWeather: null,
@@ -321,7 +321,7 @@ const CARDS = [
   {
     id: "bulma",
     element: "Nature",
-    name: "Bulma",
+    name: "Bulma", category: ["Supporter", "Human", "Alternative"],
     rarity: "Legendary",
     chance: 3080,
     requiredWeather: null,
@@ -335,7 +335,7 @@ const CARDS = [
   {
     id: "denji",
     element: "Fire",
-    name: "Denji",
+    name: "Denji", category: ["Protagonist", "AntiHero", "Unhuman", "Brutal"],
     rarity: "Legendary",
     chance: 3333,
     requiredWeather: null,
@@ -349,7 +349,7 @@ const CARDS = [
   {
     id: "uchiha-itachi",
     element: "Fire",
-    name: "Uchiha Itachi",
+    name: "Uchiha Itachi", category: ["Ninja", "Human", "AntiHero", "Brutal"],
     rarity: "Legendary",
     chance: 5500,
     requiredWeather: null,
@@ -363,7 +363,7 @@ const CARDS = [
   {
     id: "madness-doctor",
     element: "Electric",
-    name: "Madness Doctor",
+    name: "Madness Doctor", category: ["Villian", "Brutal", "Alternative"],
     rarity: "Legendary",
     chance: 10101,
     requiredWeather: null,
@@ -377,7 +377,7 @@ const CARDS = [
   {
     id: "erza",
     element: "Holy",
-    name: "Erza",
+    name: "Erza", category: ["Swordman", "Magician", "Hero", "Human"],
     rarity: "Legendary",
     chance: 12120,
     requiredWeather: null,
@@ -391,7 +391,7 @@ const CARDS = [
   {
     id: "yuji-itadori",
     element: "Fire",
-    name: "Yuji Itadori",
+    name: "Yuji Itadori", category: ["Jujutsu", "Protagonist", "Hero", "Human", "Brutal"],
     rarity: "Legendary",
     chance: 17000,
     requiredWeather: null,
@@ -405,7 +405,7 @@ const CARDS = [
   {
     id: "guts",
     element: "Dark",
-    name: "Guts",
+    name: "Guts", category: ["Berserk", "Protagonist", "AntiHero", "Swordman", "Human", "Brutal"],
     rarity: "Secret",
     chance: 18888,
     requiredWeather: null,
@@ -419,7 +419,7 @@ const CARDS = [
   {
     id: "polnareff",
     element: "Nature",
-    name: "Polnareff",
+    name: "Polnareff", category: ["JoJo", "Supporter", "Human", "Swordman"],
     rarity: "Secret",
     chance: 36000,
     requiredWeather: null,
@@ -433,7 +433,7 @@ const CARDS = [
   {
     id: "the-flash",
     element: "Electric",
-    name: "The Flash",
+    name: "The Flash", category: ["Hero", "Human", "Protagonist", "Alternative"],
     rarity: "Secret",
     chance: 52000,
     requiredWeather: null,
@@ -447,7 +447,7 @@ const CARDS = [
   {
     id: "rimuru",
     element: "Water",
-    name: "Rimuru",
+    name: "Rimuru", category: ["Protagonist", "Unhuman", "Magician", "Supporter"],
     rarity: "Secret",
     chance: 81208,
     requiredWeather: null,
@@ -461,7 +461,7 @@ const CARDS = [
   {
     id: "starter-secret",
     element: "Holy",
-    name: "The Truth",
+    name: "The Truth", category: ["Unhuman", "Alternative", "Magician"],
     rarity: "Secret",
     chance: 100000,
     requiredWeather: null,
@@ -475,7 +475,7 @@ const CARDS = [
   {
     id: "viltrumite",
     element: "Holy",
-    name: "Viltrumite",
+    name: "Viltrumite", category: ["Unhuman", "Villian", "Brutal", "PlanetDestroyer"],
     rarity: "Secret",
     chance: 222000,
     requiredWeather: null,
@@ -489,7 +489,7 @@ const CARDS = [
 {
     id: "mahito",
     element: "Dark",
-    name: "Mahito",
+    name: "Mahito", category: ["Jujutsu", "Villian", "Unhuman", "Brutal", "PureEvil"],
     rarity: "Epic",
     chance: 7927,
     requiredWeather: "Eclipsed",
@@ -503,7 +503,7 @@ const CARDS = [
   {
     id: "blackbeard",
     element: "Dark",
-    name: "BlackBeard",
+    name: "BlackBeard", category: ["Pirate", "Villian", "Human", "Brutal", "Captain"],
     rarity: "Legendary",
     chance: 40000,
     requiredWeather: "Shadow",
@@ -517,7 +517,7 @@ const CARDS = [
   {
     id: "garp",
     element: "Nature",
-    name: "Garp",
+    name: "Garp", category: ["Human", "Captain", "Hero", "Brutal"],
     rarity: "Legendary",
     chance: 38922,
     requiredWeather: null,
@@ -531,7 +531,7 @@ const CARDS = [
   {
     id: "erwin",
     element: "Fire",
-    name: "Erwin",
+    name: "Erwin", category: ["Captain", "Human", "Army", "Hero"],
     rarity: "Legendary",
     chance: 77550,
     requiredWeather: null,
@@ -545,7 +545,7 @@ const CARDS = [
   {
     id: "boa-hancock",
     element: "Fire",
-    name: "Boa Hancock",
+    name: "Boa Hancock", category: ["Pirate", "Human", "AntiVillian", "Captain"],
     rarity: "Legendary",
     chance: 69000,
     requiredWeather: "Sugar",
@@ -559,7 +559,7 @@ const CARDS = [
   {
     id: "senku",
     element: "Nature",
-    name: "Senku",
+    name: "Senku", category: ["Human", "Supporter", "Alternative"],
     rarity: "Rare",
     chance: 550,
     requiredWeather: null,
@@ -573,7 +573,7 @@ const CARDS = [
   {
     id: "grimmjaw",
     element: "Water",
-    name: "Grimmjaw",
+    name: "Grimmjaw", category: ["Unhuman", "AntiVillian", "Brutal", "Reaper"],
     rarity: "Legendary",
     chance: 65000,
     requiredWeather: "Reaper",
@@ -587,7 +587,7 @@ const CARDS = [
   {
     id: "reigen",
     element: "Water",
-    name: "Reigen",
+    name: "Reigen", category: ["Human", "Supporter", "Alternative"],
     rarity: "Mythic",
     chance: 500000,
     requiredWeather: null,
@@ -601,7 +601,7 @@ const CARDS = [
   {
     id: "kamen-rider-kabuto",
     element: "Holy",
-    name: "Kamen Rider Kabuto",
+    name: "Kamen Rider Kabuto", category: ["Hero", "Protagonist", "Human"],
     rarity: "Mythic",
     chance: 370000,
     requiredWeather: null,
@@ -615,7 +615,7 @@ const CARDS = [
   {
     id: "meruem",
     element: "Nature",
-    name: "Meruem",
+    name: "Meruem", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"],
     rarity: "Mythic",
     chance: 740000,
     requiredWeather: null,
@@ -629,7 +629,7 @@ const CARDS = [
   {
     id: "frieza",
     element: "Electric",
-    name: "Frieza",
+    name: "Frieza", category: ["Villian", "Unhuman", "Brutal", "PureEvil", "PlanetDestroyer", "Army"],
     rarity: "Legendary",
     chance: 76900,
     requiredWeather: null,
@@ -643,7 +643,7 @@ const CARDS = [
   {
     id: "adam-francis",
     element: "Holy",
-    name: "Adam Francis",
+    name: "Adam Francis", category: ["VideoGame", "Human", "Supporter", "Alternative"],
     rarity: "Epic",
     chance: 6970,
     requiredWeather: null,
@@ -657,7 +657,7 @@ const CARDS = [
   {
     id: "katakuri",
     element: "Nature",
-    name: "Katakuri",
+    name: "Katakuri", category: ["Pirate", "AntiVillian", "Human", "Brutal"],
     rarity: "Mythic",
     chance: 207000,
     requiredWeather: "Sugar",
@@ -671,7 +671,7 @@ const CARDS = [
   {
     id: "whitebeard",
     element: "Holy",
-    name: "WhiteBeard",
+    name: "WhiteBeard", category: ["Pirate", "Captain", "Human", "Brutal", "Army"],
     rarity: "Mythic",
     chance: 500100,
     requiredWeather: null,
@@ -685,7 +685,7 @@ const CARDS = [
   {
     id: "doppio",
     element: "Holy",
-    name: "Doppio",
+    name: "Doppio", category: ["JoJo", "Villian", "Human", "Supporter", "Alternative"],
     rarity: "Rare",
     chance: 1450,
     requiredWeather: "Shadow",
@@ -699,7 +699,7 @@ const CARDS = [
   {
     id: "shanks",
     element: "Fire",
-    name: "Shanks",
+    name: "Shanks", category: ["Pirate", "Captain", "Human", "Hero", "Swordman", "Brutal"],
     rarity: "Legendary",
     chance: 24740,
     requiredWeather: null,
@@ -713,7 +713,7 @@ const CARDS = [
   {
     id: "metal-cooler",
     element: "Electric",
-    name: "Metal Cooler",
+    name: "Metal Cooler", category: ["Villian", "Unhuman", "Brutal", "PlanetDestroyer", "Army"],
     rarity: "Legendary",
     chance: 80008,
     requiredWeather: null,
@@ -727,7 +727,7 @@ const CARDS = [
   {
     id: "gohan",
     element: "Electric",
-    name: "Gohan",
+    name: "Gohan", category: ["DragonWarrior", "Hero", "Human", "Protagonist"],
     rarity: "Legendary",
     chance: 85000,
     requiredWeather: null,
@@ -741,7 +741,7 @@ const CARDS = [
   {
     id: "yuno",
     element: "Nature",
-    name: "Yuno",
+    name: "Yuno", category: ["Magician", "Human", "Protagonist"],
     rarity: "Mythic",
     chance: 300000,
     requiredWeather: null,
@@ -755,7 +755,7 @@ const CARDS = [
   {
     id: "asta",
     element: "Dark",
-    name: "Asta",
+    name: "Asta", category: ["Protagonist", "Hero", "Human", "Swordman", "Brutal"],
     rarity: "Mythic",
     chance: 333000,
     requiredWeather: null,
@@ -769,7 +769,7 @@ const CARDS = [
   {
     id: "asta-demon",
     element: "Dark",
-    name: "Demon Asta",
+    name: "Demon Asta", category: ["Protagonist", "AntiHero", "Unhuman", "Swordman", "Brutal"],
     rarity: "Secret",
     chance: 3333333,
     requiredWeather: null,
@@ -784,7 +784,7 @@ const CARDS = [
   {
     id: "nami",
     element: "Water",
-    name: "Nami",
+    name: "Nami", category: ["Pirate", "Human", "Supporter"],
     rarity: "Rare",
     chance: 45,
     requiredWeather: "Raining",
@@ -798,7 +798,7 @@ const CARDS = [
   {
     id: "giyu-tomioka",
     element: "Water",
-    name: "Giyu Tomioka",
+    name: "Giyu Tomioka", category: ["DemonSlayer", "Swordman", "Human", "Hero"],
     rarity: "Epic",
     chance: 400,
     requiredWeather: "Raining",
@@ -812,7 +812,7 @@ const CARDS = [
   {
     id: "sea-beast",
     element: "Water",
-    name: "Sea Beast",
+    name: "Sea Beast", category: ["Unhuman", "Villian", "Brutal", "Hunter"],
     rarity: "Epic",
     chance: 1200,
     requiredWeather: "Raining",
@@ -826,7 +826,7 @@ const CARDS = [
   {
     id: "arlong",
     element: "Water",
-    name: "Arlong",
+    name: "Arlong", category: ["Villian", "Unhuman", "Pirate", "Brutal", "Captain"],
     rarity: "Epic",
     chance: 2400,
     requiredWeather: "Raining",
@@ -840,7 +840,7 @@ const CARDS = [
   {
     id: "aquaman",
     element: "Water",
-    name: "Aquaman",
+    name: "Aquaman", category: ["Hero", "Unhuman", "Captain"],
     rarity: "Epic",
     chance: 22222,
     requiredWeather: "Raining",
@@ -854,7 +854,7 @@ const CARDS = [
   {
     id: "noelle-silva",
     element: "Water",
-    name: "Noelle Silva",
+    name: "Noelle Silva", category: ["Magician", "Supporter", "Human", "Hero"],
     rarity: "Epic",
     chance: 400000,
     requiredWeather: "Raining",
@@ -868,7 +868,7 @@ const CARDS = [
   {
     id: "weather-report",
     element: "Nature",
-    name: "Weather Report",
+    name: "Weather Report", category: ["JoJo", "Supporter", "Magician"],
     rarity: "Mythic",
     chance: 650000,
     requiredWeather: "Raining",
@@ -882,7 +882,7 @@ const CARDS = [
   {
     id: "piccolo",
     element: "Nature",
-    name: "Piccolo",
+    name: "Piccolo", category: ["DragonWarrior", "Unhuman", "Hero", "Supporter", "Brutal"],
     rarity: "Mythic",
     chance: 780000,
     requiredWeather: "Raining",
@@ -896,7 +896,7 @@ const CARDS = [
   {
     id: "peashooter",
     element: "Nature",
-    name: "Peashooter",
+    name: "Peashooter", category: ["VideoGame", "Supporter", "Alternative"],
     rarity: "Common",
     chance: 100,
     requiredWeather: "Sunny",
@@ -910,7 +910,7 @@ const CARDS = [
   {
     id: "hutao",
     element: "Fire",
-    name: "Hutao",
+    name: "Hutao", category: ["VideoGame", "Magician", "Human"],
     rarity: "Legendary",
     chance: 2020,
     requiredWeather: "Sunny",
@@ -924,7 +924,7 @@ const CARDS = [
   {
     id: "weather-solar-deity",
     element: "Fire",
-    name: "Escanor",
+    name: "Escanor", category: ["Sins", "Hero", "Human", "Brutal"],
     rarity: "Legendary",
     chance: 2500,
     requiredWeather: "Sunny",
@@ -938,7 +938,7 @@ const CARDS = [
   {
     id: "builderman",
     element: "Holy",
-    name: "Builderman",
+    name: "Builderman", category: ["VideoGame", "Supporter", "Alternative"],
     rarity: "Mythic",
     chance: 250000,
     requiredWeather: "Sunny",
@@ -952,7 +952,7 @@ const CARDS = [
   {
     id: "aatrox",
     element: "Dark",
-    name: "Aatrox",
+    name: "Aatrox", category: ["VideoGame", "Unhuman", "Brutal", "Swordman", "Villian"],
     rarity: "Mythic",
     chance: 6666,
     requiredWeather: "Eclipse",
@@ -966,7 +966,7 @@ const CARDS = [
   {
     id: "weather-eclipse-harvester",
     element: "Dark",
-    name: "Griffith",
+    name: "Griffith", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"],
     rarity: "Mythic",
     chance: 8000,
     requiredWeather: "Eclipse",
@@ -980,7 +980,7 @@ const CARDS = [
   {
     id: "dante-limbus",
     element: "Fire",
-    name: "Dante Limbus",
+    name: "Dante Limbus", category: ["VideoGame", "Protagonist", "Human", "Swordman", "Brutal"],
     rarity: "Mythic",
     chance: 10000,
     requiredWeather: "Eclipse",
@@ -994,7 +994,7 @@ const CARDS = [
   {
     id: "adult-gon",
     element: "Dark",
-    name: "Adult Gon",
+    name: "Adult Gon", category: ["Protagonist", "Hunter", "Human", "Brutal"],
     rarity: "Secret",
     chance: 2500000,
     requiredWeather: "Eclipse",
@@ -1008,7 +1008,7 @@ const CARDS = [
   {
     id: "rukia",
     element: "Water",
-    name: "Rukia",
+    name: "Rukia", category: ["Reaper", "Swordman", "Supporter", "Human", "Hero"],
     rarity: "Legendary",
     chance: 1350,
     requiredWeather: "Snowing",
@@ -1022,7 +1022,7 @@ const CARDS = [
   {
     id: "ice-admiral",
     element: "Water",
-    name: "Ice Admiral",
+    name: "Ice Admiral", category: ["Human", "Magician", "Captain", "Villian", "Army"],
     rarity: "Mythic",
     chance: 5000,
     requiredWeather: "Snowing",
@@ -1036,7 +1036,7 @@ const CARDS = [
   {
     id: "weather-frost-sovereign",
     element: "Water",
-    name: "Esdeath",
+    name: "Esdeath", category: ["Villian", "Human", "Magician", "Brutal", "PureEvil"],
     rarity: "Mythic",
     chance: 12000,
     requiredWeather: "Snowing",
@@ -1050,7 +1050,7 @@ const CARDS = [
   {
     id: "toshiro",
     element: "Water",
-    name: "Toshiro",
+    name: "Toshiro", category: ["Reaper", "Swordman", "Human", "Hero"],
     rarity: "Mythic",
     chance: 26000,
     requiredWeather: "Snowing",
@@ -1064,7 +1064,7 @@ const CARDS = [
   {
     id: "android-21",
     element: "Electric",
-    name: "Android 21",
+    name: "Android 21", category: ["AntiVillian", "Unhuman", "Magician", "Brutal"],
     rarity: "Mythic",
     chance: 150000,
     requiredWeather: "Sugar",
@@ -1078,7 +1078,7 @@ const CARDS = [
   {
     id: "yuta-okkotsu",
     element: "Holy",
-    name: "Yuta Okkotsu",
+    name: "Yuta Okkotsu", category: ["Jujutsu", "Protagonist", "Human", "Swordman"],
     rarity: "Mythic",
     chance: 191022,
     requiredWeather: "Sugar",
@@ -1093,7 +1093,7 @@ const CARDS = [
   {
     id: "luffy-nightmare",
     element: "Dark",
-    name: "Luffy Nightmare",
+    name: "Luffy Nightmare", category: ["Pirate", "Protagonist", "Brutal", "Berserk", "Unhuman"],
     rarity: "Mythic",
     chance: 9300,
     requiredWeather: "Shadow",
@@ -1107,7 +1107,7 @@ const CARDS = [
   {
     id: "weather-shadow-monarch",
     element: "Dark",
-    name: "Igris",
+    name: "Igris", category: ["Supporter", "Unhuman", "Swordman", "Army"],
     rarity: "Mythic",
     chance: 18000,
     requiredWeather: "Shadow",
@@ -1121,7 +1121,7 @@ const CARDS = [
   {
     id: "cid-shadow",
     element: "Dark",
-    name: "Cid Atomic",
+    name: "Cid Atomic", category: ["Protagonist", "Swordman", "Human", "Magician"],
     rarity: "Mythic",
     chance: 30000,
     requiredWeather: "Shadow",
@@ -1135,7 +1135,7 @@ const CARDS = [
   {
     id: "enderman",
     element: "Dark",
-    name: "Enderman",
+    name: "Enderman", category: ["VideoGame", "Unhuman", "Brutal"],
     rarity: "Mythic",
     chance: 99999,
     requiredWeather: "Shadow",
@@ -1149,7 +1149,7 @@ const CARDS = [
   {
     id: "homura-akemi",
     element: "Dark",
-    name: "Homura Akemi",
+    name: "Homura Akemi", category: ["Magician", "Protagonist", "AntiHero", "Human"],
     rarity: "Mythic",
     chance: 199208,
     requiredWeather: "Shadow",
@@ -1163,7 +1163,7 @@ const CARDS = [
   {
     id: "kr-decade",
     element: "Dark",
-    name: "Kamen Rider Decade",
+    name: "Kamen Rider Decade", category: ["Hero", "Protagonist", "Human", "Alternative"],
     rarity: "Mythic",
     chance: 200000,
     requiredWeather: "Shadow",
@@ -1177,7 +1177,7 @@ const CARDS = [
   {
     id: "uchiha-sasuke",
     element: "Electric",
-    name: "Uchiha Sasuke",
+    name: "Uchiha Sasuke", category: ["Ninja", "AntiHero", "Human", "Swordman", "Brutal"],
     rarity: "Mythic",
     chance: 550000,
     requiredWeather: "Shadow",
@@ -1191,7 +1191,7 @@ const CARDS = [
   {
     id: "light-admiral",
     element: "Electric",
-    name: "Light Admiral",
+    name: "Light Admiral", category: ["Human", "Magician", "Captain", "Villian", "Army"],
     rarity: "Secret",
     chance: 7000,
     requiredWeather: "Heavenly",
@@ -1205,7 +1205,7 @@ const CARDS = [
   {
     id: "gojo-young",
     element: "Electric",
-    name: "Gojo Young",
+    name: "Gojo Young", category: ["Jujutsu", "Hero", "Human", "Brutal"],
     rarity: "Secret",
     chance: 8888,
     requiredWeather: "Heavenly",
@@ -1219,7 +1219,7 @@ const CARDS = [
   {
     id: "weather-heavenly-seraph",
     element: "Holy",
-    name: "The First Human",
+    name: "The First Human", category: ["Unhuman", "Villian", "Brutal", "PureEvil"],
     rarity: "Secret",
     chance: 30000,
     requiredWeather: "Heavenly",
@@ -1233,7 +1233,7 @@ const CARDS = [
   {
     id: "sailor-moon",
     element: "Holy",
-    name: "Sailor Moon",
+    name: "Sailor Moon", category: ["Hero", "Protagonist", "Magician", "Human", "Supporter"],
     rarity: "Secret",
     chance: 70007,
     requiredWeather: "Heavenly",
@@ -1247,7 +1247,7 @@ const CARDS = [
   {
     id: "jin-mori",
     element: "Holy",
-    name: "Jin Mori",
+    name: "Jin Mori", category: ["Protagonist", "Hero", "Human", "Brutal"],
     rarity: "Secret",
     chance: 240000,
     requiredWeather: "Heavenly",
@@ -1261,7 +1261,7 @@ const CARDS = [
   {
     id: "wish",
     element: "Holy",
-    name: "Wish",
+    name: "Wish", category: ["Alternative", "Supporter", "Magician"],
     rarity: "Secret",
     chance: 115000,
     requiredWeather: "Heavenly",
@@ -1275,7 +1275,7 @@ const CARDS = [
   {
     id: "weather-tsukuyomi-eye",
     element: "Nature",
-    name: "Uchiha Shisui",
+    name: "Uchiha Shisui", category: ["Ninja", "Human", "Hero", "Supporter"],
     rarity: "Secret",
     chance: 35000,
     requiredWeather: "Tsukuyomi",
@@ -1289,7 +1289,7 @@ const CARDS = [
   {
     id: "diavolo",
     element: "Dark",
-    name: "Diavolo",
+    name: "Diavolo", category: ["JoJo", "Villian", "Human", "Brutal"],
     rarity: "Secret",
     chance: 600000,
     requiredWeather: "Tsukuyomi",
@@ -1303,7 +1303,7 @@ const CARDS = [
   {
     id: "kaguya",
     element: "Holy",
-    name: "Kaguya",
+    name: "Kaguya", category: ["Villian", "Unhuman", "Magician", "PureEvil"],
     rarity: "Secret",
     chance: 999000,
     requiredWeather: "Tsukuyomi",
@@ -1317,7 +1317,7 @@ const CARDS = [
   {
     id: "weather-reaper-hollow",
     element: "Fire",
-    name: "Vasto Lord",
+    name: "Vasto Lord", category: ["Unhuman", "Villian", "Brutal", "Reaper"],
     rarity: "Mythic",
     chance: 22000,
     requiredWeather: "Reaper",
@@ -1331,7 +1331,7 @@ const CARDS = [
   {
     id: "subaru",
     element: "Dark",
-    name: "Subaru",
+    name: "Subaru", category: ["Protagonist", "Human", "Supporter", "Alternative"],
     rarity: "Mythic",
     chance: 53090,
     requiredWeather: "Reaper",
@@ -1345,7 +1345,7 @@ const CARDS = [
   {
     id: "dio-brando",
     element: "Fire",
-    name: "Dio Brando",
+    name: "Dio Brando", category: ["JoJo", "Villian", "Unhuman", "Brutal", "PureEvil"],
     rarity: "Legendary",
     chance: 666,
     requiredWeather: "Malevolent",
@@ -1359,7 +1359,7 @@ const CARDS = [
   {
     id: "weather-malevolent-king",
     element: "Fire",
-    name: "Malevolent King",
+    name: "Malevolent King", category: ["Villian", "Unhuman", "PureEvil", "Brutal", "Army", "Magician"],
     rarity: "Secret",
     chance: 45000,
     requiredWeather: "Malevolent",
@@ -1373,7 +1373,7 @@ const CARDS = [
   {
     id: "doflamingo",
     element: "Nature",
-    name: "Doflamingo",
+    name: "Doflamingo", category: ["Pirate", "Villian", "Human", "Brutal", "Captain"],
     rarity: "Secret",
     chance: 60220,
     requiredWeather: "Malevolent",
@@ -1387,7 +1387,7 @@ const CARDS = [
   {
     id: "hakari-jackpot",
     element: "Nature",
-    name: "Hakari Jackpot",
+    name: "Hakari Jackpot", category: ["Jujutsu", "Protagonist", "Human", "Brutal"],
     rarity: "Secret",
     chance: 777777,
     requiredWeather: "Malevolent",
@@ -1401,7 +1401,7 @@ const CARDS = [
   {
     id: "mahoraga",
     element: "Holy",
-    name: "Mahoraga",
+    name: "Mahoraga", category: ["Jujutsu", "Unhuman", "Brutal"],
     rarity: "Secret",
     chance: 800000,
     requiredWeather: "Malevolent",
@@ -1416,26 +1416,26 @@ const CARDS = [
 
 // Champions retain the existing reward IDs/receipts; exact level-1 Normal specs.
 const TOWER_REWARD_CARDS = [
-  {"id": "tower-champion-normal", "element": "Electric", "image": "assets/cards/equinox.png", "towerType": "normal", "unlockRequirement": "tower_floor_100_normal", "sourceId": "starter-common", "name": "Equinox", "chance": 2500025, "requiredWeather": "Normal", "nativeWeather": null, "stats": {"hp": 250000, "atk": 25000}, "passive": {"name": "Emotional Meter", "description": "Start at 50% positive / 50% negative. Primary attacks shift 10–20% toward positive; incoming hits shift 10–20% toward negative.\n100% positive: living team gains +100% max HP and +25% ATK; meter locks.\n100% negative: hit all enemies for x25 current ATK, then die permanently; cannot revive or be cloned."}},
-  {"id": "tower-champion-raining", "element": "Water", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 222222, "atk": 2222}, "passive": {"name": "Useless", "description": "Before battle, choose +50% team max HP (once/team) or +50% eligible VNĐ/EXP/Reward Bonus. Reward choice excludes Tower Coins, potion chances and Time Trial payouts.\nEach allied turn with another active attacker: heal it for 10% max HP and grant +2.2% current ATK, once/turn."}},
-  {"id": "tower-champion-snowing", "element": "Water", "image": "assets/cards/iceking.png", "towerType": "snowing", "unlockRequirement": "tower_floor_100_snowing", "sourceId": "toshiro", "name": "Ice King", "chance": 1058000, "requiredWeather": "Snowing", "nativeWeather": "snowing", "stats": {"hp": 104600, "atk": 46000}, "passive": {"name": "Ice Manipulation", "description": "When hit: 20% chance to Freeze the attacker for 2 turns. Deal +50% damage to frozen targets.\nFirst eligible fatal hit: revive at full HP for 5 combat turns, then die permanently. No teammate revival.\nOn permanent death: 58% chance to give a living teammate Ice King Crown (10% chance to Freeze targets for 3 turns)."}},
-  {"id": "tower-champion-sunny", "element": "Fire", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 78000, "atk": 13000}, "passive": {"name": "Solar Claw", "description": "33% base crit chance. First damaging crit applies Burn for 3 turns (33% current ATK/turn).\nLater crits deal x3 attack damage before the normal crit multiplier. They do not reapply this Burn. No free follow-up or guaranteed crit."}},
-  {"id": "tower-champion-sugar", "element": "Electric", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 76000, "atk": 7600}, "passive": {"name": "Candy Eater", "description": "Each primary attack gains 1–3 candies; only the current form applies.\n0–10: +25% damage; +1 extra candy/attack.\n11–25: +50% max HP; when hit, spend 1 candy to heal 3% max HP.\n26–50: damaging attacks summon a Ghost (HP = damage dealt; ATK = 10% current ATK).\n51–75: 76% dodge; a dodge skips the next attack, grants 5 candies and heals 7.6% max HP.\n76–99: every 3rd attack also hits up to 3 random enemies for 50% ATK.\n100: hit all enemies each attack; spend 1 candy/attack until 0. Then return to Form 1 and self-Stun for 5 turns; no candy gain or transformation during reversion.\nGenerated units cannot summon Ghosts."}},
-  {"id": "tower-champion-reaper", "element": "Holy", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 60000, "atk": 30000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every 2nd primary attack: hit all enemies for 60% of each target’s current ATK.\nWhen damaged: 6% chance to counter for 50% damage received; counters cannot loop.\nFirst eligible fatal hit: revive at full HP, gain +100% current ATK permanently. Cannot be cloned or revived by teammates."}},
-  {"id": "tower-champion-eclipse", "element": "Dark", "image": "assets/cards/wou.png", "towerType": "eclipse", "unlockRequirement": "tower_floor_100_eclipse", "sourceId": "weather-eclipse-harvester", "name": "Wonder Of You", "chance": 8000000, "requiredWeather": "Eclipse", "nativeWeather": "eclipse", "stats": {"hp": 800000, "atk": 8}, "passive": {"name": "Calamity", "description": "Protect a random living teammate; choose another if it dies. No position swap.\nAfter that ally’s shields/reduction, split remaining damage 50%/50%; absorb the shared half, with an 8% chance to reflect it instead. No recursive redirection.\nProtected ally’s kill: heal 80% max HP. Death while protecting: 8% chance to execute the attacker; normal immunity/survival rules apply."}},
-  {"id": "tower-champion-malevolent", "element": "Fire", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 66666, "atk": 9999}, "passive": {"name": "Malevolent Kitchen", "description": "After 5 primary attacks, hit all living enemies for 25% current ATK at the start of every combat turn while alive.\nWhen hit and surviving: 66% chance to heal 6% max HP and gain +9% current ATK. ATK bonuses stack for the match."}},
-  {"id": "tower-champion-tsukuyomi", "element": "Nature", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 200000, "atk": 20000}, "passive": {"name": "Datebayo", "description": "Each new active enemy rolls Naruto/Sasuke mode (50% each); keep the card’s attack counter across target changes.\nNaruto: every 3rd attack deals x3 damage and creates a 10% current HP/ATK Clone. Living Clones follow up each attack; Clone death heals the owner 10% max HP. No count cap; generated units cannot summon.\nSasuke: every 2nd attack hits all enemies for 50% ATK; 20% dodge. Dodge applies Burn for 5 turns (25% ATK/turn) and a 3-combat-turn shield equal to avoided damage. Burn ending naturally Stuns for 1 turn.\nSwitching to Sasuke removes Clones without healing; switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
-  {"id": "tower-champion-heavenly", "element": "Holy", "image": "assets/cards/judgement.png", "towerType": "heavenly", "unlockRequirement": "tower_floor_100_heavenly", "sourceId": "weather-heavenly-seraph", "name": "The Judgement", "chance": 300300, "requiredWeather": "Heavenly", "nativeWeather": "heavenly", "stats": {"hp": 40000, "atk": 5000}, "passive": {"name": "Divine Light", "description": "Every 2nd attack: 33% chance for a beam hitting all enemies for 50% current ATK; damaged targets have a 66% chance of Heresy for 1–3 turns.\nWhile any enemy has Heresy: beam chance/damage become 66%/66% ATK; Heresy chance becomes 33%.\nHeresy: deal 9% less damage; 3% chance to miss primary attacks."}},
-  {"id": "tower-champion-shadow", "element": "Dark", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 102000, "atk": 28000}, "passive": {"name": "Dark Aurora", "description": "On kill: 29% chance to convert an eligible original enemy and steal its passive. Insert the converted unit directly in front of Dark Decade with Dark Decade’s current max HP/ATK and the victim’s passive.\nWhile alive, revive eligible original teammates at the back with Dark Decade’s stats (max 2 revivals/teammate); keep their own passives. Never revive itself, clones or summons.\nGenerated units cannot create companions. Uncloneable enemies and anti-revival restrictions remain excluded."}},
+  {"id": "tower-champion-normal", "element": "Electric", "image": "assets/cards/equinox.png", "towerType": "normal", "unlockRequirement": "tower_floor_100_normal", "sourceId": "starter-common", "name": "Equinox", category: ["VideoGame", "Alternative", "Brutal"], "chance": 2500025, "requiredWeather": "Normal", "nativeWeather": null, "stats": {"hp": 250000, "atk": 25000}, "passive": {"name": "Emotional Meter", "description": "Start at 50% positive / 50% negative. Primary attacks shift 10–20% toward positive; incoming hits shift 10–20% toward negative.\n100% positive: living team gains +100% max HP and +25% ATK; meter locks.\n100% negative: hit all enemies for x25 current ATK, then die permanently; cannot revive or be cloned."}},
+  {"id": "tower-champion-raining", "element": "Water", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", category: ["Supporter", "Magician", "Unhuman"], "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 222222, "atk": 2222}, "passive": {"name": "Useless", "description": "Before battle, choose +50% team max HP (once/team) or +50% eligible VNĐ/EXP/Reward Bonus. Reward choice excludes Tower Coins, potion chances and Time Trial payouts.\nEach allied turn with another active attacker: heal it for 10% max HP and grant +2.2% current ATK, once/turn."}},
+  {"id": "tower-champion-snowing", "element": "Water", "image": "assets/cards/iceking.png", "towerType": "snowing", "unlockRequirement": "tower_floor_100_snowing", "sourceId": "toshiro", "name": "Ice King", category: ["AntiVillian", "Magician", "Human", "Alternative"], "chance": 1058000, "requiredWeather": "Snowing", "nativeWeather": "snowing", "stats": {"hp": 104600, "atk": 46000}, "passive": {"name": "Ice Manipulation", "description": "When hit: 20% chance to Freeze the attacker for 2 turns. Deal +50% damage to frozen targets.\nFirst eligible fatal hit: revive at full HP for 5 combat turns, then die permanently. No teammate revival.\nOn permanent death: 58% chance to give a living teammate Ice King Crown (10% chance to Freeze targets for 3 turns)."}},
+  {"id": "tower-champion-sunny", "element": "Fire", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", category: ["Unhuman", "Brutal", "Alternative"], "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 78000, "atk": 13000}, "passive": {"name": "Solar Claw", "description": "33% base crit chance. First damaging crit applies Burn for 3 turns (33% current ATK/turn).\nLater crits deal x3 attack damage before the normal crit multiplier. They do not reapply this Burn. No free follow-up or guaranteed crit."}},
+  {"id": "tower-champion-sugar", "element": "Electric", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"], "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 76000, "atk": 7600}, "passive": {"name": "Candy Eater", "description": "Each primary attack gains 1–3 candies; only the current form applies.\n0–10: +25% damage; +1 extra candy/attack.\n11–25: +50% max HP; when hit, spend 1 candy to heal 3% max HP.\n26–50: damaging attacks summon a Ghost (HP = damage dealt; ATK = 10% current ATK).\n51–75: 76% dodge; a dodge skips the next attack, grants 5 candies and heals 7.6% max HP.\n76–99: every 3rd attack also hits up to 3 random enemies for 50% ATK.\n100: hit all enemies each attack; spend 1 candy/attack until 0. Then return to Form 1 and self-Stun for 5 turns; no candy gain or transformation during reversion.\nGenerated units cannot summon Ghosts."}},
+  {"id": "tower-champion-reaper", "element": "Holy", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", category: ["Villian", "Reaper", "Unhuman", "Brutal", "PureEvil"], "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 60000, "atk": 30000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every 2nd primary attack: hit all enemies for 60% of each target’s current ATK.\nWhen damaged: 6% chance to counter for 50% damage received; counters cannot loop.\nFirst eligible fatal hit: revive at full HP, gain +100% current ATK permanently. Cannot be cloned or revived by teammates."}},
+  {"id": "tower-champion-eclipse", "element": "Dark", "image": "assets/cards/wou.png", "towerType": "eclipse", "unlockRequirement": "tower_floor_100_eclipse", "sourceId": "weather-eclipse-harvester", "name": "Wonder Of You", category: ["JoJo", "Supporter", "Magician", "Alternative"], "chance": 8000000, "requiredWeather": "Eclipse", "nativeWeather": "eclipse", "stats": {"hp": 800000, "atk": 8}, "passive": {"name": "Calamity", "description": "Protect a random living teammate; choose another if it dies. No position swap.\nAfter that ally’s shields/reduction, split remaining damage 50%/50%; absorb the shared half, with an 8% chance to reflect it instead. No recursive redirection.\nProtected ally’s kill: heal 80% max HP. Death while protecting: 8% chance to execute the attacker; normal immunity/survival rules apply."}},
+  {"id": "tower-champion-malevolent", "element": "Fire", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", category: ["Jujutsu", "Villian", "Unhuman", "Brutal", "PureEvil"], "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 66666, "atk": 9999}, "passive": {"name": "Malevolent Kitchen", "description": "After 5 primary attacks, hit all living enemies for 25% current ATK at the start of every combat turn while alive.\nWhen hit and surviving: 66% chance to heal 6% max HP and gain +9% current ATK. ATK bonuses stack for the match."}},
+  {"id": "tower-champion-tsukuyomi", "element": "Nature", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", category: ["Ninja", "Protagonist", "Hero", "Human", "Brutal"], "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 200000, "atk": 20000}, "passive": {"name": "Datebayo", "description": "Each new active enemy rolls Naruto/Sasuke mode (50% each); keep the card’s attack counter across target changes.\nNaruto: every 3rd attack deals x3 damage and creates a 10% current HP/ATK Clone. Living Clones follow up each attack; Clone death heals the owner 10% max HP. No count cap; generated units cannot summon.\nSasuke: every 2nd attack hits all enemies for 50% ATK; 20% dodge. Dodge applies Burn for 5 turns (25% ATK/turn) and a 3-combat-turn shield equal to avoided damage. Burn ending naturally Stuns for 1 turn.\nSwitching to Sasuke removes Clones without healing; switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
+  {"id": "tower-champion-heavenly", "element": "Holy", "image": "assets/cards/judgement.png", "towerType": "heavenly", "unlockRequirement": "tower_floor_100_heavenly", "sourceId": "weather-heavenly-seraph", "name": "The Judgement", category: ["Alternative", "Magician", "Unhuman", "Supporter"], "chance": 300300, "requiredWeather": "Heavenly", "nativeWeather": "heavenly", "stats": {"hp": 40000, "atk": 5000}, "passive": {"name": "Divine Light", "description": "Every 2nd attack: 33% chance for a beam hitting all enemies for 50% current ATK; damaged targets have a 66% chance of Heresy for 1–3 turns.\nWhile any enemy has Heresy: beam chance/damage become 66%/66% ATK; Heresy chance becomes 33%.\nHeresy: deal 9% less damage; 3% chance to miss primary attacks."}},
+  {"id": "tower-champion-shadow", "element": "Dark", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", category: ["Villian", "AntiVillian", "Human", "Alternative", "Brutal"], "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 102000, "atk": 28000}, "passive": {"name": "Dark Aurora", "description": "On kill: 29% chance to convert an eligible original enemy and steal its passive. Insert the converted unit directly in front of Dark Decade with Dark Decade’s current max HP/ATK and the victim’s passive.\nWhile alive, revive eligible original teammates at the back with Dark Decade’s stats (max 2 revivals/teammate); keep their own passives. Never revive itself, clones or summons.\nGenerated units cannot create companions. Uncloneable enemies and anti-revival restrictions remain excluded."}},
 ].map(reward => Object.freeze({ ...reward, towerFloor: 100, rarity: 'Secret', image: reward.image, description: `Clear Floor 100 of ${reward.towerType} Tower. Future rolls require the matching weather.` }));
 CARDS.push(...TOWER_REWARD_CARDS);
 // Raid-only secrets never enter RNG pools, including after their first unlock.
 const RAID_SECRET_CARDS = [
-  { id: 'raid-secret-mihawk', element: 'Nature', name: 'Mihawk', rarity: 'Secret', chance: 0, stats: { hp: 100000, atk: 5000 }, image: 'assets/cards/mihawk.png',
+  { id: 'raid-secret-mihawk', element: 'Nature', name: 'Mihawk', category: ["Swordman", "Human", "AntiVillian", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 100000, atk: 5000 }, image: 'assets/cards/mihawk.png',
     passive: { name: 'Hawkeye', description: "50% dodge; successful dodge counters for 500% current ATK.\nPrimary attacks pierce the enemy lineup; each damaging hit reduces the next target’s damage by 25%. Dodges/fully blocked hits do not consume a falloff step.\nEach combat turn: 25% chance for Haki for 2 turns (+250% ATK, 25% damage reduction); refreshes without stacking." } },
-  { id: 'raid-secret-ace', element: 'Fire', name: 'Ace', rarity: 'Secret', chance: 0, stats: { hp: 10000, atk: 1000 }, image: 'assets/cards/ace.png',
+  { id: 'raid-secret-ace', element: 'Fire', name: 'Ace', category: ["Pirate", "Human", "Hero", "Supporter", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 10000, atk: 1000 }, image: 'assets/cards/ace.png',
     passive: { name: 'Mera Mera', description: "Successful attacks: 10% chance to Burn for 3 turns (100% current ATK/turn).\nOn death: living teammates gain Brother Soul. Their successful attacks have a separate 10% chance to Burn for 1 turn (100% their current ATK). Stacks with other Burns; multiple Ace deaths do not increase the chance." } },
-  { id: 'raid-secret-marco', element: 'Water', name: 'Marco', rarity: 'Secret', chance: 0, stats: { hp: 500000, atk: 10000 }, image: 'assets/cards/marco.png',
+  { id: 'raid-secret-marco', element: 'Water', name: 'Marco', category: ["Pirate", "Human", "Supporter", "Hero"], rarity: 'Secret', chance: 0, stats: { hp: 500000, atk: 10000 }, image: 'assets/cards/marco.png',
     passive: { name: 'Phoenix Inferno', description: "While alive, attacks against other teammates have a 10% chance to be blocked; counter for 200% current ATK without swapping.\nOnce/match, prevent an ally’s fatal hit or danger below 10% HP, swap positions and heal to max HP. Bleed blocks the heal; fatal rescue leaves at least 1 HP.\n10% dodge; each dodge grants the living team +10% current max HP, stacking for the match." } }
 ].map(card => Object.freeze({ ...card, requiredWeather: null, raidOnly: true, raidType: 'marine_fort', unlockRequirement: `raid_secret_${card.name.toLowerCase()}`, description: 'Exclusive Marine Ford Raid drop. Never available from normal rolls.' }));
 CARDS.push(...RAID_SECRET_CARDS);
@@ -1449,7 +1449,7 @@ if (typeof window !== 'undefined') window.TOWER_REWARD_CARDS = TOWER_REWARD_CARD
 const EXPANSION_CARDS = [
   {
     "id": "funny-valentine",
-    "name": "Funny Valentine",
+    "name": "Funny Valentine", category: ["JoJo", "Villian", "Human", "Brutal"],
     "element": "Nature",
     "rarity": "Secret",
     "chance": 214000,
@@ -1466,7 +1466,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "dio-the-world",
-    "name": "Dio The World",
+    "name": "Dio The World", category: ["JoJo", "Villian", "Unhuman", "Brutal", "PureEvil"],
     "element": "Electric",
     "rarity": "Secret",
     "chance": 666666,
@@ -1483,7 +1483,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "joseph-joestar",
-    "name": "Joseph Joestar",
+    "name": "Joseph Joestar", category: ["JoJo", "Protagonist", "Hero", "Human", "Supporter"],
     "element": "Electric",
     "rarity": "Secret",
     "chance": 120000,
@@ -1499,7 +1499,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "jolyne-joestar",
-    "name": "Jolyne Joestar",
+    "name": "Jolyne Joestar", category: ["JoJo", "Protagonist", "Hero", "Human", "Brutal"],
     "element": "Nature",
     "rarity": "Secret",
     "chance": 206000,
@@ -1516,7 +1516,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "tohth",
-    "name": "Tohth",
+    "name": "Tohth", category: ["JoJo", "Supporter", "Magician", "Alternative"],
     "element": "Holy",
     "rarity": "Secret",
     "chance": 189000,
@@ -1533,7 +1533,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "emmu",
-    "name": "Emmu",
+    "name": "Emmu", category: ["Hero", "Protagonist", "Human", "Supporter"],
     "element": "Dark",
     "rarity": "Secret",
     "chance": 1700000,
@@ -1550,7 +1550,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "josuke",
-    "name": "Josuke",
+    "name": "Josuke", category: ["JoJo", "Protagonist", "Hero", "Human", "Supporter"],
     "element": "Water",
     "rarity": "Secret",
     "chance": 2400000,
@@ -1567,7 +1567,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "akaza",
-    "name": "Akaza",
+    "name": "Akaza", category: ["DemonSlayer", "Villian", "Unhuman", "Brutal"],
     "element": "Water",
     "rarity": "Secret",
     "chance": 8000000,
@@ -1584,7 +1584,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "awakened-doflamingo",
-    "name": "Awakened Doflamingo",
+    "name": "Awakened Doflamingo", category: ["Pirate", "Villian", "Human", "Brutal", "Captain", "PureEvil"],
     "element": "Dark",
     "rarity": "Secret",
     "chance": 0,
@@ -1601,7 +1601,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "prime-garp",
-    "name": "Prime Garp",
+    "name": "Prime Garp", category: ["Hero", "Human", "Captain", "Brutal", "Army"],
     "element": "Nature",
     "rarity": "Secret",
     "chance": 0,
@@ -1622,7 +1622,7 @@ window.EXPANSION_CARDS = EXPANSION_CARDS;
 // Boss Event exclusive: never enters normal rolls.
 const BOSS_EVENT_CARDS = [{
   "id": "boss-event-alucard",
-  "name": "Alucard",
+  "name": "Alucard", category: ["Protagonist", "AntiHero", "Unhuman", "Brutal", "Hunter"],
   "element": "Fire",
   "rarity": "Secret",
   "chance": 0,
@@ -1644,7 +1644,7 @@ window.BOSS_EVENT_CARDS = BOSS_EVENT_CARDS;
 const QUEST_UPDATE_CARDS = [
   {
     "id": "madara-lubu",
-    "name": "Madara Lubu",
+    "name": "Madara Lubu", category: ["Ninja", "Villian", "Unhuman", "Brutal", "Army"],
     "element": "Fire",
     "rarity": "Secret",
     "chance": 10000000,
@@ -1664,7 +1664,7 @@ const QUEST_UPDATE_CARDS = [
   },
   {
     "id": "sung-jin-woo",
-    "name": "Sung Jin Woo",
+    "name": "Sung Jin Woo", category: ["Protagonist", "Hunter", "Human", "Supporter", "Army", "Brutal"],
     "element": "Water",
     "rarity": "Secret",
     "chance": 2023000,
@@ -1683,7 +1683,7 @@ const QUEST_UPDATE_CARDS = [
   },
   {
     "id": "frieren",
-    "name": "Frieren",
+    "name": "Frieren", category: ["Protagonist", "Magician", "Supporter", "Unhuman", "Hero"],
     "element": "Holy",
     "rarity": "Secret",
     "chance": 2500000,
@@ -1702,7 +1702,7 @@ const QUEST_UPDATE_CARDS = [
   },
   {
     "id": "alexander-anderson",
-    "name": "Alexander Anderson",
+    "name": "Alexander Anderson", category: ["AntiVillian", "Human", "Brutal", "Hunter"],
     "element": "Water",
     "rarity": "Mythic",
     "chance": 777000,
@@ -1725,7 +1725,7 @@ CARDS.push(...QUEST_UPDATE_CARDS);
 CARDS.push(...[
   {
     "id": "julius",
-    "name": "Julius",
+    "name": "Julius", category: ["Magician", "Human", "Captain", "Hero", "Supporter"],
     "element": "Holy",
     "rarity": "Secret",
     "chance": 1500000,
@@ -1744,7 +1744,7 @@ CARDS.push(...[
   },
   {
     "id": "speed-wizard",
-    "name": "Speed Wizard",
+    "name": "Speed Wizard", category: ["Alternative", "Magician", "Human"],
     "element": "Electric",
     "rarity": "Mythic",
     "chance": 450000,
@@ -1761,7 +1761,7 @@ CARDS.push(...[
   },
   {
     "id": "boss-event-lucius",
-    "name": "Lucius Zogratis",
+    "name": "Lucius Zogratis", category: ["Villian", "Human", "Magician", "Brutal", "PureEvil", "Alternative"],
     "element": "Dark",
     "rarity": "Secret",
     "chance": 0,
@@ -1779,7 +1779,7 @@ CARDS.push(...[
   },
   {
     "id": "sea-goddess-valkyrie",
-    "name": "Sea Goddess Valkyrie",
+    "name": "Sea Goddess Valkyrie", category: ["Unhuman", "Supporter", "Magician"],
     "element": "Water",
     "rarity": "Mythic",
     "chance": 0,
@@ -1799,7 +1799,7 @@ CARDS.push(...[
 CARDS.push(...[
   {
     "id": "yuno-spirit",
-    "name": "Yuno Spirit",
+    "name": "Yuno Spirit", category: ["Magician", "Supporter", "Human", "Protagonist"],
     "element": "Nature",
     "rarity": "Secret",
     "chance": 0,
@@ -1817,7 +1817,7 @@ CARDS.push(...[
   },
   {
     "id": "tower-champion-lucky",
-    "name": "Yuno Spirit Demonic",
+    "name": "Yuno Spirit Demonic", category: ["Magician", "Human", "Brutal", "Protagonist"],
     "element": "Nature",
     "rarity": "Secret",
     "chance": 4444444,
@@ -1840,7 +1840,7 @@ CARDS.push(...[
 CARDS.push(...[
   {
     "id": "tower-champion-wind",
-    "name": "Xtreme Chan",
+    "name": "Xtreme Chan", category: ["Alternative", "Supporter", "Magician"],
     "element": "Nature",
     "rarity": "Secret",
     "chance": 2010000,
@@ -1860,7 +1860,7 @@ CARDS.push(...[
   },
   {
     "id": "tower-champion-bizare",
-    "name": "Star Plantinum Requiem",
+    "name": "Star Plantinum Requiem", category: ["JoJo", "Protagonist", "Unhuman", "Brutal", "Alternative"],
     "element": "Electric",
     "rarity": "Secret",
     "chance": 3000000,
@@ -1880,7 +1880,7 @@ CARDS.push(...[
   },
   {
     "id": "tower-champion-shadow-200",
-    "name": "Shadow The World Requiem",
+    "name": "Shadow The World Requiem", category: ["JoJo", "Villian", "Unhuman", "Brutal", "Alternative"],
     "element": "Dark",
     "rarity": "Secret",
     "chance": 12000000,
@@ -1901,7 +1901,7 @@ CARDS.push(...[
 ]);
 // Normal Tower Floor 200 champion; artwork is supplied by the game owner.
 CARDS.push({
-  id: 'tower-champion-normal-200', name: 'Reagan Ridley', element: 'Electric', rarity: 'Secret',
+  id: 'tower-champion-normal-200', name: 'Reagan Ridley', category: ["Human", "Supporter", "Alternative"], element: 'Electric', rarity: 'Secret',
   chance: 1692007, requiredWeather: 'Normal', towerType: 'normal', towerFloor: 200,
   unlockRequirement: 'tower_floor_200_normal', stats: {hp: 200000, atk: 16900},
   image: 'assets/cards/reaganridley.png',
@@ -1910,6 +1910,241 @@ CARDS.push({
     'AI: replace attacks with 100% ATK damage to all enemies. Each kill heals the robot and Reagan for 10% of Reagan’s max HP.\n'+
     'On reaching the frontline, sacrifice self and grant one random living teammate Robot Armor: 50% damage reduction, +25% ATK; every 2 attacks blast up to 2 random enemies for 50% ATK each.'}
 });
+// Fate card data: edit each category array here. Registry lives in category.js.
+CARDS.push(...[
+  {
+    "id": "shirou",
+    "name": "Shirou",
+    "category": [
+      "Swordman",
+      "Fate",
+      "Hero",
+      "Protagonist"
+    ],
+    "element": "Electric",
+    "rarity": "Mythic",
+    "chance": 850000,
+    "requiredWeather": "Sugar",
+    "stats": {
+      "hp": 10000,
+      "atk": 8000
+    },
+    "image": "assets/cards/shirou.png",
+    "passive": {
+      "name": "Rose Shield",
+      "description": "Fatal hit: revive at 10% max HP and gain a shield of 100% max HP for 3 turns; once per match."
+    }
+  },
+  {
+    "id": "kiritsu",
+    "name": "Kiritsu",
+    "category": [
+      "Fate",
+      "Brutal",
+      "AntiVillian"
+    ],
+    "element": "Fire",
+    "rarity": "Mythic",
+    "chance": 1850000,
+    "requiredWeather": null,
+    "stats": {
+      "hp": 150000,
+      "atk": 20000
+    },
+    "image": "assets/cards/kiritsu.png",
+    "passive": {
+      "name": "Hitman",
+      "description": "Replace each attack with Pistol (50% ATK; disable target passive next turn) or Rifle (60% ATK; 60% chance of a 30% ATK follow-up, which can chain at 60%)."
+    },
+    "questOnly": true,
+    "unlockRequirement": "quest_kiritsu"
+  },
+  {
+    "id": "mash",
+    "name": "Mash",
+    "category": [
+      "Hero",
+      "Fate",
+      "Supporter"
+    ],
+    "element": "Water",
+    "rarity": "Mythic",
+    "chance": 2900000,
+    "requiredWeather": null,
+    "stats": {
+      "hp": 300000,
+      "atk": 20000
+    },
+    "image": "assets/cards/mash.png",
+    "passive": {
+      "name": "Shield",
+      "description": "While supporting: each allied turn, shield a random teammate for 25% current HP for 1 turn and grant the team +10% crit chance (does not stack). Absorb 100% of unshielded attacks against teammates without changing positions."
+    }
+  },
+  {
+    "id": "gilgamesh",
+    "name": "Gilgamesh",
+    "category": [
+      "Villian",
+      "Hero",
+      "PureEvil",
+      "Fate"
+    ],
+    "element": "Holy",
+    "rarity": "Secret",
+    "chance": 10000000,
+    "requiredWeather": "Heavenly",
+    "stats": {
+      "hp": 1000000,
+      "atk": 50000
+    },
+    "image": "assets/cards/gilgamesh.png",
+    "passive": {
+      "name": "King of Heros",
+      "description": "Hero teammates gain +25% ATK damage while alive. Each supporting turn, give each teammate one 1-turn buff: Sword (+5% crit chance, +50% crit damage), Lance (pierce 2), or Dagger (50% follow-up; +10% chance if a follow-up skill already exists).\nEach attack hits 2 enemies. The 10th attack hits all enemies for x10 ATK."
+    }
+  },
+  {
+    "id": "cu-chalinn",
+    "name": "Cu Chalinn",
+    "category": [
+      "Hero",
+      "Swordman",
+      "Fate"
+    ],
+    "element": "Water",
+    "rarity": "Secret",
+    "chance": 4500000,
+    "requiredWeather": "Eclipse",
+    "stats": {
+      "hp": 200000,
+      "atk": 50000
+    },
+    "image": "assets/cards/cuchalinn.png",
+    "passive": {
+      "name": "Gae Blog",
+      "description": "Each attack: 22.5% chance to pierce 2 enemies; independently, 45% chance to hit the rearmost enemy for 80% ATK.\nRevive at 50% max HP once per match. The 5th attack after revival deals x5 damage."
+    }
+  },
+  {
+    "id": "saber-knight",
+    "name": "Saber Knight",
+    "category": [
+      "Hero",
+      "Swordman",
+      "Fate"
+    ],
+    "element": "Water",
+    "rarity": "Mythic",
+    "chance": 0,
+    "requiredWeather": null,
+    "stats": {
+      "hp": 80000,
+      "atk": 8000
+    },
+    "image": "assets/cards/saberknight.png",
+    "passive": {
+      "name": "EXCALIBURH",
+      "description": "Every attack gains 1 Excalibur stack, without cap. On permanent death, strike the opposing frontline for x[Excalibur] ATK. Cannot be cloned or revived."
+    },
+    "evolutionOnly": true
+  },
+  {
+    "id": "iskandar",
+    "name": "Iskandar",
+    "category": [
+      "Army",
+      "Fate",
+      "Swordman",
+      "Captain",
+      "Hero"
+    ],
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 5500000,
+    "requiredWeather": "Sunny",
+    "stats": {
+      "hp": 400000,
+      "atk": 27500
+    },
+    "image": "assets/cards/iskandar.png",
+    "passive": {
+      "name": "Ionian Hetairoi",
+      "description": "While alive after entry, teammates gain +10% crit chance and +10% ATK. From attack 6, call a random teammate to follow up each attack.\nLast ally alive: +5% crit chance and +25% crit damage. Convert own defeated enemies into teammates with their original stats and passive; max 3 conversions per match."
+    }
+  },
+  {
+    "id": "medea",
+    "name": "Medea",
+    "category": [
+      "Villian",
+      "Fate",
+      "Magician"
+    ],
+    "element": "Dark",
+    "rarity": "Secret",
+    "chance": 3200000,
+    "requiredWeather": "Shadow",
+    "stats": {
+      "hp": 200000,
+      "atk": 32000
+    },
+    "image": "assets/cards/medea.png",
+    "passive": {
+      "name": "Rule Breaker",
+      "description": "32% chance to dodge passive attacks. Every 2nd attack: 20% chance to stun for 1 turn, then disable the target passive for 1 turn after stun ends. Each attack: 10% chance to hit all enemies for 150% ATK."
+    }
+  },
+  {
+    "id": "merlin",
+    "name": "Merlin",
+    "category": [
+      "Hero",
+      "Magician",
+      "Fate",
+      "Swordman"
+    ],
+    "element": "Holy",
+    "rarity": "Secret",
+    "chance": 1700000,
+    "requiredWeather": "Sugar",
+    "stats": {
+      "hp": 100000,
+      "atk": 17000
+    },
+    "image": "assets/cards/merlin.png",
+    "passive": {
+      "name": "Noble Phantasm",
+      "description": "While supporting: each ally attack has a 17% chance of a follow-up that stuns for 1 turn. Heal the attacking ally for 5% max HP. Every 3 allied supporting turns, shield a random teammate for 50% current HP."
+    }
+  },
+  {
+    "id": "tower-champion-heavenly-200",
+    "name": "Gilgamesh Chan",
+    "category": [
+      "AntiHero",
+      "VideoGame",
+      "Fate",
+      "Alternative"
+    ],
+    "element": "Electric",
+    "rarity": "Secret",
+    "chance": 20000000,
+    "requiredWeather": "Heavenly",
+    "stats": {
+      "hp": 400000,
+      "atk": 36000
+    },
+    "image": "assets/cards/gilgameshchan.png",
+    "passive": {
+      "name": "Enuma English",
+      "description": "After 8 attacks, supporting ally attacks have a 20% chance of a 60% ATK follow-up. 36% dodge: stun the attacker for 2 turns, then disable its passive for 1 turn.\nEach attack randomly uses Gate of Babylon (5 hits, 12% ATK each), Exterminate (60% ATK to 2 enemies), or Enkindu (50% ATK; 50% chance to stun for 1 turn)."
+    },
+    "towerType": "heavenly",
+    "towerFloor": 200,
+    "unlockRequirement": "tower_floor_200_heavenly"
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 
