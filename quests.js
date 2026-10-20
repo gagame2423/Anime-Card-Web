@@ -3,6 +3,11 @@
   'use strict';
   const KEY = 'anime_card_rng_quests_v1';
   const QUESTS = Object.freeze([
+    {id:'toji',steps:[
+      {kind:'battle',target:888,mode:'boss-event',event:'gomen',won:true,minDifficulty:9,text:'Win 888 Gomen Boss Events at difficulty > 8.'},
+      {kind:'roll',target:88888,weather:'malevolent',text:'Roll 88,888 times during Malevolent weather.'},
+      {kind:'currency',target:888000000,source:'combat',text:'Earn 888,000,000 VNĐ from battles during this step; salvage does not count.'}
+    ]},
     {id:'kiritsu',steps:[
       {kind:'battle',target:10000,mode:'raid',raidType:'holy_grail',won:true,minDifficulty:11,text:'Win 10,000 Holy Grail Raids at difficulty > 10.'},
       {kind:'defeat',target:10000,category:'Fate',text:'Defeat 10,000 Fate-category enemies.'},
@@ -73,7 +78,7 @@
     return (step.won === undefined || step.won === e.won) && (!step.room || step.room === e.room) && (!step.fullElement || (e.teamElements?.length === 4 && e.teamElements.every(element => element === step.fullElement))) && (!step.mode || step.mode === e.mode) && (!step.weather || e.weatherIds?.includes(step.weather)) &&
       (!step.teammate || e.teamIds?.includes(step.teammate)) && (!step.card || step.card === e.cardId) &&
       (!step.mutation || e.mutationIds?.includes(step.mutation)) && (!step.event || step.event === e.eventType) &&
-      (!step.minDifficulty || e.difficulty >= step.minDifficulty) && (!step.raidType||step.raidType===e.raidType) && (!step.category||e.cardCategories?.includes(step.category)) && (!step.teamCategory||e.teamCategories?.includes(step.teamCategory));
+      (!step.minDifficulty || e.difficulty >= step.minDifficulty) && (!step.raidType||step.raidType===e.raidType) && (!step.category||e.cardCategories?.includes(step.category)) && (!step.teamCategory||e.teamCategories?.includes(step.teamCategory)) && (!step.source||step.source===e.source);
   }
   function record(kind, e) {
     if (host.SandboxSystem?.active || e?.sandbox || e?.mode === 'sandbox') return false;
@@ -102,10 +107,10 @@
     if (!persist()) { data.sequence--; throw Error('Không thể lưu lượt theo dõi quest.'); }
     return { id: String(data.sequence), startedAt: battle.startedAt, mode: battle.mode, weatherIds: [...weatherIds], teamIds: battle.playerTeam.map(u => u.card.id), teamElements: battle.playerTeam.filter(u => !u.isClone && !u.isSummoned && !u.isTemporaryAlly).map(u => u.card.element), raidType:battle.raid?.type, teamCategories:[...new Set(battle.playerTeam.filter(u=>!u.isClone&&!u.isSummoned&&!u.isTemporaryAlly).flatMap(u=>u.card.category||[]))], eventType: battle.bossEvent?.type, difficulty: battle.bossEvent?.difficulty ?? battle.raid?.difficulty, defeatSequence: 0 };
   }
-  function currencyEarned(amount){
+  function currencyEarned(amount,source="other"){
     if(host.SandboxSystem?.active||!Number.isFinite(amount)||!(amount>0)||data.sequence>=Number.MAX_SAFE_INTEGER||!QUESTS.some(def=>{const q=data.quests[def.id];return q&&def.steps[q.step]?.kind==='currency';}))return false;
     data.sequence++;if(!persist()){data.sequence--;return false;}
-    return record('currency',{id:'currency_'+data.sequence,startedAt:Date.now(),amount});
+    return record('currency',{id:'currency_'+data.sequence,startedAt:Date.now(),amount,source});
   }
   const snapshot = id => data.quests[id] ? JSON.parse(JSON.stringify(data.quests[id])) : null;
   function render(grid) {

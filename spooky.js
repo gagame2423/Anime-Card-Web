@@ -2,8 +2,8 @@
 (function(host){
   'use strict';
   const KEY='anime_card_rng_spooky_v1',MODE='spooky-hunt',TIME_ZONE='Asia/Bangkok',MAX=Number.MAX_SAFE_INTEGER;
-  const PLAYER_TEAM_SIZE=6,ENEMY_TEAM_SIZE=3;
-  const CAPSULE=Object.freeze({id:'spooky_capsule',name:'Spooky Capsule',type:'consumable',tier:'mythic',icon:'🎃',image:'assets/items/spookycapsule.png',description:'Open in Storage → Items for one card from the weighted Spooky pool. The Judgement requires Heavenly Tower Floor 100.'});
+  const PLAYER_TEAM_SIZE=6,ENEMY_TEAM_SIZE=3,TURN_MS=2000;
+  const CAPSULE=Object.freeze({id:'spooky_capsule',name:'Spooky Capsule',type:'consumable',tier:'mythic',icon:'🎃',image:'assets/items/spookycapsule.png',description:'Open in Storage → Items for one card, using standard mutation rolls. Duplicates grant 10% level EXP. The Judgement requires Heavenly Tower Floor 100.'});
   const EQUIPMENT='equipment_headless_horseman';
   const POOL=Object.freeze(['the-trapper','madness-doctor','tower-champion-heavenly','boss-event-alucard','boss-event-lucius','asta-demon','the-clown','the-oni','freddy-krueger','myers']);
   const COLLECTION=Object.freeze(['the-trapper','madness-doctor','the-legion','tower-champion-heavenly','the-clown','the-oni','freddy-krueger','jason-13th','myers']);
@@ -76,7 +76,7 @@
   function commitPending(){
     const p=data.pending;if(!p)return null;
     if((p.items.length||p.costs.length)&&!host.InventorySystem.transactOnce('spooky_rewards',p.id,p.items,p.costs))throw Error('Không thể lưu item Spooky. Giao dịch đang chờ khôi phục.');
-    if(p.cards.length&&bridge.grantCards?.(p.cards,p.id)!==true)throw Error('Không thể lưu thẻ Spooky. Giao dịch đang chờ khôi phục.');
+    if(p.cards.length&&bridge.grantCards?.(p.cards,p.id,p.kind)!==true)throw Error('Không thể lưu thẻ Spooky. Giao dịch đang chờ khôi phục.');
     const before=JSON.parse(JSON.stringify(data));
     data.coins=Math.max(0,Math.min(MAX,data.coins+p.coinsDelta));
     if(p.completedRun)data.runs=Math.min(MAX,data.runs+1);
@@ -124,7 +124,7 @@
   function scaledCoins(base,choices,random){const exact=Math.min(MAX,base*coinMultiplier(choices)),whole=Math.floor(exact);return whole+(exact>whole&&unit(random)<exact-whole?1:0);}
   function enemies(random=Math.random){
     const pool=[...POOL],bonus=1+modifiers().enemyStats;
-    return Array.from({length:ENEMY_TEAM_SIZE},(_,slot)=>{const [id]=pool.splice(roll(0,pool.length-1,random),1),native=host.ALL_CARDS.find(c=>c.id===id);if(!native)throw Error('Thiếu thẻ Spooky: '+id);const stats=enemyStats(data.run.wave,slot);stats.hp=Math.round(stats.hp*bonus);stats.atk=Math.round(stats.atk*bonus);const card={...native,stats:{...stats}};return {card,display:{name:card.name,image:card.image,...stats},hp:stats.hp,maxHp:stats.hp,atk:stats.atk,level:1,defeated:false,mutations:[],isSpookyEnemy:true};});
+    return Array.from({length:ENEMY_TEAM_SIZE},(_,slot)=>{const [id]=pool.splice(roll(0,pool.length-1,random),1),native=host.ALL_CARDS.find(c=>c.id===id);if(!native)throw Error('Thiếu thẻ Spooky: '+id);const stats=enemyStats(data.run.wave,slot);stats.hp=Math.round(stats.hp*bonus);stats.atk=Math.round(stats.atk*bonus);const card={...native,element:'Fire',stats:{...stats}};return {card,display:{name:card.name,image:card.image,...stats},hp:stats.hp,maxHp:stats.hp,atk:stats.atk,level:1,defeated:false,mutations:[],isSpookyEnemy:true};});
   }
   function canEnter(){return !host.SandboxSystem?.active&&isOpen()&&!data.pending&&!data.activeAttempt;}
   function start(battle){
@@ -185,5 +185,5 @@
   function sources(id){const result=[];for(const offer of SHOP)if(offer.id===id)result.push(`Spooky Shop: ${offer.cost.toLocaleString('en-US')} Spooky Coins.`);if(id===EQUIPMENT)result.push('Spooky Hunt: independent 5% chance only after winning Wave 50.');if(id==='machete')result.push('Spooky Hunt: independent 1% chance only after winning Wave 50; evolves Lv.100+ The Trapper.');return result;}
   function snapshot(){return JSON.parse(JSON.stringify({coins:data.coins,runs:data.runs,wave:data.run.wave,choices:data.run.choices,pendingChoice:data.run.pendingChoice,available:isOpen(),blocked:Boolean(data.pending)}));}
   function reset(){data=fresh();register();persist();}
-  host.SpookySystem=Object.freeze({KEY,MODE,PLAYER_TEAM_SIZE,ENEMY_TEAM_SIZE,TIME_ZONE,CAPSULE,EQUIPMENT,POOL,COLLECTION,CAPSULE_POOL,SHOP,CHOICES,BASE,FINAL,isOpen,calendar,validSave,configure,syncSeason,needsChoice,ensureChoice,choose,modifiers,enemyStats,coinRange,coinMultiplier,enemies,canEnter,start,recordKill,finish,abort,purchase,openCapsule,capsulePool,choiceText,renderChoices,renderInfo,renderShop,sources,snapshot,reset,flush:persist,get interrupted(){return interrupted;},get blocked(){return Boolean(data.pending);},unlocked:()=>host.AchievementSystem?.areSpookyComplete()===true});
+  host.SpookySystem=Object.freeze({KEY,MODE,PLAYER_TEAM_SIZE,ENEMY_TEAM_SIZE,TURN_MS,TIME_ZONE,CAPSULE,EQUIPMENT,POOL,COLLECTION,CAPSULE_POOL,SHOP,CHOICES,BASE,FINAL,isOpen,calendar,validSave,configure,syncSeason,needsChoice,ensureChoice,choose,modifiers,enemyStats,coinRange,coinMultiplier,enemies,canEnter,start,recordKill,finish,abort,purchase,openCapsule,capsulePool,choiceText,renderChoices,renderInfo,renderShop,sources,snapshot,reset,flush:persist,get interrupted(){return interrupted;},get blocked(){return Boolean(data.pending);},unlocked:()=>host.AchievementSystem?.areSpookyComplete()===true});
 })(window);

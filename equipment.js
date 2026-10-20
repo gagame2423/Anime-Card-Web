@@ -19,7 +19,8 @@
   })));
   const EVENT_EQUIPMENT=Object.freeze({id:'equipment_headless_horseman',name:'Headless Horseman',bonuses:Object.freeze({spookyCoins:.66,money:.66,drop:.06,mutation:.06}),
     item:Object.freeze({id:'equipment_headless_horseman',name:'Headless Horseman',type:'equipment',tier:'secret',icon:'🎃',image:'assets/items/hhequip.png',description:'+66% Spooky Coins; +66% VNĐ from all sources; +0.06 Drop Multiplier; Mutation chance x1.06. Spooky Hunt Wave 50 victory only: 5%.'})});
-  const ITEMS=new Map([...RECIPES,EVENT_EQUIPMENT].map(item=>[item.id,item]));
+  const INFINITY_EYE=Object.freeze({id:"equipment_infinity_eye",name:"Infinity Eye",bonuses:Object.freeze({expFlat:.8,luck:.8,moneyFlat:.8}),item:Object.freeze({id:"equipment_infinity_eye",name:"Infinity Eye",type:"equipment",tier:"mythic",icon:"∞",image:"assets/items/gojoeye.png",description:"+0.8 EXP Multiplier; +0.8 Luck; +0.8 VNĐ Multiplier. Gomen Boss Event Shop: 888,888 Gomen Coins."})});
+  const ITEMS=new Map([...RECIPES,EVENT_EQUIPMENT,INFINITY_EYE].map(item=>[item.id,item]));
   const BY_ID=new Map(RECIPES.map(recipe=>[recipe.id,recipe]));
   const ZERO=Object.freeze({luck:0,money:0,exp:0,arenaMoney:0,arenaExp:0,weather:0,mutation:0,drop:0,rollSpeed:0});
   let bridge={},blocked=false;
@@ -78,11 +79,12 @@
   function current(){return data.equipped&&host.InventorySystem.quantity(data.equipped)>0?ITEMS.get(data.equipped):null;}
   function bonuses(){return current()?.bonuses||ZERO;}
   const multiplier=(field,source='all')=>1+(bonuses()[field]||0)+(source==='arena'?(bonuses()[field==='money'?'arenaMoney':'arenaExp']||0):0);
+  const flatBonus=field=>Number(bonuses()[field+'Flat'])||0;
   const scale=(amount,mult)=>Math.max(0,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(Math.max(0,Number(amount)||0)*mult)));
-  host.EquipmentSystem=Object.freeze({KEY,RECIPES,EVENT_EQUIPMENT,isEquipment:id=>ITEMS.has(id),recovered,validSave,register,recover,inspect,craft,equip,matches,options,
-    configure:options=>{bridge=options||{};},recipe:id=>BY_ID.get(id)||null,current,bonuses,
+  host.EquipmentSystem=Object.freeze({KEY,RECIPES,EVENT_EQUIPMENT,INFINITY_EYE,isEquipment:id=>ITEMS.has(id),recovered,validSave,register,recover,inspect,craft,equip,matches,options,
+    configure:options=>{bridge=options||{};},recipe:id=>BY_ID.get(id)||null,current,bonuses,flatBonus,
     mutationMultiplier:()=>1+(bonuses().mutation||0),moneyMultiplier:source=>multiplier('money',source),expMultiplier:source=>multiplier('exp',source),
-    scaleMoney:(amount,source)=>scale(amount,multiplier('money',source)),
+    scaleMoney:(amount,source)=>scale(amount,multiplier('money',source)+flatBonus('money')),
     flush:()=>!blocked&&data.pending===null&&persist(),get blocked(){return blocked;},
     reset:()=>{data=fresh();blocked=false;register();persist();},get equipped(){return current()?.id||null;}
   });

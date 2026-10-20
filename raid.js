@@ -25,12 +25,15 @@
     ].map(Object.freeze))}) });
   const SHOP = Object.freeze([{id:'web_string',cost:6220},{id:'cannon_ball',cost:3899}, ...['exp_potion', 'rich_potion', 'speed_potion', 'speed_battle_potion'].map(id => Object.freeze({ id, cost: id === 'speed_battle_potion' ? 50 : 25 }))]);
   const GRAIL_SHOP=Object.freeze([...SHOP.filter(offer=>!['web_string','cannon_ball'].includes(offer.id)),Object.freeze({id:'excalibur_sword',cost:80000})]);
-  const offers=type=>type==='holy_grail'?GRAIL_SHOP:SHOP;
+  const offers=type=>type==='holy_grail'?GRAIL_SHOP:validType(type)?SHOP:[];
+  // Archived Gomen rewards remain readable for migration, never playable as a Raid.
+  const rewardItemId=type=>({holy_grail:'excalibur_sword',gomen:'gojo_eye'})[type]||null;
   const excaliburChance=d=>.008+.072*(difficulty(d)-1)/999;
   const LEVEL_GROWTH = .075;
   const object = v => Boolean(v && typeof v === 'object' && !Array.isArray(v));
   const integer = (v, min = 0, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(v) && v >= min && v <= max;
   const validType = type => Object.hasOwn(TYPES, type);
+  const savedType = type => validType(type) || type === 'gomen';
   const difficulty = n => Math.max(1, Math.min(1000, Math.floor(Number(n) || 1)));
   const randomUnit = random => Math.max(0, Math.min(1 - Number.EPSILON, Number(random()) || 0));
   const fresh = () => ({ version: 1, types: Object.fromEntries(Object.keys(TYPES).map(type => [type, { coins: 0, upgradeLevel: 0, wins: 0, difficulty: 1 }])), claimedSecrets: {}, activeAttempt: null, pendingReward: null });
@@ -40,25 +43,25 @@
   }
   function secretChance(d) { return (1 + 9 * (difficulty(d) - 1) / 999) / 100; }
   function validAttempt(a) {
-    return object(a) && typeof a.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(a.id) && validType(a.type) && integer(a.difficulty, 1, 1000) && integer(a.startedAt);
+    return object(a) && typeof a.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(a.id) && savedType(a.type) && integer(a.difficulty, 1, 1000) && integer(a.startedAt);
   }
   function validSave(v) {
     if (!object(v) || v.version !== 1 || !object(v.types) || !object(v.claimedSecrets)) return false;
-    if (Object.keys(v.types).some(type => !validType(type)) || !object(v.types.marine_fort)) return false;
+    if (Object.keys(v.types).some(type => !savedType(type)) || !object(v.types.marine_fort)) return false;
     for (const entry of Object.values(v.types)) if (!integer(entry.coins) || !integer(entry.wins) || !integer(entry.upgradeLevel, 0, 100) || !integer(entry.difficulty, 1, 1000)) return false;
     if (Object.entries(v.claimedSecrets).some(([id, flag]) => !SECRET_IDS.includes(id) || typeof flag !== 'boolean')) return false;
     if (v.activeAttempt !== null && !validAttempt(v.activeAttempt)) return false;
     const p = v.pendingReward;
     if (p === null) return true;
-    if (!validAttempt(p) || !v.activeAttempt || p.id !== v.activeAttempt.id || p.type !== v.activeAttempt.type || p.difficulty !== v.activeAttempt.difficulty || p.startedAt !== v.activeAttempt.startedAt) return false;
+    if (!validAttempt(p) || !object(v.types[p.type]) || !v.activeAttempt || p.id !== v.activeAttempt.id || p.type !== v.activeAttempt.type || p.difficulty !== v.activeAttempt.difficulty || p.startedAt !== v.activeAttempt.startedAt) return false;
     const range = coinRange(p.difficulty);
     if ('baseCoins' in p || 'dropMultiplier' in p) {
       if (!integer(p.baseCoins, range.min, range.max) || typeof p.dropMultiplier !== 'number' || !Number.isFinite(p.dropMultiplier) || p.dropMultiplier < 1 || p.dropMultiplier > host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER) return false;
       const exact = p.baseCoins * p.dropMultiplier;
       if (!integer(p.coins, Math.floor(exact), Math.ceil(exact))) return false;
     } else if (!integer(p.coins, range.min, range.max)) return false;
-    if(p.item!==undefined && p.item!==null && (p.type!=='holy_grail'||!object(p.item)||p.item.id!=='excalibur_sword'||!integer(p.item.quantity,1,Math.ceil(host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER))))return false;
-    if(p.type==='holy_grail' && p.secret!==null)return false;
+    if(p.item!==undefined && p.item!==null && (!rewardItemId(p.type)||!object(p.item)||p.item.id!==rewardItemId(p.type)||!integer(p.item.quantity,1,Math.ceil(host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER))))return false;
+    if(p.type!=='marine_fort' && p.secret!==null)return false;
     return p.secret === null || (object(p.secret) && SECRET_IDS.includes(p.secret.cardId) && Array.isArray(p.secret.mutationIds) && p.secret.mutationIds.length <= 2 && new Set(p.secret.mutationIds).size === p.secret.mutationIds.length && p.secret.mutationIds.every(id => typeof id === 'string' && Object.hasOwn(host.MUTATION_BY_ID || {}, id)));
   }
   function load() { try { const v = JSON.parse(host.localStorage.getItem(KEY) || 'null'); if(!validSave(v))return fresh();for(const [type,entry]of Object.entries(fresh().types))v.types[type] ||= entry;return v; } catch (_) { return fresh(); } }
@@ -87,7 +90,7 @@
     persist();
     if (data.pendingReward) { try { commitPending(); } catch (e) { console.warn(e.message); } }
   }
-  function canEnter(type = 'marine_fort') { return validType(type) && !data.pendingReward && host.InventorySystem.quantity(TYPES[type].keyId) >= 1; }
+  function canEnter(type = 'marine_fort') { return !host.SandboxSystem?.active && validType(type) && !data.pendingReward && (!TYPES[type].keyId || host.InventorySystem.quantity(TYPES[type].keyId) >= 1); }
   function setDifficulty(type, value) {
     if (!validType(type) || data.activeAttempt) return false;
     const before = data.types[type].difficulty; data.types[type].difficulty = difficulty(value);
@@ -114,11 +117,11 @@
     return TYPES[type].enemies.map(([id,h0,h1,a0,a1]) => ({ card:host.ALL_CARDS.find(c=>c.id===id), level, hpMin:Math.round(h0*scale),hpMax:Math.round(h1*scale),atkMin:Math.round(a0*scale),atkMax:Math.round(a1*scale) }));
   }
   function start(battle, type = 'marine_fort') {
-    if (battle?.mode !== MODE || battle.playerTeam?.length !== 4 || battle.enemyTeam?.length !== 10 || !canEnter(type) || data.activeAttempt) throw new Error('Cần đội 4 thẻ và 1 Key đúng loại để vào Raid.');
+    if (battle?.mode !== MODE || battle.playerTeam?.length !== 4 || battle.enemyTeam?.length !== TYPES[type]?.enemies.length || !canEnter(type) || data.activeAttempt) throw new Error('Cần đội 4 thẻ, đúng số đối thủ và điều kiện vào Raid.');
     const previous = JSON.parse(JSON.stringify(data)), now = Date.now(), entry = data.types[type];
     const attempt = { id: `${now}_${++serial}`, type, difficulty: entry.difficulty, startedAt: now };
     data.activeAttempt = attempt;
-    try { requirePersist(); if (!host.InventorySystem.remove(TYPES[type].keyId, 1)) throw new Error('Không thể tiêu Raid Key. Trận chưa bắt đầu.'); }
+    try { requirePersist(); if (TYPES[type].keyId && !host.InventorySystem.remove(TYPES[type].keyId, 1)) throw new Error('Không thể tiêu Raid Key. Trận chưa bắt đầu.'); }
     catch (e) { data = previous; persist(); throw e; }
     battle.raid = { ...attempt, upgradeLevel: entry.upgradeLevel, completed: false };
     const multiplier = 1 + entry.upgradeLevel / 100;
@@ -135,8 +138,8 @@
   }
   function finish(battle, won, random = Math.random) {
     const run = battle?.raid;
-    if (!run || run.completed) return null;
-    if (won && ((battle.enemyTeam || []).length < 10 || battle.enemyTeam.some(u => !u.defeated && u.hp > 0))) return null;
+    if (!run || run.completed || !validType(run.type)) return null;
+    if (won && ((battle.enemyTeam || []).length < TYPES[run.type].enemies.length || battle.enemyTeam.some(u => !u.defeated && u.hp > 0))) return null;
     if (data.pendingReward) {
       if (data.pendingReward.id !== run.id) throw new Error('Có phần thưởng Raid đang chờ lưu.');
       const result = commitPending(); run.completed = true; return result;
@@ -146,7 +149,7 @@
     const range = coinRange(run.difficulty);
     const baseCoins = range.min + Math.floor(randomUnit(random) * (range.max - range.min + 1));
     data.pendingReward = { ...data.activeAttempt, baseCoins, dropMultiplier: host.InventorySystem.getDropMultiplier(), coins: host.InventorySystem.scaleDrop(baseCoins, random), secret: run.type==='marine_fort'?rollSecret(run.difficulty, random):null };
-    if(run.type==='holy_grail')data.pendingReward.item=randomUnit(random)<excaliburChance(run.difficulty)?{id:'excalibur_sword',quantity:host.InventorySystem.scaleDrop(1,random)}:null;
+    if(rewardItemId(run.type))data.pendingReward.item=randomUnit(random)<excaliburChance(run.difficulty)?{id:rewardItemId(run.type),quantity:host.InventorySystem.scaleDrop(1,random)}:null;
     if (!persist()) { data.pendingReward = null; throw new Error('Không thể lưu phần thưởng Raid.'); }
     const result = commitPending(); run.completed = true; return result;
   }
@@ -163,6 +166,7 @@
     const quantity=host.InventorySystem.scaleDrop(1,random);return host.InventorySystem.grant(GRAIL_KEY.id,quantity)?quantity:0;
   }
   function purchase(type, id) {
+    if (!validType(type)) return false;
     const offer = offers(type).find(item => item.id === id), entry = data.types[type];
     if (!offer || !entry || data.pendingReward || entry.coins < offer.cost || host.InventorySystem.quantity(id) >= Number.MAX_SAFE_INTEGER) return false;
     entry.coins -= offer.cost;
@@ -171,12 +175,19 @@
   }
   function upgradeCost(type) { return 5 + 5 * Math.floor((data.types[type]?.upgradeLevel || 0) / 10); }
   function upgrade(type) {
+    if (!validType(type)) return false;
     const entry = data.types[type]; if (!entry || data.activeAttempt || data.pendingReward || entry.upgradeLevel >= 100 || entry.coins < upgradeCost(type)) return false;
     const cost = upgradeCost(type); entry.coins -= cost; entry.upgradeLevel++;
     if (persist()) return true; entry.coins += cost; entry.upgradeLevel--; return false;
   }
   function snapshot(type = 'marine_fort') { return { ...data.types[type] }; }
-  function totalWins() { return Object.values(data.types).reduce((sum, entry) => Math.min(Number.MAX_SAFE_INTEGER, sum + entry.wins), 0); }
+  function totalWins() { return Object.keys(TYPES).reduce((sum, type) => Math.min(Number.MAX_SAFE_INTEGER, sum + data.types[type].wins), 0); }
+  function legacyGomenProgress() {
+    // configure() recovers the old durable item reward before Boss Event migration.
+    if (data.pendingReward?.type === 'gomen') return {ready:false};
+    const entry=data.types.gomen;
+    return entry ? {ready:true,coins:entry.coins,wins:entry.wins,difficulty:entry.difficulty} : {ready:true,coins:0,wins:0,difficulty:1};
+  }
   function renderShop(grid, type, onChange = () => {}) {
     if (!grid || !validType(type)) return; grid.replaceChildren(); const doc = grid.ownerDocument, entry = data.types[type];
     for (const offer of offers(type)) {
@@ -193,5 +204,5 @@
     button.addEventListener('click', () => { if (upgrade(type)) onChange(); else host.alert('Không thể nâng cấp đội Raid.'); }); box.append(name, text, button); grid.append(box);
   }
   function reset() { data = fresh(); registerKey(); persist(); }
-  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, GRAIL_KEY, SECRET_IDS, TYPES, SHOP, offers, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, totalWins, renderShop, reset, flush: persist });
+  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, GRAIL_KEY, SECRET_IDS, TYPES, SHOP, offers, rewardItemId, materialChance:excaliburChance, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, totalWins, legacyGomenProgress, renderShop, reset, flush: persist });
 })(window);

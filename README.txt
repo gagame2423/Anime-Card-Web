@@ -1,117 +1,77 @@
-NHẬT KÝ CẬP NHẬT SPOOKY HUNT — 6VS3, STORAGE VÀ THƯỞNG WAVE 50
-Phiên bản: 20261020-spooky-2
-Ngày cập nhật: 20/10/2026
+NHẬT KÝ BẢN SỬA GOMEN EVENT — 20/10/2026
 
-Tài liệu chỉ ghi thay đổi của bản cập nhật này.
+1. CHUYỂN GOMEN SANG BOSS EVENT
 
-1. SPOOKY HUNT CHUYỂN SANG 6VS3
+Gomen Event được chuyển khỏi danh sách Raid sang Battle Arena > Boss Event > Gomen Event. Toàn bộ điều kiện vào trận, tạo boss, xử lý kết quả, tiền thưởng và shop do boss_event.js quản lý.
 
-- Đội người chơi cần đúng 6 thẻ; mỗi wave vẫn có đúng 3 đối thủ ban đầu. Không phải 6vs6.
-- PLAYER_TEAM_SIZE = 6 và ENEMY_TEAM_SIZE = 3 được quản lý tại spooky.js. app.js đọc các giá trị này để kiểm tra đội hình và số địch, thay vì mặc định hai bên phải có cùng số thẻ.
-- Giao diện triển khai hiển thị đủ 6 ô, bộ đếm 0/6–6/6 và nhãn trận 6V3. Đội thiếu thẻ không thể bắt đầu; vẫn kiểm tra số bản thực sự sở hữu theo đúng mutation/double mutation.
-- Điều chỉnh lưới triển khai riêng Spooky Hunt: 6 cột trên màn hình rộng từ 1300 px, 3 cột trên màn hình trung bình, 2 cột ở màn hình tối đa 700 px.
-- Engine tiếp tục xử lý toàn bộ hàng đợi. Thẻ thứ 5, thứ 6 và đơn vị sinh thêm đều được tham gia đúng luồng; không kết luận thua chỉ vì 3 hoặc 4 vị trí đầu bị hạ.
-- Giữ Auto Continue OFF trong Spooky Hunt, chọn modifier bắt buộc trước mỗi mốc 5 wave, 50 wave/lượt chạy và quy tắc mở Arena trong tháng 10 theo Asia/Bangkok.
-- Các chế độ khác giữ nguyên số thẻ và luật vào trận.
+Thể thức sử dụng đúng luật Boss Event hiện có: 5 thẻ người chơi đấu 1 boss Gojo Revice; không cần Key, không có cây nâng HP/ATK bằng Coins. Các nâng cấp Gomen thuộc Raid cũ không được áp dụng trong Boss Event. Speed Battle Potion vẫn hoạt động theo luật Boss Event.
 
-2. GIỮ NGUYÊN TĂNG TRƯỞNG BA ĐỐI THỦ
+Trận thắng thưởng Gomen Coins và có thể rơi Gojo Eye; không thưởng VNĐ, EXP hoặc potion ngẫu nhiên. Gojo Revice vẫn là thẻ tiến hóa; trận Gomen không phát trực tiếp thẻ Gojo Revice.
 
-Chỉ số trước các buff/debuff lượt chạy:
-Vị trí 1: Wave 1 = 300.000 HP / 60.000 ATK;
-           Wave 50 = 33.300.000 HP / 333.000 ATK.
-Vị trí 2: Wave 1 = 600.000 HP / 60.000 ATK;
-           Wave 50 = 66.600.000 HP / 666.000 ATK.
-Vị trí 3: Wave 1 = 666.000 HP / 66.000 ATK;
-           Wave 50 = 99.900.000 HP / 999.000 ATK.
+2. ĐIỀU KIỆN HEAVENLY
 
-Công thức giữ nguyên cho w = 1–50:
-  t = (w - 1) / 49
-  s = 3t² - 2t³
-  chỉ số(w) = round(chỉ số đầu + (chỉ số cuối - chỉ số đầu) x s)
+Chỉ được bắt đầu Gomen khi Heavenly Weather đang hoạt động và chưa hết hạn. Có thể xem thông tin hoặc shop khi sự kiện đóng, nhưng không được vào trận.
 
-Việc tăng đội người chơi từ 3 lên 6 không nhân lại HP/ATK đối thủ. Buff chỉ số của lượt chạy vẫn áp dụng một lần lên các đơn vị mới của trận.
+Điều kiện thời tiết được kiểm tra lại trước mỗi lần Continue, kể cả Auto Continue sau thắng hoặc thua. Nếu Heavenly đã hết hạn hoặc không còn hoạt động, trận kế tiếp không bắt đầu. Trận đã bắt đầu tiếp tục theo luật Boss Event hiện có.
 
-3. ĐỒ ĐẶC BIỆT CHỈ RƠI KHI THẮNG WAVE 50
+3. CHỈ SỐ, ĐỘ KHÓ VÀ COINS
 
-Thay điều kiện thử rơi từ thắng bất kỳ wave sang hoàn tất lượt chạy:
-  completedRun = won && wave === 50
+Độ khó d là số nguyên từ 1 đến 1000, đồng thời là cấp boss.
+Hệ số chỉ số: S(d) = 1 + 0,075 × (d - 1).
+HP boss = làm tròn(888.888 × S(d)).
+ATK boss = làm tròn(88.888 × S(d)).
 
-Chỉ khi completedRun là true mới thực hiện ba phép thử độc lập:
-- Headless Horseman: 5% nhận 1 trang bị.
-- Myers: 1% nhận 1 thẻ, áp dụng mutation/double mutation hiện hành.
-- Machete: 1% nhận 1 vật phẩm.
+Công thức Gomen Coins dùng cùng thuật toán Boss Event hiện hành:
+t = ((d - 1) / 999)^0,85.
+Coins tối thiểu = làm tròn(1 + 69 × t).
+Coins tối đa = làm tròn(1 + 99 × t).
+Chọn số nguyên ngẫu nhiên trong khoảng trên, sau đó áp dụng Drop Multiplier hiện có và cơ chế làm tròn ngẫu nhiên của Inventory.
 
-Wave 1–49 không gọi RNG cho ba phần thưởng này và không phát chúng. Thua ở bất kỳ wave nào, bao gồm Wave 50, không được thử rơi đồ đặc biệt. Điều kiện toàn bộ hàng địch đã bị hạ vẫn được kiểm tra trước khi công nhận chiến thắng.
+Độ khó 1: 1 Gomen Coin cơ bản mỗi trận thắng.
+Độ khó 1000: 70–100 Gomen Coins cơ bản mỗi trận thắng.
+Không sử dụng hệ nâng chỉ số đội hình của Raid cho Gomen.
 
-Spooky Coins khi thắng wave và khi hạ địch, bao gồm summon hợp lệ, giữ nguyên. Không thêm VNĐ, EXP hoặc potion rơi thường vào phần thưởng Spooky Hunt.
+4. SHOP VÀ GOJO EYE
 
-Cập nhật nội dung xem trước trong Arena, mô tả Machete/Headless Horseman và Source Info để ghi rõ “Wave 50 victory only”. Không thu hồi các vật phẩm/thẻ người chơi đã sở hữu từ phiên bản trước. Machete vẫn mua được ở Spooky Shop; điều chỉnh này áp dụng cho cơ hội rơi từ Arena, không xóa nguồn mua hoặc quyền roll đã mở khóa.
+Gojo Eye được bán trong Gomen Boss Event Shop với giá 888.888 Gomen Coins. Vật phẩm giữ nguyên ảnh assets/items/gojoeye.png và công dụng tiến hóa Gojo Young cấp 100 trở lên thành Gojo Revice.
 
-4. DỌN NAVIGATION VÀ GIỚI HẠN LỐI VÀO SHOP
+Giữ nguyên cơ hội rơi Gojo Eye khi thắng:
+p(d) = 0,008 + 0,072 × (d - 1) / 999.
+Tương ứng 0,8% tại độ khó 1 và 8% tại độ khó 1000. Số lượng vật phẩm áp dụng Drop Multiplier hiện có.
 
-- Gỡ nút Spooky Shop độc lập khỏi menu “...”, đúng vị trí trong ảnh tham chiếu.
-- Gỡ lối tắt Shop ở màn kết quả trận. Nút vào Spooky Shop chỉ còn trong dashboard Spooky Hunt của Battle Arena.
-- Có thể mở dashboard và Shop ngoài tháng 10 để dùng Coins đã kiếm; nút bắt đầu trận vẫn bị chặn ngoài mùa. Việc mở dashboard không được coi là mở Arena để chiến đấu.
-- Shop chỉ hiển thị danh sách hàng, giá và số dư. Gỡ hoàn toàn nút “Open 1 Spooky Capsule”, số Capsule, kết quả mở và bảng xem pool khỏi modal Shop.
-- Giá và danh sách hàng của Shop giữ nguyên, bao gồm Spooky Capsule 25 Coins và Machete 613.000 Coins.
+Shop áp dụng giá potion chuẩn Boss Event:
+- Rich Potion, EXP Potion, Lucky Potion, Speed Potion: 10 Gomen Coins mỗi bình.
+- Speed Battle Potion: 25 Gomen Coins mỗi bình.
 
-5. SPOOKY CAPSULE CHỈ MỞ TỪ STORAGE → ITEMS
+Infinity Eye đã có từ bản trước cũng chuyển sang Gomen Boss Event Shop, giữ nguyên giá 888.888 Gomen Coins và toàn bộ hiệu ứng trang bị. Không còn bán vật phẩm Gomen trong Raid Shop.
 
-- Spooky Capsule được khai báo là consumable, vẫn dùng ID spooky_capsule để giữ nguyên số lượng đã lưu.
-- Ảnh vật phẩm: assets/items/spookycapsule.png. Không tạo hoặc đính kèm ảnh trong gói source.
-- Vào Storage → Items, chọn Spooky Capsule rồi bấm “Open Spooky Capsule”. Mỗi lần mở tiêu thụ đúng 1 Capsule và nhận đúng 1 thẻ.
-- Kết quả hiển thị ngay trong bảng chi tiết Storage, gồm tên thẻ và mutation nhận được. Không mở Shop, không đổi màn hình.
-- Khi hết Capsule, nút mở bị vô hiệu hóa. Không cho mở trong combat hoặc Sandbox. Giao dịch vẫn dùng receipt chống tiêu thụ/cấp thưởng hai lần.
-- Định nghĩa mới cập nhật ảnh và loại vật phẩm khi tải save cũ, không thay số lượng Capsule đang có.
-- Source Info của Capsule trong Storage cho xem nguồn mua, pool hiện tại, trọng số và điều kiện mở The Judgement. Không cần tạo lại bảng pool trong vòng render tốc độ cao.
+5. TƯƠNG THÍCH DỮ LIỆU VÀ QUEST
 
-Giữ nguyên các trọng số Capsule đã được xác nhận ở bản trước:
-The Trapper 30; Madness Doctor 30; The Legion 15;
-The Judgement 10; The Clown 10; The Oni 10; Freddy Krueger 1.
+Khi tải bản cập nhật, Gomen Coins, số trận thắng và độ khó Gomen trong dữ liệu Raid cũ được chuyển một lần sang Boss Event. Cờ gomenRaidMigrated được lưu cùng số dư đích để tránh cộng trùng khi tải lại hoặc chuyển save.
 
-Tổng được cung cấp là 106 nên tiếp tục chuẩn hóa trên tập đủ điều kiện:
-  xác suất thực tế = trọng số thẻ / tổng trọng số đủ điều kiện.
+Phần thưởng Gojo Eye đang chờ ghi từ Raid cũ được khôi phục trước khi chuyển số dư. Cơ chế biên nhận bảo đảm không phát lại vật phẩm nếu lần ghi Coins trước đó bị gián đoạn. Nếu chưa thể lưu hoặc khôi phục phần thưởng, Gomen bị khóa an toàn để chờ tải lại.
 
-The Judgement chỉ có trong pool khi hoàn tất Heavenly Tower Floor 100:
-- Đã mở: tổng 106; hai thẻ trọng số 30 có xác suất 28,301887% mỗi thẻ,
-  Legion 14,150943%, mỗi thẻ trọng số 10 là 9,433962%, Freddy 0,943396%.
-- Chưa mở: bỏ Judgement, tổng 96; hai thẻ trọng số 30 là 31,25% mỗi thẻ,
-  Legion 15,625%, Clown/Oni 10,416667% mỗi thẻ, Freddy 1,041667%.
+Dữ liệu Gomen Raid cũ được giữ làm bản ghi tương thích save; không thể dùng để vào Raid, mua vật phẩm hay nâng chỉ số. Coins và nâng cấp Marine Ford/Holy Grail được giữ nguyên. Save .acrsave cũ chứa Gomen Raid vẫn được xác thực và tiếp nhận.
 
-Capsule không cấp EXP cho bản trùng, không cấp VNĐ và không tăng bộ đếm roll thông thường. Myers, Machete và Headless Horseman không được thêm vào pool Capsule.
+Quest đầu của Toji nay đếm thắng Gomen Boss Event ở độ khó > 8; mục tiêu vẫn là 888 trận. Giữ nguyên tiến độ đã theo dõi, không đếm hồi tố. Các bước còn lại không đổi. Số trận thắng Gomen được tính vào tổng Boss Event; bản ghi Gomen cũ không tiếp tục được tính trong tổng Raid.
 
-6. KIỂM TRA TÍCH HỢP
+6. PHẠM VI VÀ KIỂM TRA
 
-Đã kiểm tra:
-- Cú pháp toàn bộ JavaScript và tên script/CSS đúng chữ hoa/thường.
-- Khởi động Chromium qua đường dẫn con kiểu GitHub Pages.
-- Chọn 6 thẻ qua giao diện thật; đội 5 thẻ bị chặn; đội 6 thẻ bắt đầu được trận với đúng 3 địch.
-- Thẻ thứ 6 lên sân và gây sát thương sau khi 5 vị trí đầu bị hạ.
-- Chạy tiến trình đủ 50 wave với RNG ép trúng: 49 wave đầu không có phép thử đặc biệt; Wave 50 có thể nhận đồng thời cả ba món; lượt chạy trở về Wave 1 sau khi hoàn tất.
-- Pool Capsule có/không có Judgement, tiêu thụ từng Capsule từ Storage, kết quả tại chỗ, nút bị khóa khi hết vật phẩm và số lượng giữ qua reload.
-- Các chế độ 1v1, 4v4, Tower, Raid, Boss Event, Normal/EXP Time Trial giữ nguyên số thẻ.
-- Gói save đầy đủ tiếp tục qua được bước mã hóa/giải mã và kiểm tra schema .acrsave.
-- Giao diện mobile 390 px hiển thị đủ 6 ô, Storage không tràn ngang; không gặp lỗi JavaScript trong các luồng đã chạy.
+Bản này chỉ sửa phân loại Gomen, điều kiện Heavenly, shop và các điểm tích hợp liên quan. Không chỉnh nội tại hay thông số thẻ, Spooky Hunt, Tower, Time Trial, tiến hóa, trang bị hoặc thuật toán bảo vệ .acrsave.
 
-7. MODIFIED FILES NOTE — FILE ĐƯỢC SỬA
+Đã kiểm tra cú pháp toàn bộ JavaScript và luồng trình duyệt: tải từ đường dẫn con có phân biệt hoa/thường; chọn Gomen tại Boss Event; đội 5v1; chặn thời tiết không hợp lệ; ngăn Auto Continue khi mất Heavenly; kết quả Coins/Gojo Eye; giá shop; Quest Toji; tải lại; chuyển dữ liệu một lần; khôi phục phần thưởng sau lỗi ghi; xác thực và giải mã save .acrsave. Không đưa tệp kiểm thử, Excel hoặc tài sản nhị phân vào gói nguồn.
 
-1) spooky.js
-   Tách số thẻ người chơi/địch; kiểm tra 6vs3; định nghĩa Capsule consumable và ảnh; giới hạn drop đặc biệt ở chiến thắng Wave 50; cập nhật Source Info.
-2) app.js
-   Đội hình 6 thẻ, kiểm tra 3 địch riêng, nhãn 6V3; dashboard Shop; bỏ các handler/nội dung mở Capsule từ Shop; chuyển kết quả Capsule sang Storage; thông báo drop Wave 50.
-3) storage.js
-   Kết quả Capsule tại bảng chi tiết; kiểm tra quyền mở; Source Info hiển thị pool/điều kiện; giữ số lượng và luồng giao dịch hiện có.
-4) index.html
-   Gỡ Shop khỏi menu chính/màn kết quả; gỡ giao diện mở Capsule và preview trong Shop; thêm vùng kết quả Storage; cập nhật nhãn 6vs3 và phiên bản cache.
-5) styles.css
-   Bố cục riêng cho 6 ô triển khai; định dạng kết quả Capsule; bỏ style của phần preview đã gỡ.
-6) equipment.js
-   Mô tả Headless Horseman ghi chính xác nguồn rơi Wave 50.
-7) evolution.js
-   Mô tả Machete ghi chính xác nguồn rơi Wave 50, giữ nguyên recipe Jason.
-8) README.txt
-   Changelog riêng của lần cập nhật này, công thức và danh sách file sửa.
+Modified Files Note
 
-Các module còn lại được kèm đầy đủ và giữ nguyên nội dung từ bản Spooky ổn định. Gói có 38 file nguồn/tài liệu. Cache JS/CSS: 20261020-spooky-2. Khi triển khai, thay đồng bộ source và giữ thư mục assets hiện có; bổ sung spookycapsule.png tại đúng đường dẫn nêu trên.
+Danh sách đầy đủ các tệp thay đổi trong bản sửa này:
+- boss_event.js: khai báo Gomen/Heavenly, shop, phần thưởng vật phẩm và chuyển dữ liệu một lần.
+- raid.js: gỡ Gomen khỏi Raid có thể chơi; giữ đọc và khôi phục dữ liệu cũ để chuyển sang Boss Event.
+- app.js: hiển thị phần thưởng Gojo Eye trong thông tin và kết quả Boss Event; loại bỏ nhãn Gomen Raid cũ.
+- index.html: chuyển lựa chọn Gomen sang Boss Event và cập nhật phiên bản URL tải script/style.
+- quests.js: chuyển điều kiện trận Gomen của Toji sang Boss Event.
+- evolution.js: cập nhật mô tả nguồn và giá Gojo Eye.
+- equipment.js: cập nhật nguồn shop Infinity Eye.
+- storage.js: cập nhật nguồn Gojo Eye trong chức năng xem thông tin vật phẩm.
+- README.txt: nhật ký riêng của bản sửa này và danh sách tệp thay đổi.
 
-Không kèm Excel, test runner, log kiểm thử hoặc tài nguyên nhị phân/ảnh/âm thanh.
+Gói tải xuống chứa toàn bộ mã nguồn game; không chỉ các tệp đã sửa. Các ảnh và âm thanh tiếp tục dùng đường dẫn sẵn có, do người dùng quản lý riêng.

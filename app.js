@@ -417,7 +417,7 @@ function getDuplicateCardRollExperience(cardOrId) {
   const card=typeof cardOrId==='object'?cardOrId:getCardById(cardOrId),id=card?.id || cardOrId;
   if(state.cardProgress?.[id]?.level>=CARD_LEVEL_MAX)return 0;
   const level=window.CardLevelSystem.normalizeLevel(state.cardProgress?.[id]?.level);
-  return Math.max(1,Math.floor(window.CardLevelSystem.duplicateReward(card,level) * (1+getWeatherBonus('exp')) * (window.InventorySystem?.multiplier('exp')||1) * (1+(window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts)||0)) * (window.EquipmentSystem?.expMultiplier()||1)));
+  return Math.max(1,Math.floor(window.CardLevelSystem.duplicateReward(card,level) * (1+getWeatherBonus('exp')) * (window.InventorySystem?.multiplier('exp')||1) * (1+(window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts)||0)+window.EquipmentSystem.flatBonus("exp")) * (window.EquipmentSystem?.expMultiplier()||1)));
 }
 
 function calculateCardRollExperience(card, mutations = []) {
@@ -2602,12 +2602,12 @@ function closeVariantMenu() {
 
 function getExpMultiplier(source = 'all') {
   const level = Math.max(0, Math.floor(Number(state?.upgrades?.expMulti) || 0));
-  return (1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE) + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("exp") || 1) * (1 + getWeatherBonus("exp")) * (window.EquipmentSystem?.expMultiplier(source) || 1);
+  return (1 + (level * EXP_MULTI_LINEAR) + (Math.pow(level, EXP_MULTI_EXPONENT) * EXP_MULTI_CURVE) + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0) + window.EquipmentSystem.flatBonus("exp")) * (window.InventorySystem?.multiplier("exp") || 1) * (1 + getWeatherBonus("exp")) * (window.EquipmentSystem?.expMultiplier(source) || 1);
 }
 
 function getCoinMultiplier(includeWeather = true, source = 'all') {
   const level = Math.max(0, Math.floor(Number(state?.upgrades?.coinMulti) || 0));
-  return (1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE) + (window.AchievementSystem?.getCoinBonus(state.achievementRewardReceipts) || 0)) * (window.InventorySystem?.multiplier("rich") || 1) * (includeWeather ? 1 + getWeatherBonus("coins") : 1) * (window.EquipmentSystem?.moneyMultiplier(source) || 1);
+  return (1 + (level * COIN_MULTI_LINEAR) + (Math.pow(level, COIN_MULTI_EXPONENT) * COIN_MULTI_CURVE) + (window.AchievementSystem?.getCoinBonus(state.achievementRewardReceipts) || 0) + window.EquipmentSystem.flatBonus("money")) * (window.InventorySystem?.multiplier("rich") || 1) * (includeWeather ? 1 + getWeatherBonus("coins") : 1) * (window.EquipmentSystem?.moneyMultiplier(source) || 1);
 }
 
 function getProgressionUpgradeCost(type, level) {
@@ -2815,12 +2815,12 @@ function getRaidType() { return battleState?.raid?.type || document.getElementBy
 function getUnitBattleLevel(unit) { return unit?.isRaidEnemy || unit?.isBossEventEnemy ? Math.max(1, Math.min(1000, Number(unit.level) || 1)) : clampBattleEnemyLevel(unit?.level); }
 
 function isTimeTrialBattle() { return Boolean(window.TimeTrialSystem?.isMode(getBattleMode())); }
-function getBattleTurnMs() { return isTimeTrialBattle() ? window.TimeTrialSystem.turnMs(getBattleMode()) : window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
+function getBattleTurnMs() { if(isSpookyBattle())return window.SpookySystem.TURN_MS; return isTimeTrialBattle() ? window.TimeTrialSystem.turnMs(getBattleMode()) : window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
 function getBattleModeLabel() {
   const timing = `${getBattleTurnMs() / 1000}s TURNS`;
   if(isSpookyBattle())return `SPOOKY HUNT • WAVE ${battleState?.spooky?.wave||window.SpookySystem.snapshot().wave} / 50 • 6V3 • ${timing}`;
   if (isBossEventBattle()) return `${window.BossEventSystem.TYPES[getBossEventType()].name.toUpperCase()} • DIFF ${battleState?.bossEvent?.difficulty || window.BossEventSystem.snapshot(getBossEventType()).difficulty} • 5 vs 1 • ${timing}`;
-  if (isRaidBattle()) return `${window.RaidSystem.TYPES[getRaidType()].name.toUpperCase()} • DIFF ${battleState?.raid?.difficulty || window.RaidSystem.snapshot(getRaidType()).difficulty} • 4 vs 10 • ${timing}`;
+  if (isRaidBattle()) return `${window.RaidSystem.TYPES[getRaidType()].name.toUpperCase()} • DIFF ${battleState?.raid?.difficulty || window.RaidSystem.snapshot(getRaidType()).difficulty} • 4 vs ${window.RaidSystem.TYPES[getRaidType()].enemies.length} • ${timing}`;
   if (isTimeTrialBattle()) return `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP TIME TRIAL • 1V1' : `TIME TRIAL • ROOM ${battleState?.trial?.room || window.TimeTrialSystem.room} • 4V4`} • ${timing}`;
   return isTowerBattle() ? `TOWER ${battleState?.towerFloor || window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1} • 4V4 • ${timing}` : `${isOneVsOneBattle() ? '1V1' : '4V4'} • ${timing}`;
 }
@@ -3259,7 +3259,7 @@ function renderBattleModePicker() {
   renderTowerControls();
   renderTimeTrialControls(); renderRaidControls(); renderBossEventControls(); renderSpookyControls(); renderAutoContinueBattleToggle();
   if (els.battleStartButton) {
-    els.battleStartButton.textContent = isSpookyBattle()?`Start Spooky Wave ${window.SpookySystem.snapshot().wave}`:isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • 1 Key` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start Time Trial Room ${window.TimeTrialSystem.room}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+    els.battleStartButton.textContent = isSpookyBattle()?`Start Spooky Wave ${window.SpookySystem.snapshot().wave}`:isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • ${window.RaidSystem.TYPES[getRaidType()].keyId?"1 Key":"Free entry"}` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start Time Trial Room ${window.TimeTrialSystem.room}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
   }
 }
 
@@ -3844,7 +3844,7 @@ function scheduleNextBattleTurn(remainingMs) {
   if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${Math.ceil(delay / 1000)}s`;
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   const autoNote = document.getElementById('battleAutoNote');
-  if (autoNote) autoNote.textContent = isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : 'Normal'} Time Trial • Fixed ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
+  if (autoNote) autoNote.textContent = isSpookyBattle() ? 'Spooky Hunt • Fixed 2-second turns • Speed Battle Potion ignored • Manual Continue only' : isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : 'Normal'} Time Trial • Fixed ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
   battleTurnTimer = window.setTimeout(() => {
     battleTurnTimer = null;
     executeBattleTurn();
@@ -3907,7 +3907,7 @@ function finishBattle(playerWon) {
       }));
       const experience = cardExperienceRewards.reduce((sum, entry) => sum + entry.experience, 0);
       state.currency = Math.max(0, Number(state.currency) || 0) + reward;
-      recordEarnedCurrency(reward);
+      recordEarnedCurrency(reward,"combat");
       window.AchievementSystem?.recordBattleWin();
       const dropRateBonus = Number.isFinite(Number(rewardProfile.dropRateBonus)) ? Math.max(0, Number(rewardProfile.dropRateBonus)) : 0;
       state.experience = Math.max(0, Number(state.experience) || 0) + experience;
@@ -4068,7 +4068,7 @@ function startBattle(useExistingSetup = true) {
   const raidType = isRaidBattle() ? getRaidType() : null;
   const bossEventType = isBossEventBattle() ? getBossEventType() : null;
   const enemyTeam = isSpookyBattle()?window.SpookySystem.enemies():isBossEventBattle() ? window.BossEventSystem.enemies(bossEventType) : isRaidBattle() ? window.RaidSystem.enemies(raidType) : isTimeTrialBattle() ? window.TimeTrialSystem.enemies(getBattleMode(), playerTeam[0]) : isTowerBattle() ? window.TowerSystem.getOpponents(ALL_CARDS, towerFloor, towerWeather, WEATHERS) : chooseBattleEnemyTeam(playerTeam);
-  if (enemyTeam.length !== (isSpookyBattle() ? window.SpookySystem.ENEMY_TEAM_SIZE : isBossEventBattle() ? 1 : isRaidBattle() ? 10 : playerTeam.length)) { battleState.isBattling = false; return; }
+  if (enemyTeam.length !== (isSpookyBattle() ? window.SpookySystem.ENEMY_TEAM_SIZE : isBossEventBattle() ? 1 : isRaidBattle() ? window.RaidSystem.TYPES[getRaidType()].enemies.length : playerTeam.length)) { battleState.isBattling = false; return; }
   const playerPower = calculateBattleTeamPower(playerTeam);
   const enemyPower = calculateBattleTeamPower(enemyTeam);
 
@@ -4137,7 +4137,7 @@ function startBattle(useExistingSetup = true) {
   if (els.battleLog) els.battleLog.innerHTML = '';
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
-  appendBattleLog(isSpookyBattle()?`${getBattleModeLabel()} • Spooky Coins only • Auto Continue disabled.`:isBossEventBattle() ? `${getBattleModeLabel()} • ${window.BossEventSystem.TYPES[getBossEventType()].weatherName} entry window • Type-specific coins and exclusive card only.` : isRaidBattle() ? `${getBattleModeLabel()} • 10 preset bosses • Raid Coins only, with exclusive secret-card rolls.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.LIMITS[mode] / 1000}s limit • Speed Battle Potion ignored.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
+  appendBattleLog(isSpookyBattle()?`${getBattleModeLabel()} • Spooky Coins only • Auto Continue disabled.`:isBossEventBattle() ? `${getBattleModeLabel()} • ${window.BossEventSystem.TYPES[getBossEventType()].weatherName} entry window • Type-specific coins and exclusive drops only.` : isRaidBattle() ? `${getBattleModeLabel()} • ${window.RaidSystem.TYPES[getRaidType()].enemies.length} preset opponent(s) • Type-specific Coins and exclusive drops only.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.LIMITS[mode] / 1000}s limit • Speed Battle Potion ignored.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
   if (!isTimeTrialBattle() && !isRaidBattle() && !isBossEventBattle() && !isSpookyBattle()) appendBattleLog(isTowerBattle() ? `Tower enemy elements follow the selected type; player native-weather / mutation entry rules remain separate.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
   appendBattleLog(`First strike begins in ${getBattleTurnMs() / 1000} seconds. ${teamSize} player fighter${teamSize === 1 ? '' : 's'} vs ${enemyTeam.length} enemies.`, 'player');
   renderBattleStats();
@@ -4235,7 +4235,8 @@ function renderBossEventControls() {
   syncDifficultyNumber('bossEvent', progress.difficulty);
   setViewText('bossEventDifficultyValue', `${progress.difficulty} • Boss Lv.${progress.difficulty}`);
   setViewText('bossEventBalance', `${progress.coins.toLocaleString('en-US')} ${def.coinName}`);
-  setViewText('bossEventRules', `5 player cards vs 1 ${native.name} • Victory: ${range.min}–${range.max} ${def.coinName} • ${(event.cardChance(progress.difficulty,type)*100).toFixed(2)}% ${native.name} drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`);
+  const dropName=def.itemId?window.InventorySystem.getItem(def.itemId).name:native.name;
+  setViewText('bossEventRules', `5 player cards vs 1 ${native.name} • Victory: ${range.min}–${range.max} ${def.coinName} • ${(event.dropChance(progress.difficulty,type)*100).toFixed(2)}% ${dropName} drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`);
   setViewText('bossEventStats', `Boss HP ${boss.maxHp.toLocaleString('en-US')} • ATK ${boss.atk.toLocaleString('en-US')} • Speed Battle Potion applies. Weather is checked again before every Continue.`);
   if(!isBattleMatchActive())els.battleStartButton.disabled=!isBattleSetupValid()||!event.canEnter(type);
   if(battleState?.finished){const can=canReplayBattleTeam();els.battleAutoAgainButton.disabled=!can;els.battleAutoAgainButton.textContent=can?`Continue ${def.name}`:`Requires ${def.weatherName} weather`;if(!can)clearAutoContinueBattleTimer();}
@@ -4257,14 +4258,16 @@ function finishBossEventBattle(won) {
   battleState.finished=true;battleState.isBattling=false;battleState.outcome=summary.won?'victory':'defeat';
   const card=summary.card?getCardById(summary.card.cardId):null,mutations=summary.card?.mutationIds.map(id=>MUTATION_BY_ID[id]?.name||id).join(' + ');
   const def=window.BossEventSystem.TYPES[summary.type],native=getCardById(def.cardId);
+  const item=summary.item?window.InventorySystem.getItem(summary.item.id):null;
+  const dropName=def.itemId?window.InventorySystem.getItem(def.itemId).name:native.name;
   const body=document.getElementById('bossEventSummary');
-  body.textContent=`${def.name} • Difficulty ${summary.difficulty}\n${def.coinName}: +${summary.coins} • Drop x${(summary.dropMultiplier||1).toFixed(2)}\n${card?`Exclusive card: ${mutations?`[${mutations}] `:''}${card.name}\n`:''}No VNĐ • No EXP • No ordinary drops${summary.error?`\n${summary.error}`:''}`;
+  body.textContent=`${def.name} • Difficulty ${summary.difficulty}\n${def.coinName}: +${summary.coins} • Drop x${(summary.dropMultiplier||1).toFixed(2)}\n${card?`Exclusive card: ${mutations?`[${mutations}] `:''}${card.name}\n`:''}${item?`${item.name} x${summary.item.quantity}\n`:''}No VNĐ • No EXP • No ordinary drops${summary.error?`\n${summary.error}`:''}`;
   body.classList.remove('hidden');document.getElementById('bossEventResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent=summary.won?'🩸 BOSS DEFEATED':'🩸 EVENT ATTEMPT ENDED';
   els.battleResultText.textContent=summary.error||(summary.won?`${native.name} and all remaining enemies were defeated.`:`Your collection is preserved. ${def.weatherName} is required for the next attempt.`);
   els.battleResultPower.textContent=getBattleModeLabel();
-  for(const [id,label]of Object.entries({battleResultBaseLabel:def.coinName,battleResultTimeLabel:'Boss level',battleResultLevelLabel:`${native.name} drop chance`}))setViewText(id, label);
-  els.battleResultBaseValue.textContent=String(summary.coins);els.battleResultTimeBonus.textContent=`Lv.${summary.difficulty}`;els.battleResultLevelDiff.textContent=`${(window.BossEventSystem.cardChance(summary.difficulty,summary.type)*100).toFixed(2)}%`;
+  for(const [id,label]of Object.entries({battleResultBaseLabel:def.coinName,battleResultTimeLabel:'Boss level',battleResultLevelLabel:`${dropName} drop chance`}))setViewText(id, label);
+  els.battleResultBaseValue.textContent=String(summary.coins);els.battleResultTimeBonus.textContent=`Lv.${summary.difficulty}`;els.battleResultLevelDiff.textContent=`${(window.BossEventSystem.dropChance(summary.difficulty,summary.type)*100).toFixed(2)}%`;
   els.battleResultCash.textContent='0 VNĐ';els.battleResultExp.textContent='0 EXP';els.battleResultDropRate.textContent='0%';els.battleResultLossStatus.textContent='NONE';
   refreshAchievements();updateStats();renderCollection();renderPotionInventory();renderBossEventControls();
   if(!document.getElementById('bossEventShopModal')?.classList.contains('hidden'))renderBossEventShop();
@@ -4313,8 +4316,10 @@ function renderRaidControls() {
   const slider = document.getElementById('raidDifficulty'); if (!controls || !slider) return; slider.value = progress.difficulty; slider.disabled = isBattleMatchActive();
   syncDifficultyNumber('raid', progress.difficulty);
   setViewText('raidDifficultyValue', `${progress.difficulty} • Enemy Lv.${progress.difficulty}`);
-  setViewText('raidBalances', `${window.InventorySystem.quantity(raid.TYPES[type].keyId)} Keys • ${progress.coins.toLocaleString('en-US')} Coins • Team HP/ATK +${progress.upgradeLevel}%`);
-  setViewText('raidRules', `4 player cards vs 10 preset bosses • 1 Key per entry • Victory: ${range.min}–${range.max} ${raid.TYPES[type].coinName} • ${((type==='holy_grail'?raid.excaliburChance(progress.difficulty):raid.secretChance(progress.difficulty)) * 100).toFixed(2)}% ${type==='holy_grail'?'Excalibur Sword':'secret card'} roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`);
+  const def=raid.TYPES[type],material=raid.rewardItemId(type),dropName=material?window.InventorySystem.getItem(material)?.name:'secret card';
+  setViewText('raidBalances', `${def.keyId?window.InventorySystem.quantity(def.keyId)+' Keys':'Free entry'} • ${progress.coins.toLocaleString('en-US')} ${def.coinName} • Team HP/ATK +${progress.upgradeLevel}%`);
+  setViewText('raidRules', `4 player cards vs ${def.enemies.length} preset opponent(s) • ${def.keyId?'1 Key per entry':'No entry key or weather requirement'} • Victory: ${range.min}–${range.max} ${def.coinName} • ${((material?raid.materialChance(progress.difficulty):raid.secretChance(progress.difficulty))*100).toFixed(2)}% ${dropName} roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`);
+  setViewText('raidEnemyPreviewTitle',`Preset boss lineup • ${def.enemies.length} opponent${def.enemies.length===1?'':'s'}`);
   const list = document.getElementById('raidEnemyPreview'); if (!list) return; list.replaceChildren();
   for (const enemy of raid.preview(type)) { const li = document.createElement("li"); li.textContent = `${enemy.card.name} • Lv.${enemy.level} • HP ${enemy.hpMin.toLocaleString("en-US")}–${enemy.hpMax.toLocaleString("en-US")} • ATK ${enemy.atkMin.toLocaleString("en-US")}–${enemy.atkMax.toLocaleString("en-US")}`; list.append(li); }
   if (isRaidBattle() && !isBattleMatchActive()) els.battleStartButton.disabled = !isBattleSetupValid() || !raid.canEnter(type);
@@ -4343,7 +4348,7 @@ function finishRaidBattle(won) {
   const secret = summary.secret ? getCardById(summary.secret.cardId) : null;
   const mutationLabel = summary.secret?.mutationIds.length ? ` [${summary.secret.mutationIds.map(id => MUTATION_BY_ID[id]?.name || id).join(' + ')}]` : '';
   const body = document.getElementById('raidSummary');
-  body.textContent = `${window.RaidSystem.TYPES[summary.type].name} • Difficulty ${summary.difficulty}\nRaid Coins: +${summary.coins} • Drop x${(summary.dropMultiplier || 1).toFixed(2)}\n${secret ? `Exclusive card: ${secret.name}${mutationLabel}\n` : ''}${summary.item ? `Excalibur Sword +${summary.item.quantity}\n` : ''}No VNĐ • No EXP • No ordinary drops${summary.error ? `\n${summary.error}` : ''}`; body.classList.remove('hidden');
+  body.textContent = `${window.RaidSystem.TYPES[summary.type].name} • Difficulty ${summary.difficulty}\n${window.RaidSystem.TYPES[summary.type].coinName}: +${summary.coins} • Drop x${(summary.dropMultiplier || 1).toFixed(2)}\n${secret ? `Exclusive card: ${secret.name}${mutationLabel}\n` : ''}${summary.item ? `${window.InventorySystem.getItem(summary.item.id)?.name||summary.item.id} +${summary.item.quantity}\n` : ''}No VNĐ • No EXP • No ordinary drops${summary.error ? `\n${summary.error}` : ''}`; body.classList.remove('hidden');
   document.getElementById('raidResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '⚓ RAID COMPLETE' : '⚓ RAID ENDED';
   els.battleResultText.textContent = summary.error || (summary.won ? 'The entire boss lineup and all remaining enemies were defeated.' : 'Your collection is preserved. A new entry costs another Key.');
@@ -4837,9 +4842,9 @@ function getAchievementSnapshot() {
     spookyRuns:window.SpookySystem?.snapshot().runs||0,spookyEvolution:state.achievementRewardReceipts?.['evolution_jason-13th']?1:0,spookyCollection:(window.SpookySystem?.COLLECTION||[]).filter(id=>getOwnedCardCount(id)>0).length,
     knownBossWins: window.BossEventSystem?.totalWins() || 0, knownBattleWins: window.TowerSystem?.victories || 0, knownRaidWins: window.RaidSystem?.totalWins() || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {}, timeTrialRoom: window.TimeTrialSystem?.bestRoom || 0 };
 }
-function recordEarnedCurrency(amount) {
+function recordEarnedCurrency(amount,source="other") {
   window.AchievementSystem?.recordCurrencyEarned(amount);
-  window.QuestSystem?.currencyEarned(amount);
+  window.QuestSystem?.currencyEarned(amount,source);
 }
 function applyQuestBoardReward(receipt,reward) {
   if(!canEvolveNow())return false;
@@ -5659,7 +5664,7 @@ window.QuestsSystem.configure({clock:()=>state.weather.gameSeconds,snapshot:()=>
 window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreeze: () => { if (!isImportingSave && !window.SandboxSystem?.active) { syncGameClockToNow(); saveState(); } } });
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
-window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => (window.InventorySystem?.multiplier("exp") || 1) * (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0)) * (1 + getWeatherBonus("exp")) * (window.EquipmentSystem?.expMultiplier("arena") || 1), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
+window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => (window.InventorySystem?.multiplier("exp") || 1) * (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0) + window.EquipmentSystem.flatBonus("exp")) * (1 + getWeatherBonus("exp")) * (window.EquipmentSystem?.expMultiplier("arena") || 1), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:()=>{refreshAchievements();updateStats();renderPotionInventory();renderCollection();renderSpookyControls();if(!document.getElementById('spookyShopModal')?.classList.contains('hidden'))renderSpookyShop();},onCapsule:showSpookyCapsule});
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
@@ -5683,12 +5688,13 @@ els.battleCategoryFilter?.addEventListener("change",populateBattleFighterSelect)
 
 
 // Halloween adapters: state, reward math and run choices remain in spooky.js.
-function grantSpookyCards(cards,receipt){
+function grantSpookyCards(cards,receipt,kind){
   if(window.SandboxSystem?.active||typeof receipt!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(receipt))return false;
   if(state.spookyRewardReceipt===receipt)return true;
   const previous=JSON.parse(JSON.stringify(state));
   try{
     for(const drop of cards){const card=getCardById(drop.cardId);if(!card)return false;const ids=normalizeCardMutations(drop.mutationIds),key=canonicalVariantKey(card.id,ids);
+      if(kind==='capsule'&&getOwnedCardCount(card.id)>0&&Number(state.cardProgress?.[card.id]?.level||1)<CARD_LEVEL_MAX)grantCardExperience(card.id,Math.max(1,Math.floor(getCardLevelInfo(card.id).required*.10)));
       state.unlocked[card.id]=getUnlockedCountById(card.id)+1;state.mutations[key]=Math.max(0,Number(state.mutations[key])||0)+1;
       state.inventory[key]={id:card.id,cardId:card.id,mutationIds:ids,mutation:ids.join('+'),count:Math.max(0,Number(state.inventory[key]?.count)||0)+1};ensureCardProgress(card.id);
     }

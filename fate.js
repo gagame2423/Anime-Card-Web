@@ -67,8 +67,8 @@
       return false;
     }
     function dodge(bs,unit,source){if(has(unit,CHAN)&&alive(source))stunThenSuppress(bs,source,unit,2);}
-    function primary(bs,unit,target,scale=1){
-      return alive(unit)&&alive(target)?api.primary(bs,unit,target,atk(unit)*scale):{hit:false,damage:0,killed:false};
+    function primary(bs,unit,target,scale=1,options={}){
+      return alive(unit)&&alive(target)?api.primary(bs,unit,target,atk(unit)*scale,options):{hit:false,damage:0,killed:false};
     }
     function merge(into,result){into.damage+=result.damage||0;into.killed ||= Boolean(result.killed);into.hit ||= Boolean(result.hit||result.damage>0);return into;}
     function attack(bs,unit,target,options={}){
@@ -83,7 +83,7 @@
           while(alive(unit)&&has(unit,'kiritsu')&&enemies(bs,unit).length&&random()<followChance(bs,unit,.60)){
             const next=alive(target)?target:enemies(bs,unit)[0];
             api.countedFollowUp(bs,unit,next);counted(bs,unit,{isFollowUp:true});
-            const shot=primary(bs,unit,next,.30);merge(result,shot);after(bs,unit,next,shot,{isFollowUp:true});
+            const shot=primary(bs,unit,next,.30,{isFollowUp:true,passiveAttack:true});merge(result,shot);after(bs,unit,next,shot,{isFollowUp:true});
           }
         }
         return result;

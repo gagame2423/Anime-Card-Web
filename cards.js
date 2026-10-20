@@ -2297,6 +2297,82 @@ CARDS.push(...[
     "spookyExclusive": true
   }
 ]);
+CARDS.push(...[
+  {
+    "id": "gojo-revice",
+    "name": "Gojo Revice",
+    "element": "Electric",
+    "rarity": "Mythic",
+    "chance": 0,
+    "requiredWeather": null,
+    "category": [
+      "Hero",
+      "Magician",
+      "Jujutsu",
+      "Brutal"
+    ],
+    "stats": {
+      "hp": 88888,
+      "atk": 8888
+    },
+    "image": "assets/cards/gojorevice.png",
+    "evolutionOnly": true,
+    "passive": {
+      "name": "Gomen Amanai",
+      "description": "88% dodge against standard attacks only; dodge bonuses cannot increase it. Each dodge adds +8% damage for 8 own turns, stacking. Four consecutive dodges prepare x8 damage on the next primary attack."
+    }
+  },
+  {
+    "id": "geto-young",
+    "name": "Geto Young",
+    "element": "Dark",
+    "rarity": "Mythic",
+    "chance": 525000,
+    "requiredWeather": "Malevolent",
+    "category": [
+      "Jujutsu",
+      "Hero",
+      "Magician",
+      "Army"
+    ],
+    "stats": {
+      "hp": 52500,
+      "atk": 4500
+    },
+    "image": "assets/cards/getoyoung.png",
+    "passive": {
+      "name": "Summon Technique",
+      "description": "Every 3rd attack randomly replaces the normal attack: RDragon (x3 ATK to all enemies), Woman (120% ATK; stun 2 turns), or Centipede (110% ATK; Bleed 3 turns at 12% current ATK/turn)."
+    }
+  },
+  {
+    "id": "toji",
+    "name": "Toji",
+    "element": "Nature",
+    "rarity": "Mythic",
+    "chance": 3500000,
+    "requiredWeather": "Malevolent",
+    "category": [
+      "Brutal",
+      "PureEvil",
+      "Jujutsu",
+      "Swordman",
+      "Human",
+      "AntiHero"
+    ],
+    "stats": {
+      "hp": 235000,
+      "atk": 35500
+    },
+    "image": "assets/cards/toji.png",
+    "questOnly": true,
+    "unlockRequirement": "quest_toji",
+    "passive": {
+      "name": "Heavenly Restriction",
+      "description": "Entry and each enemy defeat: choose a mode. Inverted Spear: chain 30% ATK follow-ups at 80%, then -5 percentage points per follow-up. SS Katana: 80% ATK, bypassing shields. Playful Cloud: +50% damage against the enemy with highest current HP. Thousand Chains: every 2nd attack hits 2 enemies for 60% ATK each."
+    }
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

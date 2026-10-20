@@ -23,12 +23,13 @@
     for(const offer of host.TimeTrialSystem.SHOP_ITEMS)if(offer.id===id)result.push('Time Trial Shop: '+format(offer.cost)+' Time Trial Shards.');
     for(const [type,def]of Object.entries(host.RaidSystem.TYPES))for(const offer of host.RaidSystem.offers(type))if(offer.id===id)result.push(def.name+' Shop: '+format(offer.cost)+' '+def.coinName+'.');
     if(id===host.RaidSystem.GRAIL_KEY.id)result.push('50% chance per Fate-category enemy defeated in regular 1v1 / 4v4 battles. Generated units and Sandbox excluded.');
+    if(id==='gojo_eye')result.push('Gomen Boss Event victory (Heavenly weather): 0.8% at difficulty 1, rising linearly to 8% at difficulty 1000; evolves Lv.100+ Gojo Young.');
     if(id==='excalibur_sword')result.push('Holy Grail Raid victory: 0.8% at difficulty 1, rising linearly to 8% at difficulty 1000.');
     for(const [type,def]of Object.entries(host.BossEventSystem.TYPES))for(const offer of host.BossEventSystem.offers(type))if(offer.id===id)result.push(def.name+' Shop: '+format(offer.cost)+' '+def.coinName+'.');
     if(id===host.RaidSystem.KEY_ITEM.id)result.push('10% chance after a regular 1v1 or 4v4 victory. Not a Tower, Time Trial, Raid or Boss Event drop.');
     for(const source of host.SpookySystem?.sources(id)||[])result.push(source);
     if(id===host.SpookySystem?.CAPSULE.id){
-      result.push('Open 1 Capsule in Storage → Items to receive 1 card. No EXP, VNĐ or standard roll count.');
+      result.push('Open 1 Capsule in Storage → Items to receive 1 card. Duplicates grant 10% of current level EXP requirement; no VNĐ or standard roll count.');
       const pool=host.SpookySystem.capsulePool();
       for(const row of pool){const card=host.ALL_CARDS.find(card=>card.id===row.cardId);result.push(`${card?.name||row.cardId}: weight ${row.weight} → ${(row.chance*100).toFixed(4)}%.`);}
       if(!pool.some(row=>row.cardId==='tower-champion-heavenly'))result.push('The Judgement locked: complete Heavenly Tower Floor 100. Eligible weights are normalized.');
@@ -63,7 +64,7 @@
   function showCapsuleResult(result){
     const drop=result?.cards?.[0],card=drop?host.ALL_CARDS.find(card=>card.id===drop.cardId):null;if(!card)return;
     const mutations=(drop.mutationIds||[]).map(id=>host.MUTATION_BY_ID[id]?.name||id).join(' + ');
-    capsuleResult=`Capsule reward: ${mutations?'['+mutations+'] ':''}${card.name} · +1 owned · no EXP / VNĐ / roll count.`;
+    capsuleResult=`Capsule reward: ${mutations?'['+mutations+'] ':''}${card.name} · +1 owned · duplicates: +10% level EXP (until Lv.1000) · no VNĐ / roll count.`;
     if(ui)refreshDetails();
   }
   function render(root){
