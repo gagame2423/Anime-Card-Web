@@ -17,12 +17,15 @@
     id:'equipment_'+key,name,cost,cards:Object.freeze(cards),ingredients:Object.freeze([]),bonuses:Object.freeze(bonuses),
     item:Object.freeze({id:'equipment_'+key,name,type:'equipment',tier:'mythic',icon:'◇',image:'assets/items/'+file,description})
   })));
+  const EVENT_EQUIPMENT=Object.freeze({id:'equipment_headless_horseman',name:'Headless Horseman',bonuses:Object.freeze({spookyCoins:.66,money:.66,drop:.06,mutation:.06}),
+    item:Object.freeze({id:'equipment_headless_horseman',name:'Headless Horseman',type:'equipment',tier:'secret',icon:'🎃',image:'assets/items/hhequip.png',description:'+66% Spooky Coins; +66% VNĐ from all sources; +0.06 Drop Multiplier; Mutation chance x1.06. Spooky Hunt Wave 50 victory only: 5%.'})});
+  const ITEMS=new Map([...RECIPES,EVENT_EQUIPMENT].map(item=>[item.id,item]));
   const BY_ID=new Map(RECIPES.map(recipe=>[recipe.id,recipe]));
   const ZERO=Object.freeze({luck:0,money:0,exp:0,arenaMoney:0,arenaExp:0,weather:0,mutation:0,drop:0,rollSpeed:0});
   let bridge={},blocked=false;
   const fresh=()=>({version:1,equipped:null,pending:null});
-  function validSave(value){return Boolean(value&&value.version===1&&(value.equipped===null||BY_ID.has(value.equipped))&&value.pending===null);}
-  function read(){try{const value=JSON.parse(host.localStorage.getItem(KEY)||'null');return value&&value.version===1?{version:1,equipped:BY_ID.has(value.equipped)?value.equipped:null,pending:value.pending||null}:fresh();}catch(_){return fresh();}}
+  function validSave(value){return Boolean(value&&value.version===1&&(value.equipped===null||ITEMS.has(value.equipped))&&value.pending===null);}
+  function read(){try{const value=JSON.parse(host.localStorage.getItem(KEY)||'null');return value&&value.version===1?{version:1,equipped:ITEMS.has(value.equipped)?value.equipped:null,pending:value.pending||null}:fresh();}catch(_){return fresh();}}
   let data=read();
   function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));return true;}catch(_){return false;}}
   function recover(){
@@ -39,7 +42,7 @@
     blocked=false;return true;
   }
   const recovered=recover();
-  function register(){for(const recipe of RECIPES)host.InventorySystem.registerItem(recipe.item);}
+  function register(){for(const recipe of ITEMS.values())host.InventorySystem.registerItem(recipe.item);}
   register();
   function canonicalIds(values){return [...new Set((values||[]).map(value=>host.MUTATION_BY_ID?.[typeof value==='string'?value:value?.id]?.id).filter(Boolean))].sort();}
   function matches(requirement,variant){
@@ -69,14 +72,14 @@
     }
   }
   function equip(id){
-    if(blocked||host.SandboxSystem?.active||bridge.canAct?.()!==true||(id!==null&&(!BY_ID.has(id)||host.InventorySystem.quantity(id)<1)))return false;
+    if(blocked||host.SandboxSystem?.active||bridge.canAct?.()!==true||(id!==null&&(!ITEMS.has(id)||host.InventorySystem.quantity(id)<1)))return false;
     const before=data.equipped;data.equipped=id;if(!persist()){data.equipped=before;return false;}bridge.onChange?.();return true;
   }
-  function current(){return data.equipped&&host.InventorySystem.quantity(data.equipped)>0?BY_ID.get(data.equipped):null;}
+  function current(){return data.equipped&&host.InventorySystem.quantity(data.equipped)>0?ITEMS.get(data.equipped):null;}
   function bonuses(){return current()?.bonuses||ZERO;}
   const multiplier=(field,source='all')=>1+(bonuses()[field]||0)+(source==='arena'?(bonuses()[field==='money'?'arenaMoney':'arenaExp']||0):0);
   const scale=(amount,mult)=>Math.max(0,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(Math.max(0,Number(amount)||0)*mult)));
-  host.EquipmentSystem=Object.freeze({KEY,RECIPES,recovered,validSave,register,recover,inspect,craft,equip,matches,options,
+  host.EquipmentSystem=Object.freeze({KEY,RECIPES,EVENT_EQUIPMENT,isEquipment:id=>ITEMS.has(id),recovered,validSave,register,recover,inspect,craft,equip,matches,options,
     configure:options=>{bridge=options||{};},recipe:id=>BY_ID.get(id)||null,current,bonuses,
     mutationMultiplier:()=>1+(bonuses().mutation||0),moneyMultiplier:source=>multiplier('money',source),expMultiplier:source=>multiplier('exp',source),
     scaleMoney:(amount,source)=>scale(amount,multiplier('money',source)),

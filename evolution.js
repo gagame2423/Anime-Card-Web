@@ -3,6 +3,7 @@
   'use strict';
   const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
   const RECIPES = Object.freeze([
+    Object.freeze({id:"jason-13th",baseId:"the-trapper",itemId:"machete",level:100,name:"Jason 13th"}),
     Object.freeze({id:"saber-knight",baseId:"saber",itemId:"excalibur_sword",level:100,name:"Saber Knight"}),
     Object.freeze({id:'yuno-spirit',baseId:'yuno',itemId:'spirit_crown',level:100,name:'Yuno Spirit'}),
     Object.freeze({ id:'awakened-doflamingo', baseId:'doflamingo', itemId:'web_string', level:100, name:'Awakened Doflamingo' }),
@@ -10,6 +11,7 @@
     Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100, name:'Prime Garp' })
   ]);
   const MATERIALS = Object.freeze([
+    Object.freeze({id:"machete",name:"Machete",type:"material",icon:"🔪",image:"assets/items/machete.png",tier:"secret",description:"Evolve Lv.100+ The Trapper (any mutation) into Jason 13th. Spooky Wave 50 victory only: 1%; Spooky Shop: 613,000 Coins."}),
     Object.freeze({id:"excalibur_sword",name:"Excalibur Sword",type:"material",icon:"⚔",image:"assets/items/excalibur.png",tier:"mythic",description:"Evolve Lv.100+ Saber (any mutation) into Saber Knight. Holy Grail Raid: 0.8%–8% drop; shop 80,000 Coins."}),
     Object.freeze({id:'spirit_crown',name:'Spirit Crown',type:'material',icon:'👑',image:'assets/spiritcrown.png',tier:'secret',description:'Evolve Lv.100+ Yuno into Yuno Spirit. Lucius Event Shop: 4,400 Lucius Event Coins.'}),
     Object.freeze({ id:'sea_valkyrie', name:'Sea Valkyrie', type:'material', icon:'🌊', image:'assets/mermaidscale.png', tier:'mythic', description:'Evolve Lv.100+ Noelle Silva into Sea Goddess Valkyrie. Lucius Event Shop: 4,000 Lucius Event Coins.' }),

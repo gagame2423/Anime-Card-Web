@@ -82,7 +82,7 @@
           after(bs,unit,target,first,options);supportAttack(bs,unit,first,options);result.fateProcessed=true;
           while(alive(unit)&&has(unit,'kiritsu')&&enemies(bs,unit).length&&random()<followChance(bs,unit,.60)){
             const next=alive(target)?target:enemies(bs,unit)[0];
-            api.countedFollowUp(bs,unit);counted(bs,unit,{isFollowUp:true});
+            api.countedFollowUp(bs,unit,next);counted(bs,unit,{isFollowUp:true});
             const shot=primary(bs,unit,next,.30);merge(result,shot);after(bs,unit,next,shot,{isFollowUp:true});
           }
         }
@@ -121,7 +121,7 @@
       if(result?.skipped||result?.outOfTurn||options.isCounter||options.isFollowUp||!alive(actor)||bs.fateSupporting)return;
       bs.fateSupporting=true;
       try{
-        if(has(actor,'iskandar')&&state(actor,'iskandar').attacks>5){const ally=pick(allies(bs,actor,false));if(ally&&!api.stunned(ally)){const target=enemies(bs,actor)[0];if(target)hit(bs,ally,target,atk(ally),{fateSupport:true});}}
+        if(has(actor,'iskandar')&&state(actor,'iskandar').attacks>5){const ally=pick(allies(bs,actor,false));if(ally&&!api.stunned(ally)){const target=enemies(bs,actor)[0];if(target)hit(bs,ally,target,atk(ally),{fateSupport:true,followOwner:actor});}}
         for(const owner of [...allies(bs,actor,false)]){
           if(api.stunned(owner))continue;
           if(has(owner,'merlin')){
@@ -130,7 +130,7 @@
           }
           if(has(owner,CHAN)&&state(owner,CHAN).attacks>=8&&random()<followChance(bs,owner,.20)){const enemy=enemies(bs,owner)[0];if(enemy)hit(bs,owner,enemy,atk(owner)*.60,{fateSupport:true});}
         }
-        if(boon(bs,actor)==='dagger'){
+        if(boon(bs,actor)==='dagger'&&api.canFollow(actor)){
           // Existing follow-up skills receive +10 percentage points through
           // followChance(); only cards without one get this independent 50% hit.
           if(!hasFollowUp(actor)&&random()<.50){const enemy=enemies(bs,actor)[0];if(enemy)hit(bs,actor,enemy,atk(actor),{fateSupport:true});}
@@ -138,8 +138,8 @@
       }finally{bs.fateSupporting=false;}
     }
     const FOLLOW_IDS=new Set(['jotaro-kujo','denji','kamen-rider-kabuto','uchiha-itachi','uchiha-sasuke','weather-shadow-monarch','yuno','kiritsu','boss-event-alucard','alexander-anderson','madara-lubu','speed-wizard','tower-champion-bizare','tower-champion-shadow-200','tower-champion-heavenly-200','merlin','iskandar']);
-    const hasFollowUp=unit=>api.passiveIds(unit).some(key=>FOLLOW_IDS.has(key));
-    const followChance=(bs,unit,chance)=>Math.min(1,chance+(boon(bs,unit)==='dagger'?.10:0));
+    const hasFollowUp=unit=>api.hasExtraFollowUp(unit)||api.passiveIds(unit).some(key=>FOLLOW_IDS.has(key));
+    const followChance=(bs,unit,chance)=>!api.canFollow(unit)?0:Math.min(1,chance+(boon(bs,unit)==='dagger'?.10:0));
     function guardian(bs,target,meta={}){return !meta.fateAbsorb&&!meta.dot?allies(bs,target,false).find(owner=>has(owner,'mash')):null;}
     function redirect(bs,source,target,amount,meta){
       if(!(amount>0))return amount;const owner=guardian(bs,target,meta);if(!owner)return amount;

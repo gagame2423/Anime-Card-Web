@@ -50,7 +50,7 @@
   function prepare(bs,u,target,options){
    const next={...options};
    if(!options.isCounter){
-    const supporters=allies(bs,u).filter(a=>a!==u&&has(a,STWR)&&!api.stunned(a)&&random()<.12);
+    const supporters=allies(bs,u).filter(a=>a!==u&&has(a,STWR)&&!api.stunned(a)&&api.canFollow(a)&&random()<.12);
     if(supporters.length){next.requiemSupport=supporters;next.damageMultiplier=(next.damageMultiplier||1)*1.2;}
    }
    if(has(u,WIND)&&(runtime(u).ownAttackCount||0)%2===0){

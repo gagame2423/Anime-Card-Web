@@ -4571,3 +4571,30 @@ body {
 .potions-hud-visible #inventoryModal{padding-bottom:84px}.potions-hud-visible #inventoryModal .storage-modal{height:min(720px,calc(100dvh - 120px))}
 /* Missing artwork keeps a bounded text fallback instead of overlapping titles. */
 .crafting-visual .crafting-monogram{font-size:28px;letter-spacing:1px;max-width:100%;overflow:hidden}.crafting-detail-icon .crafting-monogram{font-size:24px}
+
+/* Halloween event: compact controls, mandatory choices and cached info. */
+#battleModePicker{grid-template-columns:repeat(auto-fit,minmax(min(155px,100%),1fr));}
+.spooky-mode{border-color:#8e598c;}
+.spooky-mode.is-selected{border-color:#ffb36c;box-shadow:inset 0 0 20px #a6424926;}
+.spooky-controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px;border:1px solid #9b6689;border-radius:16px;background:linear-gradient(120deg,#24162b,#151c30);}
+.spooky-controls>p{width:100%;margin:0;color:#d9cbe2;font-size:12px;line-height:1.6;}
+.spooky-control-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+.spooky-choice-modal{width:min(1040px,calc(100vw - 28px));max-height:90dvh;overflow:auto;}
+.spooky-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px;}
+.spooky-choice{display:flex;flex-direction:column;gap:14px;padding:22px;border:1px solid #aa679a;border-radius:16px;background:linear-gradient(155deg,#34213c,#111b2c);box-shadow:inset 0 0 24px #ff9b4e0c;}
+.spooky-choice h3{color:#ffc481;margin:0;}
+.spooky-choice ul{padding-left:18px;margin:0;line-height:1.75;color:#e6dbea;font-size:13px;flex:1;}
+.spooky-choice button{padding:12px;border:1px solid #dd986f;border-radius:10px;background:#61418b;color:#fff;font-weight:700;cursor:pointer;}
+.spooky-info-list p{padding:14px;border:1px solid #6e5279;border-radius:12px;background:#1a2133;font-size:13px;line-height:1.65;}
+.spooky-info-button{min-width:42px;font-size:22px;line-height:1;}
+#spookySummary{white-space:pre-line;}
+#spookyShopGrid{margin-top:16px;}
+#spookyShopModal .modal-panel{max-height:88dvh;overflow:auto;}
+#spookyShopModal button:disabled,.spooky-choice button:disabled{opacity:.5;cursor:not-allowed;}
+@media(max-width:700px){.spooky-choice-grid{grid-template-columns:1fr;}.spooky-choice{padding:18px;}.spooky-controls{gap:10px;}#battleModePicker{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* Spooky Hunt has six deployment slots; other mode layouts stay independent. */
+#battleModal.spooky-hunt-mode .battle-team-slots{grid-template-columns:repeat(3,minmax(0,1fr));}
+.storage-result{font-size:12px;line-height:1.7;color:#d4f7b9;padding:10px;border:1px solid #62815a;border-radius:8px;background:#172a20;overflow-wrap:anywhere;}
+@media(min-width:1300px){#battleModal.spooky-hunt-mode .battle-team-slots{grid-template-columns:repeat(6,minmax(0,1fr));}}
+@media(max-width:700px){#battleModal.spooky-hunt-mode .battle-team-slots{grid-template-columns:repeat(2,minmax(0,1fr));}}

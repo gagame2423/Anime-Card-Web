@@ -1,7 +1,7 @@
 /* Cached three-panel Storage UI and item source inspection. No reward writes. */
 (function(host){
   'use strict';
-  let bridge={},ui=null,tab='items',selected='',signature='';
+  let bridge={},ui=null,tab='items',selected='',signature='',capsuleResult='';
   const text=(node,value)=>{if(node&&node.textContent!==String(value))node.textContent=String(value);};
   const make=(tag,className='',value)=>{const n=host.document.createElement(tag);n.className=className;if(value!==undefined)n.textContent=value;return n;};
   const format=value=>Number(value||0).toLocaleString('en-US');
@@ -26,6 +26,13 @@
     if(id==='excalibur_sword')result.push('Holy Grail Raid victory: 0.8% at difficulty 1, rising linearly to 8% at difficulty 1000.');
     for(const [type,def]of Object.entries(host.BossEventSystem.TYPES))for(const offer of host.BossEventSystem.offers(type))if(offer.id===id)result.push(def.name+' Shop: '+format(offer.cost)+' '+def.coinName+'.');
     if(id===host.RaidSystem.KEY_ITEM.id)result.push('10% chance after a regular 1v1 or 4v4 victory. Not a Tower, Time Trial, Raid or Boss Event drop.');
+    for(const source of host.SpookySystem?.sources(id)||[])result.push(source);
+    if(id===host.SpookySystem?.CAPSULE.id){
+      result.push('Open 1 Capsule in Storage → Items to receive 1 card. No EXP, VNĐ or standard roll count.');
+      const pool=host.SpookySystem.capsulePool();
+      for(const row of pool){const card=host.ALL_CARDS.find(card=>card.id===row.cardId);result.push(`${card?.name||row.cardId}: weight ${row.weight} → ${(row.chance*100).toFixed(4)}%.`);}
+      if(!pool.some(row=>row.cardId==='tower-champion-heavenly'))result.push('The Judgement locked: complete Heavenly Tower Floor 100. Eligible weights are normalized.');
+    }
     if(!result.length)result.push(item?.metadata?.source||'No acquisition source is currently registered for this item.');
     return result;
   }
@@ -37,19 +44,27 @@
   function filtered(){const query=(ui.search.value||'').trim().toLowerCase();return host.InventorySystem.list().filter(item=>category(item)===tab&&`${item.name} ${item.description}`.toLowerCase().includes(query));}
   function details(){
     const item=host.InventorySystem.getItem(selected);ui.art.replaceChildren();
-    if(!item){text(ui.title,'Select an item');text(ui.type,'');text(ui.description,'Choose an item to inspect its details and sources.');text(ui.owned,'');ui.action.hidden=true;ui.info.disabled=true;return;}
+    if(!item){text(ui.title,'Select an item');text(ui.type,'');text(ui.description,'Choose an item to inspect its details and sources.');text(ui.owned,'');ui.action.hidden=true;ui.info.disabled=true;ui.result.hidden=true;return;}
     ui.art.append(visual(item));text(ui.title,item.name);text(ui.type,category(item)==='equipment'?'Equipment · exclusive slot':item.type);text(ui.description,item.description);ui.info.disabled=false;
     refreshDetails();
   }
   function refreshDetails(){
     const item=host.InventorySystem.getItem(selected);if(!item)return;
     text(ui.owned,'Owned: '+format(item.quantity));
-    const equipped=host.EquipmentSystem.equipped===selected,isEquipment=Boolean(host.EquipmentSystem.recipe(selected));
-    ui.action.hidden=!item.usable&&!isEquipment;
-    text(ui.action,isEquipment?(equipped?'Unequip':'Equip · replaces current'):'Use Potion');
-    ui.action.disabled=(isEquipment?bridge.canAct?.()===false:bridge.canUse?.()===false)||(isEquipment&&!equipped&&item.quantity<1)||(!isEquipment&&item.quantity<1);
+    const equipped=host.EquipmentSystem.equipped===selected,isEquipment=host.EquipmentSystem.isEquipment(selected);
+    const capsule=item.id===host.SpookySystem?.CAPSULE.id;
+    ui.result.hidden=!capsule||!capsuleResult;text(ui.result,capsule?capsuleResult:'');
+    ui.action.hidden=!item.usable&&!isEquipment&&!capsule;
+    text(ui.action,isEquipment?(equipped?'Unequip':'Equip · replaces current'):capsule?'Open Spooky Capsule':'Use Potion');
+    ui.action.disabled=((isEquipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)||(isEquipment&&!equipped&&item.quantity<1)||(!isEquipment&&item.quantity<1);
     const seconds=Math.ceil(item.remaining/1000);
     text(ui.timer,item.pausedRemaining?'PAUSED · '+Math.ceil(item.pausedRemaining/1000)+'s remaining':seconds>0?'ACTIVE · '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):equipped?'EQUIPPED · bonuses active':'');
+  }
+  function showCapsuleResult(result){
+    const drop=result?.cards?.[0],card=drop?host.ALL_CARDS.find(card=>card.id===drop.cardId):null;if(!card)return;
+    const mutations=(drop.mutationIds||[]).map(id=>host.MUTATION_BY_ID[id]?.name||id).join(' + ');
+    capsuleResult=`Capsule reward: ${mutations?'['+mutations+'] ':''}${card.name} · +1 owned · no EXP / VNĐ / roll count.`;
+    if(ui)refreshDetails();
   }
   function render(root){
     if(!mount(root)||ui.root.classList.contains('hidden'))return;
@@ -73,7 +88,7 @@
   function mount(root){
     if(!root)return false;if(ui?.root===root)return true;
     const select=name=>root.querySelector('[data-storage-'+name+']');
-    const next={root,search:root.querySelector('#inventorySearch'),grid:root.querySelector('#potionInventoryList'),title:select('title'),type:select('type'),art:select('art'),description:select('description'),owned:select('owned'),timer:select('timer'),action:select('action'),info:select('info'),equipped:select('equipped'),status:root.querySelector('#dropChanceDisplay')};
+    const next={root,search:root.querySelector('#inventorySearch'),grid:root.querySelector('#potionInventoryList'),title:select('title'),type:select('type'),art:select('art'),description:select('description'),owned:select('owned'),timer:select('timer'),result:select('result'),action:select('action'),info:select('info'),equipped:select('equipped'),status:root.querySelector('#dropChanceDisplay')};
     if(Object.values(next).some(n=>!n))return false;ui=next;
     root.addEventListener('click',event=>{
       const categoryButton=event.target.closest('[data-storage-tab]');if(categoryButton){tab=categoryButton.dataset.storageTab;signature='';for(const button of root.querySelectorAll('[data-storage-tab]')){const active=button===categoryButton;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));}render(root);return;}
@@ -81,8 +96,8 @@
       const button=event.target.closest('[data-storage-select]');if(button){selected=button.dataset.storageSelect;for(const slot of ui.grid.querySelectorAll('[data-storage-id]')){slot.classList.toggle('is-selected',slot.dataset.storageId===selected);slot.querySelector('.storage-select')?.setAttribute('aria-pressed',String(slot.dataset.storageId===selected));}details();}
     });
     ui.info.addEventListener('click',()=>inspectSource(selected));
-    ui.action.addEventListener('click',()=>{const equipment=host.EquipmentSystem.recipe(selected);if(equipment?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
+    ui.action.addEventListener('click',()=>{const equipment=host.EquipmentSystem.isEquipment(selected),capsule=selected===host.SpookySystem?.CAPSULE.id;if((equipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(capsule){host.SpookySystem.openCapsule();render(root);return;}if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
     return true;
   }
-  host.StorageSystem=Object.freeze({render,mount,sources,inspectSource,configure:options=>{bridge=options||{};}});
+  host.StorageSystem=Object.freeze({render,mount,sources,inspectSource,showCapsuleResult,configure:options=>{bridge=options||{};}});
 })(window);

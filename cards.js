@@ -2145,6 +2145,158 @@ CARDS.push(...[
     "unlockRequirement": "tower_floor_200_heavenly"
   }
 ]);
+// Halloween event cards. Seasonal acquisition rules live in spooky.js.
+CARDS.push(...[
+  {
+    "id": "the-legion",
+    "name": "The Legion",
+    "element": "Fire",
+    "rarity": "Mythic",
+    "chance": 666333,
+    "requiredWeather": null,
+    "category": [
+      "VideoGame",
+      "Brutal",
+      "Human",
+      "Swordman"
+    ],
+    "stats": {
+      "hp": 66666,
+      "atk": 6666
+    },
+    "passive": {
+      "name": "Frenzy",
+      "description": "Every 4th attack: 44% chance to start a chain of 44% ATK follow-ups; each can chain at 44%. Each follow-up has a 44% chance to add Bleed for its chain count (44% ATK/turn). Reach the number of living enemies at chain start to hit all enemies for x4 ATK once per chain."
+    },
+    "image": "assets/cards/thelegion.png",
+    "spookyExclusive": true
+  },
+  {
+    "id": "the-clown",
+    "name": "The Clown",
+    "element": "Dark",
+    "rarity": "Mythic",
+    "chance": 333666,
+    "requiredWeather": null,
+    "category": [
+      "VideoGame",
+      "Brutal",
+      "Magician",
+      "Swordman"
+    ],
+    "stats": {
+      "hp": 33333,
+      "atk": 6666
+    },
+    "passive": {
+      "name": "Potion",
+      "description": "Entry and each enemy defeat: randomly choose Haste or Hindred. Haste: each attack has a 33% chance of a chainable 66% ATK follow-up. Hindred: each hit has a 33% chance to block all target follow-ups for 3 turns. Each own kill: +13.9% HP and ATK."
+    },
+    "image": "assets/cards/theclown.png",
+    "spookyExclusive": true
+  },
+  {
+    "id": "the-oni",
+    "name": "The Oni",
+    "element": "Fire",
+    "rarity": "Mythic",
+    "chance": 333999,
+    "requiredWeather": null,
+    "category": [
+      "VideoGame",
+      "Brutal",
+      "Swordman",
+      "Unhuman"
+    ],
+    "stats": {
+      "hp": 33333,
+      "atk": 9999
+    },
+    "passive": {
+      "name": "Cursed Blood",
+      "description": "Attack a bleeding enemy: gain +50% ATK for the next own turn; does not stack. If first in the lineup, gain +100% ATK for 3 own turns and every 3rd attack inflicts Bleed for 1\u20133 turns (33% current ATK/turn)."
+    },
+    "image": "assets/cards/theoni.png",
+    "spookyExclusive": true
+  },
+  {
+    "id": "jason-13th",
+    "name": "Jason 13th",
+    "element": "Water",
+    "rarity": "Secret",
+    "chance": 0,
+    "requiredWeather": null,
+    "category": [
+      "Alternative",
+      "Brutal",
+      "PureEvil",
+      "Swordman",
+      "Unhuman"
+    ],
+    "stats": {
+      "hp": 333333,
+      "atk": 66666
+    },
+    "passive": {
+      "name": "Ki ki ma ma",
+      "description": "Every 5th attack prepares the next attack: Spear (200% ATK through all enemies, x0.9 per subsequent hit) or Frog (give all enemies 50% damage reduction for 3 turns). Each attack: 66% chance to heal 6% max HP. On first entry steal a random teammate passive; return it when Jason dies."
+    },
+    "image": "assets/cards/jason13th.png",
+    "evolutionOnly": true
+  },
+  {
+    "id": "freddy-krueger",
+    "name": "Freddy Krueger",
+    "element": "Dark",
+    "rarity": "Secret",
+    "chance": 999666,
+    "requiredWeather": null,
+    "category": [
+      "PureEvil",
+      "Villian",
+      "Alternative",
+      "Brutal",
+      "Magician",
+      "Unhuman"
+    ],
+    "stats": {
+      "hp": 99999,
+      "atk": 33333
+    },
+    "passive": {
+      "name": "Nightmare",
+      "description": "Each hit: 66% chance to inflict Hindred for 1 turn, blocking all follow-ups. After a successful Hindred, the next attack has a 6% chance to stun for 3 turns. 33% dodge; a successful dodge stuns the attacker for 1 turn."
+    },
+    "image": "assets/cards/freddykrueger.png",
+    "spookyExclusive": true
+  },
+  {
+    "id": "myers",
+    "name": "Myers",
+    "element": "Holy",
+    "rarity": "Secret",
+    "chance": 6666666,
+    "requiredWeather": null,
+    "category": [
+      "PureEvil",
+      "Villian",
+      "Alternative",
+      "Swordman",
+      "Brutal",
+      "Human"
+    ],
+    "stats": {
+      "hp": 666666,
+      "atk": 66666
+    },
+    "passive": {
+      "name": "Stalking",
+      "description": "Each allied supporting turn: stack +6% ATK and +3% HP. Each attack removes 66% of stored ATK bonus and 33% of stored HP bonus; base stats are unchanged. Last ally alive: execute enemies below 6% max HP. A successful execution starts a 6-turn countdown to permanent death; teammates cannot clone or revive Myers after it starts."
+    },
+    "image": "assets/cards/myers.png",
+    "spookyExclusive": true
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

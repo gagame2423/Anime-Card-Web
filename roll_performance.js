@@ -2,7 +2,7 @@
 (function (host) {
   'use strict';
   const cardMap = new Map((host.ALL_CARDS || []).map(card => [String(card.id), card]));
-  const unlockCards = [...cardMap.values()].filter(card => card.unlockRequirement && Number(card.chance) > 0 && !card.raidOnly && !card.bossEventOnly);
+  const unlockCards = [...cardMap.values()].filter(card => (card.unlockRequirement||card.spookyExclusive) && Number(card.chance) > 0 && !card.raidOnly && !card.bossEventOnly);
   let owner = null, unlocked = null, mutations = null, inventory = null;
   const ownedCards = new Set(), ownedVariants = new Set();
   let poolKey = null, poolValue = null, frame = null;

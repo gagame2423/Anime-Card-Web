@@ -3,8 +3,8 @@
   'use strict';
   const KEY = 'anime_card_rng_items_v1';
   // Two quest effects per period can overlap when claimed across a reset boundary.
-  // Achievements (1 + .45 + .90), quests (2*.10 + 2*.25), one sword (.333).
-  const MAX_KNOWN_DROP_MULTIPLIER = 3.383 + 1e-8;
+  // Achievements (1 + .45 + .90 + .06 Spooky), quests (2*.10 + 2*.25), one sword (.333).
+  const MAX_KNOWN_DROP_MULTIPLIER = 3.443 + 1e-8;
   const DURATION_MS = 600000;
   const SUPER_DURATION_MS = 300000;
   const SUPER_BASE = Object.freeze({super_luck_potion:'lucky_potion',super_rich_potion:'rich_potion',super_exp_potion:'exp_potion',super_speed_potion:'speed_potion'});
@@ -140,6 +140,17 @@
     data.receipts[stream]=receipt;
     if(persist())return true;data=JSON.parse(before);return false;
   }
+  // Event item costs and grants share one atomic receipt and one write.
+  function transactOnce(stream,receipt,grants=[],costs=[]){
+    if(!/^[a-z0-9_]{1,40}$/.test(stream)||typeof receipt!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(receipt)||![grants,costs].every(list=>Array.isArray(list)&&list.length<=8&&list.every(row=>row&&typeof row==='object'&&safeId(row.id)&&Number.isSafeInteger(row.quantity)&&row.quantity>0)))return false;
+    if(data.receipts[stream]===receipt)return true;
+    const before=JSON.stringify(data);
+    for(const row of costs)if(quantity(row.id)<row.quantity)return false;
+    for(const row of costs)data.items[row.id].quantity-=row.quantity;
+    for(const row of grants){if(!hasOwn(data.items,row.id))data.items[row.id]=normalizeItem(row.id);data.items[row.id].quantity=Math.min(Number.MAX_SAFE_INTEGER,quantity(row.id)+row.quantity);}
+    data.receipts[stream]=receipt;
+    if(persist())return true;data=JSON.parse(before);return false;
+  }
   function remove(id, count = 1) {
     const amount = countOf(count);
     if (amount < 1 || quantity(id) < amount) return false;
@@ -235,5 +246,5 @@
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, transactOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

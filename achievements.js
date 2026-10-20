@@ -12,11 +12,11 @@
     raid: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]),
     boss: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000])
   });
-  const CATEGORIES = Object.freeze({ collection: 'Collection', battles: 'Battle wins', currency: 'VNĐ milestones', rolls: 'Total rolls', tower: 'Tower progress', timetrial: 'Time Trial rooms', raid: 'Total Raid wins', boss: 'Total Boss Event clears' });
+  const CATEGORIES = Object.freeze({ collection: 'Collection', battles: 'Battle wins', currency: 'VNĐ milestones', rolls: 'Total rolls', tower: 'Tower progress', timetrial: 'Time Trial rooms', raid: 'Total Raid wins', boss: 'Total Boss Event clears', spooky:'Spooky Event' });
   const count = value => Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Number(value)))) : 0;
   const record = value => value && typeof value === 'object' && !Array.isArray(value);
   const safeKey = id => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id);
-  function fresh() { return { version: 1, stats: { collection: 0, battles: 0, currencyEarned: 0, peakCurrency: 0, rolls: 0, tower: 0, timetrial: 0, raid: 0, boss: 0 }, towerProgress: {}, claimed: {}, unlockedRequirements: {} }; }
+  function fresh() { return { version: 1, stats: { collection: 0, battles: 0, currencyEarned: 0, peakCurrency: 0, rolls: 0, tower: 0, timetrial: 0, raid: 0, boss: 0, spookyRuns:0, spookyEvolution:0, spookyCollection:0 }, towerProgress: {}, claimed: {}, unlockedRequirements: {} }; }
   function load() {
     let raw; try { raw = JSON.parse(host.localStorage?.getItem(KEY) || 'null'); } catch (_) { raw = null; }
     const result = fresh();
@@ -67,12 +67,17 @@
       const type = (towerTypes || []).find(t => t.id === towerType);
       result.push(Object.freeze({ id: card.unlockRequirement, requirement: card.unlockRequirement, category: 'tower', towerType, target, title: `${type?.name || towerType} • Floor ${target} Champion`, reward: Object.freeze({ cardId: card.id, cardName: card.name }), automatic: true }));
     }
+    result.push(
+      Object.freeze({id:'spooky_runs_666',category:'spooky',stat:'spookyRuns',target:666,title:'Clear all 50 Spooky Hunt waves 666 times',reward:Object.freeze({luckBonus:.6}),automatic:false}),
+      Object.freeze({id:'spooky_jason_evolved',category:'spooky',stat:'spookyEvolution',target:1,title:'Evolve The Trapper into Jason 13th',reward:Object.freeze({dropBonus:.06}),automatic:false}),
+      Object.freeze({id:'spooky_collection',category:'spooky',stat:'spookyCollection',target:9,title:'Own all 9 Spooky collection cards',reward:Object.freeze({expBonus:.6}),automatic:false})
+    );
     return result;
   }
   function progress(def) {
     if (def.towerType) return count(data.towerProgress[def.towerType]);
     if (def.category === 'currency') return Math.max(data.stats.currencyEarned, data.stats.peakCurrency);
-    return count(data.stats[def.category]);
+    return count(data.stats[def.stat||def.category]);
   }
   function claim(id) {
     if (host.SandboxSystem?.active) return false;
@@ -101,6 +106,9 @@
       // their sum, so reloads/pending reward recovery never add a win twice.
       data.stats.raid = Math.max(data.stats.raid, count(snapshot.knownRaidWins));
       data.stats.boss = Math.max(data.stats.boss, count(snapshot.knownBossWins));
+      data.stats.spookyRuns=Math.max(data.stats.spookyRuns,count(snapshot.spookyRuns));
+      data.stats.spookyEvolution=Math.max(data.stats.spookyEvolution,Math.min(1,count(snapshot.spookyEvolution)));
+      data.stats.spookyCollection=Math.max(data.stats.spookyCollection,Math.min(9,count(snapshot.spookyCollection)));
       data.stats.peakCurrency = Math.max(data.stats.peakCurrency, count(snapshot.currency));
       // Old saves have no lifetime-earnings history. The known balance is the
       // migration baseline; subsequent awards are recorded explicitly.
@@ -156,5 +164,5 @@
   const getExpBonus = receipts => bonus('expBonus', receipts);
   const getCoinBonus = receipts => bonus('coinBonus', receipts);
   const getDropMultiplier = receipts => Number((1 + bonus('dropBonus', receipts)).toFixed(2));
-  host.AchievementSystem = Object.freeze({ KEY, TIERS, CATEGORIES, configure, sync, list, claim, render, compact, getLuckBonus, getExpBonus, getCoinBonus, getDropMultiplier, recordBattleWin, recordCurrencyEarned, reset, flush: persist, isUnlocked: requirement => data.unlockedRequirements[requirement] === true, getStats: () => ({ ...data.stats }), requirementLabel: requirement => definitions.find(def => def.requirement === requirement)?.title || String(requirement).replaceAll('_', ' ') });
+  host.AchievementSystem = Object.freeze({ KEY, TIERS, CATEGORIES, areSpookyComplete:()=>definitions.filter(def=>def.category==='spooky').length===3&&definitions.filter(def=>def.category==='spooky').every(def=>progress(def)>=def.target), configure, sync, list, claim, render, compact, getLuckBonus, getExpBonus, getCoinBonus, getDropMultiplier, recordBattleWin, recordCurrencyEarned, reset, flush: persist, isUnlocked: requirement => data.unlockedRequirements[requirement] === true, getStats: () => ({ ...data.stats }), requirementLabel: requirement => definitions.find(def => def.requirement === requirement)?.title || String(requirement).replaceAll('_', ' ') });
 })(window);
