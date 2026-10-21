@@ -29,7 +29,9 @@
   const unit=random=>Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0));
   const roll=(min,max,random=Math.random)=>min+Math.floor(unit(random)*(max-min+1));
   const waveOf=n=>Math.max(1,Math.min(50,Math.floor(Number(n)||1)));
-  const calendar=at=>{const d=new Date(at);if(!Number.isFinite(d.getTime()))return {year:0,month:0};const parts=new Intl.DateTimeFormat('en-US',{timeZone:TIME_ZONE,year:'numeric',month:'numeric'}).formatToParts(d);return {year:Number(parts.find(p=>p.type==='year').value),month:Number(parts.find(p=>p.type==='month').value)};};
+  const calendarFormatter=new Intl.DateTimeFormat('en-US',{timeZone:TIME_ZONE,year:'numeric',month:'numeric'});
+  let calendarDay=null,calendarValue=null;
+  const calendar=at=>{const d=new Date(at);if(!Number.isFinite(d.getTime()))return {year:0,month:0};const day=Math.floor((d.getTime()+7*60*60*1000)/86400000);if(calendarDay===day)return calendarValue;const parts=calendarFormatter.formatToParts(d);calendarDay=day;return calendarValue=Object.freeze({year:Number(parts.find(p=>p.type==='year').value),month:Number(parts.find(p=>p.type==='month').value)});};
   const isOpen=(at=Date.now())=>calendar(at).month===10;
   const freshRun=(season=0)=>({wave:1,season,choices:[],pendingChoice:null});
   const fresh=()=>({version:1,coins:0,runs:0,sequence:0,run:freshRun(),activeAttempt:null,pending:null});
@@ -72,7 +74,7 @@
   function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));return true;}catch(_){return false;}}
   function register(){host.InventorySystem.registerItem(CAPSULE);}
   register();persist();
-  function notify(){bridge.onChange?.();}
+  function notify(kind='wave'){bridge.onChange?.(kind);}
   function commitPending(){
     const p=data.pending;if(!p)return null;
     if((p.items.length||p.costs.length)&&!host.InventorySystem.transactOnce('spooky_rewards',p.id,p.items,p.costs))throw Error('Không thể lưu item Spooky. Giao dịch đang chờ khôi phục.');
@@ -111,7 +113,7 @@
   function choose(index){
     const p=data.run.pendingChoice;if(host.SandboxSystem?.active||data.activeAttempt||data.pending||!isOpen()||!integer(index,0,2)||!p)return false;
     const before=JSON.parse(JSON.stringify(data.run));data.run.choices.push({...p.options[index]});data.run.pendingChoice=null;
-    if(!persist()){data.run=before;return false;}notify();return true;
+    if(!persist()){data.run=before;return false;}notify('choice');return true;
   }
   function modifiers(choices=data.run.choices){
     const result={playerStats:0,enemyStats:0,coins:0,dodge:0,reduction:0,bleed:0};
@@ -164,12 +166,12 @@
   }
   function purchase(id){
     const offer=SHOP.find(offer=>offer.id===id);if(!offer||data.pending||busy||host.SandboxSystem?.active||bridge.canAct?.()!==true||data.coins<offer.cost||host.InventorySystem.quantity(id)>=MAX)return false;
-    busy=true;try{queue('purchase',{coinsDelta:-offer.cost,items:[{id,quantity:1}],summary:{kind:'purchase'}});notify();return true;}catch(e){host.alert?.(e.message);return false;}finally{busy=false;}
+    busy=true;try{queue('purchase',{coinsDelta:-offer.cost,items:[{id,quantity:1}],summary:{kind:'purchase'}});notify('purchase');return true;}catch(e){host.alert?.(e.message);return false;}finally{busy=false;}
   }
   function openCapsule(random=Math.random){
     if(data.pending||busy||host.SandboxSystem?.active||bridge.canAct?.()!==true||host.InventorySystem.quantity(CAPSULE.id)<1)return null;
     busy=true;try{const pool=capsulePool(),r=unit(random);let sum=0,pick=pool.at(-1);for(const row of pool){sum+=row.chance;if(r<sum){pick=row;break;}}
-      const result=queue('capsule',{cards:[{cardId:pick.cardId,mutationIds:mutationIds()}],costs:[{id:CAPSULE.id,quantity:1}],summary:{kind:'capsule'}});notify();bridge.onCapsule?.(result);return result;
+      const result=queue('capsule',{cards:[{cardId:pick.cardId,mutationIds:mutationIds()}],costs:[{id:CAPSULE.id,quantity:1}],summary:{kind:'capsule'}});notify('capsule');bridge.onCapsule?.(result);return result;
     }catch(e){host.alert?.(e.message);return null;}finally{busy=false;}
   }
   function choiceText(choice){const lines=[];if(choice.playerStats)lines.push(`Team HP / ATK +${choice.playerStats}%`);if(choice.coins)lines.push(`Spooky Coins +${choice.coins}%`);if(choice.enemyStats)lines.push(`Enemies HP / ATK +${choice.enemyStats}%`);if(choice.dodge)lines.push(`Enemies dodge +${choice.dodge} percentage points (stacks)`);if(choice.reduction)lines.push(`Enemies damage reduction +${choice.reduction}%`);if(choice.bleed)lines.push(`Enemies: +${choice.bleed}% Bleed chance, 33% ATK / turn for 1–3 turns`);return lines;}
@@ -178,9 +180,18 @@
     const doc=grid.ownerDocument;pending.options.forEach((choice,index)=>{const box=doc.createElement('article');box.className='spooky-choice';const title=doc.createElement('h3');title.textContent=CHOICES.find(def=>def.id===choice.id).title;const list=doc.createElement('ul');for(const line of choiceText(choice)){const li=doc.createElement('li');li.textContent=line;list.append(li);}const button=doc.createElement('button');button.type='button';button.textContent='Choose for this run';button.disabled=Boolean(data.pending);button.addEventListener('click',()=>{if(choose(index))onChoose();});box.append(title,list,button);grid.append(box);});
   }
   function renderInfo(grid,battle){if(!grid)return;grid.replaceChildren();const choices=battle?.spooky?.choices||data.run.choices,doc=grid.ownerDocument;for(const choice of choices){const row=doc.createElement('p');row.textContent=`Wave ${choice.wave} · ${choiceText(choice).join(' • ')}`;grid.append(row);}if(!choices.length){const row=doc.createElement('p');row.textContent='No run modifiers selected yet.';grid.append(row);}}
+  const shopViews=new WeakMap();
   function renderShop(grid,onChange=()=>{}){
-    if(!grid)return;grid.replaceChildren();const doc=grid.ownerDocument;
-    for(const offer of SHOP){const item=host.InventorySystem.getItem(offer.id);if(!item)continue;const box=doc.createElement('article');box.className='module-item';const name=doc.createElement('strong');name.textContent=`${item.icon} ${item.name}`;const text=doc.createElement('p');text.textContent=item.description;const button=doc.createElement('button');button.type='button';button.textContent=`${offer.cost.toLocaleString('en-US')} Spooky Coins`;button.disabled=data.coins<offer.cost||Boolean(data.pending)||bridge.canAct?.()!==true;button.addEventListener('click',()=>{if(purchase(offer.id))onChange();});box.append(name,text,button);grid.append(box);}
+    if(!grid)return;
+    let view=shopViews.get(grid);
+    if(!view){
+      grid.replaceChildren();view={rows:[],onChange};const doc=grid.ownerDocument,fragment=doc.createDocumentFragment();
+      for(const offer of SHOP){const item=host.InventorySystem.getItem(offer.id);if(!item)continue;const box=doc.createElement('article');box.className='module-item';const name=doc.createElement('strong');name.textContent=`${item.icon} ${item.name}`;const text=doc.createElement('p');text.textContent=item.description;const button=doc.createElement('button');button.type='button';button.textContent=`${offer.cost.toLocaleString('en-US')} Spooky Coins`;button.dataset.spookyPurchase=offer.id;
+        button.addEventListener('click',()=>{if(purchase(offer.id))view.onChange();});box.append(name,text,button);fragment.append(box);view.rows.push({offer,button});}
+      grid.append(fragment);shopViews.set(grid,view);
+    }
+    view.onChange=onChange;const allowed=bridge.canAct?.()===true&&!data.pending&&!busy;
+    for(const {offer,button}of view.rows)button.disabled=!allowed||data.coins<offer.cost||host.InventorySystem.quantity(offer.id)>=MAX;
   }
   function sources(id){const result=[];for(const offer of SHOP)if(offer.id===id)result.push(`Spooky Shop: ${offer.cost.toLocaleString('en-US')} Spooky Coins.`);if(id===EQUIPMENT)result.push('Spooky Hunt: independent 5% chance only after winning Wave 50.');if(id==='machete')result.push('Spooky Hunt: independent 1% chance only after winning Wave 50; evolves Lv.100+ The Trapper.');return result;}
   function snapshot(){return JSON.parse(JSON.stringify({coins:data.coins,runs:data.runs,wave:data.run.wave,choices:data.run.choices,pendingChoice:data.run.pendingChoice,available:isOpen(),blocked:Boolean(data.pending)}));}

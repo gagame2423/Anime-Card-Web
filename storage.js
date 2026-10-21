@@ -2,6 +2,7 @@
 (function(host){
   'use strict';
   let bridge={},ui=null,tab='items',selected='',signature='',capsuleResult='';
+  const slots=new Map();
   const text=(node,value)=>{if(node&&node.textContent!==String(value))node.textContent=String(value);};
   const make=(tag,className='',value)=>{const n=host.document.createElement(tag);n.className=className;if(value!==undefined)n.textContent=value;return n;};
   const format=value=>Number(value||0).toLocaleString('en-US');
@@ -65,25 +66,29 @@
     const drop=result?.cards?.[0],card=drop?host.ALL_CARDS.find(card=>card.id===drop.cardId):null;if(!card)return;
     const mutations=(drop.mutationIds||[]).map(id=>host.MUTATION_BY_ID[id]?.name||id).join(' + ');
     capsuleResult=`Capsule reward: ${mutations?'['+mutations+'] ':''}${card.name} · +1 owned · duplicates: +10% level EXP (until Lv.1000) · no VNĐ / roll count.`;
-    if(ui)refreshDetails();
+    if(ui)host.RollPerformanceSystem.schedule(refreshVisibleDetails);
   }
+  function refreshVisibleDetails(){if(ui&&!ui.root.classList.contains('hidden'))refreshDetails();}
+  function paintStorage(){if(ui)render(ui.root);}
   function render(root){
     if(!mount(root)||ui.root.classList.contains('hidden'))return;
-    const items=filtered(),equipped=host.EquipmentSystem.current(),next=JSON.stringify([tab,ui.search.value,equipped?.id,items.map(i=>[i.id,i.quantity,i.description,i.image])]);
+    const items=filtered(),equipped=host.EquipmentSystem.current(),next=JSON.stringify([tab,ui.search.value,equipped?.id,items.map(i=>[i.id,i.description,i.image])]);
     text(ui.equipped,equipped?'Equipped: '+equipped.name+' · 1 / 1 slot':'Equipment slot: empty · 0 / 1');
     if(!items.some(item=>item.id===selected))selected=items[0]?.id||'';
-    if(next!==signature){signature=next;ui.grid.replaceChildren();
+    if(next!==signature){signature=next;ui.grid.replaceChildren();slots.clear();const fragment=ui.grid.ownerDocument.createDocumentFragment();
       for(const item of items){
         const tile=make('article','storage-slot'+(selected===item.id?' is-selected':'')+(item.quantity<1?' is-unowned':''));tile.dataset.storageId=item.id;
         const button=make('button','storage-select');button.type='button';button.dataset.storageSelect=item.id;button.setAttribute('aria-pressed',String(selected===item.id));
         button.append(visual(item),make('span','storage-quantity',host.InventorySystem.formatQuantity(item.quantity)),make('strong','',item.name));
         if(equipped?.id===item.id)button.append(make('small','storage-equipped-tag','EQUIPPED'));
         const info=make('button','storage-eye','◉');info.type='button';info.dataset.storageSource=item.id;info.setAttribute('aria-label','View sources for '+item.name);info.title='View item sources';
-        tile.append(button,info);ui.grid.append(tile);
+        tile.append(button,info);fragment.append(tile);slots.set(item.id,{tile,button,quantity:button.querySelector('.storage-quantity')});
       }
+      ui.grid.append(fragment);
       if(!items.length)ui.grid.append(make('p','storage-empty','No items in this category match your search.'));
       details();
     }else refreshDetails();
+    for(const item of items){const slot=slots.get(item.id);if(!slot)continue;text(slot.quantity,host.InventorySystem.formatQuantity(item.quantity));slot.tile.classList.toggle('is-unowned',item.quantity<1);slot.tile.classList.toggle('is-selected',selected===item.id);slot.button.setAttribute('aria-pressed',String(selected===item.id));}
     const inventory=host.InventorySystem;text(ui.status,'Item drops x'+inventory.getDropMultiplier().toFixed(3)+' · Equipment buffs apply once from the equipped slot.');
   }
   function mount(root){
@@ -97,7 +102,7 @@
       const button=event.target.closest('[data-storage-select]');if(button){selected=button.dataset.storageSelect;for(const slot of ui.grid.querySelectorAll('[data-storage-id]')){slot.classList.toggle('is-selected',slot.dataset.storageId===selected);slot.querySelector('.storage-select')?.setAttribute('aria-pressed',String(slot.dataset.storageId===selected));}details();}
     });
     ui.info.addEventListener('click',()=>inspectSource(selected));
-    ui.action.addEventListener('click',()=>{const equipment=host.EquipmentSystem.isEquipment(selected),capsule=selected===host.SpookySystem?.CAPSULE.id;if((equipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(capsule){host.SpookySystem.openCapsule();render(root);return;}if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
+    ui.action.addEventListener('click',()=>{const equipment=host.EquipmentSystem.isEquipment(selected),capsule=selected===host.SpookySystem?.CAPSULE.id;if((equipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(capsule){host.SpookySystem.openCapsule();host.RollPerformanceSystem.schedule(paintStorage);return;}if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
     return true;
   }
   host.StorageSystem=Object.freeze({render,mount,sources,inspectSource,showCapsuleResult,configure:options=>{bridge=options||{};}});

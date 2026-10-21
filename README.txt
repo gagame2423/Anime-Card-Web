@@ -1,77 +1,75 @@
-NHẬT KÝ BẢN SỬA GOMEN EVENT — 20/10/2026
+NHẬT KÝ CẬP NHẬT HIỆU NĂNG VÀ TIỆN ÍCH — 21/10/2026
+Phiên bản: 20261021-performance-qol-1
 
-1. CHUYỂN GOMEN SANG BOSS EVENT
+1. TỐI ƯU WEATHER VÀ MUTATION
 
-Gomen Event được chuyển khỏi danh sách Raid sang Battle Arena > Boss Event > Gomen Event. Toàn bộ điều kiện vào trận, tạo boss, xử lý kết quả, tiền thưởng và shop do boss_event.js quản lý.
+- Cache danh sách weather đang hoạt động, thứ tự thời gian hết hạn và tổng bonus theo chỉ số. Chỉ dựng lại khi weather hoặc thời hạn thay đổi; loại weather hết hạn trước khi tính bonus/roll.
+- MutationSystem cache tập ứng viên và xác suất, tái sử dụng bộ đệm trộn thứ tự, cache hệ số HP/ATK. Không cache kết quả ngẫu nhiên.
+- Giữ nguyên cơ chế thử độc lập: Common 10%, Uncommon 5%, Rare 2,5%; xác suất mỗi mutation sau hệ số trang bị không quá 25%. Mỗi kết quả roll có tối đa 2 mutation.
+- Đã đối chiếu 42.000 lượt roll có seed giữa bản trước và bản mới: kết quả và số lần tiêu thụ RNG khớp nhau. Các mutation cũ, double mutation và hệ số chỉ số không đổi.
 
-Thể thức sử dụng đúng luật Boss Event hiện có: 5 thẻ người chơi đấu 1 boss Gojo Revice; không cần Key, không có cây nâng HP/ATK bằng Coins. Các nâng cấp Gomen thuộc Raid cũ không được áp dụng trong Boss Event. Speed Battle Potion vẫn hoạt động theo luật Boss Event.
+2. KHO BIẾN THỂ, TÌM KIẾM VÀ ARENA
 
-Trận thắng thưởng Gomen Coins và có thể rơi Gojo Eye; không thưởng VNĐ, EXP hoặc potion ngẫu nhiên. Gojo Revice vẫn là thẻ tiến hóa; trận Gomen không phát trực tiếp thẻ Gojo Revice.
+- Bổ sung ui_performance.js quản lý chỉ mục sở hữu theo Card ID, cache giao diện, debounce, phân trang và cửa sổ chọn mutation.
+- Gom dữ liệu inventory/mutations một lần; hai bản ghi của cùng một biến thể được hợp nhất bằng số lượng lớn nhất, không cộng trùng. Các lần roll/cộng/bớt bản sao cập nhật riêng biến thể thay đổi.
+- Không quét lại toàn bộ kho cho từng thẻ, không dựng giao diện theo từng bản sao. Cache có giới hạn; lịch sử thay đổi giữ tối đa 64 mục, cache nội dung giữ tối đa 1.024 mục, cache hệ số mutation giữ tối đa 256 mục.
+- Debounce tìm kiếm Collection, Arena và Storage là 120 ms; cập nhật hình ảnh/DOM được gộp qua requestAnimationFrame.
+- Collection và Arena hiển thị tối đa 24 thẻ mỗi trang, có Previous/Next. Trang tự về đầu khi thay bộ lọc. Collection chỉ dựng tối đa 3 nhãn biến thể trên mỗi thẻ và hiển thị số biến thể còn lại.
+- Arena không còn dựng toàn bộ nút mutation trong khung preview. Nút ... mở popup hiển thị các biến thể của thẻ cùng số lượng. Popup dựng 24 biến thể mỗi đợt; Show more cho phép xem hết. Chọn biến thể tại popup để gán vào vị trí đang chọn.
+- Giữ nguyên giới hạn số bản sao có thể triển khai, lọc Element/Category, chỉ số HP/ATK có level và mutation, cùng điều kiện đội hình của từng Tower.
 
-2. ĐIỀU KIỆN HEAVENLY
+3. SPOOKY SHOP, CAPSULE VÀ HIỂN THỊ CHIẾN ĐẤU
 
-Chỉ được bắt đầu Gomen khi Heavenly Weather đang hoạt động và chưa hết hạn. Có thể xem thông tin hoặc shop khi sự kiện đóng, nhưng không được vào trận.
+- Mua Capsule không còn gọi dựng toàn bộ Collection đang đóng. Cập nhật UI được phân loại theo giao dịch và gộp vào một khung hình.
+- Spooky Shop tái sử dụng các nút đã tạo. Storage cập nhật số lượng và trạng thái vật phẩm ngay trên các ô có sẵn thay vì tạo lại cả lưới sau mỗi lần mở Capsule.
+- Nhận thẻ Capsule chỉ giữ bản sao phục hồi của các mục thay đổi, không sao chép sâu toàn bộ save rồi chuẩn hóa lại mọi thẻ. Việc trừ Capsule, nhận thẻ và ghi biên nhận vẫn được lưu bền vững; không trì hoãn phần thưởng để đổi lấy tốc độ.
+- Giữ nguyên RNG Capsule, điều kiện mở khóa The Judgement, roll mutation chuẩn, EXP thẻ trùng bằng 10% yêu cầu EXP hiện tại và ngừng cộng EXP ở cấp 1000. Không cộng số lượt roll thường khi mở Capsule.
+- Gộp hiển thị chỉ số và nhật ký chiến đấu theo khung hình. Nhật ký giữ tối đa 260 dòng; các ô đội hình và ảnh đã tải được tái sử dụng khi chỉ HP hoặc vị trí hoạt động thay đổi.
+- Giảm cấp phát đối tượng lịch mùa bằng cách tái sử dụng bộ định dạng và cache ngày Asia/Bangkok.
 
-Điều kiện thời tiết được kiểm tra lại trước mỗi lần Continue, kể cả Auto Continue sau thắng hoặc thua. Nếu Heavenly đã hết hạn hoặc không còn hoạt động, trận kế tiếp không bắt đầu. Trận đã bắt đầu tiếp tục theo luật Boss Event hiện có.
+4. SPEED UP CHO SPOOKY HUNT
 
-3. CHỈ SỐ, ĐỘ KHÓ VÀ COINS
+- Thêm công tắc Speed Up ngay bên dưới PLAYER/ENEMY STRIKE IN ... trong khung chiến đấu Spooky.
+- OFF: 2 giây mỗi lượt. ON: 1 giây mỗi lượt.
+- Đổi tốc độ trong trận giữ tỷ lệ thời gian còn lại của lượt; hủy lịch hẹn cũ trước khi đặt lịch mới để tránh chạy hai lượt trùng nhau.
+- Lưu lựa chọn qua tải lại và chuyển save. Speed Battle Potion vẫn không ảnh hưởng đến Spooky Hunt.
+- Normal Time Trial vẫn 2 giây/lượt; EXP Time Trial vẫn 1 giây/lượt. Các chế độ khác giữ cách tính thời gian trước đây.
+- Spooky vẫn là 6vs3, Auto Continue bị tắt, và Myers/Machete/Headless Horseman chỉ có cơ hội rơi khi thắng Wave 50.
 
-Độ khó d là số nguyên từ 1 đến 1000, đồng thời là cấp boss.
-Hệ số chỉ số: S(d) = 1 + 0,075 × (d - 1).
-HP boss = làm tròn(888.888 × S(d)).
-ATK boss = làm tròn(88.888 × S(d)).
+5. LUCK CONFIG TRONG GAME SETTINGS
 
-Công thức Gomen Coins dùng cùng thuật toán Boss Event hiện hành:
-t = ((d - 1) / 999)^0,85.
-Coins tối thiểu = làm tròn(1 + 69 × t).
-Coins tối đa = làm tròn(1 + 99 × t).
-Chọn số nguyên ngẫu nhiên trong khoảng trên, sau đó áp dụng Drop Multiplier hiện có và cơ chế làm tròn ngẫu nhiên của Inventory.
+- Có thanh trượt, ô nhập số và Reset to Max. Khoảng điều chỉnh từ Base Luck 1 đến Base Luck vĩnh viễn tối đa hiện có.
+- Base Luck tối đa = 1 + cấp nâng Luck × LUCK_FACTOR + Luck từ achievement đã nhận.
+- Chỉ Base Luck ở trên được thay đổi. Weather, trang bị, bonus Luck tạm thời từ quest và hệ số potion không bị đặt trần hay sửa giá trị.
+- Luck cuối = (Base Luck đã chọn + Luck weather + Luck trang bị + Luck quest tạm thời) × hệ số Luck Potion đang áp dụng.
+- Ví dụ: Base Luck tối đa 6, chọn 1,25; weather +0,5 và Lucky Potion x1,25 sẽ cho (1,25 + 0,5) × 1,25 = 2,1875 Luck. Nếu thêm trang bị hoặc bonus quest, các bonus đó vẫn được cộng đầy đủ trong ngoặc.
+- Reset to Max khôi phục toàn bộ Base Luck. Khi dùng Max, các nâng cấp/achievement mới tiếp tục tăng Base Luck tự động; khi chọn Custom, giữ mức đã chọn và luôn chặn vượt mức tối đa.
+- Tùy chọn được lưu tại anime_card_rng_settings_v1, được xác thực và đi cùng hệ thống xuất/nhập .acrsave. Save cũ chưa có thiết lập này dùng Max và Speed Up OFF. Reset game khôi phục thiết lập mặc định.
 
-Độ khó 1: 1 Gomen Coin cơ bản mỗi trận thắng.
-Độ khó 1000: 70–100 Gomen Coins cơ bản mỗi trận thắng.
-Không sử dụng hệ nâng chỉ số đội hình của Raid cho Gomen.
+6. KIỂM TRA BẢN CẬP NHẬT
 
-4. SHOP VÀ GOJO EYE
-
-Gojo Eye được bán trong Gomen Boss Event Shop với giá 888.888 Gomen Coins. Vật phẩm giữ nguyên ảnh assets/items/gojoeye.png và công dụng tiến hóa Gojo Young cấp 100 trở lên thành Gojo Revice.
-
-Giữ nguyên cơ hội rơi Gojo Eye khi thắng:
-p(d) = 0,008 + 0,072 × (d - 1) / 999.
-Tương ứng 0,8% tại độ khó 1 và 8% tại độ khó 1000. Số lượng vật phẩm áp dụng Drop Multiplier hiện có.
-
-Shop áp dụng giá potion chuẩn Boss Event:
-- Rich Potion, EXP Potion, Lucky Potion, Speed Potion: 10 Gomen Coins mỗi bình.
-- Speed Battle Potion: 25 Gomen Coins mỗi bình.
-
-Infinity Eye đã có từ bản trước cũng chuyển sang Gomen Boss Event Shop, giữ nguyên giá 888.888 Gomen Coins và toàn bộ hiệu ứng trang bị. Không còn bán vật phẩm Gomen trong Raid Shop.
-
-5. TƯƠNG THÍCH DỮ LIỆU VÀ QUEST
-
-Khi tải bản cập nhật, Gomen Coins, số trận thắng và độ khó Gomen trong dữ liệu Raid cũ được chuyển một lần sang Boss Event. Cờ gomenRaidMigrated được lưu cùng số dư đích để tránh cộng trùng khi tải lại hoặc chuyển save.
-
-Phần thưởng Gojo Eye đang chờ ghi từ Raid cũ được khôi phục trước khi chuyển số dư. Cơ chế biên nhận bảo đảm không phát lại vật phẩm nếu lần ghi Coins trước đó bị gián đoạn. Nếu chưa thể lưu hoặc khôi phục phần thưởng, Gomen bị khóa an toàn để chờ tải lại.
-
-Dữ liệu Gomen Raid cũ được giữ làm bản ghi tương thích save; không thể dùng để vào Raid, mua vật phẩm hay nâng chỉ số. Coins và nâng cấp Marine Ford/Holy Grail được giữ nguyên. Save .acrsave cũ chứa Gomen Raid vẫn được xác thực và tiếp nhận.
-
-Quest đầu của Toji nay đếm thắng Gomen Boss Event ở độ khó > 8; mục tiêu vẫn là 888 trận. Giữ nguyên tiến độ đã theo dõi, không đếm hồi tố. Các bước còn lại không đổi. Số trận thắng Gomen được tính vào tổng Boss Event; bản ghi Gomen cũ không tiếp tục được tính trong tổng Raid.
-
-6. PHẠM VI VÀ KIỂM TRA
-
-Bản này chỉ sửa phân loại Gomen, điều kiện Heavenly, shop và các điểm tích hợp liên quan. Không chỉnh nội tại hay thông số thẻ, Spooky Hunt, Tower, Time Trial, tiến hóa, trang bị hoặc thuật toán bảo vệ .acrsave.
-
-Đã kiểm tra cú pháp toàn bộ JavaScript và luồng trình duyệt: tải từ đường dẫn con có phân biệt hoa/thường; chọn Gomen tại Boss Event; đội 5v1; chặn thời tiết không hợp lệ; ngăn Auto Continue khi mất Heavenly; kết quả Coins/Gojo Eye; giá shop; Quest Toji; tải lại; chuyển dữ liệu một lần; khôi phục phần thưởng sau lỗi ghi; xác thực và giải mã save .acrsave. Không đưa tệp kiểm thử, Excel hoặc tài sản nhị phân vào gói nguồn.
+- Kiểm tra cú pháp toàn bộ JavaScript và tải script từ đường dẫn con có phân biệt hoa/thường.
+- Kiểm tra trình duyệt với 158 thẻ và 14.536 biến thể hợp lệ. Trong môi trường thử: dựng Collection khi đã có cache khoảng 4–6 ms; mở Capsule khoảng 17–22 ms ở kho lớn. Đây là số đo tham khảo, phụ thuộc thiết bị, dữ liệu và tốc độ bộ nhớ trình duyệt.
+- Thử tìm kiếm liên tiếp, phân trang, popup mutation, chọn biến thể, đội Spooky 6 thẻ, giải quyết lượt chiến đấu, đổi Speed Up và giữ nguyên thời gian Time Trial.
+- Thử Luck Config cùng weather, potion, trang bị và quest; chặn vượt Base Luck tối đa, Reset to Max và lưu qua tải lại.
+- Thử salvage một thẻ có đủ 92 biến thể: mỗi biến thể từ 2 bản còn đúng 1 bản; không mất Normal/single/double mutation.
+- Giả lập lỗi ghi save khi mở Capsule: trạng thái thẻ/EXP được phục hồi, giao dịch bị khóa chờ khôi phục, tải lại nhận đúng 1 phần thưởng, không trừ/nhận thêm lần nữa.
+- Kiểm tra xác thực, mã hóa/giải mã .acrsave chứa thiết lập mới; xem giao diện Settings trên desktop và mobile.
+- Không thay mã nội tại/thông số thẻ hoặc module luật Tower, Raid, Time Trial, Gomen Boss Event. Gomen vẫn yêu cầu Heavenly và bán Gojo Eye tại Boss Event Shop.
 
 Modified Files Note
 
-Danh sách đầy đủ các tệp thay đổi trong bản sửa này:
-- boss_event.js: khai báo Gomen/Heavenly, shop, phần thưởng vật phẩm và chuyển dữ liệu một lần.
-- raid.js: gỡ Gomen khỏi Raid có thể chơi; giữ đọc và khôi phục dữ liệu cũ để chuyển sang Boss Event.
-- app.js: hiển thị phần thưởng Gojo Eye trong thông tin và kết quả Boss Event; loại bỏ nhãn Gomen Raid cũ.
-- index.html: chuyển lựa chọn Gomen sang Boss Event và cập nhật phiên bản URL tải script/style.
-- quests.js: chuyển điều kiện trận Gomen của Toji sang Boss Event.
-- evolution.js: cập nhật mô tả nguồn và giá Gojo Eye.
-- equipment.js: cập nhật nguồn shop Infinity Eye.
-- storage.js: cập nhật nguồn Gojo Eye trong chức năng xem thông tin vật phẩm.
-- README.txt: nhật ký riêng của bản sửa này và danh sách tệp thay đổi.
+Danh sách đầy đủ tệp tạo mới hoặc thay đổi:
+- ui_performance.js: Tạo mới chỉ mục sở hữu, cache theo thẻ, debounce, phân trang và popup mutation theo nhu cầu.
+- roll_performance.js: Thêm phiên bản/lịch sử cập nhật biến thể để vô hiệu hóa cache chính xác, giới hạn bộ nhớ.
+- mutations.js: Cache xác suất/hệ số và tối ưu bộ đệm tính mutation nhiều weather, giữ nguyên RNG.
+- settings.js: Luck Config, thiết lập Speed Up, xác thực và lưu tùy chọn.
+- spooky.js: Cache lịch mùa, thông báo giao dịch theo loại, tái sử dụng giao diện shop.
+- storage.js: Cập nhật số lượng trên ô có sẵn, gộp hiển thị Capsule và hạn chế tạo lại DOM.
+- app.js: Nối các module tối ưu, cache weather, tích hợp tìm kiếm/popup, gộp hiển thị trận, nhận Capsule, Luck Config và lịch lượt Spooky.
+- index.html: UI Luck Config, popup mutation, Speed Up và script ui_performance.js; cập nhật phiên bản URL script/style.
+- styles.css: Giao diện phân trang, popup, Luck Config và công tắc Speed Up trên desktop/mobile.
+- startup.js: Kiểm tra module UI hiệu năng khi khởi động.
+- README.txt: Nhật ký riêng của bản cập nhật này và danh sách tệp thay đổi.
 
-Gói tải xuống chứa toàn bộ mã nguồn game; không chỉ các tệp đã sửa. Các ảnh và âm thanh tiếp tục dùng đường dẫn sẵn có, do người dùng quản lý riêng.
+Gói phát hành chứa toàn bộ 40 tệp nguồn game. Không kèm Excel, test runner, log kiểm thử hoặc ảnh/âm thanh nhị phân. Tiếp tục dùng thư mục assets và âm thanh do người dùng quản lý sẵn.

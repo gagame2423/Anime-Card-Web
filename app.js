@@ -573,14 +573,9 @@ function getInventoryEntries() {
   return Object.values(inventory);
 }
 
+function ownershipIndexHelpers() { return {parse:parseVariantKey,key:canonicalVariantKey,normalize:normalizeCardMutations}; }
 function getInventoryCountById(cardId) {
-  const target = normalizeCardId(cardId);
-  if (!target) return 0;
-  return getInventoryEntries().reduce((sum, entry) => {
-    if (!entry || typeof entry !== "object") return sum;
-    const entryId = normalizeCardId(entry.cardId ?? entry.id);
-    return sum + (entryId === target ? Math.max(0, Math.floor(Number(entry.count) || 0)) : 0);
-  }, 0);
+  return window.UIPerformanceSystem.inventoryCount(state,normalizeCardId(cardId),ownershipIndexHelpers());
 }
 
 function isCardOwned(cardId) {
@@ -1068,8 +1063,12 @@ function loadGame() {
 // ECONOMY
 // ============================================================
 
+function getMaximumBaseLuck() {
+  return 1 + state.upgrades.luck * LUCK_FACTOR + (window.AchievementSystem?.getLuckBonus(state.achievementRewardReceipts) || 0);
+}
 function getLuckMultiplier() {
-  return (1 + state.upgrades.luck * LUCK_FACTOR + (window.AchievementSystem?.getLuckBonus(state.achievementRewardReceipts) || 0) + getWeatherBonus("luck") + (window.EquipmentSystem?.bonuses().luck || 0) + (window.QuestsSystem?.bonus("luck") || 0)) * (window.InventorySystem?.multiplier("luck") || 1);
+  const base=window.SettingsSystem.baseLuck(getMaximumBaseLuck());
+  return (base + getWeatherBonus("luck") + (window.EquipmentSystem?.bonuses().luck || 0) + (window.QuestsSystem?.bonus("luck") || 0)) * (window.InventorySystem?.multiplier("luck") || 1);
 }
 
 function getCooldownMs() {
@@ -1110,15 +1109,19 @@ function getWeatherByReference(reference) {
   )) || null;
 }
 
+let weatherViewCache={key:'',entries:[],definitions:[],bonuses:{}};
 function getActiveWeatherEntries() {
-  return state.weather.active
-    .filter(entry => WEATHER_BY_ID[entry.weatherId])
-    .sort((a, b) => a.expiresAt - b.expiresAt);
+  const key=state.weather.active.map(entry=>entry.weatherId+':'+entry.expiresAt).join('|');
+  if(weatherViewCache.key!==key){
+    const entries=state.weather.active.filter(entry=>WEATHER_BY_ID[entry.weatherId]).slice().sort((a,b)=>a.expiresAt-b.expiresAt);
+    const definitions=entries.map(entry=>WEATHER_BY_ID[entry.weatherId]),bonuses={};
+    for(const weather of definitions)for(const [stat,value]of Object.entries(weather.buffs||{}))bonuses[stat]=(bonuses[stat]||0)+(Number(value)||0);
+    weatherViewCache={key,entries,definitions,bonuses};
+  }
+  return weatherViewCache.entries;
 }
-
 function getActiveWeatherDefinitions() {
-  pruneExpiredWeathers();
-  return getActiveWeatherEntries().map(entry => WEATHER_BY_ID[entry.weatherId]).filter(Boolean);
+  pruneExpiredWeathers();getActiveWeatherEntries();return weatherViewCache.definitions;
 }
 
 function isWeatherActive(reference) {
@@ -1149,9 +1152,8 @@ function formatWeatherCountdown(seconds) {
 }
 
 function pruneExpiredWeathers() {
-  const before = state.weather.active.length;
-  state.weather.active = state.weather.active.filter(entry => entry.expiresAt > state.weather.gameSeconds);
-  return before !== state.weather.active.length;
+  if(!state.weather.active.some(entry=>entry.expiresAt<=state.weather.gameSeconds))return false;
+  state.weather.active=state.weather.active.filter(entry=>entry.expiresAt>state.weather.gameSeconds);return true;
 }
 
 function chooseWeatherByTier() {
@@ -1461,7 +1463,7 @@ function rollMutations() {
   return window.MutationSystem.roll(getActiveWeatherDefinitions(), Math.random, window.EquipmentSystem?.mutationMultiplier() || 1);
 }
 function getWeatherBonus(stat) {
-  return window.WeatherSystem.bonus(getActiveWeatherDefinitions(), stat);
+  getActiveWeatherDefinitions(); return weatherViewCache.bonuses[stat] || 0;
 }
 
 function getVariantKey(cardId, mutations) {
@@ -1808,6 +1810,8 @@ function showCurrencyToast(amount, message = "") {
 
 function setArtwork(img, fallback, backdrop, src, alt) {
   const safeSrc = src || FALLBACK_ART_DATA_URL;
+  if(img&&img.dataset.artSource===safeSrc){if(img.alt!==(alt||'Card artwork'))img.alt=alt||'Card artwork';return;}
+  if(img){img.dataset.artSource=safeSrc;img.decoding='async';}
   if (backdrop) backdrop.style.setProperty("--art-bg-image", `url("${escapeCssUrl(safeSrc)}")`);
   if (!img) return;
   if (fallback) fallback.style.display = "none";
@@ -1834,51 +1838,7 @@ function getUniqueCount() {
 }
 
 function getVariantEntries(cardId) {
-  const targetId = normalizeCardId(cardId);
-  if (!targetId) return [];
-
-  // Merge both canonical variant stores by maximum count. They represent the
-  // same physical ownership records, so summing them would double the cards.
-  const merged = new Map();
-
-  for (const [rawKey, rawCount] of Object.entries(state?.mutations || {})) {
-    const count = Math.max(0, Math.floor(Number(rawCount) || 0));
-    if (count <= 0) continue;
-    const parsed = parseVariantKey(String(rawKey));
-    if (!parsed || normalizeCardId(parsed.cardId) !== targetId) continue;
-    const key = canonicalVariantKey(targetId, parsed.mutations.map(mutation => mutation?.id));
-    merged.set(key, {
-      count: Math.max(merged.get(key)?.count || 0, count),
-      mutations: parsed.mutations
-    });
-  }
-
-  for (const entry of getInventoryEntries()) {
-    const entryId = normalizeCardId(entry?.cardId ?? entry?.id);
-    const count = Math.max(0, Math.floor(Number(entry?.count) || 0));
-    if (!entryId || entryId !== targetId || count <= 0) continue;
-
-    const mutationIds = normalizeCardMutations(
-      entry?.mutationIds ?? entry?.mutations ?? entry?.mutation
-    );
-    const key = canonicalVariantKey(targetId, mutationIds);
-    const mutations = mutationIds.map(id => MUTATION_BY_ID[id]).filter(Boolean);
-    const existing = merged.get(key);
-    merged.set(key, {
-      count: Math.max(existing?.count || 0, count),
-      mutations: existing?.mutations?.length ? existing.mutations : mutations
-    });
-  }
-
-  return [...merged.entries()]
-    .map(([key, entry]) => ({
-      key,
-      count: Math.max(0, Math.floor(Number(entry.count) || 0)),
-      mutations: Array.isArray(entry.mutations) ? entry.mutations.filter(Boolean) : [],
-      isMulti: Array.isArray(entry.mutations) && entry.mutations.length >= 2
-    }))
-    .filter(entry => entry.count > 0)
-    .sort((a, b) => getVariantRank(a) - getVariantRank(b) || a.key.localeCompare(b.key));
+  return window.UIPerformanceSystem.variants(state,normalizeCardId(cardId),ownershipIndexHelpers());
 }
 
 function getVariantRank(entry) {
@@ -1889,6 +1849,10 @@ function getVariantRank(entry) {
 }
 
 function getCardMutationProfile(cardId) {
+  const id=normalizeCardId(cardId);getVariantEntries(id);
+  return window.UIPerformanceSystem.memo('profile:'+id,()=>buildCardMutationProfile(id));
+}
+function buildCardMutationProfile(cardId) {
   const normalizedId = normalizeCardId(cardId);
   const card = getCardById(normalizedId);
   const variants = getVariantEntries(normalizedId);
@@ -1929,6 +1893,10 @@ function getCardMutationProfile(cardId) {
 }
 
 function getCardMutationVisuals(cardId) {
+  const id=normalizeCardId(cardId);getCardMutationProfile(id);
+  return window.UIPerformanceSystem.memo('visuals:'+id,()=>buildCardMutationVisuals(id));
+}
+function buildCardMutationVisuals(cardId) {
   const normalizedId = normalizeCardId(cardId);
   const profile = getCardMutationProfile(normalizedId);
   const mutations = profile.mutationIds
@@ -2009,13 +1977,10 @@ function getFilteredCards() {
       const safeName = String(card?.name || "Unknown Card");
       const safePassive = String(card?.passive?.name || "");
       const profile = getCardMutationProfile(normalizedId);
-      const ownedMutationText = profile.variants
-        .flatMap(entry => (entry?.mutations || []).map(mutation => String(mutation?.name || "")));
-      const baseMutationText = normalizeCardMutations(card)
-        .map(id => String(MUTATION_BY_ID?.[id]?.name || id));
-      const mutationText = [...ownedMutationText, ...baseMutationText].join(" ").toLowerCase();
-
-      const searchText = `${safeName} ${safePassive} ${mutationText} ${card.category.join(" ")}`.toLowerCase();
+      const searchText=window.UIPerformanceSystem.memo('search:'+normalizedId,()=>{
+        const names=profile.mutationIds.map(id=>MUTATION_BY_ID[id]?.name||id);
+        return `${safeName} ${safePassive} ${names.join(' ')} ${(card.category||[]).join(' ')}`.toLowerCase();
+      });
       const searchMatch = !query || searchText.includes(query);
 
       return searchMatch && cardMatchesMutationFilter({ ...card, id: normalizedId }, filter);
@@ -2158,7 +2123,8 @@ function getOwnedCardCount(cardId) {
 
 function renderCollection() {
   if (!els.collectionGrid) return;
-  els.collectionGrid.innerHTML = "";
+  if(els.collectionModal?.classList.contains('hidden')){collectionNeedsRefresh=true;return;}
+  els.collectionGrid.replaceChildren();
 
   let cards = [];
   try {
@@ -2167,6 +2133,9 @@ function renderCollection() {
     console.warn("Collection filter failed safely:", error);
   }
 
+  const filterKey=[els.searchInput?.value,els.mutationFilter?.value,els.sortSelect?.value,els.collectionElementFilter?.value,els.collectionCategoryFilter?.value].join('|');
+  cards=window.UIPerformanceSystem.paginate('Collection',cards,filterKey,els.collectionGrid,renderCollection);
+  const fragment=document.createDocumentFragment();
   for (const card of cards) {
     try {
       const cardId = normalizeCardId(card?.id);
@@ -2265,7 +2234,7 @@ function renderCollection() {
       const normalizedCardMutations = normalizeCardMutations(card?.mutation);
       const variants = owned ? profile.variants : [];
       if (variants.length) {
-        variants.forEach(entry => {
+        variants.slice(0,3).forEach(entry => {
           const badge = document.createElement("span");
           const safeMutations = Array.isArray(entry?.mutations) ? entry.mutations.filter(Boolean) : [];
           const safeMutationClasses = safeMutations.map(mutation => String(mutation?.className || "")).filter(Boolean);
@@ -2304,6 +2273,7 @@ function renderCollection() {
         badgeList.appendChild(badge);
       }
 
+      if(variants.length>3){const more=document.createElement('small');more.textContent=`+${variants.length-3} more variants • Open card to inspect`;badgeList.append(more);}
       const levelInfo = owned ? getCardLevelInfo(cardId) : { level: 0, exp: 0, required: 1, progress: 0 };
       const levelWrap = document.createElement("div");
       levelWrap.className = "card-level-mini";
@@ -2336,13 +2306,14 @@ function renderCollection() {
 
       // Ownership is decided before the title/art lock is assigned, so an
       // inventory-only or legacy-keyed copy can never be downgraded to locked.
-      els.collectionGrid.appendChild(item);
+      fragment.appendChild(item);
     } catch (error) {
       // One corrupt/legacy card record must never abort Collection rendering.
       console.warn("Collection card render skipped safely:", card?.id, error);
     }
   }
 
+  els.collectionGrid.append(fragment);
   if (!els.collectionGrid.children.length) {
     const empty = document.createElement("div");
     empty.className = "empty-grid empty-state";
@@ -2384,7 +2355,7 @@ function decrementOwnershipVariant(cardId, variantKey, copies = 1) {
   if (nextCardCount > 0) state.unlocked[normalizedId] = nextCardCount;
   else delete state.unlocked[normalizedId];
 
-  window.RollPerformanceSystem?.invalidateOwnership();
+  window.RollPerformanceSystem?.updatedVariant(state,normalizedId,canonicalKey);
   return removed;
 }
 
@@ -2815,7 +2786,7 @@ function getRaidType() { return battleState?.raid?.type || document.getElementBy
 function getUnitBattleLevel(unit) { return unit?.isRaidEnemy || unit?.isBossEventEnemy ? Math.max(1, Math.min(1000, Number(unit.level) || 1)) : clampBattleEnemyLevel(unit?.level); }
 
 function isTimeTrialBattle() { return Boolean(window.TimeTrialSystem?.isMode(getBattleMode())); }
-function getBattleTurnMs() { if(isSpookyBattle())return window.SpookySystem.TURN_MS; return isTimeTrialBattle() ? window.TimeTrialSystem.turnMs(getBattleMode()) : window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
+function getBattleTurnMs() { if(isSpookyBattle())return window.SettingsSystem.spookySpeedUp?1000:window.SpookySystem.TURN_MS; return isTimeTrialBattle() ? window.TimeTrialSystem.turnMs(getBattleMode()) : window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
 function getBattleModeLabel() {
   const timing = `${getBattleTurnMs() / 1000}s TURNS`;
   if(isSpookyBattle())return `SPOOKY HUNT • WAVE ${battleState?.spooky?.wave||window.SpookySystem.snapshot().wave} / 50 • 6V3 • ${timing}`;
@@ -3020,6 +2991,11 @@ function getBattleCardRarityValue(card) {
 }
 
 function getStrongestBattleVariant(card, stat = 'atk') {
+  getBattleVariantEntries(card.id);
+  const key=`strongest:${card.id}:${stat}:${getCardLevelInfo(card).level}:${getTowerWeatherMode()}:${isTowerBattle()}`;
+  return window.UIPerformanceSystem.memo(key,()=>buildStrongestBattleVariant(card,stat));
+}
+function buildStrongestBattleVariant(card, stat = 'atk') {
   let best = null;
   for (const entry of getBattleVariantEntries(card.id)) {
     const display = getBattleVariantDisplay(card, entry);
@@ -3051,7 +3027,10 @@ function populateBattleFighterSelect() {
   const grid = els.battleFighterGrid;
   if (!grid) return;
 
-  const unlocked = getFilteredSortedBattleCards();
+  if(isBattleMatchActive())return;
+  let unlocked = getFilteredSortedBattleCards();
+  const filterKey=[els.cardSearchInput?.value,els.cardSortSelect?.value,els.battleElementFilter?.value,els.battleCategoryFilter?.value,getBattleMode(),getTowerWeatherMode()].join('|');
+  unlocked=window.UIPerformanceSystem.paginate('Arena',unlocked,filterKey,grid,populateBattleFighterSelect);
   const previousTeam = Array.isArray(battleState?.setup?.team) ? battleState.setup.team.map(slot => ({ ...slot })) : [];
   const previousActive = Number(battleState?.setup?.activeIndex || 0);
   const previousMode = getBattleMode();
@@ -3152,43 +3131,25 @@ function renderBattleSelection() {
   }
 }
 
+function openArenaMutations() {
+  if(isBattleMatchActive())return;
+  const activeIndex=Number(battleState?.setup?.activeIndex||0),slot=getBattleSetupTeam()[activeIndex],card=slot?getCardById(slot.cardId):null;
+  if(!card)return;
+  window.UIPerformanceSystem.showVariants({name:card.name,entries:getBattleVariantEntries(card.id),selectedKey:slot.variantKey,
+    canSelect:entry=>getAvailableBattleVariantCount(entry.key,activeIndex)>0,
+    select:entry=>{
+      if(isBattleMatchActive()||getBattleSetupTeam()[activeIndex]!==slot||getAvailableBattleVariantCount(entry.key,activeIndex)<=0)return;
+      slot.variantKey=entry.key;closeModal('arenaMutationModal');renderBattleSelection();
+    },open:()=>openModal('arenaMutationModal')});
+}
 function renderBattleFighterVariants() {
-  const variantGrid = els.battleVariantGrid;
-  if (!variantGrid) return;
-  variantGrid.innerHTML = '';
-
-  const activeIndex = Number(battleState?.setup?.activeIndex || 0);
-  const slot = getBattleSetupTeam()[activeIndex];
-  const card = slot ? getCardById(slot.cardId) : null;
-
-  if (!card) {
-    variantGrid.innerHTML = '<div class="battle-empty-selection">Select a team slot first.</div>';
-    if (els.battleStartButton) els.battleStartButton.disabled = true;
-    return;
-  }
-
-  const variants = getBattleVariantEntries(card.id);
-  variants.forEach(entry => {
-    const available = getAvailableBattleVariantCount(entry.key, activeIndex) > 0;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `battle-variant-option ${entry.key === slot.variantKey ? 'is-selected' : ''}`;
-    button.disabled = !available;
-    button.textContent = `${getBattleVariantLabel(entry)} x${entry.count}`;
-    applyMutationStyleTokens(button, entry.mutations);
-    button.title = `${entry.count} owned`;
-    button.addEventListener('click', () => {
-      const usage = getBattleVariantUsage(activeIndex);
-      const owned = Number(state.mutations?.[entry.key] || 0);
-      if (entry.key !== slot.variantKey && owned <= (usage.get(entry.key) || 0)) return;
-      slot.variantKey = entry.key;
-      renderBattleSelection();
-    });
-    variantGrid.appendChild(button);
-  });
-
-  const valid = isBattleSetupValid();
-  if (els.battleStartButton) els.battleStartButton.disabled = !valid || (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) || (isTimeTrialBattle() && !window.TimeTrialSystem.canEnter(getBattleMode())) || (isRaidBattle() && !window.RaidSystem.canEnter(getRaidType())) || (isBossEventBattle() && !window.BossEventSystem.canEnter(getBossEventType())) || (isSpookyBattle()&&!window.SpookySystem.canEnter());
+  const grid=els.battleVariantGrid;if(!grid)return;grid.replaceChildren();
+  const slot=getBattleSetupTeam()[Number(battleState?.setup?.activeIndex||0)],card=slot?getCardById(slot.cardId):null;
+  const summary=document.createElement('span');
+  if(!card){summary.textContent='Select a team slot first.';grid.append(summary);if(els.battleStartButton)els.battleStartButton.disabled=true;return;}
+  const variants=getBattleVariantEntries(card.id),selected=variants.find(entry=>entry.key===slot.variantKey);
+  summary.textContent=`${selected?getBattleVariantLabel(selected):'Normal'} • ${variants.length} variants`;
+  const button=document.createElement('button');button.type='button';button.className='mutation-more-button';button.textContent='...';button.setAttribute('aria-label','Choose mutation for '+card.name);button.setAttribute('aria-haspopup','dialog');button.addEventListener('click',openArenaMutations);grid.append(summary,button);
 }
 
 function renderBattleSelectionPreview() {
@@ -3233,7 +3194,7 @@ function renderBattleSelectionPreview() {
   passive.appendChild(createPassiveExpandButton(getCardPassiveCopy(card).name, getCardPassiveCopy(card).description));
   const badgeWrap = document.createElement('div');
   badgeWrap.className = 'battle-selection-preview__badges';
-  renderMutationBadges(badgeWrap, entry.mutations);
+  const more=document.createElement('button');more.type='button';more.className='mutation-more-button';more.textContent='...';more.setAttribute('aria-label','Inspect mutations for '+card.name);more.setAttribute('aria-haspopup','dialog');more.addEventListener('click',openArenaMutations);badgeWrap.append(more);
   info.append(name, stats, passive, badgeWrap);
   preview.append(media, info);
 
@@ -3308,22 +3269,16 @@ function openBattleModal() {
   openModal('battleModal');
 }
 
-function appendBattleLog(message, tone = '') {
-  if (!els.battleLog) return;
-  const line = document.createElement('div');
-  line.className = `battle-log__line ${tone ? `is-${tone}` : ''}`;
-  line.textContent = String(message);
-  els.battleLog.appendChild(line);
-
-  // Keep long auto-combat sessions bounded while always revealing the newest event.
-  const MAX_BATTLE_LOG_LINES = 260;
-  while (els.battleLog.children.length > MAX_BATTLE_LOG_LINES) {
-    els.battleLog.removeChild(els.battleLog.firstElementChild);
-  }
-  requestAnimationFrame(() => {
-    if (!els.battleLog) return;
-    els.battleLog.scrollTop = els.battleLog.scrollHeight;
-  });
+var pendingBattleLogs;
+function appendBattleLog(message,tone=''){
+  if(!els.battleLog)return;pendingBattleLogs ||= [];
+  pendingBattleLogs.push({message:String(message),tone:String(tone),battle:battleState});
+  if(pendingBattleLogs.length>260)pendingBattleLogs.shift();window.RollPerformanceSystem.schedule(paintBattleLog);
+}
+function paintBattleLog(){
+  const queued=pendingBattleLogs||[];pendingBattleLogs=[];if(!els.battleLog)return;
+  const fragment=document.createDocumentFragment();for(const entry of queued){if(entry.battle!==battleState)continue;const line=document.createElement('div');line.className=`battle-log__line ${entry.tone?'is-'+entry.tone:''}`;line.textContent=entry.message;fragment.append(line);}
+  els.battleLog.append(fragment);while(els.battleLog.children.length>260)els.battleLog.firstElementChild.remove();els.battleLog.scrollTop=els.battleLog.scrollHeight;
 }
 
 function rollEnemyMutations() {
@@ -3751,49 +3706,35 @@ function renderBattleCombatModifiers(side, unit) {
   });
 }
 
-function renderBattleLineup(side, team, activeIndex) {
-  const container = side === 'player' ? els.battlePlayerLineup : els.battleEnemyLineup;
-  if (!container) return;
-  container.innerHTML = '';
-
-  const orderedIndices = side === 'player'
-    ? team.map((_, index) => index).reverse()
-    : team.map((_, index) => index);
-
-  orderedIndices.forEach(index => {
-    const unit = team[index];
-    const slot = document.createElement('div');
-    slot.className = `battle-lineup-card ${index === activeIndex ? 'is-active' : ''} ${unit.defeated ? 'is-defeated' : ''}`;
-    slot.dataset.slotIndex = String(index + 1);
-    slot.setAttribute('aria-label', `${side === 'player' ? 'Player' : 'Enemy'} Slot ${index + 1}${index === activeIndex ? ' active' : ''}`);
-    applyMutationStyleTokens(slot, unit.mutations);
-
-    const media = document.createElement('div');
-    media.className = 'battle-lineup-card__art';
-    const img = document.createElement('img');
-    img.alt = unit.display.name;
-    const fallback = document.createElement('div');
-    fallback.className = 'battle-fighter-option__fallback';
-    fallback.textContent = unit.defeated ? '×' : '✦';
-    media.append(img, fallback);
-    if (!unit.defeated) setArtwork(img, fallback, null, unit.card.image, `${unit.display.name} artwork`);
-    else img.style.display = 'none';
-
-    const info = document.createElement('div');
-    info.className = 'battle-lineup-card__info';
-    const name = document.createElement('strong');
-    name.textContent = side === 'enemy' ? `[Lv. ${getUnitBattleLevel(unit)}] ${unit.display.name}` : unit.display.name;
-    window.ElementSystem.renderBadge(name, unit);
-    const hp = document.createElement('span');
-    hp.textContent = unit.defeated ? 'DEFEATED' : `${Math.max(0, unit.hp).toLocaleString('en-US')} HP`;
-    info.append(name, hp);
-    slot.append(media, info);
-    container.appendChild(slot);
-  });
+const battleLineupViews=new WeakMap();
+function renderBattleLineup(side,team,activeIndex){
+  const container=side==='player'?els.battlePlayerLineup:els.battleEnemyLineup;if(!container)return;
+  let view=battleLineupViews.get(container);if(!view){view={rows:new Map(),order:[]};battleLineupViews.set(container,view);}
+  const ordered=side==='player'?[...team].reverse():team;
+  const members=new Set(team);for(const unit of view.rows.keys())if(!members.has(unit))view.rows.delete(unit);
+  for(let index=0;index<team.length;index++){
+    const unit=team[index];let row=view.rows.get(unit);
+    if(!row){
+      const slot=document.createElement('div');slot.className='battle-lineup-card';
+      const media=document.createElement('div');media.className='battle-lineup-card__art';
+      const img=document.createElement('img'),fallback=document.createElement('div');fallback.className='battle-fighter-option__fallback';media.append(img,fallback);
+      const info=document.createElement('div');info.className='battle-lineup-card__info';const name=document.createElement('strong'),hp=document.createElement('span');info.append(name,hp);slot.append(media,info);
+      applyMutationStyleTokens(slot,unit.mutations);window.ElementSystem.renderBadge(slot,unit);
+      row={slot,img,fallback,name,hp};view.rows.set(unit,row);
+    }
+    row.slot.classList.toggle('is-active',index===activeIndex);row.slot.classList.toggle('is-defeated',Boolean(unit.defeated));row.slot.dataset.slotIndex=String(index+1);
+    row.slot.setAttribute('aria-label',`${side==='player'?'Player':'Enemy'} Slot ${index+1}${index===activeIndex?' active':''}`);
+    setCachedText(row.name,side==='enemy'?`[Lv. ${getUnitBattleLevel(unit)}] ${unit.display.name}`:unit.display.name);
+    setCachedText(row.hp,unit.defeated?'DEFEATED':`${Math.max(0,unit.hp).toLocaleString('en-US')} HP`);
+    row.fallback.textContent=unit.defeated?'×':'✦';
+    if(unit.defeated)row.img.style.display='none';else {setArtwork(row.img,row.fallback,null,unit.card.image,`${unit.display.name} artwork`);if(row.img.complete&&row.img.naturalWidth>0)row.img.style.display='block';}
+  }
+  if(ordered.length!==view.order.length||ordered.some((unit,index)=>view.order[index]!==unit)){container.replaceChildren(...ordered.map(unit=>view.rows.get(unit).slot));view.order=[...ordered];}
 }
 
-function renderBattleStats() {
-  if (!battleState?.playerTeam || !battleState?.enemyTeam) return;
+function renderBattleStats() { window.RollPerformanceSystem.schedule(paintBattleStats); }
+function paintBattleStats() {
+  if (!battleState?.playerTeam || !battleState?.enemyTeam || battleState.finished) return;
   const player = battleState.playerTeam[battleState.playerIndex];
   const enemy = battleState.enemyTeam[battleState.enemyIndex];
   if (!player || !enemy) return;
@@ -3844,7 +3785,7 @@ function scheduleNextBattleTurn(remainingMs) {
   if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${Math.ceil(delay / 1000)}s`;
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   const autoNote = document.getElementById('battleAutoNote');
-  if (autoNote) autoNote.textContent = isSpookyBattle() ? 'Spooky Hunt • Fixed 2-second turns • Speed Battle Potion ignored • Manual Continue only' : isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : 'Normal'} Time Trial • Fixed ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
+  if (autoNote) autoNote.textContent = isSpookyBattle() ? `Spooky Hunt • ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Manual Continue only` : isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : 'Normal'} Time Trial • Fixed ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
   battleTurnTimer = window.setTimeout(() => {
     battleTurnTimer = null;
     executeBattleTurn();
@@ -4593,7 +4534,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.EquipmentSystem.KEY, window.SpookySystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.SettingsSystem.KEY, window.EquipmentSystem.KEY, window.SpookySystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4632,6 +4573,7 @@ function validateSaveRecord(key, value) {
   const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
   const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
   if ([window.BackgroundActivitySystem.VOLUME_KEY, window.DropAudioSystem.VOLUME_KEY].includes(key)) { ensure(typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1, 'Audio volume must be between 0 and 1.'); return value; }
+  if(key===window.SettingsSystem.KEY){ensure(window.SettingsSystem.validSave(value),'invalid Luck / Speed Up settings.');return value;}
   if (key === AUTO_CONTINUE_STORAGE_KEY || key === (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card') || key === window.BackgroundActivitySystem.MUSIC_KEY || key === window.DropAudioSystem.KEY || key === window.PotionHudSystem.KEY) { ensure(typeof value === 'boolean', 'Auto Continue must be a boolean.'); return value; }
   ensure(object(value), 'expected a JSON object.');
   if (key === STORAGE_KEY || LEGACY_STORAGE_KEYS.includes(key)) {
@@ -4839,7 +4781,7 @@ document.getElementById('evolutionCloseButton')?.addEventListener('click',()=>cl
 // ============================================================
 function getAchievementSnapshot() {
   return { uniqueCards: getUniqueCount(), totalRolls: state.totalRolls, currency: state.currency,
-    spookyRuns:window.SpookySystem?.snapshot().runs||0,spookyEvolution:state.achievementRewardReceipts?.['evolution_jason-13th']?1:0,spookyCollection:(window.SpookySystem?.COLLECTION||[]).filter(id=>getOwnedCardCount(id)>0).length,
+    spookyRuns:window.SpookySystem?.snapshot().runs||0,spookyEvolution:state.achievementRewardReceipts?.['evolution_jason-13th']?1:0,spookyCollection:(window.SpookySystem?.COLLECTION||[]).filter(id=>window.RollPerformanceSystem.hasCard(state,id)).length,
     knownBossWins: window.BossEventSystem?.totalWins() || 0, knownBattleWins: window.TowerSystem?.victories || 0, knownRaidWins: window.RaidSystem?.totalWins() || 0, towerProgress: window.TowerSystem?.getProgressSnapshot() || {}, timeTrialRoom: window.TimeTrialSystem?.bestRoom || 0 };
 }
 function recordEarnedCurrency(amount,source="other") {
@@ -5144,6 +5086,7 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if(id==='arenaMutationModal')window.UIPerformanceSystem.closePicker();
   if (id === 'sandboxModal') { window.SandboxSystem?.exit?.(); return; }
   const modal = document.getElementById(id);
   if (!modal) return;
@@ -5199,6 +5142,7 @@ function resetGame() {
   previewSelection = null;
 
   state = cloneDefaultState();
+  window.SettingsSystem.reset();
   weatherHudSignature = "";
   lastClockSecondRendered = -1;
 
@@ -5454,7 +5398,7 @@ document.addEventListener('keydown', event => {
 }, true);
 els.collectionElementFilter?.addEventListener("change", () => renderCollection());
 els.battleElementFilter?.addEventListener("change", () => populateBattleFighterSelect());
-els.cardSearchInput?.addEventListener("input", () => populateBattleFighterSelect());
+els.cardSearchInput?.addEventListener("input", () => window.UIPerformanceSystem.debounce("arena-search",()=>{if(!isBattleMatchActive()&&!els.battleModal?.classList.contains("hidden"))populateBattleFighterSelect();}));
 els.cardSortSelect?.addEventListener("change", () => populateBattleFighterSelect());
 els.battleAutoAgainButton?.addEventListener("click", () => {
   if (!canReplayBattleTeam()) return;
@@ -5471,10 +5415,7 @@ els.battleCloseResultButton?.addEventListener("click", event => {
   returnToLobby();
 });
 els.rollButton?.addEventListener("click", () => rollCard("manual"));
-els.searchInput?.addEventListener("input", () => {
-  collectionNeedsRefresh = false;
-  renderCollection();
-});
+els.searchInput?.addEventListener("input", () => window.UIPerformanceSystem.debounce('collection-search',()=>{collectionNeedsRefresh=false;renderCollection();}));
 els.mutationFilter?.addEventListener("change", () => {
   collectionNeedsRefresh = false;
   renderCollection();
@@ -5575,7 +5516,7 @@ window.addEventListener("pagehide", () => {
 
 // Modular feature entry points. These do not attach extra global/battle timers.
 els.inventoryOpenButton?.addEventListener('click', () => openModal('inventoryModal'));
-document.getElementById('inventorySearch')?.addEventListener('input', renderPotionInventory);
+document.getElementById('inventorySearch')?.addEventListener('input',()=>window.UIPerformanceSystem.debounce('storage-search',renderPotionInventory));
 document.getElementById('inventoryCategory')?.addEventListener('change', renderPotionInventory);
 els.towerShopOpenButton?.addEventListener('click', () => openModal('towerShopModal'));
 els.towerWeatherSelect?.addEventListener('change', () => {
@@ -5655,9 +5596,15 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initializeGameViews();
 if(window.EquipmentSystem?.blocked)window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover the pending equipment craft before playing.');
 window.EvolutionSystem.configure({ canAct: canEvolveNow, prepare: prepareEvolution, onCommit: onEvolutionCommitted, describe: recipe => ({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(" + ") || "Normal"}))}) });
+let lastSpookyTurnMs=window.SettingsSystem.spookySpeedUp?1000:2000;
+window.SettingsSystem.configure({maxBaseLuck:getMaximumBaseLuck,totalLuck:getLuckMultiplier,canAct:()=>!isImportingSave&&!saveTransferBusy&&!window.SandboxSystem?.active,onChange:()=>{
+  const next=window.SettingsSystem.spookySpeedUp?1000:2000;
+  if(isSpookyBattle()&&isBattleMatchActive()&&next!==lastSpookyTurnMs){const remaining=Math.max(0,(battleState.nextTurnAt||Date.now()+lastSpookyTurnMs)-Date.now());scheduleNextBattleTurn(Math.min(1,remaining/lastSpookyTurnMs)*next);}
+  lastSpookyTurnMs=next;updateStats();if(isSpookyBattle())renderSpookyControls();
+}});
 window.InventorySystem.configure({ getDropMultiplier: () => (window.AchievementSystem?.getDropMultiplier(state.achievementRewardReceipts) || 1) + (window.QuestsSystem?.bonus('drop') || 0) + (window.EquipmentSystem?.bonuses().drop || 0) });
 window.EquipmentSystem.configure({canAct:canEvolveNow,money:()=>state.currency,variants:getVariantEntries,prepare:prepareEquipmentCraft,onCommit:onEvolutionCommitted,onChange:()=>{updateStats();renderUpgradeShop();renderClockAndWeather(true);renderPotionInventory();},onBlocked:()=>{isAutoRolling=false;clearCooldownExpiryTimer();window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover your pending equipment craft.');}});
-window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!window.SandboxSystem?.active&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished&&!isTimeTrialBattle())scheduleNextBattleTurn();}});
+window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!window.SandboxSystem?.active&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished&&!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}});
 window.CraftingSystem.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 window.QuestsSystem.mount(document.getElementById('questModal'));
 window.QuestsSystem.configure({clock:()=>state.weather.gameSeconds,snapshot:()=>({rolls:state.totalRolls,bestRoom:window.TimeTrialSystem.bestRoom}),canAct:canEvolveNow,isImporting:()=>isImportingSave,reward:applyQuestBoardReward,onChange:()=>{updateStats();renderClockAndWeather(true);refreshAchievements();}});
@@ -5666,7 +5613,7 @@ window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidS
 window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
 window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => (window.InventorySystem?.multiplier("exp") || 1) * (1 + (window.AchievementSystem?.getExpBonus(state.achievementRewardReceipts) || 0) + window.EquipmentSystem.flatBonus("exp")) * (1 + getWeatherBonus("exp")) * (window.EquipmentSystem?.expMultiplier("arena") || 1), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
-window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:()=>{refreshAchievements();updateStats();renderPotionInventory();renderCollection();renderSpookyControls();if(!document.getElementById('spookyShopModal')?.classList.contains('hidden'))renderSpookyShop();},onCapsule:showSpookyCapsule});
+window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:queueSpookyUi,onCapsule:showSpookyCapsule});
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
 refreshAchievements();
 recoverElapsedRealTime();
@@ -5691,16 +5638,26 @@ els.battleCategoryFilter?.addEventListener("change",populateBattleFighterSelect)
 function grantSpookyCards(cards,receipt,kind){
   if(window.SandboxSystem?.active||typeof receipt!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(receipt))return false;
   if(state.spookyRewardReceipt===receipt)return true;
-  const previous=JSON.parse(JSON.stringify(state));
+  const plans=cards.map(drop=>{const card=getCardById(drop.cardId);if(!card)throw Error('Unknown Spooky card');const ids=normalizeCardMutations(drop.mutationIds);return {card,ids,key:canonicalVariantKey(card.id,ids)};});
+  const oldReceipt=state.spookyRewardReceipt,before=plans.map(({card,key})=>({id:card.id,key,unlocked:state.unlocked[card.id],mutations:state.mutations[key],inventory:state.inventory[key],progress:state.cardProgress?.[card.id]?{...state.cardProgress[card.id]}:undefined}));
   try{
-    for(const drop of cards){const card=getCardById(drop.cardId);if(!card)return false;const ids=normalizeCardMutations(drop.mutationIds),key=canonicalVariantKey(card.id,ids);
-      if(kind==='capsule'&&getOwnedCardCount(card.id)>0&&Number(state.cardProgress?.[card.id]?.level||1)<CARD_LEVEL_MAX)grantCardExperience(card.id,Math.max(1,Math.floor(getCardLevelInfo(card.id).required*.10)));
+    for(const {card,ids,key}of plans){
+      if(kind==='capsule'&&window.RollPerformanceSystem.hasCard(state,card.id)&&Number(state.cardProgress?.[card.id]?.level||1)<CARD_LEVEL_MAX)grantCardExperience(card.id,Math.max(1,Math.floor(getCardLevelInfo(card.id).required*.10)));
       state.unlocked[card.id]=getUnlockedCountById(card.id)+1;state.mutations[key]=Math.max(0,Number(state.mutations[key])||0)+1;
       state.inventory[key]={id:card.id,cardId:card.id,mutationIds:ids,mutation:ids.join('+'),count:Math.max(0,Number(state.inventory[key]?.count)||0)+1};ensureCardProgress(card.id);
     }
-    state.spookyRewardReceipt=receipt;if(!saveState())throw Error('Không thể lưu thẻ Spooky.');window.RollPerformanceSystem.invalidateOwnership();return true;
-  }catch(error){state=previous;console.warn(error.message);return false;}
+    state.spookyRewardReceipt=receipt;if(!saveState(true))throw Error('Không thể lưu thẻ Spooky.');for(const {card,key}of plans)window.RollPerformanceSystem.acquired(state,card.id,key);return true;
+  }catch(error){for(const previous of before)for(const [store,key,value]of [[state.unlocked,previous.id,previous.unlocked],[state.mutations,previous.key,previous.mutations],[state.inventory,previous.key,previous.inventory],[state.cardProgress,previous.id,previous.progress]]){if(value===undefined)delete store[key];else store[key]=value;}state.spookyRewardReceipt=oldReceipt;window.RollPerformanceSystem.invalidateOwnership();console.warn(error.message);return false;}
 }
+var spookyUiKinds;
+function queueSpookyUi(kind='wave'){spookyUiKinds ||= new Set();spookyUiKinds.add(kind);window.RollPerformanceSystem.schedule(flushSpookyUi);}
+function flushSpookyUi(){
+  const ownership=spookyUiKinds.has('capsule')||spookyUiKinds.has('wave');spookyUiKinds.clear();
+  if(ownership){refreshAchievements();updateStats();renderCollection();}
+  renderPotionInventory();renderSpookyControls();
+  if(!document.getElementById('spookyShopModal')?.classList.contains('hidden'))renderSpookyShop();
+}
+
 function renderSpookyControls(){
   const system=window.SpookySystem;if(!system)return;const active=isSpookyBattle(),open=system.isOpen();
   els.battleModal?.classList.toggle('spooky-hunt-mode',active);
@@ -5708,6 +5665,8 @@ function renderSpookyControls(){
   setViewText('spookyModeHint',open?'OPEN • 6vs3 • 50 waves':'CLOSED • Dashboard / Shop');
   document.getElementById('spookyControls')?.classList.toggle('hidden',!active);
   document.getElementById('spookyInfoBattleButton')?.classList.toggle('hidden',!active||!isBattleMatchActive());document.getElementById('spookyLiveCoins')?.classList.toggle('hidden',!active||!isBattleMatchActive());
+  document.getElementById('spookySpeedUpControl')?.classList.toggle('hidden',!active);
+  if(active)window.SettingsSystem.render();
   if(!active)return;if(open&&!battleState?.isBattling)system.syncSeason();const info=system.snapshot(),range=system.coinRange(info.wave),kills=system.coinRange(info.wave,true);
   setViewText('spookyAvailability',open?'OPEN • October event':'CLOSED • October 1–31 only');setViewText('spookyWaveDisplay',`Wave ${info.wave} / 50 • ${info.runs} full clears`);setViewText('spookyBalance',`${info.coins.toLocaleString('en-US')} Spooky Coins`);setViewText('spookyLiveCoins',`🎃 ${info.coins.toLocaleString('en-US')}`);
   setViewText('spookyRewardPreview',`Base wave reward: ${range.min}–${range.max} Coins • Per kill: ${kills.min}–${kills.max} Coins • Current coin multiplier x${system.coinMultiplier().toFixed(3)} • Wave 50 victory only: 5% Headless Horseman, 1% Myers, 1% Machete (independent). Waves 1–49: Coins only.`);
