@@ -30,7 +30,7 @@
     }
     function spawn(bs,owner){
       const lineup=team(bs,owner);
-      if(lineup.filter(unit=>unit.reaganOwner&&alive(unit)).length>=10)return;
+      if(!api.canSpawn(bs,owner,'robot'))return;
       // Remove only expired robots. Keep every original unit and other summons.
       const current=front(bs,lineup);
       for(let i=lineup.length-1;i>=0;i--)if(lineup[i].reaganOwner===owner&&!alive(lineup[i]))lineup.splice(i,1);
@@ -39,6 +39,7 @@
         stats:{hp,atk:attack},passive:{name:'AI',description:'Each attack hits all enemies for 100% ATK. Each kill heals this robot and Reagan for 10% of Reagan’s max HP.'}};
       const robot={card,display:{name:card.name,hp,atk:attack},hp,maxHp:hp,atk:attack,level:owner.level||1,
         mutations:[...(owner.mutations||[])],defeated:false,isClone:true,isSummoned:true,isTemporaryAlly:true,reaganOwner:owner};
+      if(!api.admitSpawn(bs,owner,robot,'robot'))return;
       runtime(robot);refresh(robot);
       const at=Math.max(0,lineup.indexOf(current));lineup.splice(at,0,robot);
       const key=lineup===bs.playerTeam?'playerIndex':'enemyIndex';bs[key]=at;

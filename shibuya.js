@@ -81,7 +81,7 @@
       return false;
     }
     function summon(bs,owner,victim,hp,attack,kind,card=null){
-      if(!api.canSummon(owner)||(victim&&!api.canClone(victim)))return null;
+      if(!api.canSummon(owner)||!api.canSpawn(bs,owner,kind)||(victim&&!api.canClone(victim)))return null;
       const unit=api.summon(bs,owner,victim,Math.max(1,Math.floor(hp)),Math.max(1,Math.floor(attack)),kind,card);
       if(unit){if(kind==='puppet')unit.shibuyaPuppet=true;api.enter(bs,unit);api.indices(bs);}return unit;
     }

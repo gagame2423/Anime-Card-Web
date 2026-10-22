@@ -1426,7 +1426,7 @@ const TOWER_REWARD_CARDS = [
   {"id": "tower-champion-malevolent", "element": "Fire", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", category: ["Jujutsu", "Villian", "Unhuman", "Brutal", "PureEvil"], "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 66666, "atk": 9999}, "passive": {"name": "Malevolent Kitchen", "description": "After 5 primary attacks, hit all living enemies for 25% current ATK at the start of every combat turn while alive.\nWhen hit and surviving: 66% chance to heal 6% max HP and gain +9% current ATK. ATK bonuses stack for the match."}},
   {"id": "tower-champion-tsukuyomi", "element": "Nature", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", category: ["Ninja", "Protagonist", "Hero", "Human", "Brutal"], "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 200000, "atk": 20000}, "passive": {"name": "Datebayo", "description": "Each new active enemy rolls Naruto/Sasuke mode (50% each); keep the card’s attack counter across target changes.\nNaruto: every 3rd attack deals x3 damage and creates a 10% current HP/ATK Clone. Living Clones follow up each attack; Clone death heals the owner 10% max HP. No count cap; generated units cannot summon.\nSasuke: every 2nd attack hits all enemies for 50% ATK; 20% dodge. Dodge applies Burn for 5 turns (25% ATK/turn) and a 3-combat-turn shield equal to avoided damage. Burn ending naturally Stuns for 1 turn.\nSwitching to Sasuke removes Clones without healing; switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
   {"id": "tower-champion-heavenly", "element": "Holy", "image": "assets/cards/judgement.png", "towerType": "heavenly", "unlockRequirement": "tower_floor_100_heavenly", "sourceId": "weather-heavenly-seraph", "name": "The Judgement", category: ["Alternative", "Magician", "Unhuman", "Supporter"], "chance": 300300, "requiredWeather": "Heavenly", "nativeWeather": "heavenly", "stats": {"hp": 40000, "atk": 5000}, "passive": {"name": "Divine Light", "description": "Every 2nd attack: 33% chance for a beam hitting all enemies for 50% current ATK; damaged targets have a 66% chance of Heresy for 1–3 turns.\nWhile any enemy has Heresy: beam chance/damage become 66%/66% ATK; Heresy chance becomes 33%.\nHeresy: deal 9% less damage; 3% chance to miss primary attacks."}},
-  {"id": "tower-champion-shadow", "element": "Dark", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", category: ["Villian", "AntiVillian", "Human", "Alternative", "Brutal"], "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 102000, "atk": 28000}, "passive": {"name": "Dark Aurora", "description": "On kill: 29% chance to convert an eligible original enemy and steal its passive. Insert the converted unit directly in front of Dark Decade with Dark Decade’s current max HP/ATK and the victim’s passive.\nWhile alive, revive eligible original teammates at the back with Dark Decade’s stats (max 2 revivals/teammate); keep their own passives. Never revive itself, clones or summons.\nGenerated units cannot create companions. Uncloneable enemies and anti-revival restrictions remain excluded."}},
+  {"id": "tower-champion-shadow", "element": "Dark", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", category: ["Villian", "AntiVillian", "Human", "Alternative", "Brutal"], "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 102000, "atk": 28000}, "passive": {"name": "Dark Aurora", "description": "On kill: 29% chance to convert an eligible original enemy and steal its passive (max 2 living summons owned by this card, including summons from stolen passives). Insert the converted unit directly in front of Dark Decade with Dark Decade’s current max HP/ATK and the victim’s passive.\nWhile alive, revive eligible original teammates at the back with Dark Decade’s stats (max 2 revivals/teammate); keep their own passives. Never revive itself, clones or summons.\nGenerated units cannot create companions. Uncloneable enemies and anti-revival restrictions remain excluded."}},
 ].map(reward => Object.freeze({ ...reward, towerFloor: 100, rarity: 'Secret', image: reward.image, description: `Clear Floor 100 of ${reward.towerType} Tower. Future rolls require the matching weather.` }));
 CARDS.push(...TOWER_REWARD_CARDS);
 // Raid-only secrets never enter RNG pools, including after their first unlock.
@@ -1583,7 +1583,7 @@ const EXPANSION_CARDS = [
     "requiredWeather": "Malevolent"
   },
   {
-    "id": "awakened-doflamingo",
+    "id": "awakened-doflamingo", evolvesFrom: 'doflamingo',
     "name": "Awakened Doflamingo", category: ["Pirate", "Villian", "Human", "Brutal", "Captain", "PureEvil"],
     "element": "Dark",
     "rarity": "Secret",
@@ -1600,7 +1600,7 @@ const EXPANSION_CARDS = [
     "evolutionOnly": true
   },
   {
-    "id": "prime-garp",
+    "id": "prime-garp", evolvesFrom: 'garp',
     "name": "Prime Garp", category: ["Hero", "Human", "Captain", "Brutal", "Army"],
     "element": "Nature",
     "rarity": "Secret",
@@ -1778,7 +1778,7 @@ CARDS.push(...[
     }
   },
   {
-    "id": "sea-goddess-valkyrie",
+    "id": "sea-goddess-valkyrie", evolvesFrom: 'noelle-silva',
     "name": "Sea Goddess Valkyrie", category: ["Unhuman", "Supporter", "Magician"],
     "element": "Water",
     "rarity": "Mythic",
@@ -1798,7 +1798,7 @@ CARDS.push(...[
 // Yuno evolution and Lucky Tower champion.
 CARDS.push(...[
   {
-    "id": "yuno-spirit",
+    "id": "yuno-spirit", evolvesFrom: 'yuno',
     "name": "Yuno Spirit", category: ["Magician", "Supporter", "Human", "Protagonist"],
     "element": "Nature",
     "rarity": "Secret",
@@ -2027,7 +2027,7 @@ CARDS.push(...[
     }
   },
   {
-    "id": "saber-knight",
+    "id": "saber-knight", evolvesFrom: 'saber',
     "name": "Saber Knight",
     "category": [
       "Hero",
@@ -2220,7 +2220,7 @@ CARDS.push(...[
     "spookyExclusive": true
   },
   {
-    "id": "jason-13th",
+    "id": "jason-13th", evolvesFrom: 'the-trapper',
     "name": "Jason 13th",
     "element": "Water",
     "rarity": "Secret",
@@ -2299,7 +2299,7 @@ CARDS.push(...[
 ]);
 CARDS.push(...[
   {
-    "id": "gojo-revice",
+    "id": "gojo-revice", evolvesFrom: 'gojo-young',
     "name": "Gojo Revice",
     "element": "Electric",
     "rarity": "Mythic",
@@ -2401,7 +2401,7 @@ CARDS.push(...[
     "unlockRequirement": "raid_shibuya_jogo"
   },
   {
-    "id": "true-mahito",
+    "id": "true-mahito", evolvesFrom: 'mahito',
     "name": "True Mahito",
     "element": "Water",
     "rarity": "Secret",

@@ -118,7 +118,7 @@
     const mutation=weatherMutation(def);
     const player=key==='normal' || key==='infinite'
       ? 'Your team: any owned card or Mutation / Double Mutation. 4 cards required; floors continue infinitely.'
-      : def ? `Your team: 4 owned cards native to ${def.name}, or variants with ${mutation?.name || def.mutationId || def.name} Mutation (Double Mutations count). Any Element meeting this weather rule is allowed.`
+      : def ? `Your team: 4 owned cards native to ${def.name}, or variants with ${mutation?.name || def.mutationId || def.name} Mutation (Double Mutations count). Evolved cards inherit their base card’s Tower permissions. Any Element meeting this weather rule is allowed.`
       : 'Your team: this type has no configured deployment rule; choose an available Tower type.';
     const enemies=allowed?.length===1 ? `Enemy team: all 4 opponents use ${allowed[0]}.`
       : allowed?.length ? `Enemy team: ${allowed.join(' OR ')}. One Element is chosen per floor; all 4 opponents share it, never a mixed team.`
@@ -155,7 +155,9 @@
     // An empty mutations array must not mask legacy mutationIds/mutation fields.
     const mutations = variant && typeof variant === 'object' && !Array.isArray(variant)
       ? [variant.mutations, variant.mutationIds, variant.mutation] : variant;
-    return Boolean(card) && matchWeather(card, mutations, mode, weathers);
+    if(!card)return false;
+    const lineage=host.EvolutionSystem?.eligibilityLineage(card)||[card];
+    return lineage.some(origin=>matchWeather(origin,mutations,mode,weathers));
   }
   function floorStats(floor, boss = false) {
     const f = floorNumber(floor), role = boss ? 5 : 1;

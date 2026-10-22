@@ -22,6 +22,21 @@
     Object.freeze({ id:'web_string', name:'Web String', type:'material', icon:'🕸️', tier:'mythic', description:'Evolve Lv.100+ Doflamingo into Awakened Doflamingo. Marine Ford Raid Shop: 6,220 Coins.' }),
     Object.freeze({ id:'cannon_ball', name:'Cannon Ball', type:'material', icon:'💣', tier:'mythic', description:'Evolve Lv.100+ Garp into Prime Garp. Marine Ford Raid Shop: 3,899 Coins.' })
   ]);
+  const recipeParents=new Map(RECIPES.map(recipe=>[recipe.id,recipe.baseId]));
+  const cardsById=new Map((host.ALL_CARDS||[]).map(card=>[card.id,card])),lineageCache=new WeakMap();
+  function getBaseCardId(cardOrId){
+    const id=typeof cardOrId==='object'?cardOrId?.id:cardOrId;
+    const card=typeof cardOrId==='object'?cardOrId:cardsById.get(id);
+    return recipeParents.get(id)||card?.evolvesFrom||null;
+  }
+  function eligibilityLineage(cardOrId){
+    const first=typeof cardOrId==='object'?cardOrId:cardsById.get(cardOrId);
+    if(!first)return [];
+    if(lineageCache.has(first))return lineageCache.get(first);
+    const line=[],seen=new Set();
+    for(let card=first;card&&!seen.has(card.id);card=cardsById.get(getBaseCardId(card))){seen.add(card.id);line.push(card);}
+    const result=Object.freeze(line);lineageCache.set(first,result);return result;
+  }
   let bridge = {};
   function register() { MATERIALS.forEach(item => host.InventorySystem.registerItem(item)); }
   function validSave(value) { return value?.version === 1 && value.pending === null; }
@@ -77,5 +92,5 @@
     }
   }
   const recovered = recover(); register();
-  host.EvolutionSystem=Object.freeze({KEY,RECIPES,MATERIALS,recovered,validSave,recover,register,evolve,render,flush:()=>{try{return validSave(JSON.parse(host.localStorage.getItem(KEY)));}catch(_){return false;}},reset:()=>{host.localStorage.removeItem(KEY);recover();register();},configure:options=>{bridge=options||{};}});
+  host.EvolutionSystem=Object.freeze({KEY,RECIPES,MATERIALS,getBaseCardId,eligibilityLineage,recovered,validSave,recover,register,evolve,render,flush:()=>{try{return validSave(JSON.parse(host.localStorage.getItem(KEY)));}catch(_){return false;}},reset:()=>{host.localStorage.removeItem(KEY);recover();register();},configure:options=>{bridge=options||{};}});
 })(window);

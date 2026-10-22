@@ -283,6 +283,8 @@
   }
 
 
+  const companions=window.createCompanionRules({team:teamOf,alive:isAlive,has:hasPassive});
+
   // Champion hooks are keyed independently from legacy card/passive switches.
   const champions = (() => {
     const prefix = 'tower-champion-';
@@ -317,10 +319,13 @@
     }
     function summon(bs, owner, hp, attack, kind, victim = null) {
       if ((owner?.grimoireRevived && kind==='duo') || !canCreateCompanion(owner) || (victim && (isGeneratedUnit(victim) || uncloneable(victim) || (!isAlive(victim) && noExternalRevive(victim))))) return null;
+      const summonKind=kind==='converted'?'dark_aurora':kind;
+      if(!companions.canSpawn(bs,owner,summonKind))return null;
       const card = victim?.card || { id: `champion-${kind}-summon`, name: kind === 'ghost' ? 'Ghost' : 'Naruto Clone', element: owner.card?.element, passive: null, stats: { hp, atk: attack }, image: owner.card?.image };
       const unit = { card, mutations: [...(owner.mutations || [])], display: { name: victim ? `${victim.display?.name || card.name} • Dark Aurora` : card.name, hp, atk: attack }, hp: Math.max(1, Math.floor(hp)), maxHp: Math.max(1, Math.floor(hp)), atk: Math.max(1, Math.floor(attack)), defeated: false, isClone: kind !== 'converted', isSummoned: true, isTemporaryAlly: true, championSummonType: kind, championOwner: owner, level: owner.level || 1 };
       if (bs.mode === 'tower' && bs.enemyTeam.includes(owner)) window.TowerSystem?.protectEnemyUnit(unit);
       ensureRuntime(unit).effectivePassiveId = victim ? getEffectivePassiveCardId(victim) : null;
+      if(!companions.admit(bs,owner,unit,summonKind))return null;
       teamOf(bs, owner).push(unit); refreshUnitDisplay(unit); return unit;
     }
     function hit(bs, source, target, damage, options = {}) {
@@ -500,8 +505,8 @@
       const owner = unit.championOwner;
       if (!unit.championDismissed && unit.championSummonType === 'duo' && isAlive(owner)) heal(owner, owner.maxHp * .10, 'NARUTO CLONE', bs, owner);
       const reviver = !isGeneratedUnit(unit) && !borrowedReviveForbidden && !noExternalRevive(unit) && !isBleeding(unit) && (c.darkRevives || 0) < 2
-        ? alliesOf(bs, unit, false).find(ally => canCreateCompanion(ally) && (!passiveSuppressed(ally) && (cardIdOf(ally) === prefix + 'shadow' || hasPassive(ally,prefix+'shadow')))) : null;
-      if (reviver) {
+        ? alliesOf(bs, unit, false).find(ally => canCreateCompanion(ally) && companions.canRevive(bs,ally,unit,'dark_revive') && (!passiveSuppressed(ally) && (cardIdOf(ally) === prefix + 'shadow' || hasPassive(ally,prefix+'shadow')))) : null;
+      if (reviver && companions.admitRevive(bs,reviver,unit,'dark_revive')) {
         const team = teamOf(bs, unit), key = team === bs.playerTeam ? 'playerIndex' : 'enemyIndex';
         // Capture the next living fighter before reviving/moving the victim.
         const active = firstLiving(team, Number(bs[key]) || 0);
@@ -530,7 +535,7 @@
     function kill(bs, unit, victim) {
       const c = state(unit);
       for (const ally of alliesOf(bs, unit)) if (!passiveScopes.get(unit)?.copy && hasPassive(ally,prefix+'eclipse') && passiveRuntimeFor(ally,prefix+'eclipse').champion?.protected === unit) heal(ally, ally.maxHp * .80, 'CALAMITY', bs, ally);
-      if (canCreateCompanion(unit) && !passiveSuppressed(unit) && !isGeneratedUnit(victim) && (id(unit) === 'shadow' || (cardIdOf(unit) === prefix + 'shadow'&&!unit.passiveState?.spookyStolenPassives?.[prefix+'shadow'])) && isAlive(unit) && Math.random() < .29 && !uncloneable(victim) && !noExternalRevive(victim)) {
+      if (canCreateCompanion(unit) && !passiveSuppressed(unit) && !isGeneratedUnit(victim) && (id(unit) === 'shadow' || (cardIdOf(unit) === prefix + 'shadow'&&!unit.passiveState?.spookyStolenPassives?.[prefix+'shadow'])) && isAlive(unit) && companions.canSpawn(bs,unit,'dark_aurora') && Math.random() < .29 && !uncloneable(victim) && !noExternalRevive(victim)) {
         const stolen = getEffectivePassiveCardId(victim), converted = summon(bs, unit, unit.maxHp, unit.atk, 'converted', victim);
         if (converted) {
           if (c.formHp) {
@@ -768,7 +773,7 @@
       for (const ally of alliesOf(bs, unit)) cleanse(ally);
       if (!c.revived && canCreateCompanion(unit)) {
         const dead = teamOf(bs, unit).find(ally => ally !== unit && !isAlive(ally) && !isGeneratedUnit(ally) && !champions.noExternalRevive(ally) && !isBleeding(ally));
-        if (dead) {
+        if (dead && companions.admitRevive(bs,unit,dead,'josuke_revive')) {
           c.revived = true; dead.maxHp = unit.maxHp; dead.hp = dead.maxHp; dead.atk = atk(unit); dead.defeated = false;
           ensureRuntime(dead).passiveSuppressedUntilDeath = false;
           champions.state(dead).deathHandled = false; state(dead).deathNotified = false; cleanse(dead); refreshUnitDisplay(dead);
@@ -783,10 +788,11 @@
     function summon(bs, unit, ratio, kind) {
       if (unit.grimoireRevived || !canCreateCompanion(unit)) return null;
       const c = state(unit); c.clones = c.clones.filter(isAlive);
-      if (kind === 'd4c' && c.clones.length >= 10) return null;
+      if (!companions.canSpawn(bs,unit,kind)) return null;
       const hp = Math.max(1, Math.floor(unit.maxHp * ratio)), attack = Math.max(1, Math.floor(atk(unit) * ratio));
       const clone = { card: { id: kind + '-clone', name: unit.card.name + ' Clone', element: unit.card.element, image: unit.card.image, stats: {hp, atk:attack}, passive: null }, display: { name: unit.card.name + ' Clone', hp, atk: attack }, hp, maxHp: hp, atk: attack, mutations: [...(unit.mutations || [])], defeated: false, isClone: true, isSummoned: true, isTemporaryAlly: true, expansionCloneType: kind, expansionOwner: unit };
       if (bs.mode === 'tower' && bs.enemyTeam.includes(unit)) window.TowerSystem.protectEnemyUnit(clone);
+      if(!companions.admit(bs,unit,clone,kind))return null;
       teamOf(bs, unit).push(clone); c.clones.push(clone); ensureRuntime(clone); return clone;
     }
     function afterAttack(bs, unit, victim, outcome, options) {
@@ -895,10 +901,10 @@
     }
     function clone(bs,unit){
       if(!canCreateCompanion(unit))return;
-      const c=state(unit);c.clones=c.clones.filter(isAlive);if(c.clones.length>=3)return;
+      const c=state(unit);c.clones=c.clones.filter(isAlive);if(!companions.canSpawn(bs,unit,'hermes'))return;
       const pool=alliesOf(bs,unit,false).filter(ally=>!isGeneratedUnit(ally)&&!champions.uncloneable(ally));if(!pool.length)return;
       const victim=pool[Math.min(pool.length-1,Math.floor(Math.random()*pool.length))];
-      const summon=cloneAsTemporaryAlly(victim,unit,bs,1);if(!summon)return;
+      const summon=cloneAsTemporaryAlly(victim,unit,bs,1,'hermes');if(!summon)return;
       ensureRuntime(summon).effectivePassiveId=getEffectivePassiveCardId(victim);
       summon.display.name=`${victim.display?.name || victim.card.name} • Hermes Clone`;
       summon.hermesOwner=unit;
@@ -969,13 +975,15 @@
     }
     function entry(bs,unit) { if(id(unit)==='sung-jin-woo'&&!state(unit).bonus)rerollBonus(bs,unit); }
     function summon(bs,owner,hp,attack,name,passiveId=null,shield=0) {
-      if(!canCreateCompanion(owner))return null;
+      const summonKind=name==='Divine Steed Clone'?'divine_steed':'shadow';
+      if(!canCreateCompanion(owner)||!companions.canSpawn(bs,owner,summonKind))return null;
       hp=Math.max(1,Math.round(hp));attack=Math.max(1,Math.round(attack));
       const card={id:`quest-summon-${name}`,name,element:owner.card.element,image:owner.card.image,stats:{hp,atk:attack},passive:null};
       const unit={card,display:{name,hp,atk:attack},hp,maxHp:hp,atk:attack,mutations:[],defeated:false,isClone:true,isSummoned:true,isTemporaryAlly:true,questOwner:owner};
       ensureRuntime(unit).effectivePassiveId=passiveId;
       if(shield>0)addShield(unit,shield,'divine-steed');
       if(bs.mode==='tower'&&bs.enemyTeam.includes(owner))window.TowerSystem.protectEnemyUnit(unit);
+      if(!companions.admit(bs,owner,unit,summonKind))return null;
       teamOf(bs,owner).push(unit);state(owner).clones.push(unit);
       if(passiveId){runOnEntry(bs,unit);champions.entry(bs,unit);}
       refreshUnitDisplay(unit);return unit;
@@ -986,8 +994,8 @@
       c.lastStandUsed=true;
       const dead=teamOf(bs,unit).filter(v=>v!==unit&&!isAlive(v)&&!isGeneratedUnit(v)&&!champions.uncloneable(v));
       const hp=unit.maxHp*.5,attack=computeWeakenedAtk(unit)*.5,shield=unit.maxHp*.5;
-      for(let i=0;i<3;i++){const victim=pick(dead);summon(bs,unit,hp,attack,'Divine Steed Clone',victim?(ensureRuntime(victim).effectivePassiveId||cardIdOf(victim)):null,shield);}
-      safeLog('[PASSIVE] Divine Steed summoned 3 Clones with 50% stats and 50% Madara max HP shields.','passive');
+      let created=0;for(let i=0;i<3;i++){const victim=pick(dead);if(summon(bs,unit,hp,attack,'Divine Steed Clone',victim?(ensureRuntime(victim).effectivePassiveId||cardIdOf(victim)):null,shield))created++;}
+      safeLog(`[PASSIVE] Divine Steed summoned ${created} Clones with 50% stats and 50% Madara max HP shields.`,'passive');
     }
     function turn(bs) { for(const unit of [...phaseUnits(bs)].filter(isAlive))lastStanding(bs,unit); }
     function kill(bs,unit,victim) {
@@ -1166,7 +1174,7 @@
   const reagan=window.createReaganSkills({runtime:ensureRuntime,passiveRuntimeFor,alive:isAlive,all:allUnits,
     allies:alliesOf,enemies:enemiesOf,team:teamOf,has:hasPassive,atk:computeWeakenedAtk,hit:(...args)=>champions.hit(...args),
     heal,refresh:refreshUnitDisplay,random:()=>Math.random(),log:safeLog,atkBonus:applyPermanentAtkBonus,
-    generated:isGeneratedUnit,suppressed:passiveSuppressed,indices:ensureCurrentIndices,
+    generated:isGeneratedUnit,suppressed:passiveSuppressed,indices:ensureCurrentIndices,canSpawn:companions.canSpawn,admitSpawn:companions.admit,
     front:(bs,lineup)=>firstLiving(lineup,lineup===bs.playerTeam?bs.playerIndex:bs.enemyIndex),
     death:(bs,unit)=>onTeammateDeath(bs,unit)});
 
@@ -1180,8 +1188,10 @@
     primary:primarySkillHit,
     absorb(bs,source,target,amount,meta){const result=damageUnit(bs,source,target,amount,meta);if(result.killed){onKill(bs,source,target);onTeammateDeath(bs,target);}return result;},
     convert(bs,owner,victim,hp,attack){
+      if(!companions.canSpawn(bs,owner,'iskandar'))return null;
       const card={...victim.card,stats:{hp,atk:attack}},unit={card,display:{name:card.name+' • Hetairoi',hp,atk:attack},hp,maxHp:hp,atk:attack,
         level:victim.level||1,mutations:[...(victim.mutations||[])],defeated:false,isSummoned:true,isTemporaryAlly:true,iskandarOwner:owner};
+      if(!companions.admit(bs,owner,unit,'iskandar'))return null;
       ensureRuntime(unit);teamOf(bs,owner).push(unit);refreshUnitDisplay(unit);runOnEntry(bs,unit);champions.entry(bs,unit);ensureCurrentIndices(bs);return unit;
     }});
 
@@ -1206,16 +1216,17 @@
     shield:(...args)=>yuno.addLayer(...args),indices:ensureCurrentIndices,allowed:sourcePassiveAllowed,stunned:isUnitStunned,
     front:(bs,lineup)=>firstLiving(lineup,lineup===bs.playerTeam?bs.playerIndex:bs.enemyIndex),
     canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n)=>fate.followChance(bs,u,n),hasFollowUp:u=>fate.hasFollowUp(u),
-    canSummon:canCreateCompanion,canClone:u=>!isGeneratedUnit(u)&&!champions.uncloneable(u)&&!champions.noExternalRevive(u),
+    canSummon:canCreateCompanion,canSpawn:companions.canSpawn,canClone:u=>!isGeneratedUnit(u)&&!champions.uncloneable(u)&&!champions.noExternalRevive(u),
     countFollow(bs,u,target){const r=ensureRuntime(u);r.ownAttackCount=(r.ownAttackCount||0)+1;r.attackCount=r.ownAttackCount;grimoire.countedAttack(bs,u);fate.counted(bs,u,{isFollowUp:true});reagan.countedAttack(bs,u,{isFollowUp:true});spooky.counted(bs,u,target,{isFollowUp:true});gomen.counted(bs,u,{isFollowUp:true});shibuya.counted(bs,u,{isFollowUp:true});},
     enter(bs,u){runOnEntry(bs,u);champions.entry(bs,u);expansion.entry(bs,u);},
     summon(bs,owner,victim,hp,attack,kind,customCard){
-      const base=customCard||victim?.card;if(!base)return null;
+      const base=customCard||victim?.card;if(!base||!companions.canSpawn(bs,owner,kind))return null;
       const card={...base,stats:{hp,atk:attack}},unit={card,hp,maxHp:hp,atk:attack,defeated:false,level:victim?.level||owner.level||1,
         mutations:[...(victim?.mutations||owner.mutations||[])],display:{name:card.name+' • '+(kind==='puppet'?'Puppet':kind==='dagon'?'Companion':'Transfigured'),hp,atk:attack},
         isClone:true,isSummoned:true,isTemporaryAlly:true,shibuyaOwner:owner,shibuyaKind:kind};
       const r=ensureRuntime(unit);if(victim){r.effectivePassiveId=getEffectivePassiveCardId(victim)||null;for(const key of passiveIds(victim))if(key!==r.effectivePassiveId)addPassiveCopy(unit,key);}
       if(bs.mode==='tower'&&bs.enemyTeam.includes(owner))window.TowerSystem?.protectEnemyUnit(unit);
+      if(!companions.admit(bs,owner,unit,kind))return null;
       const line=teamOf(bs,owner),indexKey=line===bs.playerTeam?'playerIndex':'enemyIndex';line.unshift(unit);bs[indexKey]=0;refreshUnitDisplay(unit);return unit;
     }});
   function primarySkillHit(bs,source,target,amount,options={}){
@@ -2909,7 +2920,7 @@
 
       case 'doflamingo':
         if (canCreateCompanion(killer) && !isGeneratedUnit(victim) && Math.random() < 0.30) {
-          const clone = cloneAsTemporaryAlly(victim, killer, battleState, 1);
+          const clone = cloneAsTemporaryAlly(victim, killer, battleState, 1,'igris');
           if (clone) {
             // The transformed enemy joins as a temporary reserve fighter.
             appendTeamUnit(teamOf(battleState, killer), clone);
@@ -3014,7 +3025,7 @@
     if (metalCooler && target !== metalCooler && !isGeneratedUnit(target) && !champions.uncloneable(target) && incomingDamage >= Math.max(1, Number(target.hp) || 0)) {
       const mr = ensureRuntime(metalCooler);
       if (canCreateCompanion(metalCooler)) {
-        const clone = cloneAsTemporaryAlly(target, metalCooler, battleState, 0.50);
+        const clone = cloneAsTemporaryAlly(target, metalCooler, battleState, 0.50,'metal_cooler');
         if (clone) {
           clone.side = target.side;
           const team = teamOf(battleState, metalCooler);
@@ -3726,8 +3737,9 @@
     }
   }
 
-  function cloneAsTemporaryAlly(victim, source, battleState, statFactor = 0.5) {
+  function cloneAsTemporaryAlly(victim, source, battleState, statFactor = 0.5, kind) {
     if (!victim || !canCreateCompanion(source) || isGeneratedUnit(victim) || champions.uncloneable(victim) || (!isAlive(victim) && champions.noExternalRevive(victim))) return null;
+    if(!companions.canSpawn(battleState,source,kind))return null;
     const factor = Math.max(0.01, Number(statFactor) || 0.5);
     const clone = {
       card: victim.card,
@@ -3746,6 +3758,7 @@
     if (battleState?.mode === 'tower' && battleState.enemyTeam?.includes(source)) window.TowerSystem?.protectEnemyUnit?.(clone);
     ensureRuntime(clone);
     clone.passiveState.effectivePassiveId = cardIdOf(victim);
+    if(!companions.admit(battleState,source,clone,kind))return null;
     return clone;
   }
 
@@ -3753,8 +3766,8 @@
     const runtime = ensureRuntime(unit);
     if (runtime.reviveCount >= 1) return;
     const team = teamOf(battleState, unit);
-    const dead = team.find(candidate => candidate !== unit && candidate.defeated && !champions.noExternalRevive(candidate));
-    if (!dead) return;
+    const dead = team.find(candidate => candidate !== unit && candidate.defeated && !isGeneratedUnit(candidate) && !champions.noExternalRevive(candidate));
+    if (!dead || !companions.admitRevive(battleState,unit,dead,'dante_revive')) return;
     runtime.reviveCount += 1;
     dead.defeated = false;
     const originalCardId = cardIdOf(dead);
@@ -3766,6 +3779,8 @@
     dead.maxHp = Math.max(1, Number(unit?.maxHp) || Number(danteCard?.stats?.hp) || 1);
     dead.hp = dead.maxHp;
     dead.atk = Math.max(1, Number(unit?.atk) || Number(danteCard?.stats?.atk) || 1);
+    champions.state(dead).deathHandled=false;
+    if(ensureRuntime(dead).expansion)ensureRuntime(dead).expansion.deathNotified=false;
     ensureRuntime(dead).effectivePassiveId = originalCardId;
     refreshUnitDisplay(dead);
     safeLog(`[PASSIVE] ${unit.display?.name || 'Dante Limbus'} revived a teammate using Dante's stats while preserving their passive.`, 'passive');
@@ -3773,6 +3788,7 @@
 
   function createJinMoriCloneForDeadTeammate(battleState, jinUnit, victim) {
     if (!battleState || !canCreateCompanion(jinUnit) || !victim || isGeneratedUnit(victim) || champions.uncloneable(victim) || champions.noExternalRevive(victim)) return null;
+    if(!companions.canSpawn(battleState,jinUnit,'jin_mori'))return null;
     const runtime = ensureRuntime(jinUnit);
 
     const jinCard = host.getCardById?.('jin-mori') || cardOf(jinUnit);
@@ -3799,6 +3815,7 @@
     if (battleState?.mode === 'tower' && battleState.enemyTeam?.includes(jinUnit)) window.TowerSystem?.protectEnemyUnit?.(clone);
     ensureRuntime(clone).effectivePassiveId = originalPassiveId;
     ensureRuntime(clone).sourceCloneOf = originalPassiveId;
+    if(!companions.admit(battleState,jinUnit,clone,'jin_mori'))return null;
     runtime.cloneCount += 1;
 
     const team = teamOf(battleState, jinUnit);
