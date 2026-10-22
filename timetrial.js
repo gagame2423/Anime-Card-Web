@@ -132,11 +132,11 @@
         const info = bridge.getLevelInfo?.(run.cardId);
         if (!info) throw new Error('Không tìm thấy thông số EXP của thẻ đang luyện.');
         if (info.level < host.CardLevelSystem.MAX_LEVEL) {
-        const baseRate = EXP_RATE.min + (EXP_RATE.max-EXP_RATE.min) * Math.max(0, Math.min(1, Number(random()) || 0));
-        const rate = baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1);
+          // EXP Time Trial deliberately ignores every global EXP bonus.
+          const rate = EXP_RATE.min + (EXP_RATE.max-EXP_RATE.min) * Math.max(0, Math.min(1, Number(random()) || 0));
           const exact = info.required * rate + (data.xpCarry[run.cardId] || 0);
           const rounded = Math.floor(exact), carry = exact - rounded;
-          // The base rate is bounded; bonuses apply afterwards without a second cap.
+          // Preserve fractional base EXP; never multiply it by potion/weather/equipment bonuses.
           const amount = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, rounded));
           const result = bridge.grantExperience?.(run.cardId, amount, run.owner);
           if (!result) throw new Error('Không thể lưu EXP. Lượt thử đã dừng để bảo vệ tiến độ.');

@@ -4316,7 +4316,7 @@ function renderTimeTrialControls() {
   setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`);
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
   setViewText('timeTrialRules', exp
-    ? '1-second turns • 1 Ticket per attempt • 300s • 0 ATK EXP Monsters • Base 0.1%–1.5% current-level EXP per kill × total EXP Multiplier • No VNĐ, Shards or items. Auto Continue uses another Ticket. EXP and Drop bonuses apply to their respective rewards.'
+    ? '1-second turns • 1 Ticket per attempt • 300s • 0 ATK EXP Monsters • 0.1%–1.5% current-level EXP per kill • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
     : '2-second turns • 180s per room • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
   const timer = document.getElementById('timeTrialTimer');
   timer?.classList.toggle('hidden', !active || !battleState?.trial || battleState.finished);
@@ -5616,7 +5616,7 @@ window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreez
 window.BattleWeatherHud.configure({snapshot:()=>{const sandbox=window.SandboxSystem?.weatherSnapshot;if(sandbox)return sandbox;return {active:isBattleMatchActive(),seconds:state.weather.gameSeconds,weathers:getActiveWeatherEntries().map(entry=>{const def=WEATHER_BY_ID[entry.weatherId];return {...entry,id:def.id,name:def.name,icon:def.icon,color:def.color,description:window.WeatherSystem.describe(def)};})};}});
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
-window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, getExperienceMultiplier: () => getExpMultiplier("arena"), grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
+window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:queueSpookyUi,onCapsule:showSpookyCapsule});
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
