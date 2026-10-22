@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261021-performance-qol-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261021-performance-qol-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261022-shibuya-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261022-shibuya-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -466,7 +466,7 @@
             <p>6vs3 • October 1–31 (Asia/Bangkok) • 50 waves • No VNĐ / EXP • Manual Continue only. Select a permanent run modifier before Waves 5, 10, ... 50.</p><p id="spookyRewardPreview"></p>
           </div>
           <div id="bossEventControls" class="boss-event-controls hidden">
-            <label for="bossEventTypeSelect">Boss Event</label><select id="bossEventTypeSelect" class="select-input"><option value="alucard">Alucard Event</option><option value="lucius">Lucius Event</option><option value="gomen">Gomen Event • Heavenly</option></select>
+            <label for="bossEventTypeSelect">Boss Event</label><select id="bossEventTypeSelect" class="select-input"><option value="alucard">Alucard Event</option><option value="lucius">Lucius Event</option><option value="gomen">Gomen Event</option></select>
             <strong id="bossEventAvailability" role="status"></strong>
             <label class="raid-difficulty" for="bossEventDifficulty">Difficulty <output id="bossEventDifficultyValue">1 • Boss Lv.1</output><input id="bossEventDifficultyNumber" class="difficulty-number" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" aria-label="Exact difficulty (1 to 1000)">
               <input id="bossEventDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
@@ -479,7 +479,7 @@
             <p id="timeTrialRules"></p>
           </div>
           <div id="raidControls" class="raid-controls hidden">
-            <label for="raidTypeSelect">Raid type</label><select id="raidTypeSelect" class="select-input"><option value="marine_fort">Marine Ford Raid</option><option value="holy_grail">Holy Grail Raid</option></select>
+            <label for="raidTypeSelect">Raid type</label><select id="raidTypeSelect" class="select-input"><option value="marine_fort">Marine Ford Raid</option><option value="holy_grail">Holy Grail Raid</option><option value="shibuya">Shibuya Raid</option></select>
             <label class="raid-difficulty" for="raidDifficulty">Difficulty <output id="raidDifficultyValue">1 • Enemy Lv.1</output><input id="raidDifficultyNumber" class="difficulty-number" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" aria-label="Exact difficulty (1 to 1000)">
               <input id="raidDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
             <strong id="raidBalances"></strong><button id="raidShopOpenButton" class="tower-shop-button" type="button">⚓ Raid Shop</button>
@@ -867,42 +867,45 @@
   <div id="spookyInfoModal" class="modal-backdrop hidden"><section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="spookyInfoTitle"><header class="modal-header"><h2 id="spookyInfoTitle">Spooky Run Modifiers</h2><button type="button" class="modal-close" data-close-modal="spookyInfoModal" aria-label="Close run modifiers">×</button></header><div id="spookyInfoList" class="spooky-info-list"></div></section></div>
   <div id="spookyShopModal" class="modal-backdrop hidden"><section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="spookyShopTitle"><header class="modal-header"><h2 id="spookyShopTitle">🎃 Spooky Shop</h2><button type="button" class="modal-close" data-close-modal="spookyShopModal" aria-label="Close Spooky Shop">×</button></header><p id="spookyShopBalance" class="module-description"></p><div id="spookyShopGrid" class="module-grid"></div></section></div>
 
-  <script defer src="./startup.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./mutations.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./weathers.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./cards.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./category.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./elements.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./background.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./levels.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./roll_performance.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./ui_performance.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./roll_view.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./grimoire.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./yuno.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./requiem.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./reagan.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./fate.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./spooky_passives.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./gomen.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./passives.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./inventory.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./tower.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./timetrial.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./raid.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./boss_event.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./achievements.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./evolution.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./equipment.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./spooky.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./quests.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./crafting.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./drop_audio.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./sandbox.js?v=20261021-performance-qol-1"></script>
+  <script defer src="./startup.js?v=20261022-shibuya-1"></script>
+  <script defer src="./mutations.js?v=20261022-shibuya-1"></script>
+  <script defer src="./weathers.js?v=20261022-shibuya-1"></script>
+  <script defer src="./cards.js?v=20261022-shibuya-1"></script>
+  <script defer src="./category.js?v=20261022-shibuya-1"></script>
+  <script defer src="./elements.js?v=20261022-shibuya-1"></script>
+  <script defer src="./background.js?v=20261022-shibuya-1"></script>
+  <script defer src="./levels.js?v=20261022-shibuya-1"></script>
+  <script defer src="./roll_performance.js?v=20261022-shibuya-1"></script>
+  <script defer src="./ui_performance.js?v=20261022-shibuya-1"></script>
+  <script defer src="./roll_view.js?v=20261022-shibuya-1"></script>
+  <script defer src="./grimoire.js?v=20261022-shibuya-1"></script>
+  <script defer src="./yuno.js?v=20261022-shibuya-1"></script>
+  <script defer src="./requiem.js?v=20261022-shibuya-1"></script>
+  <script defer src="./reagan.js?v=20261022-shibuya-1"></script>
+  <script defer src="./fate.js?v=20261022-shibuya-1"></script>
+  <script defer src="./spooky_passives.js?v=20261022-shibuya-1"></script>
+  <script defer src="./gomen.js?v=20261022-shibuya-1"></script>
+  <script defer src="./shibuya.js?v=20261022-shibuya-1"></script>
+  <script defer src="./passives.js?v=20261022-shibuya-1"></script>
+  <script defer src="./inventory.js?v=20261022-shibuya-1"></script>
+  <script defer src="./tower.js?v=20261022-shibuya-1"></script>
+  <script defer src="./timetrial.js?v=20261022-shibuya-1"></script>
+  <script defer src="./raid.js?v=20261022-shibuya-1"></script>
+  <script defer src="./boss_event.js?v=20261022-shibuya-1"></script>
+  <script defer src="./achievements.js?v=20261022-shibuya-1"></script>
+  <script defer src="./evolution.js?v=20261022-shibuya-1"></script>
+  <script defer src="./equipment.js?v=20261022-shibuya-1"></script>
+  <script defer src="./spooky.js?v=20261022-shibuya-1"></script>
+  <script defer src="./quests.js?v=20261022-shibuya-1"></script>
+  <script defer src="./crafting.js?v=20261022-shibuya-1"></script>
+  <script defer src="./drop_audio.js?v=20261022-shibuya-1"></script>
+  <script defer src="./sandbox.js?v=20261022-shibuya-1"></script>
+  <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
+  <script defer src="./weather_hud.js?v=20261022-shibuya-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script defer src="./potion_hud.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./settings.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./storage.js?v=20261021-performance-qol-1"></script>
-  <script defer src="./app.js?v=20261021-performance-qol-1"></script>
+  <script defer src="./potion_hud.js?v=20261022-shibuya-1"></script>
+  <script defer src="./settings.js?v=20261022-shibuya-1"></script>
+  <script defer src="./storage.js?v=20261022-shibuya-1"></script>
+  <script defer src="./app.js?v=20261022-shibuya-1"></script>
 </body>
 </html>

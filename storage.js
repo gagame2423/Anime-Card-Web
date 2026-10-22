@@ -24,6 +24,7 @@
     for(const offer of host.TimeTrialSystem.SHOP_ITEMS)if(offer.id===id)result.push('Time Trial Shop: '+format(offer.cost)+' Time Trial Shards.');
     for(const [type,def]of Object.entries(host.RaidSystem.TYPES))for(const offer of host.RaidSystem.offers(type))if(offer.id===id)result.push(def.name+' Shop: '+format(offer.cost)+' '+def.coinName+'.');
     if(id===host.RaidSystem.GRAIL_KEY.id)result.push('50% chance per Fate-category enemy defeated in regular 1v1 / 4v4 battles. Generated units and Sandbox excluded.');
+    if(id==='equipment_cursed_finger')result.push('Shibuya Raid victory: 0.1% at difficulty 1, rising linearly to 1% at difficulty 1000.');
     if(id==='gojo_eye')result.push('Gomen Boss Event victory (Heavenly weather): 0.8% at difficulty 1, rising linearly to 8% at difficulty 1000; evolves Lv.100+ Gojo Young.');
     if(id==='excalibur_sword')result.push('Holy Grail Raid victory: 0.8% at difficulty 1, rising linearly to 8% at difficulty 1000.');
     for(const [type,def]of Object.entries(host.BossEventSystem.TYPES))for(const offer of host.BossEventSystem.offers(type))if(offer.id===id)result.push(def.name+' Shop: '+format(offer.cost)+' '+def.coinName+'.');

@@ -4,10 +4,10 @@
   const KEY='anime_card_rng_boss_event_v1',MODE='boss-event',CARD_ID='boss-event-alucard';
   const TYPES=Object.freeze({
     alucard:Object.freeze({name:'Alucard Event',coinName:'Alucard Event Coins',weatherId:'eclipse',weatherName:'Eclipse (Eclipsed)',bossHp:666666,bossAtk:66666,cardId:CARD_ID}),
-    lucius:Object.freeze({name:'Lucius Event',coinName:'Lucius Event Coins',weatherId:'raining',weatherName:'Raining',bossHp:1000000,bossAtk:50000,cardId:'boss-event-lucius'}),
+    lucius:Object.freeze({name:'Lucius Event',coinName:'Lucius Event Coins',weatherId:'lucky',weatherName:'Lucky',bossHp:1000000,bossAtk:50000,cardId:'boss-event-lucius'}),
     gomen:Object.freeze({name:'Gomen Event',coinName:'Gomen Coins',weatherId:'heavenly',weatherName:'Heavenly',bossHp:888888,bossAtk:88888,cardId:'gojo-revice',itemId:'gojo_eye'})
   });
-  const offers=type=>type==='gomen'?[...SHOP,{id:'gojo_eye',cost:888888},{id:'equipment_infinity_eye',cost:888888}]:type==='lucius'?[...SHOP,{id:'sea_valkyrie',cost:4000},{id:'spirit_crown',cost:4400}]:TYPES[type]?SHOP:[];
+  const offers=type=>type==='gomen'?[...SHOP,{id:'gojo_eye',cost:888888},{id:'equipment_infinity_eye',cost:888888},{id:'shibuya_raid_key',cost:10}]:type==='lucius'?[...SHOP,{id:'sea_valkyrie',cost:4000},{id:'spirit_crown',cost:4400}]:TYPES[type]?SHOP:[];
   const SHOP=Object.freeze(['rich_potion','exp_potion','lucky_potion','speed_potion','speed_battle_potion'].map(id=>Object.freeze({id,cost:id==='speed_battle_potion'?25:10})));
   const LEVEL_GROWTH=.075;
   const object=v=>Boolean(v&&typeof v==='object'&&!Array.isArray(v));

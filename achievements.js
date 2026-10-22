@@ -8,7 +8,7 @@
     currency: Object.freeze([1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000, 1000000000000, 10000000000000, 100000000000000]),
     rolls: Object.freeze([1000, 10000, 100000, 1000000, 10000000, 100000000]),
     tower: Object.freeze([10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 1000000]),
-    timetrial: Object.freeze([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]),
+    timetrial: Object.freeze([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400]),
     raid: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]),
     boss: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000])
   });
@@ -42,7 +42,7 @@
       tiers.forEach(target => {
         const id = `${category}_${target}`;
         if (category === 'timetrial') {
-          const reward = target <= 100 ? { luckBonus: .1 } : target <= 150 ? { expBonus: .1 } : { coinBonus: .1 };
+          const reward = target <= 100 ? { luckBonus: .1 } : target <= 150 ? { expBonus: .1 } : target <= 200 ? { coinBonus: .1 } : target <= 300 ? { luckBonus: .1 } : { expBonus: .05 };
           result.push(Object.freeze({ id, category, target, title: `Clear Time Trial Room ${target}`, reward: Object.freeze(reward), automatic: false }));
           return;
         }
@@ -146,7 +146,7 @@
       const categoryLabel = doc.createElement('span'); categoryLabel.textContent = CATEGORIES[item.category];
       const status = doc.createElement('span'); status.textContent = item.claimed ? 'CLAIMED' : item.complete ? 'READY' : 'IN PROGRESS'; head.append(categoryLabel, status);
       const title = doc.createElement('strong'); title.textContent = item.title;
-      const detail = doc.createElement('p'); detail.textContent = item.reward.luckBonus ? `Reward: +${item.reward.luckBonus.toFixed(1)} permanent Luck` : item.reward.expBonus ? `Reward: +${item.reward.expBonus.toFixed(1)} permanent EXP Multiplier` : item.reward.coinBonus ? `Reward: +${item.reward.coinBonus.toFixed(1)} permanent VNĐ Multiplier` : item.reward.dropBonus ? `Reward: +${item.reward.dropBonus.toFixed(2)} permanent Drop Multiplier • Item quantities only` : item.reward.cardId ? `Reward: ${item.reward.cardName} • Normal version • Permanent roll unlock` : `Reward: ${compact(item.reward.currency)} VNĐ`;
+      const detail = doc.createElement('p'); detail.textContent = item.reward.luckBonus ? `Reward: +${item.reward.luckBonus.toFixed(1)} permanent Luck` : item.reward.expBonus ? `Reward: +${Number(item.reward.expBonus.toFixed(2))} permanent EXP Multiplier` : item.reward.coinBonus ? `Reward: +${item.reward.coinBonus.toFixed(1)} permanent VNĐ Multiplier` : item.reward.dropBonus ? `Reward: +${item.reward.dropBonus.toFixed(2)} permanent Drop Multiplier • Item quantities only` : item.reward.cardId ? `Reward: ${item.reward.cardName} • Normal version • Permanent roll unlock` : `Reward: ${compact(item.reward.currency)} VNĐ`;
       const bar = doc.createElement('div'); bar.className = 'achievement-progress'; bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-label', item.title); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(item.target)); bar.setAttribute('aria-valuenow', String(Math.min(item.value, item.target)));
       const fill = doc.createElement('span'); fill.style.width = `${Math.min(100, item.value / item.target * 100)}%`; bar.append(fill);
       const numbers = doc.createElement('small'); numbers.textContent = `${compact(Math.min(item.value, item.target))} / ${compact(item.target)}`; numbers.title = `${item.value.toLocaleString('en-US')} / ${item.target.toLocaleString('en-US')}`;

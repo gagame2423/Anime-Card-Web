@@ -2373,6 +2373,229 @@ CARDS.push(...[
     }
   }
 ]);
+// Shibuya content: acquisition restrictions remain independent of combat categories.
+CARDS.push(...[
+  {
+    "id": "jogo",
+    "name": "Jogo",
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 0,
+    "category": [
+      "Jujutsu",
+      "Villian",
+      "Unhuman",
+      "Brutal",
+      "PureEvil"
+    ],
+    "stats": {
+      "hp": 231000,
+      "atk": 31000
+    },
+    "image": "assets/cards/jogo.png",
+    "passive": {
+      "name": "Inferno Domain",
+      "description": "Below 50% HP, activate a domain: deal 20% ATK to all enemies every turn. Attacks in the domain gain 1 Meteor. On permanent death, start a Meteor-turn countdown, then hit all enemies for xMeteor ATK."
+    },
+    "raidOnly": true,
+    "unlockRequirement": "raid_shibuya_jogo"
+  },
+  {
+    "id": "true-mahito",
+    "name": "True Mahito",
+    "element": "Water",
+    "rarity": "Secret",
+    "chance": 0,
+    "category": [
+      "Brutal",
+      "PureEvil",
+      "Villian",
+      "Jujutsu",
+      "Swordman",
+      "Unhuman"
+    ],
+    "stats": {
+      "hp": 224000,
+      "atk": 15670
+    },
+    "image": "assets/cards/truemahito.png",
+    "passive": {
+      "name": "Heni Satsu Rei Tai",
+      "description": "Kills summon the victim with 25% of this card’s HP/ATK and the victim’s passive. Attacks have a 15% chance to deal x2 damage; two consecutive x2 hits unlock True Form.\nTrue Form: +100% ATK and a permanent 100% HP shield. Follow-ups deal 15% ATK; chance starts at 24%, rises by 12% per hit, and caps at 72%."
+    },
+    "evolutionOnly": true,
+    "unlockRequirement": "evolution_true-mahito"
+  },
+  {
+    "id": "todo",
+    "name": "Todo",
+    "element": "Water",
+    "rarity": "Mythic",
+    "chance": 530000,
+    "category": [
+      "Army",
+      "Hero",
+      "Jujutsu",
+      "Supporter"
+    ],
+    "stats": {
+      "hp": 100000,
+      "atk": 5000
+    },
+    "image": "assets/cards/todo.png",
+    "passive": {
+      "name": "Besto Friendo",
+      "description": "While in the backline, allies with follow-up chance at most 53% gain +5.3% follow-up chance. Once per match, block an ally’s fatal hit and swap them with the ally with the highest current HP.\nAttacks have a 53% chance to call a random ally for a follow-up dealing 53% of that ally’s ATK."
+    },
+    "questOnly": true,
+    "unlockRequirement": "quest_todo",
+    "requiredWeather": "Raining"
+  },
+  {
+    "id": "dagon",
+    "name": "Dagon",
+    "element": "Water",
+    "rarity": "Secret",
+    "chance": 2200000,
+    "category": [
+      "Jujutsu",
+      "Unhuman",
+      "Magician",
+      "Villian",
+      "Brutal",
+      "Army"
+    ],
+    "stats": {
+      "hp": 400000,
+      "atk": 12000
+    },
+    "image": "assets/cards/dagon.png",
+    "passive": {
+      "name": "Water Manipulation",
+      "description": "Burn is instantly cleansed and grants a 50% HP shield. Every 3 attacks, summon a frontline clone with 25% HP and 100% ATK.\nClone: Shark inflicts 1-turn Bleed (25% ATK) every 2 attacks; Whales stuns its killer for 2 turns; Fish survives 3 fatal hits."
+    },
+    "requiredWeather": "Raining"
+  },
+  {
+    "id": "choso",
+    "name": "Choso",
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 3850000,
+    "category": [
+      "Unhuman",
+      "Jujutsu",
+      "AntiHero",
+      "Human"
+    ],
+    "stats": {
+      "hp": 280000,
+      "atk": 32500
+    },
+    "image": "assets/cards/choso.png",
+    "passive": {
+      "name": "Blood Technique",
+      "description": "Cleanse incoming Bleed and reflect it at 50% damage (3-turn cooldown). While Bleeding, use a random attack: Pierce Blood hits 4 enemies for 120% / 90% / 60% / 30% ATK; Blood Edge grants +15% crit chance and +25% crit damage for this attack; Flowing Blood deals 120% ATK and heals 10% HP."
+    },
+    "requiredWeather": "Eclipse"
+  },
+  {
+    "id": "haruta",
+    "name": "Haruta",
+    "element": "Electric",
+    "rarity": "Mythic",
+    "chance": 0,
+    "category": [
+      "AntiHero",
+      "Jujutsu",
+      "Human"
+    ],
+    "stats": {
+      "hp": 30000,
+      "atk": 7500
+    },
+    "image": "assets/cards/haruta.png",
+    "passive": {
+      "name": "Coward",
+      "description": "Attacking the enemy with the lowest ATK grants +200% ATK for that attack. Attacking any other enemy grants 10% incoming damage reduction until the next attack. Bonuses do not stack."
+    },
+    "raidOnly": true,
+    "unlockRequirement": "raid_shibuya_haruta"
+  },
+  {
+    "id": "mechamaru",
+    "name": "Mechamaru",
+    "element": "Electric",
+    "rarity": "Secret",
+    "chance": 2800000,
+    "category": [
+      "Jujutsu",
+      "AntiHero",
+      "Army",
+      "Magician",
+      "Supporter"
+    ],
+    "stats": {
+      "hp": 380000,
+      "atk": 18000
+    },
+    "image": "assets/cards/mechamaru.png",
+    "passive": {
+      "name": "Puppet Manipulation",
+      "description": "When an ally or enemy dies permanently, summon a frontline puppet with 50% of their original HP/ATK and their passive (1 active puppet). Puppets are immune to Stun/Freeze and heal 2% HP on every attack."
+    },
+    "requiredWeather": "Reaper"
+  },
+  {
+    "id": "hanami",
+    "name": "Hanami",
+    "element": "Nature",
+    "rarity": "Mythic",
+    "chance": 1820000,
+    "category": [
+      "Unhuman",
+      "Jujutsu",
+      "Brutal",
+      "Magician"
+    ],
+    "stats": {
+      "hp": 220000,
+      "atk": 18200
+    },
+    "image": "assets/cards/hanami.png",
+    "passive": {
+      "name": "Flower Field",
+      "description": "On entry, gain a 100% HP shield; while shielded, ignore passive attacks. Every 3 attacks, 28% chance to hypnotize the target for 1 turn: 82% chance to attack their own teammate."
+    },
+    "requiredWeather": "Wind"
+  },
+  {
+    "id": "sukuna-shibuya",
+    "name": "Sukuna Shibuya",
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 9999999,
+    "category": [
+      "Jujutsu",
+      "PureEvil",
+      "Brutal",
+      "Villian",
+      "AntiVillian"
+    ],
+    "stats": {
+      "hp": 1000000,
+      "atk": 9999
+    },
+    "image": "assets/cards/sukunashibuya.png",
+    "passive": {
+      "name": "FUGA x Domain",
+      "description": "Every attack gains 1 Fuga and heals 3% HP. Once per match, a fatal hit revives this card at the frontline and opens a Fuga-turn domain dealing 9% ATK to all enemies every turn. If Fuga > 9, also strike all enemies for xFuga ATK on revival. Cannot be cloned or revived by allies."
+    },
+    "questOnly": true,
+    "unlockRequirement": "quest_sukuna-shibuya",
+    "requiredWeather": "Malevolent"
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

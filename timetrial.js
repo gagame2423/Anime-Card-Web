@@ -133,16 +133,15 @@
         if (!info) throw new Error('Không tìm thấy thông số EXP của thẻ đang luyện.');
         if (info.level < host.CardLevelSystem.MAX_LEVEL) {
         const baseRate = EXP_RATE.min + (EXP_RATE.max-EXP_RATE.min) * Math.max(0, Math.min(1, Number(random()) || 0));
-        const rate = Math.max(EXP_RATE.min,Math.min(EXP_RATE.max,baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1)));
+        const rate = baseRate * Math.max(1, Number(bridge.getExperienceMultiplier?.()) || 1);
           const exact = info.required * rate + (data.xpCarry[run.cardId] || 0);
           const rounded = Math.floor(exact), carry = exact - rounded;
-          // Integer EXP must stay inside the final range as well. Requirements
-          // are always >=150, so this integer interval is non-empty.
-          const amount = Math.max(Math.ceil(info.required*EXP_RATE.min),Math.min(Math.floor(info.required*EXP_RATE.max),rounded));
+          // The base rate is bounded; bonuses apply afterwards without a second cap.
+          const amount = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, rounded));
           const result = bridge.grantExperience?.(run.cardId, amount, run.owner);
           if (!result) throw new Error('Không thể lưu EXP. Lượt thử đã dừng để bảo vệ tiến độ.');
           data.xpCarry[run.cardId] = result.level >= host.CardLevelSystem.MAX_LEVEL ? 0 : carry;
-          run.experience += result.gained; run.progressPercent += amount / info.required * 100; run.levelUps += result.levelUps;
+          run.experience += result.gained; run.progressPercent += result.gained / info.required * 100; run.levelUps += result.levelUps;
         }
         run.monsters++;
       } else if (!isExp(battle.mode) && unit.isTrialRoomEnemy) {

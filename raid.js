@@ -4,6 +4,8 @@
   const KEY = 'anime_card_rng_raid_v1', MODE = 'raid';
   const KEY_ITEM = Object.freeze({ id: 'marine_fort_raid_key', name: 'Marine Ford Raid Key', type: 'ticket', icon: '🗝️', tier: 'epic', description: 'One Marine Ford Raid entry. 10% drop on regular 1v1 / 4v4 victories.' });
   const GRAIL_KEY=Object.freeze({id:'holy_grail_raid_key',name:'Holy Grail Raid Key',type:'ticket',icon:'🗝️',tier:'mythic',description:'One Holy Grail Raid entry. 50% drop per Fate enemy defeated in regular 1v1 / 4v4 battles.'});
+  const SHIBUYA_KEY=Object.freeze({id:'shibuya_raid_key',name:'Shibuya Raid Key',type:'ticket',icon:'🗝️',tier:'secret',description:'One Shibuya Raid entry. Gomen Event Shop: 10 Gomen Coins.'});
+  const SHIBUYA_CARDS=Object.freeze(['jogo','haruta']);
   const SECRET_IDS = Object.freeze(['raid-secret-ace', 'raid-secret-marco', 'raid-secret-mihawk']);
   const TYPES = Object.freeze({ marine_fort: Object.freeze({ name: 'Marine Ford Raid', coinName:'Marine Ford Raid Coins', keyId: KEY_ITEM.id,
     enemies: Object.freeze([
@@ -22,12 +24,18 @@
       ['saber',5000,10000,500,2000],['saber-knight',7500,15000,800,2500],['iskandar',20000,23000,1750,2500],
       ['medea',25000,50000,3500,5000],['cu-chalinn',25000,40000,7000,10000],['shirou',75000,100000,5000,7000],
       ['kiritsu',25000,40000,5000,6000],['mash',30000,50000,7500,10000],['merlin',45000,60000,12500,25000],['gilgamesh',200000,500000,50000,100000]
+    ].map(Object.freeze))}), shibuya:Object.freeze({name:'Shibuya Raid',coinName:'Shibuya Coins',keyId:SHIBUYA_KEY.id,enemies:Object.freeze([
+      ['haruta',6000,7000,600,700],['hanami',10000,12000,1000,3000],['mechamaru',60000,70000,5000,10000],
+      ['dagon',40000,100000,10000,25000],['choso',80000,200000,15000,30000],['mahito',85000,220000,18000,40000],
+      ['true-mahito',100000,300000,30000,60000],['toji',150000,300000,40000,80000],['mahoraga',250000,500000,50000,90000],
+      ['sukuna-shibuya',400000,800000,60000,90000]
     ].map(Object.freeze))}) });
   const SHOP = Object.freeze([{id:'web_string',cost:6220},{id:'cannon_ball',cost:3899}, ...['exp_potion', 'rich_potion', 'speed_potion', 'speed_battle_potion'].map(id => Object.freeze({ id, cost: id === 'speed_battle_potion' ? 50 : 25 }))]);
   const GRAIL_SHOP=Object.freeze([...SHOP.filter(offer=>!['web_string','cannon_ball'].includes(offer.id)),Object.freeze({id:'excalibur_sword',cost:80000})]);
-  const offers=type=>type==='holy_grail'?GRAIL_SHOP:validType(type)?SHOP:[];
+  const SHIBUYA_SHOP=Object.freeze([...GRAIL_SHOP.filter(offer=>offer.id!=='excalibur_sword'),Object.freeze({id:'mahito_puppet',cost:10500})]);
+  const offers=type=>type==='shibuya'?SHIBUYA_SHOP:type==='holy_grail'?GRAIL_SHOP:validType(type)?SHOP:[];
   // Archived Gomen rewards remain readable for migration, never playable as a Raid.
-  const rewardItemId=type=>({holy_grail:'excalibur_sword',gomen:'gojo_eye'})[type]||null;
+  const rewardItemId=type=>({holy_grail:'excalibur_sword',gomen:'gojo_eye',shibuya:'equipment_cursed_finger'})[type]||null;
   const excaliburChance=d=>.008+.072*(difficulty(d)-1)/999;
   const LEVEL_GROWTH = .075;
   const object = v => Boolean(v && typeof v === 'object' && !Array.isArray(v));
@@ -49,7 +57,7 @@
     if (!object(v) || v.version !== 1 || !object(v.types) || !object(v.claimedSecrets)) return false;
     if (Object.keys(v.types).some(type => !savedType(type)) || !object(v.types.marine_fort)) return false;
     for (const entry of Object.values(v.types)) if (!integer(entry.coins) || !integer(entry.wins) || !integer(entry.upgradeLevel, 0, 100) || !integer(entry.difficulty, 1, 1000)) return false;
-    if (Object.entries(v.claimedSecrets).some(([id, flag]) => !SECRET_IDS.includes(id) || typeof flag !== 'boolean')) return false;
+    if (Object.entries(v.claimedSecrets).some(([id, flag]) => ![...SECRET_IDS,...SHIBUYA_CARDS].includes(id) || typeof flag !== 'boolean')) return false;
     if (v.activeAttempt !== null && !validAttempt(v.activeAttempt)) return false;
     const p = v.pendingReward;
     if (p === null) return true;
@@ -62,6 +70,7 @@
     } else if (!integer(p.coins, range.min, range.max)) return false;
     if(p.item!==undefined && p.item!==null && (!rewardItemId(p.type)||!object(p.item)||p.item.id!==rewardItemId(p.type)||!integer(p.item.quantity,1,Math.ceil(host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER))))return false;
     if(p.type!=='marine_fort' && p.secret!==null)return false;
+    if(p.cards!==undefined && (p.type!=='shibuya'||!Array.isArray(p.cards)||p.cards.length>2||new Set(p.cards.map(c=>c?.cardId)).size!==p.cards.length||p.cards.some(c=>!object(c)||!SHIBUYA_CARDS.includes(c.cardId)||!Array.isArray(c.mutationIds)||c.mutationIds.length>2||new Set(c.mutationIds).size!==c.mutationIds.length||c.mutationIds.some(id=>!Object.hasOwn(host.MUTATION_BY_ID||{},id)))))return false;
     return p.secret === null || (object(p.secret) && SECRET_IDS.includes(p.secret.cardId) && Array.isArray(p.secret.mutationIds) && p.secret.mutationIds.length <= 2 && new Set(p.secret.mutationIds).size === p.secret.mutationIds.length && p.secret.mutationIds.every(id => typeof id === 'string' && Object.hasOwn(host.MUTATION_BY_ID || {}, id)));
   }
   function load() { try { const v = JSON.parse(host.localStorage.getItem(KEY) || 'null'); if(!validSave(v))return fresh();for(const [type,entry]of Object.entries(fresh().types))v.types[type] ||= entry;return v; } catch (_) { return fresh(); } }
@@ -69,24 +78,26 @@
   if (!data.pendingReward) data.activeAttempt = null; // Interrupted fights never refund a spent key.
   function persist() { try { host.localStorage.setItem(KEY, JSON.stringify(data)); return true; } catch (e) { console.warn('Raid save unavailable', e); return false; } }
   function requirePersist() { if (!persist()) throw new Error('Không thể lưu Raid. Thao tác chưa hoàn tất.'); }
-  function registerKey() { host.InventorySystem.registerItem(KEY_ITEM);host.InventorySystem.registerItem(GRAIL_KEY); }
+  function registerKey() { host.InventorySystem.registerItem(KEY_ITEM);host.InventorySystem.registerItem(GRAIL_KEY);host.InventorySystem.registerItem(SHIBUYA_KEY); }
   registerKey(); persist();
   function commitPending() {
     const p = data.pendingReward;
     if (!p) return null;
     if (p.secret && bridge.grantSecret?.(p.secret) !== true) throw new Error('Chưa thể lưu thẻ Raid. Phần thưởng sẽ được khôi phục ở lần tải sau.');
+    for(const card of p.cards||[])if(bridge.grantSecret?.(card)!==true)throw new Error('Chưa thể lưu thẻ Shibuya. Phần thưởng đang chờ khôi phục.');
     if(p.item&&!host.InventorySystem.grantOnce('raid_'+p.type,p.id,p.item.id,p.item.quantity))throw new Error('Chưa thể lưu vật phẩm Raid. Phần thưởng đang chờ khôi phục.');
     const previous = JSON.parse(JSON.stringify(data)), entry = data.types[p.type];
     const granted = Math.min(p.coins, Number.MAX_SAFE_INTEGER - entry.coins);
     entry.coins += granted; entry.wins = Math.min(Number.MAX_SAFE_INTEGER, entry.wins + 1);
     if (p.secret) data.claimedSecrets[p.secret.cardId] = true;
+    for(const card of p.cards||[])data.claimedSecrets[card.cardId]=true;
     data.pendingReward = null; data.activeAttempt = null;
     if (!persist()) { data = previous; throw new Error('Chưa thể lưu Raid Coins. Phần thưởng đang chờ khôi phục.'); }
-    return { won: true, coins: granted, secret: p.secret, item:p.item||null, type: p.type, difficulty: p.difficulty, dropMultiplier: p.dropMultiplier || 1 };
+    return { won: true, coins: granted, secret: p.secret, cards:p.cards||[], item:p.item||null, type: p.type, difficulty: p.difficulty, dropMultiplier: p.dropMultiplier || 1 };
   }
   function configure(options = {}) {
     bridge = options;
-    for (const id of SECRET_IDS) if (bridge.hasSecret?.(id)) data.claimedSecrets[id] = true;
+    for (const id of [...SECRET_IDS,...SHIBUYA_CARDS]) if (bridge.hasSecret?.(id)) data.claimedSecrets[id] = true;
     persist();
     if (data.pendingReward) { try { commitPending(); } catch (e) { console.warn(e.message); } }
   }
@@ -136,6 +147,12 @@
     const mutationIds = (bridge.rollMutations?.() || []).map(m => typeof m === 'string' ? m : m.id);
     return { cardId, mutationIds };
   }
+  function shibuyaChances(d){const t=(difficulty(d)-1)/999;return {jogo:.0031+.0279*t,haruta:.052+.468*t,equipment_cursed_finger:.001+.009*t};}
+  function rollShibuyaCards(d,random){
+    const chances=shibuyaChances(d),cards=[];
+    for(const cardId of SHIBUYA_CARDS)if(randomUnit(random)<chances[cardId]&&!data.claimedSecrets[cardId]&&!bridge.hasSecret?.(cardId))cards.push({cardId,mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)});
+    return cards;
+  }
   function finish(battle, won, random = Math.random) {
     const run = battle?.raid;
     if (!run || run.completed || !validType(run.type)) return null;
@@ -149,7 +166,8 @@
     const range = coinRange(run.difficulty);
     const baseCoins = range.min + Math.floor(randomUnit(random) * (range.max - range.min + 1));
     data.pendingReward = { ...data.activeAttempt, baseCoins, dropMultiplier: host.InventorySystem.getDropMultiplier(), coins: host.InventorySystem.scaleDrop(baseCoins, random), secret: run.type==='marine_fort'?rollSecret(run.difficulty, random):null };
-    if(rewardItemId(run.type))data.pendingReward.item=randomUnit(random)<excaliburChance(run.difficulty)?{id:rewardItemId(run.type),quantity:host.InventorySystem.scaleDrop(1,random)}:null;
+    if(run.type==='shibuya')data.pendingReward.cards=rollShibuyaCards(run.difficulty,random);
+    if(rewardItemId(run.type))data.pendingReward.item=randomUnit(random)<(run.type==='shibuya'?shibuyaChances(run.difficulty).equipment_cursed_finger:excaliburChance(run.difficulty))?{id:rewardItemId(run.type),quantity:host.InventorySystem.scaleDrop(1,random)}:null;
     if (!persist()) { data.pendingReward = null; throw new Error('Không thể lưu phần thưởng Raid.'); }
     const result = commitPending(); run.completed = true; return result;
   }
@@ -204,5 +222,5 @@
     button.addEventListener('click', () => { if (upgrade(type)) onChange(); else host.alert('Không thể nâng cấp đội Raid.'); }); box.append(name, text, button); grid.append(box);
   }
   function reset() { data = fresh(); registerKey(); persist(); }
-  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, GRAIL_KEY, SECRET_IDS, TYPES, SHOP, offers, rewardItemId, materialChance:excaliburChance, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, totalWins, legacyGomenProgress, renderShop, reset, flush: persist });
+  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, GRAIL_KEY, SHIBUYA_KEY, SHIBUYA_CARDS, shibuyaChances, SECRET_IDS, TYPES, SHOP, offers, rewardItemId, materialChance:excaliburChance, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, totalWins, legacyGomenProgress, renderShop, reset, flush: persist });
 })(window);

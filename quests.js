@@ -3,6 +3,17 @@
   'use strict';
   const KEY = 'anime_card_rng_quests_v1';
   const QUESTS = Object.freeze([
+    {id:'todo',steps:[
+      {kind:'battle',target:1000,teammate:'yuji-itadori',text:'Complete 1,000 battles in any mode with Yuji Itadori in the starting team.'},
+      {kind:'battle',target:1000,mode:'raid',raidType:'shibuya',won:true,minDifficulty:11,teammate:'yuji-itadori',text:'Win 1,000 Shibuya Raids at difficulty > 10 with Yuji Itadori.'},
+      {kind:'battle',target:1000,mode:'1v1',won:true,weather:'raining',teammate:'yuji-itadori',text:'Win 1,000 regular 1v1 battles with Yuji Itadori during Raining weather.'}
+    ]},
+    {id:'sukuna-shibuya',steps:[
+      {kind:'battle',target:10000,mode:'raid',raidType:'shibuya',won:true,minDifficulty:101,text:'Win 10,000 Shibuya Raids at difficulty > 100.'},
+      {kind:'battle',target:1000,mode:'raid',raidType:'shibuya',won:true,minDifficulty:101,weather:'malevolent',text:'Win 1,000 Shibuya Raids at difficulty > 100 during Malevolent weather.'},
+      {kind:'roll',target:66666,weather:'malevolent',text:'Roll 66,666 times during Malevolent weather.'},
+      {kind:'roll',target:1,card:'weather-malevolent-king',mutation:'cursed',text:'Roll Malevolent King with Cursed, including double mutations.'}
+    ]},
     {id:'toji',steps:[
       {kind:'battle',target:888,mode:'boss-event',event:'gomen',won:true,minDifficulty:9,text:'Win 888 Gomen Boss Events at difficulty > 8.'},
       {kind:'roll',target:88888,weather:'malevolent',text:'Roll 88,888 times during Malevolent weather.'},

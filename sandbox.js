@@ -107,6 +107,7 @@
     return {card:native,display:{name:`${mutations.map(m=>`[${m.name}] `).join('')}${native.name}`,image:native.image,hp,atk},level:config.level,mutations,hp,maxHp:hp,atk,defeated:false,side,sandboxAllowZeroAttack:true};
   }
   function renderCombat() {
+    host.BattleWeatherHud?.render();
     if(!battle || !engine)return;
     for(const side of ['player','enemy']){
       const root=el(side==='player'?'sandboxPlayerCombat':'sandboxEnemyCombat');if (!root) continue;root.replaceChildren();
@@ -135,7 +136,7 @@
         isWeatherActive:name => { const key = String(name).toLowerCase(); return (host.WEATHERS || []).some(w => (w.id === key || w.name.toLowerCase() === key) && weatherIds.has(w.id)); }
         // No reward, quest, ownership, weather-write or save callbacks.
       });
-      battle = {mode:'sandbox',sandbox:true,playerTeam:setup.player.map(c=>unit(c,'player')),enemyTeam:setup.enemy.map(c=>unit(c,'enemy')),turn:'player',playerIndex:0,enemyIndex:0,finished:false,championChoices:{aqua:el('sandboxAquaMode')?.value || 'hp'},startedAt:Date.now()};
+      battle = {mode:'sandbox',sandbox:true,weatherIds:[...weatherIds],playerTeam:setup.player.map(c=>unit(c,'player')),enemyTeam:setup.enemy.map(c=>unit(c,'enemy')),turn:'player',playerIndex:0,enemyIndex:0,finished:false,championChoices:{aqua:el('sandboxAquaMode')?.value || 'hp'},startedAt:Date.now()};
       engine.beginBattle(battle);
       const winner = engine.checkBattleWinner(battle);
       if (winner) { battle.finished = true; battle.outcome = winner === 'player' ? 'PLAYER WINS' : 'OPPONENT WINS'; }
@@ -163,7 +164,7 @@
     stopTimer(); active = false; paused = false; battle = null; engine = null;
     const modal = el('sandboxModal'); if (modal) { modal.hidden = true; modal.classList.add('hidden'); modal.style.setProperty('display','none','important'); }
     for (const id of ['sandboxPlayerCombat','sandboxEnemyCombat','sandboxLog']) el(id)?.replaceChildren();
-    try { bridge.onExit?.(); } catch (error) { fail('Could not restore Arena: ' + error.message, error); }
+    try { bridge.onExit?.();host.BattleWeatherHud?.render(); } catch (error) { fail('Could not restore Arena: ' + error.message, error); }
     el('sandboxOpenButton')?.focus({preventScroll:true});
   }
   function open() {
@@ -225,5 +226,5 @@
     el('sandboxOpenButton').disabled = false;
     host.GameStartup?.clear('sandbox-ui'); host.GameStartup?.clear('startup:SandboxSystem'); return true;
   }
-  host.SandboxSystem = Object.freeze({configure,open,exit,start,get active(){return active;},get ready(){return initialized;}});
+  host.SandboxSystem = Object.freeze({configure,open,exit,start,get active(){return active;},get weatherSnapshot(){return active?{active:Boolean(battle&&!battle.finished),sandbox:true,seconds:0,weathers:(battle?.weatherIds||[]).map(id=>host.WEATHERS.find(w=>w.id===id)).filter(Boolean)}:null;},get ready(){return initialized;}});
 })(window);

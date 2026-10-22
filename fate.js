@@ -139,7 +139,7 @@
     }
     const FOLLOW_IDS=new Set(['jotaro-kujo','denji','kamen-rider-kabuto','uchiha-itachi','uchiha-sasuke','weather-shadow-monarch','yuno','kiritsu','boss-event-alucard','alexander-anderson','madara-lubu','speed-wizard','tower-champion-bizare','tower-champion-shadow-200','tower-champion-heavenly-200','merlin','iskandar']);
     const hasFollowUp=unit=>api.hasExtraFollowUp(unit)||api.passiveIds(unit).some(key=>FOLLOW_IDS.has(key));
-    const followChance=(bs,unit,chance)=>!api.canFollow(unit)?0:Math.min(1,chance+(boon(bs,unit)==='dagger'?.10:0));
+    const followChance=(bs,unit,chance)=>!api.canFollow(unit)?0:Math.min(1,chance+(boon(bs,unit)==='dagger'?.10:0)+(api.followBonus?.(bs,unit,chance)||0));
     function guardian(bs,target,meta={}){return !meta.fateAbsorb&&!meta.dot?allies(bs,target,false).find(owner=>has(owner,'mash')):null;}
     function redirect(bs,source,target,amount,meta){
       if(!(amount>0))return amount;const owner=guardian(bs,target,meta);if(!owner)return amount;
