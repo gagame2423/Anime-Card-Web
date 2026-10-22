@@ -1034,7 +1034,7 @@ function loadState() {
 }
 
 function saveState(canonicalOwnership = false) {
-  if (isImportingSave || window.SandboxSystem?.active || window.EquipmentSystem?.blocked) return false;
+  if (isImportingSave || window.SandboxSystem?.active || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked) return false;
   try {
     // Rolls already update all three canonical ownership stores together.
     if (!canonicalOwnership) syncOwnershipRecords();
@@ -2509,6 +2509,8 @@ function renderPreview() {
   if (els.previewLevel) els.previewLevel.textContent = `Lv. ${levelInfo.level}`;
   if (els.previewExpText) els.previewExpText.textContent = levelInfo.maxed ? "MAX LEVEL" : `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP`;
   if (els.previewExpBar) els.previewExpBar.style.width = `${Math.round(levelInfo.progress * 100)}%`;
+  const feedButton=document.getElementById('previewFeedButton');
+  if(feedButton)feedButton.disabled=levelInfo.maxed||!canEvolveNow();
   if (els.previewSalvageButton) els.previewSalvageButton.disabled = variant.count <= 0;
   if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = !getPreviewVariants(card.id).some(entry => entry.count > 1);
   els.previewName.textContent = display.name;
@@ -4365,8 +4367,8 @@ function finishTimeTrialBattle(won, reason = '') {
   refreshAchievements(); saveState(); updateStats(); renderCollection(); renderTimeTrialControls();
   const body = document.getElementById('timeTrialSummary');
   body.textContent = summary.exp
-    ? `EXP Monsters Defeated: ${summary.monsters}\nTotal EXP Gained: +${summary.progressPercent.toFixed(2)}% Level Progress\n+${summary.experience.toLocaleString('en-US')} whole EXP • ${summary.levelUps} level-ups\nNo Shards • No VNĐ • No items`
-    : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • No item drops`;
+    ? `EXP Monsters Defeated: ${summary.monsters}\nTotal EXP Gained: +${summary.progressPercent.toFixed(2)}% Level Progress\n+${summary.experience.toLocaleString('en-US')} whole EXP • ${summary.levelUps} level-ups\nNo Shards • No VNĐ • Victory: 1–3 Bread`
+    : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • Victory: 1–3 Bread`;
   body.classList.remove('hidden');
   document.getElementById('timeTrialResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '🏆 TIME TRIAL COMPLETE' : '⏱ TIME TRIAL ENDED';
@@ -4537,7 +4539,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.SettingsSystem.KEY, window.EquipmentSystem.KEY, window.SpookySystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
+  return [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.ExpFoodSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.SettingsSystem.KEY, window.EquipmentSystem.KEY, window.SpookySystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4545,7 +4547,7 @@ function setSaveTransferStatus(message, failed = false) {
 }
 function buildGameSaveExport() {
   syncGameClockToNow(); refreshAchievements(); window.InventorySystem?.tick();
-  if (![window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.EquipmentSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush(),window.SpookySystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
+  if (![window.ExpFoodSystem.flush(), window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.EquipmentSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush(),window.SpookySystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
   if (!saveState()) throw new Error('Your progress could not be saved. Please try again.');
   const storage = {};
   for (const key of getGameSaveKeys()) {
@@ -4576,6 +4578,7 @@ function validateSaveRecord(key, value) {
   const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
   const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
   if ([window.BackgroundActivitySystem.VOLUME_KEY, window.DropAudioSystem.VOLUME_KEY].includes(key)) { ensure(typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1, 'Audio volume must be between 0 and 1.'); return value; }
+  if(key===window.ExpFoodSystem.KEY){ensure(window.ExpFoodSystem.validSave(value),'unfinished or invalid feeding transaction.');return value;}
   if(key===window.SettingsSystem.KEY){ensure(window.SettingsSystem.validSave(value),'invalid Luck / Speed Up settings.');return value;}
   if (key === AUTO_CONTINUE_STORAGE_KEY || key === (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card') || key === window.BackgroundActivitySystem.MUSIC_KEY || key === window.DropAudioSystem.KEY || key === window.PotionHudSystem.KEY) { ensure(typeof value === 'boolean', 'Auto Continue must be a boolean.'); return value; }
   ensure(object(value), 'expected a JSON object.');
@@ -4732,7 +4735,7 @@ async function importGameSave(input) {
 }
 
 // Evolution changes a cloned save first; no live ownership changes before commit.
-function canEvolveNow() { return !window.EquipmentSystem?.blocked && !window.SandboxSystem?.active && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
+function canEvolveNow() { return !window.ExpFoodSystem?.blocked && !window.EquipmentSystem?.blocked && !window.SandboxSystem?.active && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
 function prepareEquipmentCraft(recipe, selected) {
   if(!canEvolveNow()||state.currency<recipe.cost)throw Error('Finish the current battle or check VNĐ.');
   if(!saveState()||!window.InventorySystem.flush())throw Error('Unable to save before crafting.');
@@ -4862,6 +4865,8 @@ function renderAchievements() {
 // Quest progress receives only fresh, completed gameplay events.
 function recordQuestBattleCompletion(battle) {
   if (battle?.sandbox || battle?.mode === 'sandbox' || window.SandboxSystem?.active) return;
+  const bread=window.ExpFoodSystem.rewardVictory(battle);
+  if(bread)appendBattleLog(`Bread +${bread} · EXP Food in Storage.`, 'victory');
   if (!battle?.questContext || battle.questCompletionRecorded || ['surrender', 'aborted'].includes(battle.outcome)) return;
   battle.questCompletionRecorded = true;
   window.QuestSystem.record('battle', { ...battle.questContext, won: battle.questResultWon ?? (battle.outcome === 'victory'), room: battle.trial?.room, teamElements: battle.questContext.teamElements });
@@ -5133,7 +5138,7 @@ function resetGame() {
   try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
   renderAutoContinueBattleToggle();
   returnToLobby();
-  window.InventorySystem?.reset(); window.SpookySystem?.reset(); window.EquipmentSystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.();
+  window.InventorySystem?.reset(); window.ExpFoodSystem?.reset(); window.SpookySystem?.reset(); window.EquipmentSystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.();
 
   clearCooldownExpiryTimer();
   clearBattleTurnTimer();
@@ -5608,6 +5613,24 @@ window.SettingsSystem.configure({maxBaseLuck:getMaximumBaseLuck,totalLuck:getLuc
 }});
 window.InventorySystem.configure({ getDropMultiplier: () => (window.AchievementSystem?.getDropMultiplier(state.achievementRewardReceipts) || 1) + (window.QuestsSystem?.bonus('drop') || 0) + (window.EquipmentSystem?.bonuses().drop || 0) });
 window.EquipmentSystem.configure({canAct:canEvolveNow,money:()=>state.currency,variants:getVariantEntries,prepare:prepareEquipmentCraft,onCommit:onEvolutionCommitted,onChange:()=>{updateStats();renderUpgradeShop();renderClockAndWeather(true);renderPotionInventory();},onBlocked:()=>{isAutoRolling=false;clearCooldownExpiryTimer();window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover your pending equipment craft.');}});
+window.ExpFoodSystem.configure({
+  canAct:canEvolveNow, expMultiplier:()=>getExpMultiplier('all'),
+  describe:id=>{const card=getCardById(id);return card&&isCardOwned(id)?{...getCardLevelInfo(id),name:card.name,image:card.image}:null;},
+  open:()=>openModal('feedFoodModal'),
+  prepare:(id,rows,amount)=>{
+    if(!canEvolveNow()||!isCardOwned(id)||getCardLevelInfo(id).maxed)throw Error('Choose an owned card below Lvl 1000.');
+    if(!saveState()||!window.InventorySystem.flush())throw Error('Unable to save current progress.');
+    const mainBefore=localStorage.getItem(STORAGE_KEY),itemsBefore=localStorage.getItem(window.InventorySystem.KEY);
+    const main=JSON.parse(mainBefore),items=JSON.parse(itemsBefore),card=getCardById(id);
+    for(const row of rows){if(!(items.items[row.id]?.quantity>=row.quantity))throw Error('Not enough EXP Food.');items.items[row.id].quantity-=row.quantity;}
+    main.cardProgress ||= {};const progress=main.cardProgress[id] ||= {level:1,exp:0};
+    const result=window.CardLevelSystem.grant(progress,card,amount);if(!result.gained)throw Error('No EXP can be gained.');
+    main.experience=Math.min(Number.MAX_SAFE_INTEGER,(Number(main.experience)||0)+result.gained);
+    return{mainBefore,itemsBefore,mainAfter:JSON.stringify(main),itemsAfter:JSON.stringify(items),result};
+  },
+  onCommit:()=>{state=loadState();window.RollPerformanceSystem?.invalidateOwnership();syncOwnershipRecords();updateStats();renderPreview();renderCollection();renderAvailableCards();renderPotionInventory();}
+});
+document.getElementById('previewFeedButton')?.addEventListener('click',()=>{if(previewSelection)window.ExpFoodSystem.open(previewSelection.cardId);});
 window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!window.SandboxSystem?.active&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished&&!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}});
 window.CraftingSystem.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 window.QuestsSystem.mount(document.getElementById('questModal'));

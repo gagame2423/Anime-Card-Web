@@ -27,10 +27,7 @@
       }
     }
     function resizeMyers(unit,c){
-      c.baseHp ||= Math.max(1,unit.maxHp-c.hpAdded);
-      const wanted=Math.round(Math.min(LIMIT,c.baseHp*c.stalkHp)),delta=wanted-c.hpAdded;c.hpAdded=wanted;
-      unit.maxHp=Math.max(1,Math.min(LIMIT,unit.maxHp+delta));
-      unit.hp=delta>0?Math.min(unit.maxHp,unit.hp+delta):Math.min(unit.maxHp,unit.hp);refresh(unit);
+      api.setHpBonus(unit,'myers-stalking',c.stalkHp);refresh(unit);
     }
     function startTurn(bs,actor,side){
       for(const owner of all(bs))if(alive(owner)&&has(owner,'myers')&&owner!==actor&&(bs.playerTeam.includes(owner)?'player':'enemy')===side){const c=state(owner,'myers');c.stalkAtk=Math.min(LIMIT,c.stalkAtk+.06);c.stalkHp=Math.min(LIMIT,c.stalkHp+.03);resizeMyers(owner,c);}

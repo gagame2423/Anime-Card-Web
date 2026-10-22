@@ -6,7 +6,7 @@
   const text=(node,value)=>{if(node&&node.textContent!==String(value))node.textContent=String(value);};
   const make=(tag,className='',value)=>{const n=host.document.createElement(tag);n.className=className;if(value!==undefined)n.textContent=value;return n;};
   const format=value=>Number(value||0).toLocaleString('en-US');
-  function category(item){return item.type==='equipment'||item.type==='gear'?'equipment':['ticket','portal','key'].includes(item.type)?'portals':'items';}
+  function category(item){return item.type==='exp_food'?'exp_food':item.type==='equipment'||item.type==='gear'?'equipment':['ticket','portal','key'].includes(item.type)?'portals':'items';}
   function visual(item){
     const root=make('div','storage-item-art'),fallback=make('span','',item.name.split(/\s+/).map(s=>s[0]).slice(0,3).join(''));
     const potion=host.InventorySystem.POTIONS[item.id];
@@ -36,6 +36,8 @@
       for(const row of pool){const card=host.ALL_CARDS.find(card=>card.id===row.cardId);result.push(`${card?.name||row.cardId}: weight ${row.weight} → ${(row.chance*100).toFixed(4)}%.`);}
       if(!pool.some(row=>row.cardId==='tower-champion-heavenly'))result.push('The Judgement locked: complete Heavenly Tower Floor 100. Eligible weights are normalized.');
     }
+    if(id==='bread')result.push('Win any real battle mode: 1–3 Bread per victory. Sandbox excluded. Feed from an owned card’s details → Feed.');
+    if(item?.type==='exp_food')result.push('EXP gained = total base Food EXP × Player EXP Multiplier; capped at Lvl 1000. Feed from card details.');
     if(!result.length)result.push(item?.metadata?.source||'No acquisition source is currently registered for this item.');
     return result;
   }

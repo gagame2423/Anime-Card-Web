@@ -1226,7 +1226,7 @@ const CARDS = [
     stats: { hp: 8200, atk: 4100 },
     passive: {
       name: "Ascension",
-      description: "Perfect-roll affinity. This passive currently grants no additional HP or ATK."
+      description: "When targeted by a passive attack, copies the attacker’s passive for 3 turns, then loses it. Cooldown: 5 turns after the copy expires."
     },
     image: "assets/cards/adamror.png"
   },

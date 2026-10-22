@@ -1,72 +1,98 @@
-NHẬT KÝ SỬA QUYỀN TOWER VÀ GIỚI HẠN TRIỆU HỒI — 22/10/2026
-Phiên bản: 20261022-tower-summon-1
+NHẬT KÝ CẬP NHẬT — CỘNG BUFF, EXP FOOD VÀ FEED
+Ngày phát hành: 22/10/2026
 
-1. QUYỀN VÀO TOWER CỦA THẺ TIẾN HÓA
+1. SỬA CÁCH CỘNG BONUS CHỈ SỐ NỘI TẠI
 
-- Bổ sung evolvesFrom cho đủ 8 thẻ tiến hóa. EvolutionSystem cung cấp getBaseCardId và eligibilityLineage để tra nguồn gốc thống nhất; có cache và chặn vòng lặp nguồn gốc.
-- Bộ lọc thẻ, bộ chọn mutation và kiểm tra lúc Start Battle đều dùng cùng một phép kiểm tra: thẻ tiến hóa kế thừa quyền Tower của thẻ gốc, đồng thời biến thể đang triển khai vẫn được xét single/double mutation như trước.
-- Không yêu cầu còn sở hữu bản thẻ gốc đã dùng để tiến hóa. Chỉ bản thẻ tiến hóa/biến thể thực sự đang sở hữu mới được triển khai.
-- Không sao chép HP, ATK, Element, Category hoặc điều kiện roll của thẻ gốc sang thẻ tiến hóa. Không thay đổi thuật toán chọn địch Tower hay đội hình địch đã khóa.
+Thêm combat_stats.js để lưu mốc HP và ATK riêng cho từng đơn vị trong từng trận. Mốc này lấy từ chỉ số khi bắt đầu trận, sau level, mutation và thiết lập chỉ số của chế độ. Bonus % của nội tại được cộng vào cùng mốc, không tiếp tục nhân trên chỉ số đã được buff.
 
-Đối chiếu toàn bộ nhánh:
-- True Mahito <- Mahito: kế thừa Eclipse Tower (Eclipsed).
-- Gojo Revice <- Gojo Young: kế thừa Heavenly Tower.
-- Awakened Doflamingo <- Doflamingo: kế thừa Malevolent Tower.
-- Sea Goddess Valkyrie <- Noelle Silva: kế thừa Raining Tower.
-- Jason 13th <- The Trapper: kế thừa quyền của The Trapper.
-- Saber Knight <- Saber: kế thừa quyền của Saber.
-- Yuno Spirit <- Yuno: kế thừa quyền của Yuno.
-- Prime Garp <- Garp: kế thừa quyền của Garp.
+Công thức:
+HP tối đa = làm tròn[HP mốc x (1 + tổng bonus HP)] + HP cộng thẳng.
+ATK = ATK mốc x (1 + tổng bonus ATK) + ATK cộng thẳng.
 
-Mahito giữ nguyên weather Eclipsed theo thông số đã đính chính. Không bổ sung quyền Malevolent cho biến thể Normal của Mahito/True Mahito. Biến thể có mutation phù hợp vẫn được vào Weather Tower tương ứng theo luật chung. Các nhánh gốc Normal không tự được vào mọi Weather Tower khi không có mutation phù hợp.
+Ví dụ: HP mốc 100, Wish +150% HP, Aqua +50% HP cho kết quả 100 x (1 + 1,5 + 0,5) = 300 HP; không còn thành 375 HP.
 
-2. GIỚI HẠN SUMMON/CLONE THEO ĐỘI HÌNH THỰC
+Các bonus cộng thẳng, như ATK lấy từ đối thủ hoặc HP hấp thụ của đồng đội đã ngã xuống, được giữ riêng. Chúng không trở thành mốc để nhân thêm mọi bonus % về sau. Hệ số sát thương của chiêu, chí mạng và khắc chế nguyên tố vẫn thuộc bước tính sát thương.
 
-- Thêm companions.js, chỉ giữ trạng thái trong trận. Mọi đường tạo clone, summon, puppet, robot hoặc chuyển hóa địch đều phải qua kiểm tra trước khi thêm đơn vị vào hàng đợi.
-- Đếm đơn vị còn sống trên sân: HP > 0, chưa defeated, còn nằm trong đội hình, đúng chủ sở hữu và cơ chế tạo. Không dựa vào độ dài cache clones của nội tại. Đổi/đánh cắp nội tại hoặc xóa cache không làm mất số đơn vị đã tạo.
-- Giữ riêng giới hạn số đơn vị đang sống và số lần tạo trong cả trận. Đơn vị đã chết không chiếm ô đang sống; giới hạn cả trận không được làm mới do thay nội tại.
+Đã cập nhật các đường tăng HP/ATK dùng chung, bao gồm buff đồng đội, tăng chỉ số sau khi hạ địch, bonus hồi sinh và các hiệu ứng của thẻ mới. Các bonus theo nguồn như Haki, First Strike, ngưỡng HP thấp, Storm Susano, Sweet Destruction, dạng kẹo và Systems Stats được quản lý riêng để tránh ghi đè lẫn nhau.
 
-Các giới hạn được thực thi:
-- Kamen Rider Dark Decade: tối đa 2 summon còn sống do thẻ đó tạo, tính cả summon từ nội tại đã đánh cắp. Đơn vị chuyển hóa vẫn đứng ngay trước Dark Decade. Nội tại Dark Aurora được sao chép cũng giữ giới hạn 2 đơn vị chuyển hóa riêng của nó.
-- Alucard: tối đa 3 Hermes Clone còn sống trên mỗi chủ sở hữu.
-- Funny Valentine: tối đa 10 D4C Clone còn sống trên mỗi chủ sở hữu.
-- Reagan Ridley: tối đa 10 robot còn sống trong cùng một đội; nhiều Reagan không nhân giới hạn đội lên.
-- Mechamaru: tối đa 1 puppet còn sống trên mỗi chủ sở hữu.
-- Madara Lubu: tối đa 3 Divine Steed Clone còn sống và tối đa 3 lần tạo trong trận, giữ kích hoạt last-stand một lần.
-- Iskandar: tối đa 3 đơn vị chuyển hóa trong trận, đồng thời không vượt 3 đơn vị còn sống do cơ chế này tạo.
+Bonus tạm thời hết hạn chỉ gỡ đúng nguồn của nó. Làm mới +20% HP/ATK của Android 21 không tiếp tục tăng chỉ số và vẫn hết hạn đúng sau khi làm mới. Myers thay đổi lượng HP từ Stalking dựa trên mốc cố định, không nhân lại HP đã buff. Khi đổi bộ chỉ số qua hồi sinh sao chép, mốc được khởi tạo lại cho bộ chỉ số mới. Tăng level trong trận điều chỉnh mốc thay vì nhân lại từng bonus một lần nữa.
 
-- Các cơ chế vốn không có giới hạn số lượng trong thông số của gói nguồn vẫn giữ luật đó: Dagon, True Mahito, Naruto Clone, Ghost, Ito Clone, Shadow của Sung Jin Woo, Igris, Metal Cooler và Jin Mori. Chúng vẫn đi qua bộ kiểm tra chung và quy tắc chống đệ quy; không áp thêm trần số lượng tùy ý.
-- Clone/summon không thể tiếp tục tạo clone/summon. Các thẻ cấm clone/hồi sinh vẫn bị loại khỏi nguồn triệu hồi như trước.
-- Geto Young không sinh đơn vị trên sân: Summon Technique là ba đòn kỹ năng thay thế. Các đòn này được giữ nguyên, không bị tính nhầm thành summon.
-- Spooky passives không có đường tạo đơn vị riêng; nội tại mượn/đánh cắp dùng chung bộ kiểm tra tại engine.
+2. EXP FOOD VÀ NGUỒN NHẬN
 
-3. KIỂM TRA CÁC NỘI TẠI HỒI SINH
+Storage có tab EXP Food riêng, tiếp tục giữ Items, Portals và Equipment.
 
-- Dark Decade chỉ hồi sinh đồng đội gốc, không hồi sinh clone/summon; tối đa 2 lần trên mỗi đồng đội trong trận. Các đồng đội gốc hồi sinh không bị tính nhầm thành summon.
-- Dante và Josuke giữ giới hạn hồi sinh đồng đội một lần mỗi chủ sở hữu/trận. Bộ đếm nằm độc lập với cache nội tại để không được làm mới khi nội tại thay đổi.
-- Dante không chọn clone/summon để hồi sinh vượt giới hạn sân. Khi hồi sinh đồng đội gốc, cập nhật trạng thái xử lý cái chết để các lần chết hợp lệ tiếp theo được xử lý đúng.
-- Các lần tự hồi sinh giữ nguyên cơ chế hiện có; không tạo thêm một ô thẻ mới.
+Spooky Candy
+- Mã vật phẩm: spooky_candy.
+- EXP gốc: 1.000 mỗi món.
+- Giá: 100 Spooky Coins tại Spooky Shop.
+- Ảnh: assets/items/spcandy.png.
 
-4. KIỂM TRA VÀ PHẠM VI BẢN SỬA
+Bread
+- Mã vật phẩm: bread.
+- EXP gốc: 25 mỗi món.
+- Thắng một trận thật nhận ngẫu nhiên 1, 2 hoặc 3 Bread với xác suất bằng nhau.
+- Áp dụng cho 1v1, 4v4, Tower, Normal Time Trial, EXP Time Trial, Raid, Boss Event và từng trận thắng trong Spooky Hunt.
+- EXP Time Trial nhận Bread khi lượt thử kết thúc với kết quả thắng; không nhận thêm Bread cho từng EXP Monster.
+- Thua, bỏ trận và Sandbox không nhận Bread. Gọi xử lý lại cùng kết quả không cộng lại vật phẩm.
+- Số lượng Bread được giữ đúng khoảng 1–3, không nhân thêm Drop Multiplier.
+- Ảnh: assets/items/bread.png.
 
-- Kiểm tra 8 nhánh tiến hóa với Normal, các Weather Tower và nhiều single/double mutation; triển khai thực tế 4 True Mahito vào Eclipse và 4 Gojo Revice vào Heavenly.
-- Thử Dark Decade hạ nhiều địch, mất summon rồi tạo thay thế và đánh cắp Dagon; không vượt 2 summon đang sống.
-- Thử xóa cache D4C/Alucard, nhiều Reagan cùng đội, reset cache Mechamaru và giới hạn hồi sinh độc lập với cache.
-- Chạy 185 trận giả lập, 2.960 lượt; kiểm tra giới hạn sân trong 238.336 lượt đối chiếu. Không phát hiện lỗi runtime hoặc HP/ATK không hữu hạn trong các kiểm tra này.
-- Kiểm tra cú pháp đủ 39 module JavaScript, đăng ký nội tại của 167 thẻ và roundtrip save .acrsave.
-- Giữ nguyên yêu cầu EXP lên cấp, công thức chỉ số theo level và EXP Time Trial gốc 0,1%–1,5% không nhân EXP Multiplier. Không thay đổi dữ liệu tiến trình hoặc reset level.
+Thức ăn nằm trong Storage; nhận thức ăn không tự tăng EXP cho thẻ. Các chế độ vốn không cho EXP trực tiếp vẫn giữ quy tắc đó. Bread là phần thưởng vật phẩm bổ sung của bản cập nhật này.
 
-Modified Files Note
+3. GIAO DIỆN FEED XP FOOD
 
-- companions.js: Tạo mới bộ kiểm tra summon/clone và ngân sách hồi sinh theo trận, độc lập với cache nội tại.
-- cards.js: Thuộc tính evolvesFrom cho 8 thẻ tiến hóa; mô tả rõ giới hạn 2 summon của Dark Decade.
-- evolution.js: Tra cứu cha và chuỗi nguồn gốc có cache, dùng chung cho quyền triển khai.
-- tower.js: Kế thừa quyền Tower khi lọc thẻ/biến thể và kiểm tra triển khai; bổ sung giải thích trong hint.
-- passives.js: Nối toàn bộ đường tạo đơn vị với bộ kiểm tra sân; củng cố các giới hạn hồi sinh.
-- reagan.js: Kiểm tra robot theo giới hạn chung 10 đơn vị còn sống trong đội.
-- shibuya.js: Kiểm tra quyền tạo đơn vị trước khi triệu hồi Dagon/puppet/đơn vị chuyển hóa.
-- index.html: Nạp companions.js trước engine; cập nhật mã phiên bản URL script/style.
-- startup.js: Chẩn đoán thiếu companions.js khi tải bản cập nhật không đầy đủ.
-- README.txt: Changelog riêng của bản sửa này và danh sách tệp thay đổi.
+Mở một thẻ đã sở hữu trong Index/chi tiết thẻ và chọn Feed ngay dưới các nút Salvage.
 
-Gói đầy đủ gồm 43 tệp nguồn: 39 JavaScript, index.html, styles.css, passives.css và README.txt. Không kèm Excel, test runner, log kiểm thử hoặc ảnh/âm thanh nhị phân.
+- Bên trái hiển thị ảnh, tên, EXP và level đúng dạng Lvl [level]/1000.
+- Bên phải hiển thị các EXP Food đang có, số lượng và ô nhập số món muốn dùng.
+- Add All chọn toàn bộ thức ăn hiện có; Remove All bỏ toàn bộ lựa chọn.
+- Khung “These items will be used!” xem trước các món đã chọn và EXP dự kiến.
+- Feed xác nhận sử dụng; Cancel đóng hộp thoại.
+- Không có dòng hướng dẫn về vượt giới hạn level.
+
+Công thức EXP Food:
+EXP nhận = phần nguyên[(1.000 x số Spooky Candy + 25 x số Bread) x EXP Multiplier hiện tại của người chơi].
+
+EXP Multiplier được đọc lại khi Feed, gồm các nguồn EXP có hiệu lực cho hoạt động ngoài Arena. Chỉ nhân một lần trên tổng EXP gốc của thức ăn. Ví dụ ở x2, dùng 1 Spooky Candy và 2 Bread cho (1.000 + 2 x 25) x 2 = 2.100 EXP.
+
+Không cho Feed thẻ chưa sở hữu, đang ở Lvl 1000, trong trận chiến hoặc trong Sandbox. Không trừ thức ăn khi kiểm tra thất bại. Level được giới hạn tại 1000 theo hệ thống hiện có; thức ăn đã xác nhận dùng được tiêu theo số lượng người chơi chọn.
+
+Giao dịch lưu đồng thời bản trước/sau của EXP và kho thức ăn. Nếu ghi save bị lỗi, game khôi phục cả hai; nếu trang đóng giữa giao dịch, game phục hồi bản trước khi tải tiến độ. Nhật ký giao dịch được đưa vào gói .acrsave; save cũ chưa có dữ liệu EXP Food vẫn nhập được.
+
+Công thức yêu cầu EXP và tăng chỉ số theo level không thay đổi. EXP Time Trial vẫn dùng mức gốc 0,1%–1,5% và không áp dụng EXP Multiplier; đây là cơ chế riêng với EXP Food. Normal Time Trial giữ 2 giây/lượt, EXP Time Trial giữ 1 giây/lượt.
+
+4. SỬA CHI TIẾT THẺ TRÊN MOBILE
+
+Chi tiết thẻ chuyển thành bố cục dọc trên màn hình nhỏ. Khung ảnh có chiều cao ổn định; phần level, mutation và các nút thao tác nằm trong vùng cuộn, không chồng lên ảnh hoặc lên nhau. Nút Salvage và Feed đủ chiều cao để thao tác cảm ứng. Feed XP Food cũng xếp dọc trên mobile và giữ Feed/Cancel trong vùng thao tác phía dưới.
+
+5. LÀM LẠI THE FIRST HUMAN — ASCENSION
+
+Khi bị tấn công bằng đòn nội tại, The First Human sao chép nội tại của kẻ tấn công trong 3 lượt trận. Hết thời hạn, bản sao bị gỡ. Sau khi bản sao hết hạn, chờ 5 lượt trận trước khi có thể sao chép tiếp. Đòn thường và sát thương theo thời gian từ Burn/Bleed không kích hoạt khả năng này.
+
+Bản sao sử dụng hệ thống thực thi nội tại có sẵn. Những bản sao phụ được tạo bởi nội tại mượn cũng bị gỡ khi hết hạn; các nội tại đã có từ trước được giữ nguyên. Bonus chỉ số nội tại tạm thời thuộc bản sao bị gỡ theo nguồn. Trạng thái chỉ tồn tại trong trận và tách biệt giữa Arena với Sandbox.
+
+6. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
+
+Tệp mới:
+- combat_stats.js: mốc chỉ số, tổng bonus %, bonus theo nguồn và bonus cộng thẳng; dữ liệu WeakMap riêng theo bộ mô phỏng.
+- exp_food.js: định nghĩa thức ăn, thưởng Bread, giao dịch Feed có phục hồi và giao diện Feed XP Food.
+
+Tệp đã sửa:
+- app.js: nối nút Feed, chuẩn bị/cập nhật tiến độ sau Feed, thưởng Bread từ kết quả trận thật và tích hợp kho giao dịch vào export/import/reset.
+- cards.js: mô tả Ascension của The First Human.
+- passives.js: cộng bonus theo mốc; quản lý gỡ bonus tạm, tăng level/hồi sinh và vòng đời nội tại sao chép của First Human.
+- spooky_passives.js: tính HP Stalking của Myers qua nguồn bonus riêng.
+- grimoire.js: khởi tạo lại mốc chỉ số khi Julius dùng backup life.
+- requiem.js: giữ HP hấp thụ của Xtreme Chan dưới dạng HP cộng thẳng.
+- spooky.js: thêm Spooky Candy giá 100 Spooky Coins.
+- storage.js: lọc tab EXP Food và thông tin nguồn nhận/cách sử dụng.
+- index.html: nút Feed, modal thức ăn, tab Storage, thứ tự nạp module và mã phiên bản tệp mới.
+- styles.css: giao diện Feed và bố cục chi tiết thẻ thích ứng desktop/mobile.
+- startup.js: kiểm tra các module mới khi khởi động.
+- README.txt: chỉ ghi thay đổi của bản phát hành này.
+
+7. KIỂM TRA VÀ TỆP BÀN GIAO
+
+Đã kiểm tra cú pháp JavaScript, khởi động qua đường dẫn thư mục con tương tự GitHub Pages, cộng Wish/Aqua, làm mới/hết hạn bonus, Feed với EXP Multiplier, chặn Feed Lvl 1000, khôi phục lỗi ghi save, vòng đời sao chép First Human và vòng nhận Bread trong tám nhánh chế độ. Đã chạy 167 thẻ qua hơn 3.000 lượt mô phỏng và kiểm tra giao diện ở chiều rộng 320px, 390px và desktop.
+
+Gói bàn giao chứa đầy đủ nguồn game và README.txt. Không kèm Excel, ảnh, âm thanh, log hoặc mã kiểm thử. Các đường dẫn ảnh mới được khai báo ở trên để người quản lý dự án bổ sung asset hiện có.

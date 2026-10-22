@@ -9,7 +9,7 @@
    if(!has(u,WIND)||!alive(u)||state(u,WIND).lastStand||allies(bs,u).some(a=>a!==u))return;
    const c=state(u,WIND);c.lastStand=true;
    const hp=team(bs,u).filter(a=>a!==u&&!alive(a)).reduce((sum,a)=>sum+Math.max(0,a.maxHp||0),0);
-   u.maxHp=Math.min(Number.MAX_VALUE/1024,u.maxHp+hp);u.hp=Math.min(u.maxHp,u.hp+hp);refresh(u);
+   api.flatHp(u,hp);refresh(u);
    log('[PASSIVE] The Fuuto Wind: last stand +50% damage and fallen allies’ max HP.','passive');
   }
   function turn(bs){

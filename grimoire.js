@@ -77,7 +77,7 @@
       const c = api.skillState(unit, 'julius'), backup = c.backup;
       if (!backup) return false;
       c.backup = null; unit.grimoireRevived = true;
-      unit.maxHp = Math.max(1, backup.maxHp); unit.hp = Math.max(1, Math.min(unit.maxHp, backup.hp)); unit.atk = Math.max(1, backup.atk); unit.defeated = false;
+      unit.maxHp = Math.max(1, backup.maxHp); unit.hp = Math.max(1, Math.min(unit.maxHp, backup.hp)); unit.atk = Math.max(1, backup.atk); api.resetStats(unit); unit.defeated = false;
       const r = runtime(unit);
       // Captured ATK already includes runtime buffs. Do not apply them twice.
       r.atkBonusPct = 0; r.maxHpBonusPct = 0; r.displayAtkBonusPct = 0; r.displayHpBonusPct = 0;

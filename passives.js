@@ -20,6 +20,7 @@
   const MAX_SLASHES = 16;
 
   let host = { ...initialHost };
+  const combatStats = window.createCombatStats();
   let passiveLogSequence = 0;
   const passiveScopes = new WeakMap();
   let phaseUnit = null, activeCombat = null;
@@ -100,6 +101,7 @@
     // Copies created by enemy summons/conversions also inherit the event element.
     if(unit?.card&&activeCombat?.mode==='spooky-hunt'&&activeCombat.enemyTeam?.includes(unit)&&unit.card.element!=='Fire')unit.card={...unit.card,element:'Fire'};
     if (!unit) return null;
+    combatStats.ensure(unit);
     if (!unit.passiveState || typeof unit.passiveState !== 'object') {
       unit.passiveState = {
         attackCount: 0,
@@ -362,13 +364,13 @@
       const next = c.candies >= 100 ? 6 : c.candies >= 76 ? 5 : c.candies >= 51 ? 4 : c.candies >= 26 ? 3 : c.candies >= 11 ? 2 : 1;
       if (c.form === next) return;
       if (c.form === 2 && c.formHp) {
-        unit.maxHp = Math.max(1, unit.maxHp - c.formHp); unit.hp = Math.min(unit.hp, unit.maxHp); c.formHp = 0;
+        combatStats.set(unit,'hp','candy-form',0); c.formHp = 0;
         const runtime = ensureRuntime(unit);
         runtime.maxHpBonusPct = Math.max(0, runtime.maxHpBonusPct - .50);
         runtime.displayHpBonusPct = Math.max(0, runtime.displayHpBonusPct - .50);
       }
       c.form = next;
-      if (next === 2) c.formHp = applyMaxHpBonus(unit, 0.50);
+      if (next === 2) { c.formHp = combatStats.set(unit,'hp','candy-form',.50,!isBleeding(unit)); ensureRuntime(unit).displayHpBonusPct += .50; }
       refreshUnitDisplay(unit); log(unit, `Candy Form ${next} • ${c.candies} candies`);
     }
     function duo(bs, unit, target) {
@@ -510,7 +512,7 @@
         const team = teamOf(bs, unit), key = team === bs.playerTeam ? 'playerIndex' : 'enemyIndex';
         // Capture the next living fighter before reviving/moving the victim.
         const active = firstLiving(team, Number(bs[key]) || 0);
-        c.darkRevives = (c.darkRevives || 0) + 1; unit.maxHp = reviver.maxHp; unit.hp = unit.maxHp; unit.atk = reviver.atk; unit.defeated = false; c.deathHandled = false;
+        c.darkRevives = (c.darkRevives || 0) + 1; unit.maxHp = reviver.maxHp; unit.hp = unit.maxHp; unit.atk = reviver.atk; combatStats.reset(unit); unit.defeated = false; c.deathHandled = false;
         const at = team.indexOf(unit); if (at >= 0) team.splice(at, 1); team.push(unit);
         bs[key] = Math.max(0, team.indexOf(active || unit));
         ensureRuntime(unit).passiveSuppressedUntilDeath = false;
@@ -539,7 +541,7 @@
         const stolen = getEffectivePassiveCardId(victim), converted = summon(bs, unit, unit.maxHp, unit.atk, 'converted', victim);
         if (converted) {
           if (c.formHp) {
-            unit.maxHp = Math.max(1, unit.maxHp - c.formHp); unit.hp = Math.min(unit.hp, unit.maxHp);
+            combatStats.set(unit,'hp','candy-form',0);
             ensureRuntime(unit).maxHpBonusPct = Math.max(0, ensureRuntime(unit).maxHpBonusPct - .50);
             ensureRuntime(unit).displayHpBonusPct = Math.max(0, ensureRuntime(unit).displayHpBonusPct - .50);
           }
@@ -703,7 +705,7 @@
         rescue(bs, unit);
         if (id(unit) !== 'raid-secret-mihawk' || Math.random() >= .25) continue;
         const c = state(unit), runtime = ensureRuntime(unit);
-        if (!c.hakiTurns) { runtime.atkBonusPct += 2.50; runtime.displayAtkBonusPct += 2.50; }
+        if (!c.hakiTurns) { combatStats.set(unit,'atk','hawkeye-haki',2.50); runtime.displayAtkBonusPct += 2.50; }
         c.hakiTurns = 2; runtime.raidHakiReduction = .25; addActiveTag(unit, 'HAKI +250% ATK / 25% REDUCTION');
       }
     }
@@ -711,7 +713,7 @@
       for (const unit of phaseUnits(bs)) {
         const c = state(unit), runtime = ensureRuntime(unit);
         if (c.hakiTurns > 0 && --c.hakiTurns === 0) {
-          runtime.atkBonusPct = Math.max(0, runtime.atkBonusPct - 2.50); runtime.displayAtkBonusPct = Math.max(0, runtime.displayAtkBonusPct - 2.50);
+          combatStats.set(unit,'atk','hawkeye-haki',0); runtime.displayAtkBonusPct = Math.max(0, runtime.displayAtkBonusPct - 2.50);
           runtime.raidHakiReduction = 0; removeActiveTag(unit, 'HAKI +250% ATK / 25% REDUCTION');
         }
         rescue(bs, unit);
@@ -774,7 +776,7 @@
       if (!c.revived && canCreateCompanion(unit)) {
         const dead = teamOf(bs, unit).find(ally => ally !== unit && !isAlive(ally) && !isGeneratedUnit(ally) && !champions.noExternalRevive(ally) && !isBleeding(ally));
         if (dead && companions.admitRevive(bs,unit,dead,'josuke_revive')) {
-          c.revived = true; dead.maxHp = unit.maxHp; dead.hp = dead.maxHp; dead.atk = atk(unit); dead.defeated = false;
+          c.revived = true; dead.maxHp = unit.maxHp; dead.hp = dead.maxHp; dead.atk = atk(unit); combatStats.reset(dead); dead.defeated = false;
           ensureRuntime(dead).passiveSuppressedUntilDeath = false;
           champions.state(dead).deathHandled = false; state(dead).deathNotified = false; cleanse(dead); refreshUnitDisplay(dead);
           safeLog('[PASSIVE] Crazy Diamond revived ' + dead.card.name, 'passive');
@@ -966,11 +968,11 @@
     }
     function rerollBonus(bs,unit) {
       const c=state(unit),r=ensureRuntime(unit);
-      if(c.bonus==='atk'){r.atkBonusPct=Math.max(0,r.atkBonusPct-.15);r.displayAtkBonusPct-=.15;}
-      if(c.hpDelta){unit.maxHp=Math.max(1,Math.round(unit.maxHp/1.2));unit.hp=Math.min(unit.hp,unit.maxHp);r.displayHpBonusPct-=.20;c.hpDelta=0;}
+      if(c.bonus==='atk'){combatStats.set(unit,'atk','systems-atk',0);r.displayAtkBonusPct-=.15;}
+      if(c.bonus==='hp'){combatStats.set(unit,'hp','systems-hp',0);r.displayHpBonusPct-=.20;c.hpDelta=0;}
       c.bonus=pick(['atk','hp','heal']);
-      if(c.bonus==='atk'){r.atkBonusPct+=.15;r.displayAtkBonusPct+=.15;}
-      if(c.bonus==='hp'){c.hpDelta=Math.round(unit.maxHp*.20);unit.maxHp+=c.hpDelta;if(!isBleeding(unit))unit.hp+=c.hpDelta;r.displayHpBonusPct+=.20;}
+      if(c.bonus==='atk'){combatStats.set(unit,'atk','systems-atk',.15);r.displayAtkBonusPct+=.15;}
+      if(c.bonus==='hp'){c.hpDelta=combatStats.set(unit,'hp','systems-hp',.20,!isBleeding(unit));r.displayHpBonusPct+=.20;}
       refreshUnitDisplay(unit);
     }
     function entry(bs,unit) { if(id(unit)==='sung-jin-woo'&&!state(unit).bonus)rerollBonus(bs,unit); }
@@ -1140,6 +1142,8 @@
       },
       deleteProperty(target,field) { return SHARED_PASSIVE_FIELDS.has(field)?delete target[field]:delete copy.state[field]; }
     });
+    const parent=passiveScopes.get(unit)?.copy;
+    if(parent?.firstHumanLease)copy.firstHumanLease=parent.firstHumanLease;
     (root.grimoire ||= {copies:[]}).copies.push(copy);
     return copy;
   }
@@ -1155,6 +1159,7 @@
     log:safeLog,random:()=>Math.random(),hasPassive,passiveIds,skillState,canFutureRevive:(bs,target)=>!champions.noExternalRevive(target)&&alliesOf(bs,target,false).some(unit=>!unit.passiveState?.passiveSuppressedUntilDeath&&((passiveIds(unit,true).includes('dante-limbus')&&(passiveRuntimeFor(unit,'dante-limbus').reviveCount||0)<1)||(passiveIds(unit,true).includes('josuke')&&!passiveRuntimeFor(unit,'josuke').expansion?.revived))),addCopy:addPassiveCopy,replaceCopies:(unit,ids)=>{unit.passiveState.grimoire.copies=[];for(const key of ids)addPassiveCopy(unit,key);},card:key=>host.getCardById?.(key)||SOURCE_CARDS.find(card=>card.id===key),
     frontline:(bs,unit)=>firstLiving(teamOf(bs,unit),bs.playerTeam.includes(unit)?bs.playerIndex:bs.enemyIndex),
     enemyFront:activeDefender,attack:(...args)=>performAttack(...args),hpBonus:applyMaxHpBonus,atkBonus:applyPermanentAtkBonus,
+    resetStats:unit=>combatStats.reset(unit),
     copyEntry:activateCopy,
     reflectHit(bs,source,target,amount,meta) { const result=damageUnit(bs,source,target,amount,meta); if(result.killed){onKill(bs,source,target);onTeammateDeath(bs,target);} return result; }
   });
@@ -1169,6 +1174,7 @@
   const requiem=window.createRequiemSkills({canFollow:unit=>spooky.canFollow(unit),followChance:(bs,u,n)=>fate.followChance(bs,u,n),owns:(u,key)=>(u?.passiveState?.effectivePassiveId||cardIdOf(u))===key||Boolean(u?.passiveState?.grimoire?.copies?.some(copy=>copy.id===key)),runtime:ensureRuntime,id:getEffectivePassiveCardId,rawId:cardIdOf,has:hasPassive,passiveRuntimeFor,alive:isAlive,
     allies:alliesOf,enemies:enemiesOf,team:teamOf,all:allUnits,atk:computeWeakenedAtk,random:()=>Math.random(),hit:(...args)=>champions.hit(...args),
     status:setStatus,dot:addDot,refresh:refreshUnitDisplay,log:safeLog,enemyFront:activeDefender,stunned:isUnitStunned,
+    flatHp:(u,n)=>combatStats.flat(u,'hp',n,!isBleeding(u)),
     hpBonus:applyMaxHpBonus,atkBonus:applyPermanentAtkBonus,attack:(...args)=>performAttack(...args)});
 
   const reagan=window.createReaganSkills({runtime:ensureRuntime,passiveRuntimeFor,alive:isAlive,all:allUnits,
@@ -1208,6 +1214,7 @@
     },
     execute:(bs,source,target)=>champions.execute?champions.execute(bs,source,target):executeSpookyTarget(bs,source,target),
     death:(bs,unit)=>onTeammateDeath(bs,unit),indices:ensureCurrentIndices,attack:(...args)=>performAttack(...args),followChance:(bs,u,n)=>fate.followChance(bs,u,n),
+    setHpBonus:(u,key,pct)=>combatStats.set(u,'hp',key,pct,!isBleeding(u)),
     atkBonus:applyPermanentAtkBonus,hpBonus:applyMaxHpBonus});
   const gomen=window.createGomenSkills({runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,id:getEffectivePassiveCardId,alive:isAlive,all:allUnits,enemies:enemiesOf,enemyTeam:enemyTeamOf,atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,allowed:sourcePassiveAllowed,status:setStatus,dot:addDot,canFollow:unit=>spooky.canFollow(unit),attack:(...args)=>performAttack(...args),indices:ensureCurrentIndices,primary:primarySkillHit,followChance:(bs,u,n)=>fate.followChance(bs,u,n)});
   const shibuya=window.createShibuyaSkills({runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,alive:isAlive,all:allUnits,
@@ -1305,10 +1312,7 @@
   function applyMaxHpBonus(unit, percent, healToNewMax = true) {
     if (!unit) return 0;
     const pct = Number(percent) || 0;
-    const currentMax = Math.max(1, Number(unit.maxHp) || 1);
-    const bonus = Math.max(0, currentMax * pct);
-    unit.maxHp = Math.max(1, Math.round(currentMax + bonus));
-    if (healToNewMax && !isBleeding(unit)) unit.hp = Math.min(unit.maxHp, Math.max(0, Number(unit.hp) || 0) + bonus);
+    const bonus = combatStats.add(unit, 'hp', pct, healToNewMax && !isBleeding(unit));
     const runtime = ensureRuntime(unit);
     runtime.maxHpBonusPct += pct;
     runtime.displayHpBonusPct += pct;
@@ -1319,9 +1323,7 @@
   function applyRuntimeLevelGrowth(unit, factor) {
     if (!unit || !Number.isFinite(factor) || factor <= 0 || factor === 1) return;
     const runtime = ensureRuntime(unit);
-    unit.maxHp = Math.max(1, Math.round(unit.maxHp * factor));
-    unit.hp = Math.min(unit.maxHp, Math.max(0, isBleeding(unit) ? unit.hp : Math.round(unit.hp * factor)));
-    unit.atk = Math.max(1, Math.round(unit.atk * factor));
+    combatStats.scale(unit, factor, !isBleeding(unit));
     for (const key of ['baseAtkAtBattleStart', 'temporaryAtkDelta', 'temporaryMaxHpDelta', 'stormAtkDelta']) {
       if (Number(runtime[key]) > 0) runtime[key] = Math.round(runtime[key] * factor);
     }
@@ -1331,15 +1333,7 @@
 
   function multiplyMaxHp(unit, factor, healToNewMax = true) {
     if (!unit) return 0;
-    const safeFactor = Math.max(0.01, Number(factor) || 1);
-    const oldMax = Math.max(1, Number(unit.maxHp) || 1);
-    const newMax = Math.max(1, Math.round(oldMax * safeFactor));
-    const delta = newMax - oldMax;
-    unit.maxHp = newMax;
-    if (healToNewMax && !isBleeding(unit)) unit.hp = Math.min(newMax, Math.max(0, Number(unit.hp) || 0) + Math.max(0, delta));
-    ensureRuntime(unit).displayHpBonusPct += Math.max(0, safeFactor - 1);
-    refreshUnitDisplay(unit);
-    return delta;
+    return applyMaxHpBonus(unit, Math.max(0.01, Number(factor) || 1) - 1, healToNewMax);
   }
 
   function isBleeding(unit) { return Array.isArray(ensureRuntime(unit)?.bleed) && ensureRuntime(unit).bleed.some(effect => Number(effect?.turns) > 0); }
@@ -1391,7 +1385,7 @@
   function applyPermanentAtkBonus(unit, pct, tag = '') {
     const safePct = Number(pct) || 0;
     if (!unit || safePct === 0) return;
-    unit.atk = Math.max(1, Math.round(unit.atk * (1 + safePct)));
+    combatStats.add(unit, 'atk', safePct);
     const runtime = ensureRuntime(unit);
     runtime.displayAtkBonusPct += safePct;
     if (tag) runtime.activeTags.push(tag);
@@ -1534,19 +1528,7 @@
     const maxHp = Math.max(1, Number(unit.maxHp) || 1);
     const currentHp = Math.max(0, Number(unit.hp) || 0);
     const passiveId = getEffectivePassiveCardId(unit);
-    let atkMultiplier = 1 + Math.max(-0.95, Number(runtime.displayAtkBonusPct) || 0);
-    atkMultiplier *= (1 + Math.max(0, Number(runtime.temporaryAtkBonusPct) || 0))*spooky.atkFactor(unit)*gomen.damageFactor(unit);
-    if (passiveId === 'vegeta' || passiveId === 'polnareff') {
-      if (currentHp / maxHp < 0.25) atkMultiplier *= 2;
-    }
-    if (passiveId === 'weather-solar-deity' && getWeatherActive('Sunny')) atkMultiplier *= 2;
-    if (passiveId === 'piccolo' && runtime.buffStacks > 0) atkMultiplier *= 1 + runtime.buffStacks * 0.10;
-    if (passiveId === 'doppio' && runtime.buffStacks > 0) atkMultiplier *= 1 + runtime.buffStacks * 0.20;
-    if (passiveId === 'gohan' && runtime.nextAttackMultiplier > 1) atkMultiplier *= runtime.nextAttackMultiplier;
-    if (runtime.jackpotBoost === 'atk') atkMultiplier *= 1.77;
-    if (runtime.hamonActive) atkMultiplier = Math.max(atkMultiplier, 10);
-    if (runtime.jackpotBoost === 'atk') atkMultiplier *= 1.77;
-    if (runtime.hamonActive) atkMultiplier = Math.max(atkMultiplier, 10);
+    const atkMultiplier = computeWeakenedAtk(unit) / Math.max(1, combatStats.ensure(unit).base.atk);
     const effects = [];
     const addDotEffect = (kind, icon, tone, label) => {
       const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
@@ -1564,7 +1546,7 @@
     const shield = Math.max(0, Number(runtime.shield) || 0);
     return {
       atkMultiplierPct: (atkMultiplier - 1) * 100,
-      hpBonusPct: (Math.max(0, Number(runtime.displayHpBonusPct) || 0) + Math.max(0, Number(runtime.temporaryMaxHpBonusPct) || 0) + spooky.hpBonus(unit)) * 100,
+      hpBonusPct: combatStats.percent(unit,'hp') * 100,
       hpPct: (currentHp / maxHp) * 100,
       currentHp,
       maxHp,
@@ -1683,7 +1665,7 @@
     if (runtime.stormTurns > 0) {
       runtime.stormTurns -= 1;
       if (runtime.stormTurns <= 0) {
-        unit.atk = Math.max(1, (Number(unit.atk) || 1) - runtime.stormAtkDelta);
+        combatStats.set(unit,'atk','storm-susano',0);
         runtime.stormAtkDelta = 0;
         runtime.displayAtkBonusPct = Math.max(0, Number(runtime.displayAtkBonusPct) || 0) - 0.60;
         refreshUnitDisplay(unit);
@@ -1692,12 +1674,12 @@
     }
     if (runtime.temporaryStatsTurns > 0) {
       runtime.temporaryStatsTurns -= 1;
-      if (runtime.temporaryStatsTurns <= 0 && (runtime.temporaryAtkDelta > 0 || runtime.temporaryMaxHpDelta > 0)) {
-        if (runtime.temporaryAtkDelta > 0) {
-          unit.atk = Math.max(1, (Number(unit.atk) || 1) - runtime.temporaryAtkDelta);
+      if (runtime.temporaryStatsTurns <= 0 && (runtime.temporaryAtkBonusPct > 0 || runtime.temporaryMaxHpBonusPct > 0)) {
+        if (runtime.temporaryAtkBonusPct > 0) {
+          combatStats.set(unit,'atk','sweet-destruction',0);
         }
-        if (runtime.temporaryMaxHpDelta > 0) {
-          unit.maxHp = Math.max(1, (Number(unit.maxHp) || 1) - runtime.temporaryMaxHpDelta);
+        if (runtime.temporaryMaxHpBonusPct > 0) {
+          combatStats.set(unit,'hp','sweet-destruction',0);
           unit.hp = Math.min(unit.maxHp, Math.max(1, Number(unit.hp) || 1));
         }
         runtime.temporaryAtkDelta = 0;
@@ -1761,7 +1743,7 @@
   function calculateBaseDamage(attacker) {
     const base = Math.max(1, Number(attacker?.atk) || Number(attacker?.display?.atk) || 1);
     const runtime = ensureRuntime(attacker);
-    const attack = base * Math.max(0, 1 + (Number(runtime.atkBonusPct) || 0));
+    const attack = combatStats.value(attacker, 'atk', Number(runtime.atkBonusPct) || 0);
     return window.TowerSystem?.limitEnemyAttack?.(attacker, attack) ?? attack;
   }
 
@@ -1784,8 +1766,42 @@
     return Boolean(shibuya.canProtect(battleState,target)||shibuya.immune(target,{passiveAttack:true})||spooky.reduction(battleState,target)||spooky.eventBonus(battleState,target,'dodge')||spooky.dodgeChance(target)||fate.guardian(battleState,target) || hasPassive(target,'medea') || fate.dodgeChance(target) || reagan.reduction(target) || yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
+  function borrowFirstHumanPassive(bs,unit,source,meta,amount) {
+    if(!bs||!source||source===unit||!(amount>0)||!meta.passiveAttack||meta.dot||!hasPassive(unit,'weather-heavenly-seraph'))return;
+    const root=unit.passiveState,lease=root.firstHumanLease;
+    if(lease?.copy||(lease?.readyAt||0)>(bs.turnCount||0))return;
+    const key=getEffectivePassiveCardId(source);
+    if(!key||key==='weather-heavenly-seraph')return;
+    const copy=addPassiveCopy(unit,key);if(!copy)return;
+    copy.firstHumanLease=copy;
+    root.firstHumanLease={copy,expiresAt:(bs.turnCount||0)+3,readyAt:(bs.turnCount||0)+8};
+    activateCopy(bs,unit,copy);
+    safeLog('[PASSIVE] Ascension borrowed '+getPassiveName(source)+' for 3 turns.','passive');
+  }
+  function expireFirstHumanCopies(bs){
+    for(const unit of allUnits(bs)){
+      const root=unit.passiveState,lease=root?.firstHumanLease;
+      if(lease?.copy&&(bs.turnCount||0)>=lease.expiresAt){
+        const ending=root.grimoire.copies.filter(copy=>copy===lease.copy||copy.firstHumanLease===lease.copy);
+        const statKeys={
+          'raid-secret-mihawk':[['atk','hawkeye-haki']],
+          'sung-jin-woo':[['atk','systems-atk'],['hp','systems-hp']],
+          'tower-champion-sugar':[['hp','candy-form']],
+          'uchiha-sasuke':[['atk','storm-susano']],
+          'android-21':[['atk','sweet-destruction'],['hp','sweet-destruction']],
+          'starter-common':[['atk','first-strike']],
+          vegeta:[['atk','low-hp:vegeta']],polnareff:[['atk','low-hp:polnareff']]
+        };
+        for(const copy of ending)for(const [stat,key]of statKeys[copy.id]||[])combatStats.set(unit,stat,key,0);
+        root.grimoire.copies=root.grimoire.copies.filter(copy=>!ending.includes(copy));
+        lease.copy=null;refreshUnitDisplay(unit);
+      }
+    }
+  }
+
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
     if (!target || !isAlive(target)) return { damage: 0, killed: false, reflected: false };
+    borrowFirstHumanPassive(battleState,target,attacker,meta,amount);
     if(shibuya.immune(target,meta))return {damage:0,killed:false,immune:true};
     if(!(gomen.isGojo(target)&&meta.passiveAttack)&&fate.passiveDodge(battleState,target,attacker,meta))return {damage:0,killed:false,dodged:true};
     if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
@@ -1982,7 +1998,7 @@
           const baseAtk = Math.max(1, Number(runtime.baseAtkAtBattleStart) || Number(unit.atk) || 1);
           const bonusPct = sacrifices;
           const bonusAtk = Math.max(0, Math.round(baseAtk * bonusPct));
-          unit.atk = Math.max(1, Math.round(baseAtk * (1 + bonusPct)));
+          combatStats.set(unit,'atk','eclipse-sacrifice',bonusPct);
           runtime.displayAtkBonusPct = Math.max(runtime.displayAtkBonusPct, bonusPct);
           runtime.activeTags.push(`ECLIPSED +${sacrifices * 100}% ATK (+${bonusAtk.toLocaleString('en-US')})`);
           refreshUnitDisplay(unit);
@@ -2025,9 +2041,7 @@
         }
         break;
       case 'weather-heavenly-seraph':
-        // The source description does not define what a "perfect roll" is
-        // or how much bonus power it grants. The runtime hook is registered
-        // below; no invented balance value is introduced here.
+        // Ascension is triggered by incoming passive attacks, not battle entry.
         break;
       case 'starter-secret':
         runtime.passiveImmune = true;
@@ -2065,8 +2079,9 @@
     // runtime ATK bonus is reset when the unit is no longer below 25% HP.
     if (id === 'vegeta' || id === 'polnareff') {
       const active = hpRatio < 0.25;
-      runtime.atkBonusPct = active ? 1 : 0;
-      runtime.displayAtkBonusPct = active ? 1 : 0;
+      const before=runtime.lowHpBonus||0;runtime.lowHpBonus=active?1:0;
+      combatStats.set(attacker,'atk','low-hp:'+id,runtime.lowHpBonus);
+      runtime.displayAtkBonusPct += runtime.lowHpBonus-before;
       if (active && !runtime.thresholdBuffAnnounced) {
         runtime.thresholdBuffAnnounced = true;
         safeLog(`[Self-Passive] ${attacker.display?.name || 'Unit'} activated +100% ATK because this unit's HP fell below 25%.`, 'passive');
@@ -2096,10 +2111,11 @@
 
     // Basic attack-count passives.
     if (id === 'starter-common') {
-      runtime.atkBonusPct = Math.min(1.00, runtime.atkBonusPct + 0.10);
-      runtime.displayAtkBonusPct = Math.max(runtime.displayAtkBonusPct, runtime.atkBonusPct);
-      addActiveTag(attacker, `FIRST STRIKE ${Math.round(runtime.atkBonusPct * 100)}%`);
-      safeLog(`[PASSIVE] ${attacker.display?.name || 'Naruto Kid'} [First Strike] gained +10% ATK (current stack ${Math.round(runtime.atkBonusPct * 100)}%).`, 'passive');
+      const previous=runtime.firstStrikeBonus||0;runtime.firstStrikeBonus=Math.min(1,previous+.10);
+      combatStats.set(attacker,'atk','first-strike',runtime.firstStrikeBonus);
+      runtime.displayAtkBonusPct += runtime.firstStrikeBonus-previous;
+      addActiveTag(attacker, `FIRST STRIKE ${Math.round(runtime.firstStrikeBonus * 100)}%`);
+      safeLog(`[PASSIVE] ${attacker.display?.name || 'Naruto Kid'} [First Strike] gained +10% ATK (current stack ${Math.round(runtime.firstStrikeBonus * 100)}%).`, 'passive');
     }
 
     if (id === 'sasuke-kid' && attackCount === 3) {
@@ -2237,7 +2253,7 @@
       runtime.sasukeLowHpTriggered = true;
       const beforeAtk = Number(attacker.atk) || 1;
       runtime.stormAtkDelta = Math.max(1, Math.round(beforeAtk * 0.60));
-      attacker.atk = Math.max(1, beforeAtk + runtime.stormAtkDelta);
+      runtime.stormAtkDelta=combatStats.set(attacker,'atk','storm-susano',.60);
       if (attacker.isTowerEnemy) runtime.stormAtkDelta = Math.max(0, attacker.atk - beforeAtk);
       runtime.displayAtkBonusPct = Math.max(runtime.displayAtkBonusPct, 0.60);
       runtime.stormTurns = 6;
@@ -2261,7 +2277,7 @@
       runtime.facingTurns += 1;
       if (runtime.facingTurns > 3 && !runtime.absorbedAttack) {
         runtime.absorbedAttack = Math.max(0, getBaseAtk(target) * 0.50);
-        attacker.atk += Math.max(1, Math.floor(runtime.absorbedAttack));
+        combatStats.flat(attacker,'atk',Math.max(1, Math.floor(runtime.absorbedAttack)));
         refreshUnitDisplay(attacker);
         ensureRuntime(target).noDodgeAgainstUnit = true;
         safeLog(`[PASSIVE] ${attacker.display?.name || 'Android 21'} absorbed 50% of the target's base ATK; the target can no longer dodge this attacker.`, 'passive');
@@ -2287,10 +2303,6 @@
     if (id === 'guts' && runtime.berserker) {
       // Berserker's damage is normal ATK; only bleed is added.
     }
-    if (id === 'piccolo' && runtime.buffStacks > 0) multiplier *= 1 + runtime.buffStacks * 0.10;
-    if (id === 'doppio' && runtime.buffStacks > 0) multiplier *= 1 + runtime.buffStacks * 0.20;
-    if (id === 'jonathan-joestar' && runtime.hamonActive) multiplier *= 10;
-    if (id === 'weather-solar-deity' && getWeatherActive('Sunny')) multiplier *= 2;
     if (id === 'erwin' && runtime.capitanBuffApplied) { /* applied directly */ }
     if (runtime.nextAttackIsBuffed) {
       multiplier *= 1.30;
@@ -2300,7 +2312,6 @@
       multiplier *= 1 + runtime.nextAttackBonus;
       runtime.nextAttackBonus = 0;
     }
-    if (runtime.jackpotBoost === 'atk') multiplier *= 1.77;
     if (runtime.nextEnemyDoubleStrike) {
       multiplier *= 2;
       runtime.nextEnemyDoubleStrike = false;
@@ -2835,7 +2846,7 @@
       case 'blackbeard': {
         const bonus = Math.max(0, Math.floor((Number(victim.atk) || 0) * 0.25));
         const beforeAtk = Math.max(1, Number(killer.atk) || 1);
-        killer.atk = Math.max(1, beforeAtk + bonus);
+        combatStats.flat(killer,'atk',bonus);
         runtime.flatAtkBonusDisplay = Math.max(0, Number(runtime.flatAtkBonusDisplay) || 0) + bonus;
         runtime.activeTags.push(`LIBERATION +${bonus.toLocaleString('en-US')} ATK`);
         refreshUnitDisplay(killer);
@@ -2846,26 +2857,9 @@
       case 'android-21': {
         heal(killer, (Number(victim.maxHp) || 0) * 0.30, 'SWEET DESTRUCTION', battleState, killer);
 
-        // Refresh the 2-turn +20% stat buff without stacking duplicate
-        // temporary deltas. Any permanent ATK/HP earned elsewhere remains intact.
-        if (runtime.temporaryAtkDelta > 0) {
-          killer.atk = Math.max(1, (Number(killer.atk) || 1) - runtime.temporaryAtkDelta);
-        }
-        if (runtime.temporaryMaxHpDelta > 0) {
-          killer.maxHp = Math.max(1, (Number(killer.maxHp) || 1) - runtime.temporaryMaxHpDelta);
-          killer.hp = Math.min(killer.maxHp, Math.max(1, Number(killer.hp) || 1));
-        }
-
-        const atkBase = Math.max(1, Number(killer.atk) || 1);
-        const maxHpBase = Math.max(1, Number(killer.maxHp) || 1);
-        runtime.temporaryAtkDelta = Math.max(1, Math.round(atkBase * 0.20));
-        runtime.temporaryMaxHpDelta = Math.max(1, Math.round(maxHpBase * 0.20));
-        if (killer.isTowerEnemy) killer.maxHp = maxHpBase + runtime.temporaryMaxHpDelta;
-        killer.atk = atkBase + runtime.temporaryAtkDelta;
-        killer.maxHp = maxHpBase + runtime.temporaryMaxHpDelta;
-        if (killer.isTowerEnemy) runtime.temporaryAtkDelta = Math.max(0, killer.atk - atkBase);
-        if (!isBleeding(killer)) killer.hp = Math.min(killer.maxHp, Math.max(1, Math.round((Number(killer.hp) || 1) * 1.20)));
-
+        // Named bonuses refresh instead of compounding or erasing other sources.
+        runtime.temporaryAtkDelta=combatStats.set(killer,'atk','sweet-destruction',.20);
+        runtime.temporaryMaxHpDelta=combatStats.set(killer,'hp','sweet-destruction',.20,!isBleeding(killer));
         runtime.temporaryAtkBonusPct = 0.20;
         runtime.temporaryMaxHpBonusPct = 0.20;
         runtime.temporaryStatsTurns = 2;
@@ -3062,10 +3056,19 @@
     if (attacker?.isExpMonster || (attacker?.sandboxAllowZeroAttack && Number(attacker.atk) === 0)) return 0;
     const runtime = ensureRuntime(attacker);
     const reduction = runtime.weakenAttackTurns > 0 ? clamp(runtime.weakenAttackPct, 0, 0.95) : 0;
-    const attackBuff = 1 + Math.max(0, Number(runtime.atkBonusPct) || 0);
-    const attack = Math.max(1, Number(attacker.atk) || 1) * attackBuff;
+    // All persistent and temporary stat bonuses share the same starting ATK.
+    let extra = (Number(runtime.atkBonusPct) || 0) + fate.atkAura(activeCombat,attacker)-1 + spooky.atkFactor(attacker)-1 + gomen.damageFactor(attacker)-1;
+    for (const key of passiveIds(attacker)) {
+      const r=passiveRuntimeFor(attacker,key);
+      if(key==='piccolo')extra+=(r.buffStacks||0)*.10;
+      if(key==='doppio')extra+=(r.buffStacks||0)*.20;
+      if(key==='jonathan-joestar'&&r.hamonActive)extra+=9;
+      if(key==='weather-solar-deity'&&getWeatherActive('Sunny'))extra+=1;
+    }
+    if(runtime.jackpotBoost==='atk')extra+=.77;
+    const attack = combatStats.value(attacker,'atk',extra);
     const bounded = window.TowerSystem?.limitEnemyAttack?.(attacker, attack) ?? attack;
-    return bounded * (1 - reduction) * fate.atkAura(activeCombat,attacker) * spooky.atkFactor(attacker) * gomen.damageFactor(attacker);
+    return bounded * (1 - reduction);
   }
 
 
@@ -3611,6 +3614,7 @@
 
   function resolveTurn(battleState) {
     if (!battleState || battleState.finished) return { ended: true, winner: null };
+    expireFirstHumanCopies(battleState);
     ensureCurrentIndices(battleState);
     const actedSide=battleState.turn;
     const actor = actedSide === 'player' ? battleState.player : battleState.enemy;
@@ -3625,6 +3629,7 @@
     spooky.endTurn(battleState,actor);
     gomen.endTurn(battleState,actor);
     shibuya.endTurn(battleState,actor);
+    expireFirstHumanCopies(battleState);
     ensureCurrentIndices(battleState);
     const winner = checkBattleWinner(battleState);
     return winner ? { ended: true, winner } : { ended: false, winner: null };
@@ -3724,18 +3729,7 @@
     return battleState?.mode === '1v1' ? '1v1' : '4v4';
   }
 
-  function onRoll(event) {
-    // Hook for Ascension. The source description provides no definition
-    // for "perfect roll" nor a numeric bonus, so no invented balance value
-    // is applied. The hook remains available for future exact data.
-    try {
-      if (event?.card?.id === 'weather-heavenly-seraph' && event?.perfect === true) {
-        safeLog(`[PASSIVE] Ascension recognized a perfect roll.`, 'passive');
-      }
-    } catch (error) {
-      console.warn('[PASSIVE] onRoll hook failed safely:', error);
-    }
-  }
+  function onRoll(event) { /* Card acquisition never triggers combat Ascension. */ }
 
   function cloneAsTemporaryAlly(victim, source, battleState, statFactor = 0.5, kind) {
     if (!victim || !canCreateCompanion(source) || isGeneratedUnit(victim) || champions.uncloneable(victim) || (!isAlive(victim) && champions.noExternalRevive(victim))) return null;
@@ -3779,6 +3773,7 @@
     dead.maxHp = Math.max(1, Number(unit?.maxHp) || Number(danteCard?.stats?.hp) || 1);
     dead.hp = dead.maxHp;
     dead.atk = Math.max(1, Number(unit?.atk) || Number(danteCard?.stats?.atk) || 1);
+    combatStats.reset(dead);
     champions.state(dead).deathHandled=false;
     if(ensureRuntime(dead).expansion)ensureRuntime(dead).expansion.deathNotified=false;
     ensureRuntime(dead).effectivePassiveId = originalCardId;
@@ -4082,7 +4077,7 @@
     'uchiha-sasuke': Object.freeze(['ON_CARD_ATTACK_STRIKE', 'ON_HP_THRESHOLD']),
     'light-admiral': Object.freeze(['ON_DODGE']),
     'gojo-young': Object.freeze(['ON_CARD_DEFEND_OR_HIT']),
-    'weather-heavenly-seraph': Object.freeze(['ON_ROLL']),
+    'weather-heavenly-seraph': Object.freeze(['ON_PASSIVE_ATTACK_RECEIVED']),
     'sailor-moon': Object.freeze(['ON_VICTORY']),
     'jin-mori': Object.freeze(['ON_CARD_DEFEND_OR_HIT']),
     'wish': Object.freeze(['ON_BATTLE_START']),
@@ -4289,6 +4284,7 @@
       if (battleState.mode === 'tower') (battleState.enemyTeam || []).forEach(unit => window.TowerSystem?.protectEnemyUnit?.(unit));
       for (const team of [battleState.playerTeam || [], battleState.enemyTeam || []]) team.forEach((unit,index) => { ensureRuntime(unit).initialLineupIndex = index; });
       for (const unit of allUnits(battleState)) {
+        combatStats.reset(unit);
         const runtime = ensureRuntime(unit);
         runtime.baseAtkAtBattleStart = Math.max(1, Number(unit.atk) || Number(unit.display?.atk) || 1);
         runtime.fateOriginal={hp:unit.maxHp,atk:unit.atk};

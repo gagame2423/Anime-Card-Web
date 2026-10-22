@@ -11,6 +11,7 @@
   const SHOP=Object.freeze([
     ...['exp_potion','rich_potion','lucky_potion','speed_potion'].map(id=>Object.freeze({id,cost:10})),
     ...['super_exp_potion','super_rich_potion','super_luck_potion','super_speed_potion'].map(id=>Object.freeze({id,cost:100})),
+    Object.freeze({id:'spooky_candy',cost:100}),
     Object.freeze({id:CAPSULE.id,cost:25}),Object.freeze({id:'machete',cost:613000})
   ]);
   const CHOICES=Object.freeze([
