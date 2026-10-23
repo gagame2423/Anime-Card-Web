@@ -1,7 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function googleUser() { return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com'; }
+    function owner(uid) { return googleUser() && request.auth.uid == uid; }
     function summary(s) {
       return s.keys().hasOnly(['totalRolls','strongestPower','timeTrialRoom','uniqueCards','displayName'])
         && s.totalRolls is int && s.totalRolls >= 0 && s.totalRolls <= 9007199254740991
@@ -42,8 +43,8 @@ service cloud.firestore {
       }
     }
     match /leaderboards/{uid} {
-      allow get: if true;
-      allow list: if request.query.limit != null && request.query.limit <= 50;
+      allow get: if googleUser();
+      allow list: if googleUser() && request.query.limit != null && request.query.limit <= 50;
       allow delete: if owner(uid);
       allow create, update: if owner(uid)
         && request.resource.data.keys().hasOnly(['uid','displayName','totalRolls','strongestPower','timeTrialRoom','uniqueCards','revision','updatedAt'])

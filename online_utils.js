@@ -8,12 +8,25 @@
  function stable(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return '['+value.map(stable).join(',')+']';return '{'+Object.keys(value).sort().filter(k=>value[k]!==undefined).map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}';}
  function text(node,value){if(node&&node.textContent!==String(value))node.textContent=String(value);}
  function make(tag,className='',value){const n=host.document.createElement(tag);n.className=className;if(value!==undefined)n.textContent=value;return n;}
+ const PEER_CONNECT_TIMEOUT_MS=10000;
+ const STUN_SERVERS=Object.freeze(['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302']);
+ function peerOptions(){return{config:{iceServers:STUN_SERVERS.map(urls=>({urls}))},debug:1};}
+ const gameJobs=new Map();
+ function loadGameScript(declaration){
+  const src=declaration?.src;if(!src)return Promise.reject(Error('Missing game script declaration.'));
+  if(gameJobs.has(src))return gameJobs.get(src);
+  const job=new Promise((resolve,reject)=>{const script=host.document.createElement('script');let done=false;script.async=false;script.dataset.gameResource='true';
+    const finish=error=>{if(done)return;done=true;host.clearTimeout(timer);script.onload=script.onerror=null;if(error){script.remove();reject(error);}else resolve();};
+   const timer=host.setTimeout(()=>finish(Error('Game module took too long to load: '+src.split('/').pop())),15000);
+   script.onload=()=>finish();script.onerror=()=>finish(Error('Could not load game module: '+src.split('/').pop()));script.src=src;host.document.head.append(script);});
+  gameJobs.set(src,job);return job;
+ }
  const sdkJobs=new Map();
  function loadSdk(id,ready){if(ready())return Promise.resolve();if(sdkJobs.has(id))return sdkJobs.get(id);const declaration=host.document.getElementById(id);if(!declaration?.src)return Promise.reject(Error('Missing SDK declaration: '+id));
-  const job=new Promise((resolve,reject)=>{const script=host.document.createElement('script');script.async=true;script.dataset.onlineResource='true';let done=false;const finish=error=>{if(done)return;done=true;host.clearTimeout(timeout);script.onload=script.onerror=null;if(error){script.remove();reject(error);}else resolve();};const timeout=host.setTimeout(()=>finish(Error('Online service took too long to load. Local play is available.')),12000);script.onload=()=>finish(ready()?null:Error('Online SDK could not initialize.'));script.onerror=()=>finish(Error('Online service unavailable. Local play is available.'));script.src=declaration.src;host.document.head.append(script);});
+  const job=new Promise((resolve,reject)=>{const script=host.document.createElement('script');script.async=true;script.dataset.onlineResource='true';let done=false;const finish=error=>{if(done)return;done=true;host.clearTimeout(timeout);script.onload=script.onerror=null;if(error){script.remove();reject(error);}else resolve();};const timeout=host.setTimeout(()=>finish(Error('Online service took too long to load. Check your connection and retry.')),12000);script.onload=()=>finish(ready()?null:Error('Online SDK could not initialize.'));script.onerror=()=>finish(Error('Online service unavailable. Check your connection and retry.'));script.src=declaration.src;host.document.head.append(script);});
   sdkJobs.set(id,job);job.catch(()=>sdkJobs.delete(id));return job;
  }
- function timeout(promise,ms=15000,message='Online service did not respond. Local progress is preserved.'){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=host.setTimeout(()=>reject(Error(message)),ms);})]).finally(()=>host.clearTimeout(timer));}
+ function timeout(promise,ms=15000,message='Online service did not respond. Check your connection and retry.'){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=host.setTimeout(()=>reject(Error(message)),ms);})]).finally(()=>host.clearTimeout(timer));}
  function error(message,code){return Object.assign(Error(message),{code});}
- host.OnlineUtils=Object.freeze({bytes,hash,token,stable,text,make,loadSdk,timeout,error});
+ host.OnlineUtils=Object.freeze({bytes,hash,token,stable,text,make,loadSdk,loadGameScript,peerOptions,STUN_SERVERS,PEER_CONNECT_TIMEOUT_MS,timeout,error});
 })(window);

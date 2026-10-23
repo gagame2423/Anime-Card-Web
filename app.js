@@ -10,7 +10,7 @@
 // ============================================================
 
 function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active);}
-function gameInputLocked(){return isSimulationActive()||Boolean(window.CloudSaveSystem?.blocking);}
+function gameInputLocked(){return isSimulationActive()||window.CloudSaveSystem?.playAllowed!==true||Boolean(window.GameStartup?.failed);}
 
 const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
@@ -1037,7 +1037,7 @@ function loadState() {
 }
 
 function saveState(canonicalOwnership = false, progressChanged = true) {
-  if (isImportingSave || isSimulationActive() || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked || window.CloudSaveSystem?.recoveryBlocked) return false;
+  if (!window.CloudSaveSystem?.googleVerified || isImportingSave || isSimulationActive() || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked || window.CloudSaveSystem?.recoveryBlocked) return false;
   try {
     // Rolls already update all three canonical ownership stores together.
     if (!canonicalOwnership) syncOwnershipRecords();
@@ -4903,6 +4903,7 @@ function globalTick() {
 }
 
 function startGlobalLoop() {
+  if (window.CloudSaveSystem?.playAllowed !== true || window.GameStartup?.failed) return;
   if (globalTickTimer !== null) window.clearInterval(globalTickTimer);
   globalTickTimer = window.setInterval(globalTick, GLOBAL_TICK_MS);
 }
@@ -4945,6 +4946,7 @@ function setBattleModalLock(active) {
 }
 
 function openModal(id) {
+  if (window.CloudSaveSystem?.playAllowed !== true) return;
   if (window.SandboxSystem?.active && id !== 'sandboxModal') return;
   if (window.PvPSystem?.active && id !== 'pvpModal') return;
   const modal = document.getElementById(id);
@@ -5683,11 +5685,13 @@ document.getElementById('spookyChooseButton')?.addEventListener('click',showSpoo
 // Online modules receive narrow read/serialize/lifecycle adapters only.
 async function applyCloudProgress(payload,options={}){
   if(isBattleMatchActive()||isSimulationActive()||isImportingSave)throw Error('Finish the current activity before restoring cloud progress.');
+  if(options.canApply&&options.canApply()!==true)throw Error('Authentication changed before Cloud restore.');
   const imported=parseCloudSaveBundle(await decryptGameSave(payload));
   const gameKeys=getGameSaveKeys(),records=Object.fromEntries(gameKeys.map(key=>[key,Object.hasOwn(imported,key)?imported[key]:null]));
   // Prepare a one-use, per-tab receipt for the exact Cloud records. The next boot
   // validates it against both local bytes and the server, avoiding reload loops.
   const receipt=options.cloudFirst?await window.CloudSaveSystem.restoreReceipt(options.meta,records):null;
+  if(options.canApply&&options.canApply()!==true)throw Error('Authentication changed before Cloud restore.');
   const previousReceipt=receipt===null?null:sessionStorage.getItem(window.CloudSaveSystem.BOOT_KEY);
   const keys=[...gameKeys,window.CloudSaveSystem.META_KEY],previous=Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)]));
   const previousAutoRoll=isAutoRolling;
@@ -5712,12 +5716,28 @@ function cloudProgressSummary(){
   let strongestPower=0;for(const card of ALL_CARDS){if(!isCardOwned(card.id))continue;for(const variant of getVariantEntries(card.id)){const stats=getDisplayCard(card,variant.mutations);strongestPower=Math.max(strongestPower,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(stats.hp+stats.atk*2)));}}
   return{totalRolls:Math.min(Number.MAX_SAFE_INTEGER,state.totalRolls||0),strongestPower,timeTrialRoom:window.TimeTrialSystem.bestRoom||0,uniqueCards:getUniqueCount()};
 }
+let authRuntimeUnlocked=false;
+function suspendGameForAuthentication(){
+  isAutoRolling=false;if(els.autoRollToggle)els.autoRollToggle.checked=false;
+  clearCooldownExpiryTimer();stopCooldownVisualLoop();clearAutoContinueBattleTimer();clearBattleTurnTimer();clearBattleAnimationTimers();
+  if(globalTickTimer!==null){clearInterval(globalTickTimer);globalTickTimer=null;}
+  window.TimeTrialSystem?.detach();window.PvPSystem?.exit();window.SandboxSystem?.exit();
+  if(battleState){battleState.finished=true;battleState.isBattling=false;battleState=null;}
+  window.DropAudioSystem?.stop();window.BackgroundActivitySystem?.holdSpecial();
+  for(const modal of document.querySelectorAll('.modal-backdrop'))modal.classList.add('hidden');
+  document.body.classList.remove('battle-lock','modal-open');authRuntimeUnlocked=false;
+}
 window.CloudSaveSystem.configure({
-  open:openModal,canRestore:()=>!isBattleMatchActive()&&!isSimulationActive()&&!isImportingSave,
+  open:openModal,storageKeys:getGameSaveKeys,onSessionEnd:suspendGameForAuthentication,
+  canRestore:()=>!isBattleMatchActive()&&!isSimulationActive()&&!isImportingSave,
   canSnapshot:()=>!isSimulationActive()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked&&window.EvolutionSystem.flush(),
   capture:async()=>{const bundle=buildCloudSaveBundle(),summary=cloudProgressSummary();return{payload:await encryptGameSave(JSON.stringify(bundle)),summary,meaningful:summary.totalRolls>0||summary.uniqueCards>0||state.currency>0||Object.values(state.upgrades||{}).some(n=>n>0)};},
   validate:async payload=>parseCloudSaveBundle(await decryptGameSave(payload)),apply:applyCloudProgress,
-  onBlocking:blocked=>{const shell=document.getElementById('app');if(shell)shell.inert=blocked;for(const modal of document.querySelectorAll('.modal-backdrop'))modal.inert=blocked&&modal.id!=='cloudAccountModal';if(blocked){clearAutoContinueBattleTimer();clearCooldownExpiryTimer();}else{if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();if(battleState?.finished)scheduleAutoContinueBattle();}}
+  onBlocking:blocked=>{
+    if(blocked){clearAutoContinueBattleTimer();clearCooldownExpiryTimer();if(globalTickTimer!==null){clearInterval(globalTickTimer);globalTickTimer=null;}authRuntimeUnlocked=false;}
+    else if(!authRuntimeUnlocked){authRuntimeUnlocked=true;resumeGameRuntime();window.BackgroundActivitySystem?.releaseSpecial();}
+    else{if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();if(battleState?.finished)scheduleAutoContinueBattle();}
+  }
 });
 window.LeaderboardSystem.configure({open:openModal});
 window.PvPSystem.configure({

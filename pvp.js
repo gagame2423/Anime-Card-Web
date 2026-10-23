@@ -4,17 +4,28 @@
  'use strict';
  const U=host.OnlineUtils,C=host.PvPCombat,V=host.PvPView,TURN_MS=15000,PROTOCOL=1;
  let bridge={},active=false,peer=null,connection=null,role='',room='',session='',mode=1,phase='setup',localCommit=null,remoteCommit='',localReveal=null,remoteReveal=null,combat=null,seq=0,deadline=0,timer=null,clock=null,heartbeat=null,queue=Promise.resolve(),generation=0,remoteName='Opponent',lastSeen=0,confirmed=false,lastHash='',remoteAck='',hello=false,identitySignature='',selection=[],remoteBusy=false,handling=false,lockState='idle',mounted=false;
- let ownedIds=new Set();
+ let ownedIds=new Set(),attemptTimer=null,iceTimer=null;const rtcCleanup=[];
+ const CONNECT_MS=U.PEER_CONNECT_TIMEOUT_MS,TIMEOUT_MESSAGE='Connection timed out. Please verify Room ID or network firewall.';
+ function clearConnectionTimer(){if(attemptTimer!==null)host.clearTimeout(attemptTimer);attemptTimer=null;}
+ function clearIceTimer(){if(iceTimer!==null)host.clearTimeout(iceTimer);iceTimer=null;}
+ function startConnectionTimer(){if(attemptTimer!==null)return;const ticket=generation;attemptTimer=host.setTimeout(()=>{attemptTimer=null;if(ticket===generation&&active&&!hello)abort(TIMEOUT_MESSAGE,false);},CONNECT_MS);}
+ function connectionError(error){if(error?.type==='peer-unavailable')return 'Room not found. Please verify Room ID.';if(error?.type==='unavailable-id')return 'Room ID already taken. Please create another room.';if(['network','server-error','socket-error','socket-closed','disconnected'].includes(error?.type))return 'Network connection failed. Please check your Internet connection or firewall.';return error?.message||'Peer connection failed. Please try again.';}
  const el=id=>host.document.getElementById(id),text=(id,value)=>U.text(el(id),value);
  const localSide=()=>role==='host'?'host':'guest';
  const safeName=n=>String(n||'Player').replace(/[\u0000-\u001f]/g,'').slice(0,40);
  function refreshOwned(){const cards=bridge.ownedCards?.()||[];ownedIds=new Set(cards.map(card=>String(card.id)));V.setCards(cards);}
  function stopTimer(){if(timer!==null)host.clearTimeout(timer);timer=null;deadline=0;}
- function stopRoom(){generation++;V.closePicker(false);stopTimer();if(clock!==null)host.clearInterval(clock);clock=null;if(heartbeat!==null)host.clearInterval(heartbeat);heartbeat=null;const c=connection,p=peer;connection=null;peer=null;try{c?.close();}catch(_){}try{p?.destroy();}catch(_){}session='';role='';room='';confirmed=false;hello=false;}
+ function stopRoom(preserveIdentity=false){generation++;clearConnectionTimer();clearIceTimer();for(const cleanup of rtcCleanup.splice(0))cleanup();queue=Promise.resolve();V.closePicker(false);stopTimer();if(clock!==null)host.clearInterval(clock);clock=null;if(heartbeat!==null)host.clearInterval(heartbeat);heartbeat=null;const c=connection,p=peer;connection=null;peer=null;try{c?.close();}catch(_){}try{p?.destroy();}catch(_){}session='';if(!preserveIdentity){role='';room='';}confirmed=false;hello=false;}
  function send(type,body={}){if(!connection?.open)throw Error('Opponent connection is closed.');connection.send({protocol:PROTOCOL,type,session,...body});}
  function stopLiveTimers(){if(clock!==null)host.clearInterval(clock);clock=null;if(heartbeat!==null)host.clearInterval(heartbeat);heartbeat=null;}
- function abort(message,notify=true){stopTimer();stopLiveTimers();phase='ended';confirmed=false;try{if(notify&&connection?.open)send('abort',{message:'Match ended: connection or synchronization error.'});}catch(_){}text('pvpStatus',message+' · No rewards or progression.');renderControls();}
- function end(message){stopTimer();stopLiveTimers();phase='ended';confirmed=false;text('pvpStatus',message+' · No rewards or progression.');renderCombat();renderControls();}
+ function abort(message,notify=true){
+  const hadCombat=Boolean(combat);
+  try{if(notify&&connection?.open)send('abort',{message:'Match ended: connection or synchronization error.'});}catch(_){}
+  stopRoom(hadCombat);handling=false;phase=hadCombat?'ended':'setup';lockState='idle';
+  if(!hadCombat){localCommit=null;remoteCommit='';localReveal=null;remoteReveal=null;selection=[];remoteBusy=false;V.resetCombat();text('pvpOpponentPick','Opponent picks remain hidden until both players are Ready.');}
+  text('pvpStatus',message+(hadCombat?' · No rewards or progression.':''));renderCombat();renderControls();
+ }
+ function end(message){clearConnectionTimer();clearIceTimer();stopTimer();stopLiveTimers();phase='ended';confirmed=false;text('pvpStatus',message+' · No rewards or progression.');renderCombat();renderControls();}
  function resetPicks(){localCommit=null;lockState='idle';remoteCommit='';localReveal=null;remoteReveal=null;combat=null;seq=0;lastHash='';remoteAck='';confirmed=false;selection=[];remoteBusy=false;phase='picking';text('pvpOpponentPick','Hidden selection · waiting for Ready');V.resetCombat();renderControls();}
  function renderSelection(){V.state({phase,mode,selection:[...selection],locked:Boolean(localCommit),lockState,remoteReady:Boolean(remoteCommit),hello,hasPeer:Boolean(peer),handling,hasCombat:Boolean(combat),valid:C.validTeam(selection,mode)});}
  function renderControls(){text('pvpRoomCode',room||'No room');text('pvpFormatLabel',mode+'v'+mode+' · Level 1 · Normal cards');
@@ -36,30 +47,49 @@
  async function ensurePeer(){await U.loadSdk('peerJsCdn',()=>typeof host.Peer==='function');identitySignature=await C.signature();}
  function roomCode(){return 'PVP-'+U.token(3).toUpperCase();}
  function peerId(code){return 'acr-'+code.toLowerCase();}
- async function createRoom(){if(!active||peer||handling)return;handling=true;renderControls();const ticket=generation;try{await ensurePeer();if(ticket!==generation||!active)return;mode=Number(el('pvpMode')?.value)===4?4:1;role='host';room=roomCode();session=U.token();resetPicks();makePeer(peerId(room),true);text('pvpStatus','Opening room…');}catch(error){text('pvpStatus',error.message);stopRoom();}finally{handling=false;renderControls();}}
- async function joinRoom(){if(!active||peer||handling)return;const code=String(el('pvpJoinCode')?.value||'').trim().toUpperCase();if(!/^PVP-[A-F0-9]{6}$/.test(code)){text('pvpStatus','Enter a room code such as PVP-A1B2C3.');return;}handling=true;renderControls();const ticket=generation;try{await ensurePeer();if(ticket!==generation||!active)return;role='guest';room=code;session='';resetPicks();makePeer(undefined,false);text('pvpStatus','Connecting to room…');}catch(error){text('pvpStatus',error.message);stopRoom();}finally{handling=false;renderControls();}}
- function makePeer(id,isHost){const ticket=generation;peer=new host.Peer(id,{debug:0});
-  peer.on('open',()=>{if(ticket!==generation)return;if(isHost)text('pvpStatus','Room ready. Share the Room ID with one friend.');else attach(peer.connect(peerId(room),{reliable:true,serialization:'json',metadata:{protocol:PROTOCOL}}));renderControls();});
-  peer.on('connection',c=>{if(ticket!==generation||!isHost||connection){c.on('open',()=>{try{c.send({protocol:PROTOCOL,type:'busy'});}finally{c.close();}});return;}attach(c);});
-  peer.on('error',error=>{if(ticket!==generation)return;abort(error.type==='unavailable-id'?'Room ID already taken. Leave this room and create another.':error.type==='peer-unavailable'?'Room not found. Check the Room ID.':error.message||'Peer connection failed.',false);});
-  peer.on('disconnected',()=>{if(ticket===generation&&phase!=='ended')abort('Connection to the room service was lost. Recreate the room.',false);});
+ async function createRoom(){
+  if(!active||peer||handling||host.CloudSaveSystem?.playAllowed!==true)return;
+  handling=true;startConnectionTimer();renderControls();const ticket=generation;
+  try{await ensurePeer();if(ticket!==generation||!active)return;mode=Number(el('pvpMode')?.value)===4?4:1;role='host';room=roomCode();session=U.token();resetPicks();text('pvpStatus','Connecting to room service…');makePeer(peerId(room),true);}
+  catch(error){if(ticket===generation)abort(connectionError(error),false);}
+  finally{if(ticket===generation){handling=false;renderControls();}}
  }
- function attach(c){let pending=0;if(connection){c.close();return;}connection=c;const ticket=generation;lastSeen=Date.now();
-  c.on('open',()=>{if(ticket!==generation)return;text('pvpStatus','Opponent connected. Verifying game version…');if(role==='host')send('hello',{mode,signature:identitySignature,name:safeName(bridge.displayName?.())});
+ async function joinRoom(){
+  if(!active||peer||handling||host.CloudSaveSystem?.playAllowed!==true)return;
+  const code=String(el('pvpJoinCode')?.value||'').trim().toUpperCase();if(!/^PVP-[A-F0-9]{6}$/.test(code)){text('pvpStatus','Enter a room code such as PVP-A1B2C3.');return;}
+  handling=true;startConnectionTimer();renderControls();const ticket=generation;
+  try{await ensurePeer();if(ticket!==generation||!active)return;role='guest';room=code;session='';resetPicks();text('pvpStatus','Connecting to room…');makePeer(undefined,false);}
+  catch(error){if(ticket===generation)abort(connectionError(error),false);}
+  finally{if(ticket===generation){handling=false;renderControls();}}
+ }
+ function makePeer(id,isHost){const ticket=generation;peer=new host.Peer(id,U.peerOptions());
+  peer.on('open',()=>{if(ticket!==generation)return;try{if(isHost){clearConnectionTimer();text('pvpStatus','Room ready. Share the Room ID with one friend.');}else attach(peer.connect(peerId(room),{reliable:true,serialization:'json',metadata:{protocol:PROTOCOL}}));renderControls();}catch(error){abort(connectionError(error),false);}});
+  peer.on('connection',c=>{if(ticket!==generation||!isHost||connection){c.on('error',()=>{});c.on('open',()=>{try{c.send({protocol:PROTOCOL,type:'busy'});}catch(_){}finally{c.close();}});return;}attach(c);});
+  peer.on('error',error=>{if(ticket!==generation)return;abort(connectionError(error),false);});
+  peer.on('disconnected',()=>{if(ticket!==generation||phase==='ended')return;if(hello&&connection?.open){text('pvpStatus','Room service disconnected. Your existing peer connection is still active.');return;}abort('Connection to the room service was lost. Please create or join again.',false);});
+  peer.on('close',()=>{if(ticket===generation&&phase!=='ended')abort('Room connection closed. Please create or join again.',false);});
+ }
+ function attach(c){let pending=0,watchedPc=null;if(connection){c.close();return;}connection=c;const ticket=generation;lastSeen=Date.now();startConnectionTimer();
+  function watchTransport(){const pc=c.peerConnection;if(!pc||pc===watchedPc||typeof pc.addEventListener!=='function')return;watchedPc=pc;
+   const changed=()=>{if(ticket!==generation||phase==='ended'||pc!==watchedPc)return;const states=[pc.connectionState,pc.iceConnectionState];if(states.some(state=>['failed','closed'].includes(state))){abort('WebRTC connection failed. Please check network firewall or try another network.',false);return;}if(states.includes('disconnected')){if(iceTimer===null)iceTimer=host.setTimeout(()=>{iceTimer=null;if(ticket===generation)abort(TIMEOUT_MESSAGE,false);},CONNECT_MS);}else if(states.some(state=>['connected','completed'].includes(state)))clearIceTimer();};
+   pc.addEventListener('connectionstatechange',changed);pc.addEventListener('iceconnectionstatechange',changed);rtcCleanup.push(()=>{pc.removeEventListener('connectionstatechange',changed);pc.removeEventListener('iceconnectionstatechange',changed);});changed();
+  }
+  watchTransport();
+  c.on('open',()=>{if(ticket!==generation)return;try{watchTransport();text('pvpStatus','Opponent connected. Verifying game version…');if(role==='host')send('hello',{mode,signature:identitySignature,name:safeName(bridge.displayName?.())});
    heartbeat=host.setInterval(()=>{if(ticket!==generation)return;if(Date.now()-lastSeen>45000){abort('Opponent timed out.',false);return;}try{send('ping',{at:Date.now()});}catch(_){}},10000);
-   clock=host.setInterval(renderClock,250);renderControls();});
-  c.on('data',message=>{if(ticket!==generation)return;if(pending>=64){abort('Too many queued peer messages.');c.close();return;}pending++;queue=queue.then(()=>{if(ticket===generation)return receive(message);}).catch(error=>abort(error.message)).finally(()=>{pending--;});});
-  c.on('close',()=>{if(ticket===generation&&phase!=='ended')abort('Opponent disconnected.',false);});c.on('error',error=>{if(ticket===generation)abort(error.message||'Peer channel error.',false);});
+   clock=host.setInterval(renderClock,250);renderControls();}catch(error){abort(connectionError(error),false);}});
+  c.on('data',message=>{if(ticket!==generation)return;if(pending>=64){abort('Too many queued peer messages.');return;}pending++;queue=queue.then(()=>{if(ticket===generation)return receive(message);}).catch(error=>{if(ticket===generation)abort(error.message);}).finally(()=>{pending--;});});
+  c.on('close',()=>{if(ticket===generation&&phase!=='ended')abort('Opponent disconnected. Please create or join again.',false);});c.on('error',error=>{if(ticket===generation)abort(connectionError(error),false);});
  }
  async function receive(message){
   if(!message||typeof message!=='object'||Array.isArray(message)||JSON.stringify(message).length>65536)throw Error('Invalid peer message.');
   if(message.type==='busy'){abort('Room already has two players.',false);return;}
   if(message.protocol!==PROTOCOL)throw Error('Incompatible PvP protocol.');lastSeen=Date.now();
   if(message.type==='hello'){
-   if(role!=='guest'||hello||message.signature!==identitySignature||![1,4].includes(message.mode)||!/^[a-f0-9]{32}$/.test(message.session))throw Error('Players must use the same game update.');session=message.session;mode=message.mode;remoteName=safeName(message.name);hello=true;resetPicks();send('hello_ack',{signature:identitySignature,name:safeName(bridge.displayName?.())});text('pvpStatus','Connected. Choose your team privately, then Lock In / Ready.');renderControls();return;
+   if(role!=='guest'||hello||message.signature!==identitySignature||![1,4].includes(message.mode)||!/^[a-f0-9]{32}$/.test(message.session))throw Error('Players must use the same game update.');session=message.session;mode=message.mode;remoteName=safeName(message.name);hello=true;clearConnectionTimer();resetPicks();send('hello_ack',{signature:identitySignature,name:safeName(bridge.displayName?.())});text('pvpStatus','Connected. Choose your team privately, then Lock In / Ready.');renderControls();return;
   }
   if(!session||message.session!==session)throw Error('Message belongs to another room session.');
-  if(message.type==='hello_ack'){if(role!=='host'||hello||message.signature!==identitySignature)throw Error('Game version mismatch.');hello=true;remoteName=safeName(message.name);text('pvpStatus','Connected. Choose your team privately, then Lock In / Ready.');renderControls();return;}
+  if(message.type==='hello_ack'){if(role!=='host'||hello||message.signature!==identitySignature)throw Error('Game version mismatch.');hello=true;clearConnectionTimer();remoteName=safeName(message.name);text('pvpStatus','Connected. Choose your team privately, then Lock In / Ready.');renderControls();return;}
   if(message.type==='ping'){send('pong');return;}if(message.type==='pong')return;
   if(message.type==='leave'){end('Opponent left the room');return;}if(message.type==='abort'){abort('Match stopped because peers could not verify the same state.',false);return;}
   if(phase==='ended')return;
