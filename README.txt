@@ -1,6 +1,17 @@
 NHẬT KÝ CẬP NHẬT — ĐĂNG NHẬP GOOGLE BẮT BUỘC VÀ SỬA KẾT NỐI PVP
 Ngày cập nhật: 23/10/2026
 
+
+BỔ SUNG — TURN METERED ASIA-EAST CHO PVP KHÁC MẠNG
+
+- Đã thêm TURN Metered vùng asia-east qua cổng 80/443, UDP/TCP và TLS bên cạnh ba STUN Google hiện có; giữ debug: 1. TURN chuyển tiếp dữ liệu khi đường kết nối trực tiếp bị NAT/firewall chặn. Timeout kết nối và chờ ICE phục hồi tăng lên 20.000 ms.
+- Sửa username và credential trong hằng TURN_SERVER ở đầu online_utils.js. Đã điền thông tin người dùng cung cấp; không cần dán lại mật khẩu. Nếu credential rỗng hoặc còn PASTE_YOUR_PASSWORD_HERE, game chỉ dùng STUN và ghi console.warn rõ ràng, không làm hỏng quá trình tạo Peer.
+- Kiểm tra tại https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/ : thêm từng URI TURN trong TURN_SERVER cùng username/password, chọn Add Server rồi Gather candidates. Có thể chọn IceTransports = relay để kiểm tra relay. Kết quả cần xuất hiện Type = relay; chuỗi ICE tương ứng có “typ relay”. Nên thử từng URI trên cả hai mạng rồi thử kết nối PvP thực tế.
+- CẢNH BÁO: credential nằm trong JavaScript phía trình duyệt nên công khai. Theo dõi mức sử dụng trong Metered dashboard và tạo lại credential nếu bị lạm dụng; sau đó cập nhật TURN_SERVER và triển khai lại. README không chứa mật khẩu thật.
+- Tệp thay đổi trong bản bổ sung: online_utils.js (TURN và timeout 20 giây), index.html (toàn bộ cache tag thành 20261023-google-pvp-2), README.txt (hướng dẫn và ghi chú tương ứng). pvp.js được kiểm tra cú pháp, không chỉnh sửa; heartbeat và timeout băm lựa chọn vẫn giữ nhịp riêng 10 giây, không phải timeout kết nối.
+- Cần làm thủ công: đẩy nguồn lên GitHub Pages; nhờ cả hai người chơi Ctrl+F5; kiểm tra relay và chơi thử từ hai mạng khác nhau. Không cần thay đổi Firebase hay giao diện.
+
+
 1. ĐĂNG NHẬP GOOGLE NGAY KHI KHỞI ĐỘNG
 
 - Thêm lớp đăng nhập toàn màn hình có duy nhất hành động chính Sign in with Google. Không có nút đóng, chơi khách hoặc tiếp tục offline. Phím Escape và thao tác bên ngoài không thể đóng lớp này; bàn phím không truy cập được các điều khiển game phía sau.
@@ -23,18 +34,18 @@ Ngày cập nhật: 23/10/2026
   stun:stun.l.google.com:19302
   stun:stun1.l.google.com:19302
   stun:stun2.l.google.com:19302
-- Bắt đầu ngân sách kết nối 10.000 ms từ thao tác Create Room hoặc Join Room, bao gồm thời gian nạp SDK và chuẩn bị phiên.
-- Create Room: nếu chưa đăng ký được phòng sau 10 giây, hủy và bật lại điều khiển. Khi phòng đã đăng ký thành công và báo Room ready, phòng được giữ để chủ phòng chia sẻ mã và chờ bạn; không đóng phòng chỉ vì bạn chưa vào trong 10 giây.
-- Join Room và kênh đến chủ phòng: nếu kênh dữ liệu/handshake chưa hoàn tất sau 10 giây, hủy kết nối đang chờ, hủy timer/listener liên quan, trả giao diện về trạng thái có thể thử lại.
+- Bắt đầu ngân sách kết nối 20.000 ms từ thao tác Create Room hoặc Join Room, bao gồm thời gian nạp SDK và chuẩn bị phiên.
+- Create Room: nếu chưa đăng ký được phòng sau 20 giây, hủy và bật lại điều khiển. Khi phòng đã đăng ký thành công và báo Room ready, phòng được giữ để chủ phòng chia sẻ mã và chờ bạn; không đóng phòng chỉ vì bạn chưa vào trong 20 giây.
+- Join Room và kênh đến chủ phòng: nếu kênh dữ liệu/handshake chưa hoàn tất sau 20 giây, hủy kết nối đang chờ, hủy timer/listener liên quan, trả giao diện về trạng thái có thể thử lại.
 - Thông báo timeout chính xác: Connection timed out. Please verify Room ID or network firewall.
 - Xử lý peer.error, peer.disconnected, peer.close, conn.error và conn.close. Lỗi peer-unavailable, network hoặc ID trùng không giữ nút ở trạng thái Connecting.
-- Theo dõi connectionState và iceConnectionState của RTCPeerConnection. Trạng thái failed/closed kết thúc phiên an toàn; disconnected được chờ phục hồi tối đa 10 giây. Mất kết nối signaling nhưng kênh dữ liệu đã xác minh vẫn mở thì tiếp tục dùng kênh đang có.
+- Theo dõi connectionState và iceConnectionState của RTCPeerConnection. Trạng thái failed/closed kết thúc phiên an toàn; disconnected được chờ phục hồi tối đa 20 giây. Mất kết nối signaling nhưng kênh dữ liệu đã xác minh vẫn mở thì tiếp tục dùng kênh đang có.
 - Callback thuộc kết nối cũ không được sửa trạng thái phòng mới. Giữ nguyên blind pick SHA-256, khóa lựa chọn Ready, chuẩn hóa Level 1, đồng bộ lượt và quy tắc PvP không có thưởng/tiến độ.
-- STUN hỗ trợ tìm đường kết nối NAT, không bảo đảm vượt mọi NAT đối xứng hoặc firewall. Mạng chặn kết nối trực tiếp có thể cần TURN có thông tin xác thực; bản cập nhật này không cung cấp TURN.
+- STUN hỗ trợ tìm đường kết nối NAT, không bảo đảm vượt mọi NAT đối xứng hoặc firewall. Bản cập nhật đã cấu hình TURN Metered asia-east để chuyển tiếp khi kết nối trực tiếp thất bại; việc sử dụng phụ thuộc credential hợp lệ và dịch vụ TURN hoạt động.
 
 4. CẤU HÌNH TRIỂN KHAI
 
-- Tải lên đầy đủ nguồn, giữ đúng chữ hoa/thường của tên tệp. Mã cache mới: 20261023-google-pvp-1. Tiếp tục dùng các asset ảnh/âm thanh hiện có do người dùng quản lý; gói này không chứa asset mới.
+- Tải lên đầy đủ nguồn, giữ đúng chữ hoa/thường của tên tệp. Mã cache mới: 20261023-google-pvp-2. Tiếp tục dùng các asset ảnh/âm thanh hiện có do người dùng quản lý; gói này không chứa asset mới.
 - Trong Firebase Authentication, bật Google và thêm tên miền triển khai vào Authorized domains. Anonymous không còn được mã game sử dụng; nên tắt nhà cung cấp Anonymous nếu dự án không có ứng dụng khác cần nó.
 - Triển khai firestore.rules đi kèm. Hàm kiểm tra quyền yêu cầu request.auth.token.firebase.sign_in_provider == 'google.com', đồng thời giữ giới hạn UID và kiểm tra schema/revision hiện có. Chỉ thay tệp nguồn trên web không tự cập nhật Firestore Rules.
 - Có thể triển khai Rules bằng Firebase CLI: firebase deploy --only firestore:rules --project anime-card-web
@@ -50,7 +61,7 @@ Ngày cập nhật: 23/10/2026
 
 6. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
 
-- online_utils.js: Cấu hình STUN dùng chung, hằng timeout 10 giây, trình nạp module có thứ tự và thông báo lỗi dịch vụ.
+- online_utils.js: Cấu hình STUN dùng chung, hằng timeout 20 giây, trình nạp module có thứ tự và thông báo lỗi dịch vụ.
 - pvp.js: Timeout, hủy kết nối, khôi phục điều khiển, xử lý sự kiện PeerJS/DataConnection và trạng thái ICE.
 - startup.js: Lớp xác thực bắt buộc, khóa focus/Escape, nạp gameplay sau Google và kiểm tra module sau khi nạp.
 - firebase.js: Xác minh Google/token, điều phối Cloud-first, bỏ guest/offline, khóa khi lỗi/mất mạng, xóa phiên khi đăng xuất và chặn khôi phục từ tác vụ cũ.
