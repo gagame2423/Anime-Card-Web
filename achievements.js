@@ -29,7 +29,7 @@
     return result;
   }
   let data = load(), bridge = {}, definitions = [], bonusDefinitions = {}, reconciling = false;
-  function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); return true; } catch (error) { console.warn('Achievement save unavailable', error); return false; } }
+  function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; } catch (error) { console.warn('Achievement save unavailable', error); return false; } }
   function compact(value) {
     for (const [unit, suffix] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']]) if (value >= unit) return `${(value / unit).toFixed(2).replace(/\.?0+$/, '')}${suffix}`;
     return String(value);

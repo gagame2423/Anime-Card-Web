@@ -90,7 +90,7 @@
     return changed;
   }
   settle();
-  function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); return true; } catch (e) { console.warn('Inventory save unavailable', e); return false; } }
+  function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; } catch (e) { console.warn('Inventory save unavailable', e); return false; } }
   persist(); // Migrate in place; card and tower saves are never rewritten here.
   function getItem(id, at = Date.now()) {
     if (!safeId(id) || !hasOwn(data.items, id)) return null;

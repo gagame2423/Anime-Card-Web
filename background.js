@@ -28,7 +28,7 @@
     } catch (_) { return Promise.resolve(false); }
   }
   doc.getElementById('musicToggleButton')?.addEventListener('click',()=>{
-    muted = !muted; try { host.localStorage.setItem(MUSIC_KEY,JSON.stringify(muted)); } catch (_) {}
+    muted = !muted; try { host.localStorage.setItem(MUSIC_KEY,JSON.stringify(muted));host.CloudSaveSystem?.markDirty(); } catch (_) {}
     if (muted) music?.pause(); else void resumeMusic(); renderMusicControl();
   });
   renderMusicControl();
@@ -77,7 +77,7 @@
   });
   host.BackgroundActivitySystem = Object.freeze({
     MUSIC_KEY, VOLUME_KEY,
-    setVolume:value=>{const next=Number(value);if(!Number.isFinite(next))return;volume=Math.max(0,Math.min(1,next));if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;if(music)music.volume=volume;try{host.localStorage.setItem(VOLUME_KEY,JSON.stringify(volume));}catch(_){}},
+    setVolume:value=>{const next=Number(value);if(!Number.isFinite(next))return;volume=Math.max(0,Math.min(1,next));if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;if(music)music.volume=volume;try{host.localStorage.setItem(VOLUME_KEY,JSON.stringify(volume));host.CloudSaveSystem?.markDirty();}catch(_){}},
     get volume(){return volume;}, holdSpecial:()=>{specialHold=true;if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;music?.pause();},
     releaseSpecial:()=>{
       specialHold=false;

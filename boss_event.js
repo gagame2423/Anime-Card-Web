@@ -39,7 +39,7 @@
   // Legacy shared balance belongs entirely to Alucard. New types start empty.
   for(const type of Object.keys(TYPES)) data.events[type] ||= {coins:0,difficulty:1,wins:0};
   if(!data.pendingReward)data.activeAttempt=null;
-  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));return true;}catch(_){return false;}}
+  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();return true;}catch(_){return false;}}
   persist();
   function migrateGomen(){
     if(data.gomenRaidMigrated)return true;

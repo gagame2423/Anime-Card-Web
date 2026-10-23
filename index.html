@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261022-feed-additive-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261022-feed-additive-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261023-cloud-pvp-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261023-cloud-pvp-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -63,7 +63,8 @@
           <div class="utility-menu__panel" aria-label="Game utilities">
             <button id="inventoryOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🧪</span><span><small>STORAGE</small><strong>Items</strong></span></button>
             <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
-            <button id="saveManagerOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Export or import save"><span class="nav-icon">⇄</span><span><small>BACKUP</small><strong>Save</strong></span></button>
+            <button id="cloudLoginOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">☁</span><span><small id="cloudSyncIndicator">Offline</small><strong>... Login</strong></span></button>
+            <button id="leaderboardOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">♛</span><span><small>GLOBAL</small><strong>Leaderboard</strong></span></button>
             <button id="craftingOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚗</span><span><small>UPGRADE</small><strong>Crafting</strong></span></button>
             <button id="questOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">?</span><span><small>DISCOVER</small><strong>Quests</strong></span></button>
             <button id="evolutionOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">✧</span><span><small>TRANSFORM</small><strong>Evolution</strong></span></button>
@@ -383,18 +384,19 @@
       <div id="achievementList" class="achievement-grid" aria-label="Achievements and rewards"></div>
     </section>
   </div>
-  <!-- SAVE TRANSFER: all persistent game stores travel together -->
-  <div id="saveManagerModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="saveManagerTitle">
-    <section class="modal-panel module-modal save-manager-modal">
-      <header class="modal-header"><div><p class="eyebrow">TAKE YOUR PROGRESS WITH YOU</p><h2 id="saveManagerTitle">⇄ Save transfer</h2></div><button data-close-modal="saveManagerModal" class="modal-close" type="button" aria-label="Close save transfer">×</button></header>
-      <p class="module-description">Xuất toàn bộ tiến độ thành tệp .acrsave có kiểm tra toàn vẹn. Có thể xuất và nhập liên tiếp, không có thời gian chờ 7 ngày.</p>
-      <div class="save-transfer-actions">
-        <article><h3>Export Save</h3><p>Tạo bản sao .acrsave để giữ hoặc chuyển sang thiết bị khác.</p><small id="saveExportAvailability" class="save-cooldown-label" aria-live="polite"></small><button id="exportSaveButton" type="button">↓ Export Save (.acrsave)</button></article>
-        <article><h3>Import Save</h3><p>Chọn save .acrsave hợp lệ. Nhập sẽ thay thế tiến độ hiện tại rồi tải lại game.</p><small id="saveImportAvailability" class="save-cooldown-label" aria-live="polite"></small><button id="importSaveButton" type="button">↑ Import Save (.acrsave)</button><input id="importSaveInput" type="file" accept=".acrsave" hidden></article>
+  <div id="cloudAccountModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cloudAccountTitle">
+    <section class="modal-panel online-modal">
+      <header class="modal-header"><div><p class="eyebrow">OFFLINE + CLOUD</p><h2 id="cloudAccountTitle">Cloud Account</h2></div><button class="modal-close" type="button" data-close-modal="cloudAccountModal" aria-label="Close Cloud Account">×</button></header>
+      <div class="online-content"><h3 id="cloudAccountName">Local guest</h3><p id="cloudUid" class="online-muted"></p><p id="cloudStatus" class="online-status" role="status" aria-live="polite">Progress is saved on this device.</p>
+        <div class="online-actions"><button id="cloudGoogleButton" type="button" class="online-primary">Sign in with Google</button><button id="cloudGuestButton" type="button">Play as Guest</button><button id="cloudSyncButton" type="button">Sync Now / Retry</button><button id="cloudLogoutButton" type="button" hidden>Sign Out</button><button id="cloudReloadButton" type="button">Reload Page</button></div>
+        <label class="online-field">Leaderboard display name<input id="cloudDisplayName" maxlength="40" placeholder="Your public player name" autocomplete="nickname"></label>
+        <section id="cloudConflict" class="cloud-conflict" hidden><h3>Choose your progress</h3><p>Both saves stay separate. Choosing Cloud preserves a recovery copy of the local save.</p><div class="cloud-save-choices"><article><strong>This device</strong><p id="cloudLocalSummary"></p><button id="cloudUseLocal" type="button">Keep Local / Migrate</button></article><article><strong>Cloud account</strong><p id="cloudRemoteSummary"></p><button id="cloudUseRemote" type="button">Use Cloud Save</button></article></div></section>
+        <details><summary>Local recovery</summary><p>A backup is kept before a cloud save replaces this device's progress.</p><button id="cloudRestoreBackup" type="button">Restore Previous Local Copy</button></details>
+        <p class="online-muted">Google sync carries progress between devices. Anonymous guests can link Google later. Offline play keeps using localStorage.</p>
       </div>
-      <p id="saveTransferStatus" class="module-description save-transfer-status" role="status" aria-live="polite">Timer potion giữ nguyên thời điểm hết hạn. File sửa sai checksum sẽ bị từ chối; Base64 là đóng gói, không phải mã hóa bí mật.</p>
     </section>
   </div>
+  <div id="leaderboardModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle"><section class="modal-panel online-modal"><header class="modal-header"><h2 id="leaderboardTitle">Global Leaderboard</h2><button class="modal-close" type="button" data-close-modal="leaderboardModal" aria-label="Close leaderboard">×</button></header><div class="online-content"><div class="online-actions"><label class="online-field">Top 50 by<select id="leaderboardMetric"><option value="totalRolls">Total Rolls</option><option value="strongestPower">Strongest Card</option><option value="timeTrialRoom">Normal Time Trial Room</option></select></label><button id="leaderboardRefresh" type="button">Refresh</button></div><p id="leaderboardStatus" role="status"></p><div id="leaderboardList" class="leaderboard-list"></div></div></section></div>
   <!-- ITEMS: separate persistence from card ownership -->
   <div id="inventoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="inventoryModalTitle">
     <section class="modal-panel module-modal storage-modal">
@@ -472,6 +474,7 @@
             <button id="timeTrialOpenButton" type="button" class="battle-mode-option" aria-pressed="false" aria-haspopup="dialog" aria-controls="timeTrialModeModal"><strong>⏱ TIME TRIAL</strong><span id="timeTrialModeHint">Choose Normal or EXP</span></button>
             <button type="button" class="battle-mode-option" data-battle-mode="raid" aria-pressed="false"><strong>⚓ RAID</strong><span>Marine Ford / Holy Grail</span></button>
             <button type="button" class="battle-mode-option" data-battle-mode="boss-event" aria-pressed="false"><strong>🩸 BOSS EVENT</strong><span>Alucard / Lucius / Gomen • 5 vs 1 • Weather required</span></button>
+            <button id="pvpOpenButton" type="button" class="battle-mode-option" aria-haspopup="dialog" aria-controls="pvpModal"><strong>🌐 ONLINE PVP</strong><span>1v1 / 4v4 • Blind Pick • Level 1 • No rewards</span></button>
             <button id="spookyModeButton" type="button" class="battle-mode-option spooky-mode" data-battle-mode="spooky-hunt" aria-pressed="false"><strong>🎃 SPOOKY HUNT</strong><span id="spookyModeHint">October • 6vs3 • 50 waves</span></button>
           </div>
           <div id="spookyControls" class="spooky-controls hidden">
@@ -856,6 +859,16 @@
   <div id="bossEventShopModal" class="modal-backdrop hidden">
     <section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="bossEventShopTitle"><header class="modal-header"><h2 id="bossEventShopTitle">🩸 Boss Event Shop</h2><button class="modal-close" data-close-modal="bossEventShopModal" type="button" aria-label="Close Boss Event shop">×</button></header><p id="bossEventShopBalance" class="module-description"></p><div id="bossEventShopGrid" class="module-grid"></div></section>
   </div>
+  <div id="pvpModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pvpTitle"><section class="modal-panel pvp-modal">
+    <header class="modal-header"><div><p class="eyebrow">CASUAL · ZERO PROGRESSION</p><h2 id="pvpTitle">Online PvP</h2></div><button id="pvpExit" type="button" class="ghost-button">Exit PvP</button></header>
+    <div class="online-content"><p>Level 1 base stats · Normal cards · Native passives · No weather, equipment, potion effects or rewards.</p>
+      <div class="pvp-room-controls"><label class="online-field">Format<select id="pvpMode"><option value="1">1v1</option><option value="4">4v4</option></select></label><button id="pvpCreate" type="button">Create Room</button><label class="online-field">Room ID<input id="pvpJoinCode" maxlength="10" placeholder="PVP-A1B2C3" autocomplete="off" spellcheck="false"></label><button id="pvpJoin" type="button">Join Room</button></div>
+      <div class="online-actions"><strong id="pvpRoomCode">No room</strong><button id="pvpCopyRoom" type="button">Copy ID</button><button id="pvpLeaveRoom" type="button" hidden>Leave Room</button></div>
+      <p id="pvpStatus" class="online-status" role="status" aria-live="polite"></p><h3 id="pvpFormatLabel">1v1 · Level 1 · Normal cards</h3><div id="pvpPickGrid" class="pvp-pick-grid"></div>
+      <div class="online-actions"><button id="pvpReady" type="button" class="online-primary" disabled>Lock In / Ready</button><span id="pvpOpponentPick">Opponent picks remain hidden until both players are Ready.</span></div><div id="pvpOpponentTeam"></div>
+      <div class="pvp-strike-bar"><strong id="pvpTurnLabel">15-second turn timer</strong><button id="pvpStrike" type="button" class="online-primary" disabled>Strike</button></div><div id="pvpCombatTeams" class="pvp-combat-teams"></div><details class="pvp-log"><summary>Combat Log</summary><div id="pvpLog"></div></details>
+    </div>
+  </section></div>
   <div id="sandboxModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="sandboxTitle">
     <section class="modal-panel sandbox-modal">
       <header class="modal-header"><div><p class="eyebrow">COMBAT LAB</p><h2 id="sandboxTitle">Sandbox Mode</h2></div><button id="sandboxExitButton" type="button" class="ghost-button">Exit Sandbox</button></header>
@@ -881,48 +894,57 @@
   <div id="spookyInfoModal" class="modal-backdrop hidden"><section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="spookyInfoTitle"><header class="modal-header"><h2 id="spookyInfoTitle">Spooky Run Modifiers</h2><button type="button" class="modal-close" data-close-modal="spookyInfoModal" aria-label="Close run modifiers">×</button></header><div id="spookyInfoList" class="spooky-info-list"></div></section></div>
   <div id="spookyShopModal" class="modal-backdrop hidden"><section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="spookyShopTitle"><header class="modal-header"><h2 id="spookyShopTitle">🎃 Spooky Shop</h2><button type="button" class="modal-close" data-close-modal="spookyShopModal" aria-label="Close Spooky Shop">×</button></header><p id="spookyShopBalance" class="module-description"></p><div id="spookyShopGrid" class="module-grid"></div></section></div>
 
-  <script defer src="./startup.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./mutations.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./weathers.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./cards.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./category.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./elements.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./background.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./levels.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./roll_performance.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./ui_performance.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./roll_view.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./grimoire.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./yuno.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./requiem.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./reagan.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./fate.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./spooky_passives.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./gomen.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./shibuya.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./companions.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./combat_stats.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./passives.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./inventory.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./exp_food.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./tower.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./timetrial.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./raid.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./boss_event.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./achievements.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./evolution.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./equipment.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./spooky.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./quests.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./crafting.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./drop_audio.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./sandbox.js?v=20261022-feed-additive-1"></script>
+  <script id="firebaseAppCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script defer src="./online_utils.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./firebase.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./startup.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./mutations.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./weathers.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./cards.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./category.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./elements.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./background.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./levels.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./roll_performance.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./ui_performance.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./roll_view.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./grimoire.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./yuno.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./requiem.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./reagan.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./fate.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./spooky_passives.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./gomen.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./shibuya.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./companions.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./combat_stats.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./passives.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./inventory.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./exp_food.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./tower.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./timetrial.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./raid.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./boss_event.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./achievements.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./evolution.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./equipment.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./spooky.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./quests.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./crafting.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./drop_audio.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./sandbox.js?v=20261023-cloud-pvp-1"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script defer src="./weather_hud.js?v=20261022-feed-additive-1"></script>
+  <script defer src="./weather_hud.js?v=20261023-cloud-pvp-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script defer src="./potion_hud.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./settings.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./storage.js?v=20261022-feed-additive-1"></script>
-  <script defer src="./app.js?v=20261022-feed-additive-1"></script>
+  <script defer src="./potion_hud.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./settings.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./storage.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./pvp_combat.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./pvp.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./leaderboard.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./app.js?v=20261023-cloud-pvp-1"></script>
 </body>
 </html>

@@ -46,7 +46,7 @@
   }
   function setEnabled(value) {
     const next = Boolean(value);
-    try { host.localStorage.setItem(KEY, JSON.stringify(next)); } catch (_) { if (toggle) toggle.checked = enabled; return false; }
+    try { host.localStorage.setItem(KEY, JSON.stringify(next));host.CloudSaveSystem?.markDirty(); } catch (_) { if (toggle) toggle.checked = enabled; return false; }
     enabled = next; render(); return true;
   }
   function mount() {

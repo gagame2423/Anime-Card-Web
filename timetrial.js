@@ -41,7 +41,7 @@
   if (data.activeAttempt?.mode === MODES.normal) data.room = 1;
   data.activeAttempt = null;
   function persist() {
-    try { host.localStorage.setItem(KEY, JSON.stringify(data)); return true; }
+    try { host.localStorage.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; }
     catch (error) { console.warn('Time Trial save unavailable', error); return false; }
   }
   function requirePersist() { if (!persist()) throw new Error('Không thể lưu Time Trial. Chưa thể tiếp tục thao tác.'); }

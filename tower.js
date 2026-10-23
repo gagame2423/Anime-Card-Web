@@ -107,7 +107,7 @@
     return result;
   }
   let data = load();
-  function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); return true; } catch (e) { console.warn('Tower save unavailable', e); return false; } }
+  function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; } catch (e) { console.warn('Tower save unavailable', e); return false; } }
   const weatherId = mode => String(mode || 'normal').trim().toLowerCase();
   function nextFloor(mode = 'normal') { return (data.cleared[weatherId(mode)] || 0) + 1; }
   function completed() { return false; } // Compatibility: infinite towers never complete.

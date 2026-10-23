@@ -9,7 +9,7 @@
   try{const saved=JSON.parse(host.localStorage.getItem(KEY)||'null');if(validSave(saved))preferences=saved;}catch(_){}
   function maxBaseLuck(){return Math.max(1,Number(bridge.maxBaseLuck?.())||1);}
   function baseLuck(max=maxBaseLuck()){return preferences.baseLuck===null?max:Math.max(1,Math.min(max,preferences.baseLuck));}
-  function commit(next){if(bridge.canAct?.()===false)return false;try{host.localStorage.setItem(KEY,JSON.stringify(next));preferences=next;bridge.onChange?.();render();return true;}catch(_){render();return false;}}
+  function commit(next){if(bridge.canAct?.()===false)return false;try{host.localStorage.setItem(KEY,JSON.stringify(next));host.CloudSaveSystem?.markDirty();preferences=next;bridge.onChange?.();render();return true;}catch(_){render();return false;}}
   function setBaseLuck(value){const max=maxBaseLuck(),number=Number(value);if(value!==null&&!Number.isFinite(number))return false;const chosen=value===null?max:Math.max(1,Math.min(max,number));return commit({...preferences,baseLuck:chosen>=max-1e-9?null:chosen});}
   function setSpookySpeedUp(value){return commit({...preferences,spookySpeedUp:value===true});}
   function render(){for(const [prefix,get] of rows){const system=get();if(!system)continue;const value=String(Math.round(system.volume*100));for(const suffix of ['Range','Number']){const node=host.document?.getElementById(prefix+'Volume'+suffix);if(node&&host.document.activeElement!==node)node.value=value;}}

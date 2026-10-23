@@ -1,0 +1,8 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    { "collectionGroup": "users", "fieldPath": "payload", "indexes": [] },
+    { "collectionGroup": "chunks", "fieldPath": "text", "indexes": [] },
+    { "collectionGroup": "recovery", "fieldPath": "payload", "indexes": [] }
+  ]
+}

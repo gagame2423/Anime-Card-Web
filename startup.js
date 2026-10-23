@@ -23,15 +23,17 @@
   function ready(callback) { if (!doc) return; if (doc.readyState !== 'complete') doc.addEventListener('DOMContentLoaded', callback, {once:true}); else callback(); }
   doc?.addEventListener('error', event => {
     const node = event.target;
+    if(node?.dataset?.onlineResource==='true')return;
     if (node?.tagName !== 'SCRIPT' && !(node?.tagName === 'LINK' && node.rel === 'stylesheet')) return;
     const file = (node.src || node.href || '').split('/').pop();
     report('resource:' + file, 'Could not load ' + file + '.');
   }, true);
   host.addEventListener?.('error', event => {
+    if(event.filename&&[...doc.querySelectorAll('script[data-online-resource="true"]')].some(node=>node.src===event.filename))return;
     if (event.target === host && event.filename && event.message) report('script:' + event.filename, 'A game script could not initialize: ' + event.filename.split('/').pop() + '.', event.error);
   });
   ready(() => {
-    for(const name of ['ExpFoodSystem','createCombatStats','QuestsSystem','CraftingSystem','EquipmentSystem','StorageSystem','DropAudioSystem','PotionHudSystem','SettingsSystem','UIPerformanceSystem','createReaganSkills','createRequiemSkills','createFateSkills','createSpookySkills','createGomenSkills','createShibuyaSkills','createCompanionRules','BattleWeatherHud','SpookySystem','CategorySystem'])if(!host[name])report('startup:'+name,'Could not load '+name+'; upload the complete update.');
+    for(const name of ['CloudSaveSystem','OnlineUtils','PvPSystem','PvPCombat','LeaderboardSystem','ExpFoodSystem','createCombatStats','QuestsSystem','CraftingSystem','EquipmentSystem','StorageSystem','DropAudioSystem','PotionHudSystem','SettingsSystem','UIPerformanceSystem','createReaganSkills','createRequiemSkills','createFateSkills','createSpookySkills','createGomenSkills','createShibuyaSkills','createCompanionRules','BattleWeatherHud','SpookySystem','CategorySystem'])if(!host[name])report('startup:'+name,'Could not load '+name+'; upload the complete update.');
     if (!host.createYunoSkills) report('startup:Yuno', 'Could not load yuno.js; upload the complete update.');
     if (!host.createGrimoireSkills) report('startup:Grimoire', 'Could not load grimoire.js; upload the complete update.');
     if (!host.RollPerformanceSystem) report('startup:RollPerformanceSystem', 'Could not load roll_performance.js; performance optimizations are unavailable.');

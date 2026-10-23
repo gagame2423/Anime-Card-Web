@@ -64,7 +64,7 @@
   }
   function load() { try { const v = JSON.parse(host.localStorage.getItem(KEY) || 'null'); return validSave(v) ? v : fresh(); } catch (_) { return fresh(); } }
   let data = load(), bridge = {}, awarding = false;
-  function persist() { try { host.localStorage.setItem(KEY, JSON.stringify(data)); return true; } catch (_) { return false; } }
+  function persist() { try { host.localStorage.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; } catch (_) { return false; } }
   function reconcile() {
     if (awarding || host.SandboxSystem?.active) return;
     awarding = true;
@@ -193,7 +193,7 @@
   let data=load(),bridge={},dirty=false,saveTimer=null,revision=0,ui=null,tab='daily',selected=null,renderedRevision=-1;
   const nowClock=()=>Math.max(0,Number(bridge.clock?.())||0);
   const blocked=()=>Boolean(host.SandboxSystem?.active||bridge.canAct?.()===false);
-  function flush(){if(bridge.isImporting?.())return false;if(saveTimer!==null)host.clearTimeout(saveTimer);saveTimer=null;try{host.localStorage.setItem(KEY,JSON.stringify(data));dirty=false;return true;}catch(_){return false;}}
+  function flush(){if(bridge.isImporting?.())return false;if(saveTimer!==null)host.clearTimeout(saveTimer);saveTimer=null;try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();dirty=false;return true;}catch(_){return false;}}
   function changed(){dirty=true;revision++;if(saveTimer===null)saveTimer=host.setTimeout(()=>{saveTimer=null;if(dirty)flush();},250);}
   function rollCycle(type,index){
     const pool=[...pools[type]];

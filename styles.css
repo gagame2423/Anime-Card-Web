@@ -4663,3 +4663,49 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
  .feed-food-actions { padding-bottom:max(16px,env(safe-area-inset-bottom)); }
 }
 .feed-food-actions button { font-size:14px; font-weight:700; line-height:1.3; }
+
+/* Online account, leaderboard and isolated PvP. */
+.online-modal,.pvp-modal { width:min(880px,96vw); max-height:92dvh; display:flex; flex-direction:column; }
+.pvp-modal { width:min(1120px,97vw); }
+.online-modal>.modal-header,.pvp-modal>.modal-header { flex:0 0 auto; }
+.online-content { padding:20px; overflow:auto; min-height:0; overscroll-behavior:contain; }
+.online-content h3 { margin:8px 0; overflow-wrap:anywhere; }
+.online-content p { line-height:1.6; overflow-wrap:anywhere; }
+.online-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:14px 0; }
+.online-content button,.online-field input,.online-field select,.pvp-pick-slot select { min-height:42px; border:1px solid #4b638b; border-radius:8px; padding:10px 14px; background:#17243d; color:#eff5ff; font-size:13px; }
+.online-content button { cursor:pointer; }
+.online-content button:disabled { opacity:.45; cursor:not-allowed; }
+.online-content .online-primary { background:linear-gradient(110deg,#354a9d,#673bb0); border-color:#a490ff; font-weight:750; }
+.online-field { display:flex; flex-direction:column; gap:7px; min-width:0; font-size:12px; }
+.online-field input,.online-field select { width:100%; box-sizing:border-box; }
+.online-status { min-height:45px; padding:13px; border:1px solid #465e86; border-radius:10px; background:#0d1729; color:#c5d7ff; }
+.online-muted { color:#a8b9d8; font-size:12px; }
+#cloudUid { word-break:break-all; }
+.cloud-conflict { padding:16px; border:1px solid #c58a55; background:#2b2231; border-radius:12px; }
+.cloud-save-choices { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.cloud-save-choices article { padding:12px; border:1px solid #5b5064; border-radius:8px; min-width:0; }
+#cloudAccountModal { z-index:1800; }
+.leaderboard-list { display:grid; gap:8px; }
+.leaderboard-row { display:grid; grid-template-columns:52px minmax(0,1fr) auto; align-items:center; gap:12px; padding:14px; border:1px solid #2f4364; border-radius:10px; background:#111e33; }
+.leaderboard-row.is-you { border-color:#b1a0ff; background:#29264c; }
+.leaderboard-name { overflow-wrap:anywhere; }.leaderboard-rank { color:#cabbff; }.leaderboard-score { color:#9fd7ef; font-size:13px; }
+.pvp-room-controls { display:grid; grid-template-columns:110px auto minmax(130px,1fr) auto; align-items:end; gap:12px; }
+#pvpRoomCode { font:700 18px monospace; color:#d1c8ff; user-select:all; }
+.pvp-pick-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+.pvp-pick-slot { min-width:0; display:flex; flex-direction:column; gap:8px; padding:12px; border:1px solid #3b4c6b; border-radius:10px; background:#111b2e; }
+.pvp-pick-slot select { width:100%; }.pvp-pick-slot small { color:#aec3df; line-height:1.4; }
+.pvp-combat-teams { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.pvp-team { min-width:0; }.pvp-team h3 { color:#c7ccff; }
+.pvp-fighter { border:1px solid #41587b; border-radius:10px; padding:12px; margin:10px 0; display:flex; flex-direction:column; gap:7px; background:#121c2f; }
+.pvp-fighter>span,.pvp-fighter small { font-size:12px; color:#bdcce3; }
+.pvp-fighter progress { width:100%; accent-color:#8eb6ff; }.pvp-fighter.is-defeated { opacity:.4; }
+.pvp-fighter details p { font-size:12px; white-space:pre-line; }.pvp-fighter summary { cursor:pointer; font-size:12px; }
+.pvp-strike-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; position:sticky; top:-20px; background:#101827; padding:12px 0; z-index:2; }
+.pvp-log { margin-top:16px; }.pvp-log>div { max-height:220px; overflow:auto; font-size:11px; }
+@media(max-width:600px){
+ .online-content { padding:14px; }.online-modal,.pvp-modal { width:calc(100vw - 16px); max-height:94dvh; }
+ .cloud-save-choices { grid-template-columns:1fr; }.online-actions button { flex:1 1 135px; }
+ .pvp-room-controls { grid-template-columns:1fr 1fr; }.pvp-pick-grid,.pvp-combat-teams { grid-template-columns:1fr; }
+ .leaderboard-row { grid-template-columns:35px minmax(0,1fr) auto; gap:7px; padding:10px; }
+ .pvp-strike-bar { top:-14px; font-size:12px; }
+}

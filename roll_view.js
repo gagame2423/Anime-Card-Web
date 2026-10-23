@@ -28,7 +28,7 @@
   function setEnabled(value, persist = true) {
     enabled = value === true;
     if (persist) {
-      try { host.localStorage.setItem(KEY, JSON.stringify(enabled)); if (refs.toggle) refs.toggle.title = ''; }
+      try { host.localStorage.setItem(KEY, JSON.stringify(enabled));host.CloudSaveSystem?.markDirty(); if (refs.toggle) refs.toggle.title = ''; }
       catch (_) { if (refs.toggle) refs.toggle.title = 'Active for this session; browser storage is unavailable.'; }
     }
     if (refs.toggle) refs.toggle.checked = enabled;

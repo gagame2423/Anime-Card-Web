@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function summary(s) {
+      return s.keys().hasOnly(['totalRolls','strongestPower','timeTrialRoom','uniqueCards','displayName'])
+        && s.totalRolls is int && s.totalRolls >= 0 && s.totalRolls <= 9007199254740991
+        && s.strongestPower is int && s.strongestPower >= 0 && s.strongestPower <= 9007199254740991
+        && s.timeTrialRoom is int && s.timeTrialRoom >= 0 && s.timeTrialRoom <= 9007199254740991
+        && s.uniqueCards is int && s.uniqueCards >= 0 && s.uniqueCards <= 10000
+        && s.displayName is string && s.displayName.size() > 0 && s.displayName.size() <= 40;
+    }
+    function saveBody(d) {
+      return d.keys().hasOnly(['format','revision','digest','payload','manifest','summary','updatedAt'])
+        && d.format == 'anime-card-cloud-v1' && d.revision is int && d.revision > 0
+        && d.digest is string && d.digest.matches('^[a-f0-9]{64}$')
+        && summary(d.summary) && d.updatedAt == request.time
+        && ((d.payload is string && d.payload.size() > 0 && d.payload.size() <= 600000 && d.manifest == null)
+          || (d.payload == null && d.manifest is map
+            && d.manifest.keys().hasOnly(['snapshotId','chunks'])
+            && d.manifest.snapshotId is string && d.manifest.snapshotId.matches('^[a-f0-9]{32}$')
+            && d.manifest.chunks is int && d.manifest.chunks > 0 && d.manifest.chunks <= 200));
+    }
+    match /users/{uid} {
+      allow get: if owner(uid);
+      allow list, delete: if false;
+      allow create: if owner(uid) && saveBody(request.resource.data) && request.resource.data.revision == 1;
+      allow update: if owner(uid) && saveBody(request.resource.data) && request.resource.data.revision == resource.data.revision + 1;
+      match /snapshots/{snapshot}/chunks/{chunk} {
+        allow get, list, delete: if owner(uid);
+        allow create: if owner(uid) && snapshot.matches('^[a-f0-9]{32}$')
+          && request.resource.data.keys().hasOnly(['index','text'])
+          && request.resource.data.index is int && request.resource.data.index >= 0 && request.resource.data.index < 200
+          && request.resource.data.text is string && request.resource.data.text.size() <= 120000;
+        allow update: if false;
+      }
+      match /recovery/{name} {
+        allow get: if owner(uid) && name == 'previous';
+        allow create, update: if owner(uid) && name == 'previous'
+          && request.resource.data == get(/databases/$(database)/documents/users/$(uid)).data;
+        allow list, delete: if false;
+      }
+    }
+    match /leaderboards/{uid} {
+      allow get: if true;
+      allow list: if request.query.limit != null && request.query.limit <= 50;
+      allow delete: if owner(uid);
+      allow create, update: if owner(uid)
+        && request.resource.data.keys().hasOnly(['uid','displayName','totalRolls','strongestPower','timeTrialRoom','uniqueCards','revision','updatedAt'])
+        && request.resource.data.uid == uid && request.resource.data.updatedAt == request.time
+        && request.resource.data.revision == getAfter(/databases/$(database)/documents/users/$(uid)).data.revision
+        && request.resource.data.displayName == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.displayName
+        && request.resource.data.totalRolls == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.totalRolls
+        && request.resource.data.strongestPower == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.strongestPower
+        && request.resource.data.timeTrialRoom == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.timeTrialRoom
+        && request.resource.data.uniqueCards == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.uniqueCards;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

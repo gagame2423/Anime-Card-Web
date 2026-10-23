@@ -29,7 +29,7 @@
   function validSave(value){return Boolean(value&&value.version===1&&(value.equipped===null||ITEMS.has(value.equipped))&&value.pending===null);}
   function read(){try{const value=JSON.parse(host.localStorage.getItem(KEY)||'null');return value&&value.version===1?{version:1,equipped:ITEMS.has(value.equipped)?value.equipped:null,pending:value.pending||null}:fresh();}catch(_){return fresh();}}
   let data=read();
-  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));return true;}catch(_){return false;}}
+  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();return true;}catch(_){return false;}}
   function recover(){
     if(data.pending){
       const p=data.pending;

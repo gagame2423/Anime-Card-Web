@@ -72,7 +72,7 @@
   try{const raw=JSON.parse(host.localStorage.getItem(KEY)||'null');data=validSave(raw)?raw:fresh();}catch(_){data=fresh();}
   let interrupted=Boolean(data.activeAttempt&&!data.pending),busy=false;
   if(interrupted){data.activeAttempt=null;data.run=freshRun(data.run.season);}
-  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));return true;}catch(_){return false;}}
+  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();return true;}catch(_){return false;}}
   function register(){host.InventorySystem.registerItem(CAPSULE);}
   register();persist();
   function notify(kind='wave'){bridge.onChange?.(kind);}

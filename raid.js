@@ -76,7 +76,7 @@
   function load() { try { const v = JSON.parse(host.localStorage.getItem(KEY) || 'null'); if(!validSave(v))return fresh();for(const [type,entry]of Object.entries(fresh().types))v.types[type] ||= entry;return v; } catch (_) { return fresh(); } }
   let data = load(), bridge = {}, serial = 0;
   if (!data.pendingReward) data.activeAttempt = null; // Interrupted fights never refund a spent key.
-  function persist() { try { host.localStorage.setItem(KEY, JSON.stringify(data)); return true; } catch (e) { console.warn('Raid save unavailable', e); return false; } }
+  function persist() { try { host.localStorage.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; } catch (e) { console.warn('Raid save unavailable', e); return false; } }
   function requirePersist() { if (!persist()) throw new Error('Không thể lưu Raid. Thao tác chưa hoàn tất.'); }
   function registerKey() { host.InventorySystem.registerItem(KEY_ITEM);host.InventorySystem.registerItem(GRAIL_KEY);host.InventorySystem.registerItem(SHIBUYA_KEY); }
   registerKey(); persist();

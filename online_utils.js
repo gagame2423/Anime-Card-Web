@@ -1,0 +1,19 @@
+/* Shared online primitives. No game, account or progression writes. */
+(function(host){
+ 'use strict';
+ const encoder=new TextEncoder();
+ const bytes=text=>encoder.encode(String(text));
+ async function hash(text){if(!host.crypto?.subtle)throw Error('Online play requires HTTPS or localhost and Web Crypto.');return [...new Uint8Array(await host.crypto.subtle.digest('SHA-256',bytes(text)))].map(n=>n.toString(16).padStart(2,'0')).join('');}
+ function token(length=16){if(!host.crypto?.getRandomValues)throw Error('Secure randomness is unavailable.');return [...host.crypto.getRandomValues(new Uint8Array(length))].map(n=>n.toString(16).padStart(2,'0')).join('');}
+ function stable(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return '['+value.map(stable).join(',')+']';return '{'+Object.keys(value).sort().filter(k=>value[k]!==undefined).map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}';}
+ function text(node,value){if(node&&node.textContent!==String(value))node.textContent=String(value);}
+ function make(tag,className='',value){const n=host.document.createElement(tag);n.className=className;if(value!==undefined)n.textContent=value;return n;}
+ const sdkJobs=new Map();
+ function loadSdk(id,ready){if(ready())return Promise.resolve();if(sdkJobs.has(id))return sdkJobs.get(id);const declaration=host.document.getElementById(id);if(!declaration?.src)return Promise.reject(Error('Missing SDK declaration: '+id));
+  const job=new Promise((resolve,reject)=>{const script=host.document.createElement('script');script.async=true;script.dataset.onlineResource='true';let done=false;const finish=error=>{if(done)return;done=true;host.clearTimeout(timeout);script.onload=script.onerror=null;if(error){script.remove();reject(error);}else resolve();};const timeout=host.setTimeout(()=>finish(Error('Online service took too long to load. Local play is available.')),12000);script.onload=()=>finish(ready()?null:Error('Online SDK could not initialize.'));script.onerror=()=>finish(Error('Online service unavailable. Local play is available.'));script.src=declaration.src;host.document.head.append(script);});
+  sdkJobs.set(id,job);job.catch(()=>sdkJobs.delete(id));return job;
+ }
+ function timeout(promise,ms=15000,message='Online service did not respond. Local progress is preserved.'){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=host.setTimeout(()=>reject(Error(message)),ms);})]).finally(()=>host.clearTimeout(timer));}
+ function error(message,code){return Object.assign(Error(message),{code});}
+ host.OnlineUtils=Object.freeze({bytes,hash,token,stable,text,make,loadSdk,timeout,error});
+})(window);

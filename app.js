@@ -9,6 +9,9 @@
 // 5) LocalStorage persists game state and recovers elapsed real time.
 // ============================================================
 
+function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active);}
+function gameInputLocked(){return isSimulationActive()||Boolean(window.CloudSaveSystem?.blocking);}
+
 const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
   "animeCardRngSave_v1"
@@ -399,7 +402,7 @@ function ensureCardProgress(cardId) {
 }
 
 function grantCardExperience(cardId, amount) {
-  if (window.SandboxSystem?.active) return {gained:0,level:getCardLevelInfo(cardId).level,levelUps:0};
+  if (isSimulationActive()) return {gained:0,level:getCardLevelInfo(cardId).level,levelUps:0};
   const normalizedId = normalizeCardId(cardId);
   if (state.cardProgress?.[normalizedId]?.level >= CARD_LEVEL_MAX) return {gained:0,level:CARD_LEVEL_MAX,levelUps:0};
   const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
@@ -1033,12 +1036,13 @@ function loadState() {
   }
 }
 
-function saveState(canonicalOwnership = false) {
-  if (isImportingSave || window.SandboxSystem?.active || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked) return false;
+function saveState(canonicalOwnership = false, progressChanged = true) {
+  if (isImportingSave || isSimulationActive() || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked || window.CloudSaveSystem?.recoveryBlocked) return false;
   try {
     // Rolls already update all three canonical ownership stores together.
     if (!canonicalOwnership) syncOwnershipRecords();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if(progressChanged)window.CloudSaveSystem?.markDirty();
     return true;
   } catch (error) {
     console.warn("Save failed:", error);
@@ -1623,7 +1627,7 @@ function renderMutationBadges(container, mutations) {
 function rollCard(source = "manual") {
   // HARD GATE: no trigger can bypass the cooldown, including keyboard,
   // programmatic calls, or Auto Roll.
-  if (isCooldownActive || window.SandboxSystem?.active || window.EquipmentSystem?.blocked) return false;
+  if (isCooldownActive || gameInputLocked() || window.EquipmentSystem?.blocked) return false;
   if (source === "auto" && !isAutoRolling) return false;
 
   // Lock immediately so a second synchronous event cannot enter.
@@ -1704,7 +1708,7 @@ function scheduleRollUi() {
   else flushRollUi();
 }
 function flushRollUi(force = false) {
-  if (isImportingSave || window.SandboxSystem?.active || (!force && !rollUiCanPaint)) return;
+  if (isImportingSave || isSimulationActive() || (!force && !rollUiCanPaint)) return;
   if (!rollUiDirty && !pendingRollPresentation) return;
   const presentation = pendingRollPresentation;
   pendingRollPresentation = null; rollUiDirty = false;
@@ -3818,7 +3822,7 @@ function getBattleDefeatNotice() {
 }
 
 function finishBattle(playerWon) {
-  if (window.SandboxSystem?.active || battleState?.sandbox || battleState?.mode === 'sandbox') return;
+  if (isSimulationActive() || battleState?.sandbox || battleState?.mode === 'sandbox') return;
   if (!battleState || battleState.finished) return;
   if(isSpookyBattle()){finishSpookyBattle(playerWon);return;}
   if (isTimeTrialBattle()) { finishTimeTrialBattle(playerWon); return; }
@@ -3967,7 +3971,7 @@ function endBattle(playerWon) {
 
 function startBattle(useExistingSetup = true) {
   clearAutoContinueBattleTimer();
-  if (isBattleMatchActive() || isImportingSave || window.SandboxSystem?.active || window.EquipmentSystem?.blocked) return;
+  if (isBattleMatchActive() || isImportingSave || gameInputLocked() || window.EquipmentSystem?.blocked) return;
   if (isBossEventBattle()) syncGameClockToNow();
   const setupTeam = useExistingSetup ? battleState?.setup?.team : null;
   if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
@@ -4520,7 +4524,7 @@ function setSaveTransferBusy(busy) {
   document.getElementById('saveManagerModal')?.setAttribute('aria-busy', String(busy));
 }
 async function withSaveTransfer(action, operation) {
-  if (window.SandboxSystem?.active) { setSaveTransferStatus('Thoát Sandbox trước khi chuyển save.',true); return false; }
+  if (isSimulationActive()) { setSaveTransferStatus('Thoát Sandbox trước khi chuyển save.',true); return false; }
   if (saveTransferBusy) { showSaveTransferError(new Error('Đang xử lý chuyển save. Vui lòng đợi hoàn tất.')); return false; }
   setSaveTransferBusy(true);
   try {
@@ -4545,7 +4549,7 @@ function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
   if (status) { status.textContent = message; status.classList.toggle('is-error', failed); }
 }
-function buildGameSaveExport() {
+function buildCloudSaveBundle() {
   syncGameClockToNow(); refreshAchievements(); window.InventorySystem?.tick();
   if (![window.ExpFoodSystem.flush(), window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.EquipmentSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush(),window.SpookySystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
   if (!saveState()) throw new Error('Your progress could not be saved. Please try again.');
@@ -4555,21 +4559,6 @@ function buildGameSaveExport() {
     if (value !== null) storage[key] = JSON.parse(value);
   }
   return { format: 'anime-card-rng-save', version: 1, exportedAt: new Date().toISOString(), storage };
-}
-async function exportGameSave() {
-  return withSaveTransfer('export', async () => {
-    const bundle = buildGameSaveExport(), actionAt = Date.now();
-    const protectedText = await encryptGameSave(JSON.stringify(bundle));
-    const blob = new Blob([protectedText], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob), anchor = document.createElement('a');
-    anchor.href = url; anchor.download = `anime-card-save-${new Date(actionAt).toISOString().slice(0, 10)}.acrsave`;
-    document.body.append(anchor);
-    try { anchor.click(); }
-    catch (error) { throw new Error('Không thể xuất save: ' + error.message); }
-    finally { anchor.remove(); window.setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 1000); }
-    setSaveTransferStatus('Đã tạo và gửi tệp .acrsave tới trình duyệt. Có thể xuất hoặc nhập tiếp ngay.');
-    return true;
-  });
 }
 function validateSaveRecord(key, value) {
   const object = item => Boolean(item && typeof item === 'object' && !Array.isArray(item));
@@ -4663,7 +4652,7 @@ function validateSaveRecord(key, value) {
   }
   return value;
 }
-function parseGameSaveImport(text) {
+function parseCloudSaveBundle(text) {
   if (typeof text !== 'string' || text.length > 10 * 1024 * 1024) throw new Error('Save files must be valid JSON smaller than 10 MB.');
   let file; try { file = JSON.parse(text); } catch (_) { throw new Error('This file is not valid JSON.'); }
   const object = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -4697,45 +4686,8 @@ function parseGameSaveImport(text) {
   if(equipment?.equipped){const items=JSON.parse(result[itemKey]).items;const owned=Array.isArray(items)?items.find(item=>item.id===equipment.equipped):items[equipment.equipped];if(Number(typeof owned==='object'?owned?.quantity??owned?.count:owned)<1||!owned)throw Error('Equipped item is not owned in this save.');}
   return result;
 }
-async function importGameSave(input) {
-  return withSaveTransfer('import', async () => {
-    let text;
-    if (typeof input === 'string') text = input;
-    else {
-      if (!input || typeof input.arrayBuffer !== 'function' || !/\.acrsave$/i.test(input.name || '')) throw new Error('Chỉ chấp nhận tệp .acrsave. Save JSON cũ không được nhập trực tiếp.');
-      if (input.size > SAVE_FILE_MAX_BYTES) throw new Error('Tệp .acrsave vượt giới hạn 32 MiB.');
-      try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(await input.arrayBuffer()); }
-      catch (_) { throw saveIntegrityError(); }
-    }
-    const dataString = await decryptGameSave(text);
-    const imported = parseGameSaveImport(dataString);
-    const keys = [...getGameSaveKeys(),...LEGACY_SAVE_TRANSFER_KEYS], previous = new Map(keys.map(key => [key, localStorage.getItem(key)]));
-    isImportingSave = true;
-    try {
-      for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(imported, key)) localStorage.setItem(key, imported[key]);
-        else localStorage.removeItem(key);
-      }
-    } catch (error) {
-      let restored = true;
-      for (const [key, value] of previous) try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (_) { restored = false; }
-      isImportingSave = false;
-      throw new Error(restored ? 'Không thể ghi save. Tiến độ trước đó đã được khôi phục.' : 'Không thể ghi/khôi phục dữ liệu do bộ nhớ trình duyệt không khả dụng.');
-    }
-    isAutoRolling = false;
-    if (els.autoRollToggle) els.autoRollToggle.checked = false;
-    if (globalTickTimer !== null) { window.clearInterval(globalTickTimer); globalTickTimer = null; }
-    clearCooldownExpiryTimer(); clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
-    window.TimeTrialSystem.detach();
-    setSaveTransferStatus('Đã nhập save bảo vệ. Đang tải lại game…');
-    // Existing saveState/pagehide/visibility guards protect restored stores.
-    window.location.reload();
-    return true;
-  });
-}
-
 // Evolution changes a cloned save first; no live ownership changes before commit.
-function canEvolveNow() { return !window.ExpFoodSystem?.blocked && !window.EquipmentSystem?.blocked && !window.SandboxSystem?.active && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
+function canEvolveNow() { return !window.CloudSaveSystem?.blocking && !window.ExpFoodSystem?.blocked && !window.EquipmentSystem?.blocked && !isSimulationActive() && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
 function prepareEquipmentCraft(recipe, selected) {
   if(!canEvolveNow()||state.currency<recipe.cost)throw Error('Finish the current battle or check VNĐ.');
   if(!saveState()||!window.InventorySystem.flush())throw Error('Unable to save before crafting.');
@@ -4777,6 +4729,7 @@ function prepareEvolution(recipe, variantKey) {
   return {mainBefore,mainAfter,itemsBefore,itemsAfter:JSON.stringify(items)};
 }
 function onEvolutionCommitted() {
+  window.CloudSaveSystem?.markDirty();
   state = loadState(); syncOwnershipRecords(); refreshAchievements(); updateStats(); renderCollection(); renderAvailableCards(); renderPotionInventory();
 }
 document.getElementById('evolutionOpenButton')?.addEventListener('click',()=>{ window.EvolutionSystem.render(document.getElementById('evolutionGrid')); openModal('evolutionModal'); });
@@ -4864,7 +4817,7 @@ function renderAchievements() {
 
 // Quest progress receives only fresh, completed gameplay events.
 function recordQuestBattleCompletion(battle) {
-  if (battle?.sandbox || battle?.mode === 'sandbox' || window.SandboxSystem?.active) return;
+  if (battle?.sandbox || battle?.mode === 'sandbox' || isSimulationActive()) return;
   const bread=window.ExpFoodSystem.rewardVictory(battle);
   if(bread)appendBattleLog(`Bread +${bread} · EXP Food in Storage.`, 'victory');
   if (!battle?.questContext || battle.questCompletionRecorded || ['surrender', 'aborted'].includes(battle.outcome)) return;
@@ -4876,7 +4829,7 @@ function recordQuestEnemyDefeat(battle, victim, source) {
   if(spookyCoins)appendBattleLog(`🎃 Enemy defeated: +${spookyCoins} Spooky Coins.`, 'victory');
   const keys=window.RaidSystem.rollFateKey(battle,victim,source);
   if(keys)appendBattleLog(`Holy Grail Raid Key +${keys} • Fate enemy drop.`, 'victory');
-  if (battle?.sandbox || battle?.mode === 'sandbox' || window.SandboxSystem?.active) return;
+  if (battle?.sandbox || battle?.mode === 'sandbox' || isSimulationActive()) return;
   if (!battle?.questContext || !battle.enemyTeam.includes(victim) || !battle.playerTeam.includes(source) || victim.isClone || victim.isSummoned || victim.isTemporaryAlly) return;
   const seen = battle.questDefeatSeen ||= new WeakSet();
   if (seen.has(victim)) return;
@@ -4917,7 +4870,7 @@ function globalTick() {
   if(window.EquipmentSystem?.blocked)return;
   if (isImportingSave) return;
   window.PotionHudSystem?.render();
-  if (window.SandboxSystem?.active) return;
+  if (gameInputLocked()) return;
   refreshAchievements(!(window.RollViewSystem?.enabled && isAutoRolling));
   const now = Date.now();
   const previous = Number(state.weather.lastRealTimestamp);
@@ -4943,7 +4896,7 @@ function globalTick() {
 
   // Only the clock changes here; ownership is already canonical. Persist each
   // tick without rebuilding every variant in the player's collection.
-  saveState(true);
+  saveState(true,false);
 
   // Global tick is the second authoritative Auto-Roll safety net.
   if (isAutoRolling && !isCooldownActive) attemptAutoRoll();
@@ -4982,6 +4935,7 @@ function isBattleMatchActive() {
 }
 
 function setBattleModalLock(active) {
+  if(!active)window.CloudSaveSystem?.afterActivity();
   window.BattleWeatherHud?.render();
   const sandboxButton = document.getElementById('sandboxOpenButton');
   if (sandboxButton) sandboxButton.disabled = Boolean(active);
@@ -4992,6 +4946,7 @@ function setBattleModalLock(active) {
 
 function openModal(id) {
   if (window.SandboxSystem?.active && id !== 'sandboxModal') return;
+  if (window.PvPSystem?.active && id !== 'pvpModal') return;
   const modal = document.getElementById(id);
   if (!modal) return;
   document.getElementById('utilityMenu')?.removeAttribute('open');
@@ -5020,7 +4975,7 @@ function openModal(id) {
     setViewText('timeTrialModeTickets', `${window.InventorySystem.quantity(window.TimeTrialSystem.TICKET_ID)} EXP Time Trial Tickets in Storage • Select a type, then choose your lineup in Arena.`);
     modal.querySelector('[data-time-trial-type]')?.focus();
   }
-  if (id === "saveManagerModal") renderSaveTransferAvailability();
+
   if (id === "cardPreviewModal") renderPreview();
   if (id === "battleModal") resetBattleView();
 }
@@ -5095,8 +5050,10 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if(id==='cloudAccountModal'&&window.CloudSaveSystem?.blocking)return;
   if(id==='arenaMutationModal')window.UIPerformanceSystem.closePicker();
   if (id === 'sandboxModal') { window.SandboxSystem?.exit?.(); return; }
+  if (id === 'pvpModal') { window.PvPSystem?.exit?.(); return; }
   const modal = document.getElementById(id);
   if (!modal) return;
 
@@ -5354,7 +5311,7 @@ els.resetButton?.addEventListener("click", resetGame);
 els.autoContinueBattleToggle?.addEventListener('change', () => {
   if(isSpookyBattle()){renderAutoContinueBattleToggle();return;}
   autoContinueBattleEnabled = els.autoContinueBattleToggle.checked;
-  try { localStorage.setItem(AUTO_CONTINUE_STORAGE_KEY, JSON.stringify(autoContinueBattleEnabled)); }
+  try { localStorage.setItem(AUTO_CONTINUE_STORAGE_KEY, JSON.stringify(autoContinueBattleEnabled)); window.CloudSaveSystem?.markDirty(); }
   catch (error) { console.warn('Auto Continue preference could not be persisted:', error); }
   renderAutoContinueBattleToggle();
   if (autoContinueBattleEnabled) scheduleAutoContinueBattle();
@@ -5492,7 +5449,8 @@ document.addEventListener("keydown", event => {
 });
 
 function resumeGameRuntime() {
-  if (isImportingSave || window.SandboxSystem?.active) return;
+  window.CloudSaveSystem?.afterActivity();
+  if (isImportingSave || gameInputLocked()) return;
   recoverElapsedRealTime();
   window.InventorySystem.tick(Date.now());
   window.TimeTrialSystem.checkDeadline();
@@ -5508,7 +5466,7 @@ function resumeGameRuntime() {
 
 // Recover real time on background/foreground and before the page unloads.
 document.addEventListener("visibilitychange", () => {
-  if (isImportingSave || window.SandboxSystem?.active) return;
+  if (isImportingSave || gameInputLocked()) return;
   if (document.visibilityState === "visible") {
     resumeGameRuntime();
   } else {
@@ -5518,7 +5476,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 window.addEventListener("pagehide", () => {
-  if (isImportingSave || window.SandboxSystem?.active) return;
+  if (isImportingSave || gameInputLocked()) return;
   syncGameClockToNow();
   saveState();
 });
@@ -5546,19 +5504,6 @@ document.getElementById('raidDifficulty')?.addEventListener('input', event => {
 
 document.getElementById('achievementOpenButton')?.addEventListener('click', () => openModal('achievementModal'));
 document.getElementById('achievementCategory')?.addEventListener('change', renderAchievements);
-document.getElementById('saveManagerOpenButton')?.addEventListener('click', () => openModal('saveManagerModal'));
-document.getElementById('exportSaveButton')?.addEventListener('click', exportGameSave);
-document.getElementById('importSaveButton')?.addEventListener('click', () => {
-  if (saveTransferBusy) return;
-  try { document.getElementById('importSaveInput')?.click(); }
-  catch (error) { showSaveTransferError(error); }
-});
-document.getElementById('importSaveInput')?.addEventListener('change', async event => {
-  const file = event.target.files?.[0]; if (!file) return;
-  try { await importGameSave(file); }
-  finally { event.target.value = ''; }
-});
-
 // ============================================================
 // INITIALIZE
 // ============================================================
@@ -5585,7 +5530,7 @@ function initializeGameViews() {
   } catch (error) { window.GameStartup?.report('roll-ui', 'Roll display initialization failed.', error); }
   try {
     window.SandboxSystem?.configure?.({
-  canEnter: () => Boolean(els.battleModal) && !isBattleMatchActive() && !isImportingSave && !saveTransferBusy,
+  canEnter: () => Boolean(els.battleModal) && !isBattleMatchActive() && !isImportingSave && !saveTransferBusy && !gameInputLocked(),
   onEnter: () => {
     clearAutoContinueBattleTimer();
     els.battleModal?.classList.add('hidden');
@@ -5606,7 +5551,7 @@ else initializeGameViews();
 if(window.EquipmentSystem?.blocked)window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover the pending equipment craft before playing.');
 window.EvolutionSystem.configure({ canAct: canEvolveNow, prepare: prepareEvolution, onCommit: onEvolutionCommitted, describe: recipe => ({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(" + ") || "Normal"}))}) });
 let lastSpookyTurnMs=window.SettingsSystem.spookySpeedUp?1000:2000;
-window.SettingsSystem.configure({maxBaseLuck:getMaximumBaseLuck,totalLuck:getLuckMultiplier,canAct:()=>!isImportingSave&&!saveTransferBusy&&!window.SandboxSystem?.active,onChange:()=>{
+window.SettingsSystem.configure({maxBaseLuck:getMaximumBaseLuck,totalLuck:getLuckMultiplier,canAct:()=>!isImportingSave&&!saveTransferBusy&&!isSimulationActive(),onChange:()=>{
   const next=window.SettingsSystem.spookySpeedUp?1000:2000;
   if(isSpookyBattle()&&isBattleMatchActive()&&next!==lastSpookyTurnMs){const remaining=Math.max(0,(battleState.nextTurnAt||Date.now()+lastSpookyTurnMs)-Date.now());scheduleNextBattleTurn(Math.min(1,remaining/lastSpookyTurnMs)*next);}
   lastSpookyTurnMs=next;updateStats();if(isSpookyBattle())renderSpookyControls();
@@ -5628,14 +5573,14 @@ window.ExpFoodSystem.configure({
     main.experience=Math.min(Number.MAX_SAFE_INTEGER,(Number(main.experience)||0)+result.gained);
     return{mainBefore,itemsBefore,mainAfter:JSON.stringify(main),itemsAfter:JSON.stringify(items),result};
   },
-  onCommit:()=>{state=loadState();window.RollPerformanceSystem?.invalidateOwnership();syncOwnershipRecords();updateStats();renderPreview();renderCollection();renderAvailableCards();renderPotionInventory();}
+  onCommit:()=>{window.CloudSaveSystem?.markDirty();state=loadState();window.RollPerformanceSystem?.invalidateOwnership();syncOwnershipRecords();updateStats();renderPreview();renderCollection();renderAvailableCards();renderPotionInventory();}
 });
 document.getElementById('previewFeedButton')?.addEventListener('click',()=>{if(previewSelection)window.ExpFoodSystem.open(previewSelection.cardId);});
-window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!window.SandboxSystem?.active&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished&&!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}});
+window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished&&!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}});
 window.CraftingSystem.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 window.QuestsSystem.mount(document.getElementById('questModal'));
 window.QuestsSystem.configure({clock:()=>state.weather.gameSeconds,snapshot:()=>({rolls:state.totalRolls,bestRoom:window.TimeTrialSystem.bestRoom}),canAct:canEvolveNow,isImporting:()=>isImportingSave,reward:applyQuestBoardReward,onChange:()=>{updateStats();renderClockAndWeather(true);refreshAchievements();}});
-window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreeze: () => { if (!isImportingSave && !window.SandboxSystem?.active) { syncGameClockToNow(); saveState(); } } });
+window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreeze: () => { if (!isImportingSave && !gameInputLocked()) { syncGameClockToNow(); saveState(); } } });
 window.BattleWeatherHud.configure({snapshot:()=>{const sandbox=window.SandboxSystem?.weatherSnapshot;if(sandbox)return sandbox;return {active:isBattleMatchActive(),seconds:state.weather.gameSeconds,weathers:getActiveWeatherEntries().map(entry=>{const def=WEATHER_BY_ID[entry.weatherId];return {...entry,id:def.id,name:def.name,icon:def.icon,color:def.color,description:window.WeatherSystem.describe(def)};})};}});
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
@@ -5664,7 +5609,7 @@ els.battleCategoryFilter?.addEventListener("change",populateBattleFighterSelect)
 
 // Halloween adapters: state, reward math and run choices remain in spooky.js.
 function grantSpookyCards(cards,receipt,kind){
-  if(window.SandboxSystem?.active||typeof receipt!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(receipt))return false;
+  if(isSimulationActive()||typeof receipt!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(receipt))return false;
   if(state.spookyRewardReceipt===receipt)return true;
   const plans=cards.map(drop=>{const card=getCardById(drop.cardId);if(!card)throw Error('Unknown Spooky card');const ids=normalizeCardMutations(drop.mutationIds);return {card,ids,key:canonicalVariantKey(card.id,ids)};});
   const oldReceipt=state.spookyRewardReceipt,before=plans.map(({card,key})=>({id:card.id,key,unlocked:state.unlocked[card.id],mutations:state.mutations[key],inventory:state.inventory[key],progress:state.cardProgress?.[card.id]?{...state.cardProgress[card.id]}:undefined}));
@@ -5733,3 +5678,45 @@ function finishSpookyBattle(won){
 document.getElementById('spookyShopOpenButton')?.addEventListener('click',()=>openModal('spookyShopModal'));
 for(const id of ['spookyInfoSetupButton','spookyInfoBattleButton'])document.getElementById(id)?.addEventListener('click',()=>openModal('spookyInfoModal'));
 document.getElementById('spookyChooseButton')?.addEventListener('click',showSpookyChoices);
+
+
+// Online modules receive narrow read/serialize/lifecycle adapters only.
+async function applyCloudProgress(payload,options={}){
+  if(isBattleMatchActive()||isSimulationActive()||isImportingSave)throw Error('Finish the current activity before restoring cloud progress.');
+  const imported=parseCloudSaveBundle(await decryptGameSave(payload));
+  const keys=[...getGameSaveKeys(),window.CloudSaveSystem.META_KEY],previous=Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)]));
+  const previousAutoRoll=isAutoRolling;
+  isImportingSave=true;isAutoRolling=false;clearCooldownExpiryTimer();clearAutoContinueBattleTimer();clearBattleTurnTimer();
+  try{
+    localStorage.setItem(window.CloudSaveSystem.RESTORE_KEY,JSON.stringify({version:1,previous}));
+    for(const key of getGameSaveKeys()){if(Object.hasOwn(imported,key))localStorage.setItem(key,imported[key]);else localStorage.removeItem(key);}
+    if(options.meta)localStorage.setItem(window.CloudSaveSystem.META_KEY,JSON.stringify(options.meta));
+    localStorage.removeItem(window.CloudSaveSystem.RESTORE_KEY);
+  }catch(error){
+    let restored=true;for(const [key,value]of Object.entries(previous))try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}catch(_){restored=false;}
+    if(restored)localStorage.removeItem(window.CloudSaveSystem.RESTORE_KEY);
+    isImportingSave=!restored;if(restored){isAutoRolling=previousAutoRoll;if(els.autoRollToggle)els.autoRollToggle.checked=previousAutoRoll;}else window.CloudSaveSystem.blockForRecovery('Storage unavailable. Reload to recover the interrupted cloud restore.');
+    throw Error(restored?'Cloud restore failed; previous local progress was recovered.':'Storage unavailable. Reload to recover the interrupted cloud restore.');
+  }
+  if(globalTickTimer!==null){clearInterval(globalTickTimer);globalTickTimer=null;}window.TimeTrialSystem.detach();window.location.reload();
+}
+function cloudProgressSummary(){
+  let strongestPower=0;for(const card of ALL_CARDS){if(!isCardOwned(card.id))continue;for(const variant of getVariantEntries(card.id)){const stats=getDisplayCard(card,variant.mutations);strongestPower=Math.max(strongestPower,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(stats.hp+stats.atk*2)));}}
+  return{totalRolls:Math.min(Number.MAX_SAFE_INTEGER,state.totalRolls||0),strongestPower,timeTrialRoom:window.TimeTrialSystem.bestRoom||0,uniqueCards:getUniqueCount()};
+}
+window.CloudSaveSystem.configure({
+  open:openModal,canRestore:()=>!isBattleMatchActive()&&!isSimulationActive()&&!isImportingSave,
+  canSnapshot:()=>!isSimulationActive()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked&&window.EvolutionSystem.flush(),
+  capture:async()=>{const bundle=buildCloudSaveBundle(),summary=cloudProgressSummary();return{payload:await encryptGameSave(JSON.stringify(bundle)),summary,meaningful:summary.totalRolls>0||summary.uniqueCards>0||state.currency>0||Object.values(state.upgrades||{}).some(n=>n>0)};},
+  validate:async payload=>parseCloudSaveBundle(await decryptGameSave(payload)),apply:applyCloudProgress,
+  onBlocking:blocked=>{const shell=document.getElementById('app');if(shell)shell.inert=blocked;for(const modal of document.querySelectorAll('.modal-backdrop'))modal.inert=blocked&&modal.id!=='cloudAccountModal';if(blocked){clearAutoContinueBattleTimer();clearCooldownExpiryTimer();}else{if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();if(battleState?.finished)scheduleAutoContinueBattle();}}
+});
+window.LeaderboardSystem.configure({open:openModal});
+window.PvPSystem.configure({
+  canEnter:()=>!isBattleMatchActive()&&!isImportingSave&&!gameInputLocked(),
+  ownedCards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),
+  displayName:()=>window.CloudSaveSystem.publicName||'Player',
+  open:openModal,close:id=>{document.getElementById(id)?.classList.add('hidden');},
+  onEnter:()=>{clearAutoContinueBattleTimer();clearCooldownExpiryTimer();els.battleModal?.classList.add('hidden');},
+  onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');resumeGameRuntime();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();}
+});
