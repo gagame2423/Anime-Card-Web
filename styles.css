@@ -4680,9 +4680,6 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 .online-status { min-height:45px; padding:13px; border:1px solid #465e86; border-radius:10px; background:#0d1729; color:#c5d7ff; }
 .online-muted { color:#a8b9d8; font-size:12px; }
 #cloudUid { word-break:break-all; }
-.cloud-conflict { padding:16px; border:1px solid #c58a55; background:#2b2231; border-radius:12px; }
-.cloud-save-choices { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.cloud-save-choices article { padding:12px; border:1px solid #5b5064; border-radius:8px; min-width:0; }
 #cloudAccountModal { z-index:1800; }
 .leaderboard-list { display:grid; gap:8px; }
 .leaderboard-row { display:grid; grid-template-columns:52px minmax(0,1fr) auto; align-items:center; gap:12px; padding:14px; border:1px solid #2f4364; border-radius:10px; background:#111e33; }
@@ -4690,6 +4687,6 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 .leaderboard-name { overflow-wrap:anywhere; }.leaderboard-rank { color:#cabbff; }.leaderboard-score { color:#9fd7ef; font-size:13px; }
 @media(max-width:600px){
  .online-content { padding:14px; }.online-modal { width:calc(100vw - 16px); max-height:94dvh; }
- .cloud-save-choices { grid-template-columns:1fr; }.online-actions button { flex:1 1 135px; }
+ .online-actions button { flex:1 1 135px; }
  .leaderboard-row { grid-template-columns:35px minmax(0,1fr) auto; gap:7px; padding:10px; }
 }

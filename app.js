@@ -5684,22 +5684,30 @@ document.getElementById('spookyChooseButton')?.addEventListener('click',showSpoo
 async function applyCloudProgress(payload,options={}){
   if(isBattleMatchActive()||isSimulationActive()||isImportingSave)throw Error('Finish the current activity before restoring cloud progress.');
   const imported=parseCloudSaveBundle(await decryptGameSave(payload));
-  const keys=[...getGameSaveKeys(),window.CloudSaveSystem.META_KEY],previous=Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)]));
+  const gameKeys=getGameSaveKeys(),records=Object.fromEntries(gameKeys.map(key=>[key,Object.hasOwn(imported,key)?imported[key]:null]));
+  // Prepare a one-use, per-tab receipt for the exact Cloud records. The next boot
+  // validates it against both local bytes and the server, avoiding reload loops.
+  const receipt=options.cloudFirst?await window.CloudSaveSystem.restoreReceipt(options.meta,records):null;
+  const previousReceipt=receipt===null?null:sessionStorage.getItem(window.CloudSaveSystem.BOOT_KEY);
+  const keys=[...gameKeys,window.CloudSaveSystem.META_KEY],previous=Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)]));
   const previousAutoRoll=isAutoRolling;
   isImportingSave=true;isAutoRolling=false;clearCooldownExpiryTimer();clearAutoContinueBattleTimer();clearBattleTurnTimer();
   try{
     localStorage.setItem(window.CloudSaveSystem.RESTORE_KEY,JSON.stringify({version:1,previous}));
-    for(const key of getGameSaveKeys()){if(Object.hasOwn(imported,key))localStorage.setItem(key,imported[key]);else localStorage.removeItem(key);}
+    for(const [key,value]of Object.entries(records)){if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}
     if(options.meta)localStorage.setItem(window.CloudSaveSystem.META_KEY,JSON.stringify(options.meta));
+    if(receipt!==null)sessionStorage.setItem(window.CloudSaveSystem.BOOT_KEY,receipt);
     localStorage.removeItem(window.CloudSaveSystem.RESTORE_KEY);
   }catch(error){
     let restored=true;for(const [key,value]of Object.entries(previous))try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}catch(_){restored=false;}
+    if(receipt!==null)try{if(previousReceipt===null)sessionStorage.removeItem(window.CloudSaveSystem.BOOT_KEY);else sessionStorage.setItem(window.CloudSaveSystem.BOOT_KEY,previousReceipt);}catch(_){}
     if(restored)localStorage.removeItem(window.CloudSaveSystem.RESTORE_KEY);
     isImportingSave=!restored;if(restored){isAutoRolling=previousAutoRoll;if(els.autoRollToggle)els.autoRollToggle.checked=previousAutoRoll;}else window.CloudSaveSystem.blockForRecovery('Storage unavailable. Reload to recover the interrupted cloud restore.');
     throw Error(restored?'Cloud restore failed; previous local progress was recovered.':'Storage unavailable. Reload to recover the interrupted cloud restore.');
   }
   if(globalTickTimer!==null){clearInterval(globalTickTimer);globalTickTimer=null;}window.TimeTrialSystem.detach();window.location.reload();
 }
+
 function cloudProgressSummary(){
   let strongestPower=0;for(const card of ALL_CARDS){if(!isCardOwned(card.id))continue;for(const variant of getVariantEntries(card.id)){const stats=getDisplayCard(card,variant.mutations);strongestPower=Math.max(strongestPower,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(stats.hp+stats.atk*2)));}}
   return{totalRolls:Math.min(Number.MAX_SAFE_INTEGER,state.totalRolls||0),strongestPower,timeTrialRoom:window.TimeTrialSystem.bestRoom||0,uniqueCards:getUniqueCount()};

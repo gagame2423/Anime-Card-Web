@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261023-pvp-ui-2" />
-  <link rel="stylesheet" href="./passives.css?v=20261023-pvp-ui-2" />
-  <link rel="stylesheet" href="./pvp.css?v=20261023-pvp-ui-2" />
+  <link rel="stylesheet" href="./styles.css?v=20261023-cloud-first-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261023-cloud-first-1" />
+  <link rel="stylesheet" href="./pvp.css?v=20261023-cloud-first-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -391,9 +391,8 @@
       <div class="online-content"><h3 id="cloudAccountName">Local guest</h3><p id="cloudUid" class="online-muted"></p><p id="cloudStatus" class="online-status" role="status" aria-live="polite">Progress is saved on this device.</p>
         <div class="online-actions"><button id="cloudGoogleButton" type="button" class="online-primary">Sign in with Google</button><button id="cloudGuestButton" type="button">Play as Guest</button><button id="cloudSyncButton" type="button">Sync Now / Retry</button><button id="cloudLogoutButton" type="button" hidden>Sign Out</button><button id="cloudReloadButton" type="button">Reload Page</button></div>
         <label class="online-field">Leaderboard display name<input id="cloudDisplayName" maxlength="40" placeholder="Your public player name" autocomplete="nickname"></label>
-        <section id="cloudConflict" class="cloud-conflict" hidden><h3>Choose your progress</h3><p>Both saves stay separate. Choosing Cloud preserves a recovery copy of the local save.</p><div class="cloud-save-choices"><article><strong>This device</strong><p id="cloudLocalSummary"></p><button id="cloudUseLocal" type="button">Keep Local / Migrate</button></article><article><strong>Cloud account</strong><p id="cloudRemoteSummary"></p><button id="cloudUseRemote" type="button">Use Cloud Save</button></article></div></section>
         <details><summary>Local recovery</summary><p>A backup is kept before a cloud save replaces this device's progress.</p><button id="cloudRestoreBackup" type="button">Restore Previous Local Copy</button></details>
-        <p class="online-muted">Google sync carries progress between devices. Anonymous guests can link Google later. Offline play keeps using localStorage.</p>
+        <p class="online-muted">An existing Cloud Save automatically replaces this device’s progress on sign-in. New accounts migrate device progress. Offline play keeps using localStorage.</p>
       </div>
     </section>
   </div>
@@ -921,54 +920,54 @@
   <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="./online_utils.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./firebase.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./startup.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./mutations.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./weathers.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./cards.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./category.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./elements.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./background.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./levels.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./roll_performance.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./ui_performance.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./roll_view.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./grimoire.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./yuno.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./requiem.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./reagan.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./fate.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./spooky_passives.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./gomen.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./shibuya.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./companions.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./combat_stats.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./passives.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./inventory.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./exp_food.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./tower.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./timetrial.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./raid.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./boss_event.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./achievements.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./evolution.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./equipment.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./spooky.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./quests.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./crafting.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./drop_audio.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./sandbox.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./online_utils.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./firebase.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./startup.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./mutations.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./weathers.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./cards.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./category.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./elements.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./background.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./levels.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./roll_performance.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./ui_performance.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./roll_view.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./grimoire.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./yuno.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./requiem.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./reagan.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./fate.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./spooky_passives.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./gomen.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./shibuya.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./companions.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./combat_stats.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./passives.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./inventory.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./exp_food.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./tower.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./timetrial.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./raid.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./boss_event.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./achievements.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./evolution.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./equipment.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./spooky.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./quests.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./crafting.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./drop_audio.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./sandbox.js?v=20261023-cloud-first-1"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script defer src="./weather_hud.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./weather_hud.js?v=20261023-cloud-first-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script defer src="./potion_hud.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./settings.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./storage.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./pvp_combat.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./pvp_view.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./pvp.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./leaderboard.js?v=20261023-pvp-ui-2"></script>
-  <script defer src="./app.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./potion_hud.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./settings.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./storage.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./pvp_combat.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./pvp_view.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./pvp.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./leaderboard.js?v=20261023-cloud-first-1"></script>
+  <script defer src="./app.js?v=20261023-cloud-first-1"></script>
 </body>
 </html>
