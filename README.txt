@@ -1,159 +1,67 @@
-NHẬT KÝ CẬP NHẬT — FIREBASE CLOUD SAVE, LEADERBOARD VÀ ONLINE PVP
+NHẬT KÝ CẬP NHẬT — GIAO DIỆN VÀ KHÓA ĐỘI ONLINE PVP
 Ngày phát hành: 23/10/2026
 
-1. TÀI KHOẢN VÀ CLOUD SAVE
+1. ĐIỀU HƯỚNG
 
-Thêm module firebase.js cho dự án anime-card-web với đúng cấu hình được cung cấp. Firebase App, Auth và Firestore compat được ghim ở phiên bản 10.14.1; PeerJS được ghim ở 1.5.4. Các URL CDN được khai báo trực tiếp trong index.html. Bộ nạp online_utils.js tải chúng tuần tự khi cần, có giới hạn chờ, không bắt game offline phải đợi CDN để khởi động.
+Đổi nhãn mục tài khoản trong menu chính từ ... Login thành Login. Mục này tiếp tục mở Cloud Account như trước.
 
-Các nút Import Save, Export Save và hộp thoại chuyển tệp đã được gỡ khỏi giao diện. Menu ... có mục ... Login để mở Cloud Account và mục Leaderboard để mở bảng xếp hạng.
+2. SỬA LOCK IN / READY
 
-Cloud Account hỗ trợ:
-- Sign in with Google qua GoogleAuthProvider và signInWithPopup.
-- Play as Guest bằng Anonymous Auth; nếu dịch vụ không truy cập được, tiến độ vẫn lưu local để tiếp tục chơi offline.
-- Liên kết tài khoản Guest với Google để giữ UID khi Google chưa gắn với tài khoản khác. Nếu Google đã có tài khoản, game kiểm tra hai bản tiến độ trước khi đồng bộ.
-- Sync Now / Retry, Sign Out, Reload Page, đặt tên hiển thị công khai và phục hồi bản local trước khi tải Cloud.
+- Kiểm tra đủ đúng 1 hoặc 4 thẻ khác nhau trước khi cho phép Ready. Sửa trường hợp mảng đội hình có ô trống nhưng vẫn vượt qua kiểm tra đủ số lượng; không còn bỏ sót ô do Array.every bỏ qua phần tử chưa được gán.
+- Ngay khi Lock In, chụp một bản đội hình cố định, đóng bộ chọn và khóa toàn bộ ô thẻ trước khi bắt đầu hash bất đồng bộ.
+- Hiển thị rõ giai đoạn đang khóa, Ready / Waiting for Opponent và đang xác minh để vào trận. Thẻ đã khóa có dấu ✓ và viền xanh.
+- Tạo nonce ngẫu nhiên bảo mật, tính SHA-256 và chỉ gửi hash trong gói commit. Không gửi đội hình hoặc nonce cho đối thủ trước khi cả hai đã Ready.
+- Nhấn nhanh nhiều lần không tạo thêm commit. Thay đổi đội hình sau khi đã khóa bị chặn cả ở UI lẫn callback xử lý.
+- Nếu hash lỗi trước khi gửi, trả về trạng thái có thể chọn thẻ và thử lại. Không mở khóa một commitment đã được gửi.
+- Giới hạn chờ hash là 10 giây. Công việc hash còn chờ khi rời phòng bị hủy theo phiên, không được gửi vào phòng mới.
+- Sau khi hai phía reveal và xác minh thành công, cả hai tự chuyển từ màn chọn đội sang Battle Screen.
 
-2. CẤU HÌNH BẮT BUỘC TRƯỚC KHI CHẠY ONLINE
+Giữ nguyên cấu trúc gói PeerJS, cơ chế commit/reveal, RNG đồng bộ, hash trạng thái và xác nhận từng lượt. Cập nhật mã tương thích nội bộ thành acr-online-20261023-v2; hai người phải dùng cùng bản game.
 
-Mã nguồn không tự thay đổi cấu hình quản trị Firebase. Chủ dự án cần thực hiện:
+3. BỘ CHỌN THẺ TRỰC QUAN
 
-Bước 1: Mở Firebase Console của dự án anime-card-web. Trong Authentication → Sign-in method, bật Google và Anonymous; hoàn tất email hỗ trợ của Google nếu Console yêu cầu.
+- Thay toàn bộ dropdown trong giao diện PvP bằng nút chọn chế độ và ô thẻ trực quan: 1 ô cho 1v1, 4 ô cho 4v4.
+- Bấm ô thẻ để mở Select Card. Chỉ hiển thị thẻ người chơi đã sở hữu.
+- Mỗi thẻ có artwork, viền theo độ hiếm, biểu tượng Element, tỷ lệ RNG và HP / ATK cơ bản ở Level 1. Không lấy Level, mutation hoặc chỉ số được nâng từ kho.
+- Có tìm kiếm tên và bộ lọc All, Fire, Water, Nature, Electric, Dark, Holy.
+- Chọn một thẻ rồi Confirm Card. Ô đội hình hiện Selected và hiệu ứng xác nhận. Thẻ đã nằm ở ô khác được đánh dấu và không thể chọn trùng.
+- Đội đối thủ chỉ hiện các ô bí mật và trạng thái Ready trong giai đoạn chọn; không lộ artwork hoặc tên thẻ.
+- Escape trong bộ chọn chỉ đóng Select Card, không thoát phòng PvP. Hỗ trợ giữ focus bàn phím trong hộp thoại và trả focus về ô đã chọn.
+- Nếu thiếu artwork/icon, dùng phần hiển thị dự phòng, không làm hỏng bộ chọn. Không tạo thêm asset trong gói cập nhật.
 
-Bước 2: Trong Authentication → Settings → Authorized domains, thêm hostname của trang game. Với GitHub Pages, thêm dạng ten-tai-khoan.github.io; không thêm đường dẫn thư mục con vào hostname. Dùng HTTPS hoặc localhost cho Auth, Web Crypto và WebRTC.
+4. BỐ CỤC ARENA VÀ HIỆU NĂNG
 
-Bước 3: Tạo Cloud Firestore database nếu dự án chưa có. Áp dụng firestore.rules và firestore.indexes.json đi kèm. Từ thư mục gốc của mã nguồn, sau khi Firebase CLI đã đăng nhập đúng quyền, có thể chạy:
+- Giao diện Duel Link tông tối, điểm nhấn xanh, thanh bước Connect / Blind Pick / Battle và trạng thái kết nối.
+- Lock In nằm ngoài vùng cuộn của đội hình để luôn dễ tiếp cận trên desktop và mobile.
+- Battle Screen hiển thị hai phía, artwork đơn vị đang ở tuyến đầu, HP, ATK, Shield, nội tại có thể mở rộng, các thẻ dự bị và Combat Log.
+- Đánh dấu phía đang tấn công. Giữ nút Strike, thời gian 15 giây/lượt và tự đánh khi hết giờ. Có Exit PvP và Leave Room.
+- Tách giao diện vào pvp_view.js và pvp.css. Bộ hiển thị chỉ đọc trạng thái trận; không ghi vào mô phỏng hoặc gửi gói mạng.
+- Lập danh mục thẻ sở hữu một lần khi mở PvP. Tra cứu ID bằng Map / Set; tìm kiếm được debounce 100 ms.
+- Lưới ban đầu tối đa 48 thẻ, Load more tăng thêm 48 thẻ mỗi lần. Artwork tải lazy; sự kiện dùng delegation thay vì gắn lại cho từng thẻ.
+- Không dựng lại ô chọn khi dữ liệu hiển thị không đổi. Đồng hồ chỉ sửa văn bản khi số giây thay đổi. Danh sách đơn vị dự bị mặc định hiện tối đa 8 ô, có nút xem thêm nếu có nhiều summon.
+- CSS chỉ áp dụng cho giao diện PvP. Sửa xung đột footer toàn cục từng làm nút xác nhận bị cắt; có bố cục responsive và hỗ trợ giảm chuyển động.
 
-firebase deploy --only firestore --project anime-card-web
+Giữ chuẩn hóa Level 1, Normal và nội tại gốc. Không thêm EXP, tiền, vật phẩm, tiến độ quest hoặc achievement từ PvP. Không sửa thuật toán chiến đấu PvE, EXP, Firebase Auth, migration hay Cloud Save trong bản này.
 
-firebase.json chỉ chứa cấu hình Rules/Indexes; lệnh này không triển khai hay thay đổi hosting của game. Các module HTML/JS/CSS vẫn có thể được đưa lên GitHub Pages như trước.
+5. KIỂM TRA VÀ TRIỂN KHAI
 
-Bước 4: Mở trang đã triển khai, đăng nhập, kiểm tra trạng thái Cloud saved, thử tài khoản đó trên trình duyệt khác và thử kết nối PvP giữa hai thiết bị/mạng thực tế.
+- Kiểm tra hai phiên trình duyệt bằng kênh reliable mô phỏng theo giao diện PeerJS: hoàn thành trận 1v1 và 4v4, trạng thái kết quả tương ứng ở hai phía.
+- Kiểm tra khóa ngay khi hash còn chờ, nhấn Ready lặp, commit 64 ký tự, không reveal sớm, chuyển màn tự động, đội 4v4 thiếu ô và chặn thẻ trùng.
+- Kiểm tra timer thật 15 giây, lệnh đến muộn và gói sai thứ tự; dữ liệu save không thay đổi trong trận.
+- Kiểm tra tìm kiếm, lọc Element, Load more, Escape, Level 1 base stats, bố cục 1440px / 390px / 320px và khởi động khi CDN không tải được.
+- Không dùng máy chủ Firebase thật hoặc PeerServer ngoài Internet trong các kiểm tra này. Kết nối WebRTC thực trên mạng triển khai vẫn cần được chủ dự án kiểm tra.
 
-PeerJS cần truy cập CDN, dịch vụ signaling và WebRTC. Một số mạng cần máy chủ TURN riêng; khi đó cấu hình iceServers trong makePeer của pvp.js. Gói này không chứa thông tin đăng nhập TURN hoặc quyền quản trị Firebase.
+Cần triển khai toàn bộ nguồn trong ZIP, đặc biệt hai tệp mới pvp_view.js và pvp.css. index.html dùng mã cache 20261023-pvp-ui-2 để lấy đúng phiên bản JS/CSS. Cả hai người chơi cần tải cùng bản cập nhật; SHA-256 vẫn yêu cầu HTTPS hoặc localhost. Cấu hình Firebase và các tệp Rules/Indexes hiện có được giữ nguyên trong gói.
 
-3. MIGRATION, ĐỒNG BỘ VÀ PHỤC HỒI
+6. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
 
-Lần đầu đăng nhập một UID chưa có users/{uid}, game tự lấy toàn bộ save đã chuẩn hóa từ localStorage để tạo bản Cloud. Không đặt lại level, EXP, mutation, vật phẩm, tiến độ nhiệm vụ hay các chế độ trong quá trình migration. Auth không bị đưa vào payload tiến độ; mỗi thiết bị vẫn đăng nhập Firebase bằng phiên riêng.
+- index.html: Đổi nhãn Login, thay cấu trúc PvP, thêm Select Card, các màn lobby/battle và nạp module/style mới; cập nhật mã cache.
+- pvp.js: Khóa đội bất đồng bộ an toàn, trạng thái Ready và chuyển màn; nối bộ chọn trực quan với phòng PeerJS hiện có.
+- pvp_combat.js: Sửa kiểm tra đội hình có ô trống và mã tương thích phiên bản; giữ nguyên công thức chiến đấu.
+- pvp_view.js: Tệp mới; dựng ô đội hình, bộ chọn có tìm kiếm/lọc, xử lý focus và giao diện trận PvP độc lập.
+- pvp.css: Tệp mới; giao diện Duel Link, thẻ, modal, Arena, hiệu ứng khóa và responsive.
+- styles.css: Gỡ các quy tắc PvP cũ đã chuyển vào pvp.css; giữ giao diện Cloud Account và Leaderboard.
+- startup.js: Bổ sung kiểm tra module PvPView để báo rõ khi thiếu tệp triển khai.
+- README.txt: Changelog của riêng bản cập nhật này và danh sách tệp thay đổi.
 
-Nếu tài khoản đã có save:
-- Cùng tài khoản, bản local chưa thay đổi: khôi phục bản Cloud mới hơn khi cần.
-- Local có thay đổi trên đúng revision đang lưu: đẩy thay đổi local lên Cloud.
-- Hai bản cùng có thay đổi, hoặc local thuộc UID khác: hiện Choose your progress. Người chơi chọn Keep Local / Migrate hoặc Use Cloud Save. Không cộng gộp tiền, vật phẩm hay bản sao thẻ giữa hai save.
-- Đăng nhập giữa trận không làm đổi đội hình đang đánh. Kiểm tra/migration tự tiếp tục sau khi hoạt động hiện tại kết thúc.
-
-Các lần roll, tăng level, dùng/mua vật phẩm, hoàn thành màn, crafting/evolution, phần thưởng nhiệm vụ và thay đổi cài đặt đánh dấu save cần đồng bộ. Các thay đổi liên tiếp được gộp, thông thường tối đa một đợt nền mỗi 60 giây. Roll liên tục không dời hạn gửi mãi về sau. Sync Now chủ động gửi ngay. Khi lỗi mạng, khoảng thử lại tăng từ 5 giây tới tối đa 120 giây; local vẫn giữ tiến độ mới.
-
-Tick chỉ cập nhật đồng hồ không tự gây một lần ghi Cloud mỗi giây. localStorage tiếp tục lưu tiến độ ngay tại thiết bị. Trạng thái Pending sync nghĩa là vẫn còn thay đổi đang chờ; có thể chọn Sync Now và đợi Cloud saved trước khi chuyển sang thiết bị khác.
-
-Mỗi lần Cloud ghi dùng transaction và số revision tăng một đơn vị. Nếu thiết bị khác đã ghi revision mới, bản cũ không tự ghi đè. Game phát hiện cập nhật từ Cloud và yêu cầu đối chiếu lại. Nếu tab khác của cùng trình duyệt đổi tài khoản/revision, tab hiện tại dừng đồng bộ và yêu cầu tải lại để tránh gửi bản đang giữ trong bộ nhớ.
-
-Trước khi Cloud thay thế local, game lưu một bản phục hồi trong IndexedDB. Quá trình ghi nhiều kho local có journal và rollback. Nếu trang đóng giữa bước ghi, journal được phục hồi trước khi các module đọc save. Mục Restore Previous Local Copy trả lại bản local đã giữ, đồng thời đăng xuất để không tự đẩy nhầm sang tài khoản đang dùng.
-
-Định dạng lưu:
-- users/{uid}: revision, checksum SHA-256, metadata tổng hợp và payload bảo vệ hoặc manifest.
-- Payload giữ cơ chế đóng gói Base64 + kiểm tra toàn vẹn của save hiện tại. Base64 không phải mã hóa bí mật; quyền truy cập Cloud dựa trên Firebase Auth và Firestore Rules.
-- Payload nhỏ được lưu trực tiếp khi không vượt 600.000 byte.
-- Payload lớn chia thành các phần tối đa 120.000 ký tự tại users/{uid}/snapshots/{snapshotId}/chunks/{index}; chỉ công bố manifest sau khi các phần đã ghi xong.
-- Kiểm tra hash, kích thước và schema của mọi kho trước khi áp dụng. Giới hạn payload Cloud 16 MiB; giới hạn dữ liệu game thô 10 MiB được giữ từ bộ kiểm tra save hiện có.
-- users/{uid}/recovery/previous giữ bản Cloud liền trước. Việc dọn các phần cũ được thực hiện khi có thể, không sửa bản đang được tham chiếu.
-
-Rules chỉ cho chủ UID đọc/ghi save riêng. Người khác không được liệt kê collection users hoặc đọc payload của UID khác. Các bản ghi công khai được tách sang collection leaderboards. Indexes bỏ lập chỉ mục cho chuỗi payload/text lớn.
-
-4. GLOBAL LEADERBOARD
-
-Leaderboard hiển thị tối đa Top 50, có ba tiêu chí:
-- Total Rolls.
-- Strongest Card Power.
-- Normal Time Trial Room cao nhất.
-
-Strongest Card Power = giá trị lớn nhất của HP + 2 x ATK trong các biến thể đang sở hữu, có áp dụng level và mutation; không lấy buff tạm trong trận. Khi hai mutation có chỉ số khác nhau, so sánh tất cả biến thể thay vì chỉ chọn mutation hiếm nhất.
-
-Bảng công khai chỉ chứa UID, tên hiển thị, các chỉ số tổng hợp, revision và thời điểm cập nhật. Không công khai toàn bộ save, tiền, kho vật phẩm hay email. Tên dùng textContent và bị giới hạn độ dài. Mỗi lần truy vấn có limit 50, cache giao diện 30 giây; Refresh chủ động tải lại.
-
-Đây là bảng xếp hạng casual từ tiến độ do client gửi. Rules xác nhận quyền ghi đúng UID và khớp metadata với giao dịch save; chúng không thay thế máy chủ kiểm chứng toàn bộ lịch sử RNG/chơi game.
-
-5. ONLINE PVP 1V1 VÀ 4V4
-
-Vào Arena → Online PvP. Chọn 1v1 hoặc 4v4, Create Room rồi chia sẻ mã dạng PVP-A1B2C3. Người còn lại nhập mã ở Join Room. Mỗi phòng nhận hai người. Có thể dùng tiến độ local khi chơi Guest; không bắt buộc phải có Google để tạo kết nối PeerJS.
-
-Chọn đội:
-- Mỗi người chọn 1 hoặc 4 thẻ khác nhau từ bộ sưu tập của mình.
-- Lock In / Ready khóa lựa chọn ngay, trước khi tính hash.
-- Chỉ trao đổi commitment SHA-256 khi một bên Ready. Đội hình và nonce chỉ được gửi khi cả hai bên đã khóa.
-- Hai bên kiểm tra reveal khớp commitment rồi mới hiện tên đội đối thủ. Không chấp nhận đổi lựa chọn sau Ready hoặc thẻ không tồn tại trong Index.
-
-Cân bằng:
-- Mọi thẻ xuất phát ở Level 1 và chỉ số gốc, Normal/no mutation.
-- Không cộng level tài khoản, mutation, equipment, thời tiết hoặc potion vào PvP.
-- Giữ nguyên nội tại chiến đấu, nguyên tố và các buff/debuff phát sinh hợp lệ trong trận. Aqua dùng nhánh +50% HP vì nhánh phần thưởng không có giá trị trong PvP.
-- HP/ATK được mỗi trình duyệt dựng từ cards.js. Không nhận chỉ số HP/ATK tùy ý từ gói mạng.
-- Bản cập nhật không sửa chỉ số thẻ, công thức EXP, nội tại, quy tắc summon hay cân bằng của các chế độ PvE hiện có.
-
-Đồng bộ:
-- Hai trình duyệt phải có cùng fingerprint dữ liệu thẻ và phiên bản PvP.
-- RNG lấy từ nonce của cả hai bên và phiên phòng; bên đánh trước cũng được chọn từ RNG này.
-- Chủ phòng điều phối thứ tự lượt. Người đến lượt có thể chọn Strike; sau 15 giây trận tự thực hiện đòn để tránh chờ vô hạn.
-- Mỗi bước có số thứ tự và hash trạng thái, bao gồm RNG và trạng thái nội tại. Gói sai lượt, reveal sai, phiên khác hoặc trạng thái lệch sẽ dừng trận an toàn.
-- Lệnh cũ đến muộn sau khi timer đã thực hiện lượt được bỏ qua, không gây lỗi đồng bộ giả.
-- Đóng phòng, mất kết nối hoặc thiếu xác nhận sẽ dừng trận. Exit PvP trả về Arena, tiếp tục các vòng lặp thật theo thiết lập trước đó.
-- Giới hạn riêng cho một trận PvP: 300 lượt hoặc hơn 400 đơn vị trên sân dẫn tới hòa để giữ trình duyệt ổn định. Đây không phải thay đổi giới hạn nội tại của các chế độ khác.
-
-Không có EXP, VNĐ, coin, Bread, potion, key hay bất kỳ vật phẩm/phần thưởng nào. Không gọi hệ thống nhiệm vụ, achievement, thống kê thắng/thua hoặc ghi tiến độ từ trận PvP. Auto-roll và các vòng tiến độ thật tạm dừng khi giao diện PvP hoạt động. Bộ mô phỏng có trạng thái riêng, không dùng chung bộ runtime của PvE/Sandbox.
-
-PvP là mô hình casual P2P, không có máy chủ chiến đấu có thẩm quyền. Bộ chọn đội chỉ cho thẻ đã sở hữu trên client; gói này không bổ sung máy chủ độc lập để kiểm chứng quyền sở hữu trước mọi client đã bị sửa mã.
-
-6. KIỂM TRA ĐÃ THỰC HIỆN VÀ PHẠM VI
-
-- Kiểm tra khởi động khi CDN không truy cập được: game offline vẫn hoạt động, không có lỗi JavaScript hoặc overlay lỗi hệ thống online gây chặn game.
-- Kiểm tra migration bằng dịch vụ Auth/Firestore mô phỏng, bao gồm thẻ Level 157, mutation Wet, EXP, tiền và Bread; dữ liệu giữ đúng trên trình duyệt thứ hai.
-- Kiểm tra Guest liên kết Google giữ UID, lỗi ghi mạng/local, retry, transaction revision, lựa chọn Local/Cloud, phục hồi bản local và tự tiếp tục migration sau hoạt động đang chạy.
-- Kiểm tra payload khoảng 929 KB được chia thành 8 phần và ghép lại đúng SHA-256.
-- Chạy 167 thẻ qua 2.556 lượt đối chiếu hai bộ mô phỏng cùng RNG, không phát hiện lệch trạng thái.
-- Kiểm tra hai trình duyệt với kênh reliable mô phỏng theo giao diện PeerJS: blind pick, 1v1, 4v4, timer thật 15 giây, lệnh tới muộn và gói sai thứ tự. Dữ liệu save giữ nguyên trong PvP.
-- Kiểm tra bố cục desktop, 390px và 320px.
-
-Chưa xác nhận đăng nhập Google thật, đọc/ghi Firestore thật của dự án hoặc kết nối qua PeerServer ngoài Internet. Môi trường kiểm thử không tạo được ICE candidate cho kết nối WebRTC thực. Các bước kiểm tra trên dịch vụ thật phải thực hiện sau khi chủ dự án hoàn tất phần cấu hình ở mục 2. Không có thao tác ghi dữ liệu vào Firebase thật trong quá trình kiểm thử này.
-
-7. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
-
-- README.txt: Chỉ chứa changelog và hướng dẫn triển khai của bản cập nhật này.
-- achievements.js: Thông báo khi dữ liệu achievement được lưu để xếp lịch đồng bộ; giữ nguyên logic mốc thưởng.
-- app.js: Adapter Cloud/PvP, snapshot đầy đủ, áp dụng save có rollback, cách ly PvP, thay giao diện chuyển tệp và phối hợp tạm dừng/tiếp tục runtime.
-- background.js: Đánh dấu đồng bộ khi thay đổi cài đặt nhạc/âm lượng.
-- boss_event.js: Đánh dấu đồng bộ sau khi lưu dữ liệu Boss Event.
-- drop_audio.js: Đánh dấu đồng bộ khi thay đổi SFX/âm lượng.
-- equipment.js: Đánh dấu đồng bộ sau khi lưu equipment/crafting.
-- firebase.js: Module mới: cấu hình dự án, Auth, migration, revision, Cloud Save, phục hồi và API leaderboard.
-- firebase.json: Tệp mới: liên kết Rules/Indexes để triển khai Firestore bằng CLI.
-- firestore.indexes.json: Tệp mới: miễn lập chỉ mục chuỗi payload/text lớn; không yêu cầu composite index cho ba bảng Top 50.
-- firestore.rules: Tệp mới: quyền truy cập save riêng theo UID, kiểm tra schema/revision và metadata leaderboard.
-- index.html: CDN được ghim phiên bản, Cloud Account, Leaderboard, PvP và điều hướng mới; gỡ nút/hộp thoại Import/Export.
-- inventory.js: Đánh dấu đồng bộ sau khi lưu vật phẩm, potion và giao dịch kho.
-- leaderboard.js: Module mới: giao diện Top 50, chọn tiêu chí, cache và Refresh.
-- online_utils.js: Module mới: hash, nonce, serialization ổn định, giới hạn chờ và bộ nạp SDK không chặn offline.
-- potion_hud.js: Đánh dấu đồng bộ khi đổi lựa chọn hiển thị HUD potion.
-- pvp.js: Module mới: phòng PeerJS, chọn đội kín, khóa/reveal, giao thức lượt và UI kết quả.
-- pvp_combat.js: Module mới: bộ chiến đấu PvP độc lập, chuẩn hóa Level 1, RNG và hash trạng thái.
-- quests.js: Thông báo lưu hai hệ thống quest cho Cloud; toàn bộ logic nhiệm vụ tiếp tục nằm ở module này.
-- raid.js: Đánh dấu đồng bộ sau khi lưu dữ liệu Raid.
-- roll_view.js: Đánh dấu đồng bộ khi đổi Hide Rolling Card.
-- settings.js: Đánh dấu đồng bộ khi đổi cài đặt game.
-- spooky.js: Đánh dấu đồng bộ sau khi lưu Spooky Hunt/Shop/Capsule.
-- startup.js: Kiểm tra module mới; lỗi CDN tùy chọn không bị coi là lỗi khởi động của game offline.
-- styles.css: Bố cục Cloud Account, conflict, Leaderboard, PvP và responsive mobile.
-- timetrial.js: Chỉ thêm thông báo lưu cho Cloud, không đổi EXP hay thời gian lượt.
-- tower.js: Đánh dấu đồng bộ sau khi lưu Tower; không đổi scaling hay đội địch bị khóa.
-
-8. TỆP BÀN GIAO VÀ TÀI LIỆU KỸ THUẬT
-
-Gói ZIP có đầy đủ nguồn game, README.txt và ba tệp cấu hình Firestore cần thiết. Không chứa Excel, test runner, log, ảnh hoặc âm thanh. Các asset hiện có vẫn do người quản lý dự án cung cấp.
-
-Tài liệu chính thức dùng cho phần tích hợp mới:
-https://firebase.google.com/docs/web/alt-setup
-https://firebase.google.com/docs/auth/web/google-signin
-https://firebase.google.com/docs/auth/web/anonymous-auth
-https://firebase.google.com/docs/firestore/manage-data/transactions
-https://firebase.google.com/docs/firestore/security/rules-conditions
-https://firebase.google.com/docs/firestore/quotas
-https://peerjs.com/client/getting-started
-https://peerjs.com/client/api/data-connection
+Gói bàn giao chứa đầy đủ mã nguồn và cấu hình, không chứa Excel, test runner, log, ảnh hoặc âm thanh.

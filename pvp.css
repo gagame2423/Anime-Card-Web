@@ -1,0 +1,163 @@
+/* Isolated Duel Link presentation. No global card or PvE layout overrides. */
+#pvpModal { --pvp-accent:#bdfc70; --pvp-line:#273749; --pvp-muted:#8c9daf; --pvp-cyan:#83e5f4; }
+#pvpModal [hidden] { display:none !important; }
+#pvpModal button { cursor:pointer; }
+#pvpModal button:disabled { cursor:not-allowed; }
+#pvpModal .pvp-modal { width:min(1180px,96vw); max-height:94dvh; display:flex; flex-direction:column; border:1px solid #344555; border-radius:20px; background:radial-gradient(ellipse at 80% 0,#143b3c45,transparent 45%),#0c121d; box-shadow:0 30px 100px #000b; }
+.pvp-header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:24px 28px 18px; }
+.pvp-kicker { margin:0; color:var(--pvp-accent); font-size:10px; font-weight:750; letter-spacing:.16em; line-height:1.6; }
+.pvp-kicker>span { display:inline-block; margin-left:10px; padding:1px 6px; border:1px solid #415b46; border-radius:4px; font-size:8px; letter-spacing:.08em; color:#a8c6bb; }
+.pvp-header h2 { margin:6px 0 0; font-size:30px; letter-spacing:-1px; font-weight:650; }
+#pvpModal em { color:var(--pvp-accent); font-style:normal; }
+.pvp-header-actions { display:flex; align-items:center; gap:18px; }
+.pvp-connection { color:#91a1b2; font-size:11px; white-space:nowrap; }
+.pvp-connection:before { content:""; display:inline-block; width:6px; height:6px; background:#677487; border-radius:50%; margin-right:7px; }
+.pvp-connection.is-connected { color:#bcf3cb; }.pvp-connection.is-connected:before { background:#aafa82; box-shadow:0 0 9px #9fff73aa; }
+#pvpModal .pvp-button { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:44px; border:1px solid #c8ff8b; padding:11px 18px; border-radius:9px; color:#172315; background:var(--pvp-accent); font-size:12px; font-weight:750; line-height:1.4; transition:border-color .15s,background .15s; }
+#pvpModal .pvp-button:hover:not(:disabled) { background:#d4ff9d; box-shadow:0 0 15px #c5ff8219; }
+#pvpModal .pvp-button:disabled { opacity:.4; }
+#pvpModal .pvp-button-quiet { background:#141f2c; border-color:#354454; color:#d9e2eb; }
+#pvpModal .pvp-button-quiet:hover:not(:disabled) { background:#1e2e3a; }
+.pvp-phase-track { display:grid; grid-template-columns:repeat(3,1fr); gap:0; padding:0 28px; border-top:1px solid #ffffff09; border-bottom:1px solid var(--pvp-line); background:#080f1988; }
+.pvp-phase-track>span { padding:13px 12px; font-size:11px; color:#738598; border-bottom:2px solid transparent; text-align:center; }
+.pvp-phase-track b { font-size:9px; opacity:.7; margin-right:8px; }.pvp-phase-track>span.is-active { color:var(--pvp-accent); border-bottom-color:var(--pvp-accent); background:linear-gradient(0deg,#bdfc700c,transparent); }
+.pvp-content { min-height:0; overflow:auto; overscroll-behavior:contain; padding:16px 28px 24px; }
+.pvp-status { margin:0 0 20px; color:#bccbd5; font-size:12px; line-height:1.7; padding:10px 13px; border:1px solid #2b3a49; border-left:2px solid var(--pvp-cyan); border-radius:6px; background:#121d29; overflow-wrap:anywhere; }
+.pvp-room-controls { display:grid; grid-template-columns:140px auto minmax(160px,1fr) auto; align-items:end; gap:12px; }
+.pvp-field-label,.pvp-room-input { color:var(--pvp-muted); font-size:10px; font-weight:650; letter-spacing:.06em; }
+.pvp-room-input { display:flex; flex-direction:column; gap:7px; }
+.pvp-room-input input,.pvp-search input { border:1px solid #344451; border-radius:8px; background:#080f19; color:#edf7fd; padding:12px 14px; min-width:0; width:100%; font-size:12px; }
+.pvp-room-input input:disabled { color:#7d8a9c; }.pvp-room-input input::placeholder { color:#627487; }
+.pvp-format-switch { display:flex; gap:3px; padding:3px; margin-top:7px; border:1px solid #2c3a49; border-radius:8px; background:#080f19; }
+.pvp-format-switch button { flex:1; border:0; border-radius:5px; padding:9px 10px; background:transparent; color:#8d9bad; font-size:12px; font-weight:650; }
+.pvp-format-switch button.is-active { background:#293b33; color:#d2fdb4; }.pvp-format-switch button:disabled { opacity:.65; }
+.pvp-room-strip { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0 18px; margin-bottom:14px; border-bottom:1px solid #ffffff0d; }
+.pvp-room-strip>div { display:flex; align-items:center; gap:12px; }
+#pvpRoomCode { margin-left:10px; font:650 12px ui-monospace,monospace; color:#d9e7f5; letter-spacing:.06em; user-select:all; }
+#pvpModal .pvp-text-button { min-height:28px; border:0; background:none; color:#b7cadb; padding:4px 1px; font-size:11px; font-weight:550; }
+#pvpModal .pvp-text-button:hover:not(:disabled) { color:var(--pvp-accent); }#pvpModal .pvp-text-button:disabled { opacity:.3; }
+.pvp-pick-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:22px; }
+.pvp-pick-heading h3 { margin:5px 0 0; font-size:23px; font-weight:550; letter-spacing:-.5px; }
+.pvp-rules-chip { font-size:9px; font-weight:650; color:#a7bccc; padding:7px 10px; border:1px solid #2d404b; border-radius:5px; letter-spacing:.04em; white-space:nowrap; }
+.pvp-draft-board { display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:22px; }
+.pvp-your-draft { min-width:0; }
+.pvp-section-label { display:flex; justify-content:space-between; gap:10px; margin-bottom:12px; color:#8ca0af; font-size:9px; letter-spacing:.1em; }
+.pvp-section-label>span:last-child { color:#afc3cb; letter-spacing:0; }
+.pvp-pick-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.pvp-pick-grid[data-size="1"] { grid-template-columns:minmax(180px,245px); justify-content:center; }
+.pvp-deck-slot { --card-color:#75899c; position:relative; display:flex; flex-direction:column; min-width:0; padding:9px; border:1px solid #344857; border-radius:12px; background:linear-gradient(150deg,#1b2a37a3,#0c141f 65%); color:#eaf0f5; text-align:left; min-height:262px; transition:border-color .15s,box-shadow .15s; overflow:hidden; }
+.pvp-deck-slot:not(.has-card) { border-style:dashed; }
+.pvp-deck-slot:hover:not(:disabled) { border-color:var(--pvp-accent); box-shadow:inset 0 0 25px #bdfc7008; }
+.pvp-deck-slot.has-card { border-color:var(--card-color); }
+.pvp-slot-top { display:flex; align-items:center; justify-content:space-between; gap:5px; color:#91a2ae; font-size:8px; letter-spacing:.05em; margin:1px 0 9px; }
+.pvp-slot-mark { color:#cbefac; font-size:8px; letter-spacing:0; }
+.pvp-slot-empty { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px; padding:15px 5px 27px; }
+.pvp-slot-empty>b { display:grid; place-items:center; width:48px; height:58px; border:1px solid #3b4e5b; border-radius:9px; background:linear-gradient(150deg,#2e4a4133,#15212e); color:#b7d3c8; font-size:27px; font-weight:300; transform:rotate(-7deg); margin-bottom:10px; }
+.pvp-slot-empty strong { font-size:12px; font-weight:600; }.pvp-slot-empty small { font-size:9px; line-height:1.6; color:#748a9c; max-width:110px; }
+.pvp-art { position:relative; width:100%; aspect-ratio:4/3; overflow:hidden; border-radius:6px; background:radial-gradient(ellipse at 50% 60%,#3c4550,#111e2d 75%); }
+.pvp-art img { position:relative; width:100%; height:100%; object-fit:cover; display:block; }
+.pvp-art-fallback { position:absolute; inset:0; display:grid; place-items:center; color:#799296; font-size:clamp(26px,4vw,48px); font-weight:350; letter-spacing:.1em; background:repeating-linear-gradient(135deg,transparent,transparent 16px,#bdfc7006 17px,#bdfc7006 18px); }
+.pvp-deck-slot .pvp-art { aspect-ratio:4/3; margin-bottom:10px; }
+.pvp-slot-name { display:block; font-size:12px; line-height:1.4; margin:7px 0 4px; overflow-wrap:anywhere; font-weight:650; }
+.pvp-level { display:block; font-size:8px; line-height:1.6; letter-spacing:.08em; color:#849ba8; }
+.pvp-card-stats { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:auto; padding-top:10px; width:100%; }
+.pvp-card-stats>span { display:flex; flex-direction:column; gap:4px; min-width:0; padding:5px 6px; background:#080f1988; border-radius:5px; }
+.pvp-card-stats small { color:#79bba7; font-size:8px; font-weight:650; letter-spacing:.04em; }.pvp-card-stats b { font-size:10px; font-weight:650; color:#d5e1e9; overflow-wrap:anywhere; }
+.pvp-card-stats>span:last-child small { color:#d6b776; }
+.pvp-element { display:inline-flex; align-items:center; gap:4px; color:#e1edf3; font-size:8px; padding:3px 5px; border:1px solid #ffffff20; border-radius:4px; background:#0b1728dd; width:fit-content; line-height:1.2; }
+.pvp-element>img { width:14px; height:14px; object-fit:contain; }
+.pvp-art>.pvp-element { position:absolute; top:7px; left:7px; z-index:1; }
+.pvp-blind-panel { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; padding:20px 16px; border:1px solid #263442; border-radius:12px; text-align:center; background:radial-gradient(ellipse at center,#26344a44,transparent 70%),#0a111c; }
+.pvp-blind-symbol { display:grid; place-items:center; width:48px; height:48px; border:1px solid #3c4d5c; border-radius:50%; color:#8da6b5; font-size:28px; margin-bottom:14px; }
+.pvp-blind-panel .pvp-kicker { font-size:8px; color:#93a2b6; }.pvp-blind-panel h4 { font-size:15px; font-weight:550; margin:8px 0 15px; }
+.pvp-hidden-slots { display:flex; gap:6px; }.pvp-hidden-slots>span { display:grid; place-items:center; width:28px; height:38px; border:1px solid #384659; border-radius:4px; background:#1a2534; color:#7a8b9e; font-size:14px; }
+.pvp-hidden-slots>span.is-ready { color:var(--pvp-accent); border-color:#607c4c; }
+.pvp-blind-panel>p:not(.pvp-kicker) { margin:13px 0 20px; color:#8ea2b4; font-size:10px; line-height:1.8; max-width:185px; }
+.pvp-lock-note { color:#5c7284; font:8px ui-monospace,monospace; letter-spacing:.05em; }
+.pvp-ready-bar { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; gap:20px; padding:18px 28px; border-top:1px solid #ffffff0d; background:#0d1721; }
+.pvp-ready-bar strong { display:block; font-size:11px; font-weight:550; line-height:1.6; }.pvp-ready-bar small { display:block; font-size:9px; color:#7f95a6; margin-top:5px; }
+#pvpModal .pvp-ready { min-width:205px; min-height:48px; font-size:12px; }
+#pvpModal .pvp-ready.is-ready { opacity:1; color:#c3f7bb; background:#213a2c; border-color:#70a76b; box-shadow:0 0 16px #bdfc7012; }
+.pvp-pick-grid.is-locked .pvp-deck-slot { border-color:#729859; box-shadow:inset 0 0 20px #bdfc7009; animation:pvp-lock-in .4s ease-out; }
+.pvp-deck-slot.is-confirmed { animation:pvp-lock-in .35s ease-out; }
+@keyframes pvp-lock-in { from { box-shadow:0 0 0 3px #bdfc7055; } to { box-shadow:0 0 0 0 transparent; } }
+.pvp-footer { display:flex; flex:0 0 auto; min-height:0; letter-spacing:normal; justify-content:space-between; align-items:center; gap:12px; padding:12px 28px; border-top:1px solid #26323f; color:#5f798a; font-size:9px; background:#08101a; }
+.pvp-footer>span:first-child { font-size:8px; color:#92c7b2; letter-spacing:.1em; white-space:nowrap; }
+
+/* Card picker: bounded grid, lazy artwork and delegated events. */
+.pvp-picker-overlay { position:fixed; inset:0; z-index:2; display:grid; place-items:center; padding:20px; background:#030811dc; backdrop-filter:blur(12px); }
+.pvp-picker-panel { display:flex; flex-direction:column; width:min(1080px,100%); height:min(820px,92dvh); border:1px solid #4c605c; border-radius:18px; background:radial-gradient(ellipse at 50% 0,#233f3b44,transparent 50%),#0c131e; box-shadow:0 30px 100px #000a; overflow:hidden; }
+.pvp-picker-header { display:flex; align-items:center; justify-content:space-between; gap:15px; padding:22px 26px; border-bottom:1px solid #26343f; }
+.pvp-picker-header h2 { font-size:24px; font-weight:550; margin:6px 0 0; letter-spacing:-.4px; }.pvp-picker-header h2>span { font-size:12px; font-weight:400; margin-left:8px; color:#76909d; }
+#pvpModal .pvp-icon-button { width:35px; height:35px; border-radius:7px; background:#16212d; border:1px solid #334650; color:#c4d4df; font-size:23px; }
+.pvp-picker-tools { padding:18px 26px 12px; }.pvp-search { display:flex; align-items:center; border:1px solid #30464e; border-radius:8px; background:#080f19; padding:0 10px; }.pvp-search>span { color:#9cb3bd; font-size:24px; }.pvp-search input { border:0; background:transparent; min-height:42px; }
+.pvp-element-filters { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:12px; }
+#pvpModal .pvp-filter { padding:6px 11px; min-height:30px; border:1px solid #293b49; border-radius:6px; background:#121f2a; color:#8fa3b5; font-size:10px; }
+#pvpModal .pvp-filter.is-active { border-color:#a6d372; color:#d3f6b2; background:#253c2b; }
+.pvp-picker-caption { display:flex; justify-content:space-between; gap:12px; padding:0 26px 13px; font-size:9px; color:#728c9e; }.pvp-picker-caption>span:first-child { color:#abc3cb; }
+.pvp-card-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; overflow:auto; overscroll-behavior:contain; min-height:0; flex:1; align-content:start; padding:2px 26px 20px; scrollbar-gutter:stable; }
+.pvp-card-tile { --card-color:#6c7c8d; display:flex; flex-direction:column; position:relative; min-width:0; border:1px solid var(--card-color); background:linear-gradient(140deg,#23303c,#0f1823 65%); color:#e5edf3; border-radius:9px; padding:7px; text-align:left; transition:border-color .15s,box-shadow .15s; }
+.pvp-card-tile .pvp-art { aspect-ratio:4/4.3; border-radius:5px; }
+.pvp-card-tile:hover:not(:disabled) { border-color:#c0f788; box-shadow:0 0 14px #bdfc701c; }
+.pvp-card-tile.is-selected { border-color:var(--pvp-accent); box-shadow:0 0 0 1px var(--pvp-accent); background:#223a2c; }
+.pvp-card-tile:disabled { opacity:.45; }
+.pvp-tile-name { display:block; font-size:11px; font-weight:650; line-height:1.4; padding:9px 2px 4px; overflow-wrap:anywhere; }
+.pvp-card-tile>.pvp-level { padding-left:2px; }.pvp-card-tile .pvp-card-stats { padding-top:8px; }
+.pvp-card-rate { position:absolute; right:6px; bottom:7px; font:7px ui-monospace,monospace; color:#eee8ce; padding:4px; background:#0c1422d9; border-radius:3px; }
+.pvp-card-selected,.pvp-card-in-use { position:absolute; inset:auto 0 0; padding:8px; color:#d9ffc6; text-align:center; font-size:9px; font-weight:700; background:#1d452eec; }.pvp-card-in-use { color:#b7cad4; background:#152a3cec; }
+.pvp-picker-footer { display:flex; flex:0 0 auto; min-height:0; letter-spacing:normal; align-items:center; justify-content:space-between; gap:15px; padding:16px 26px; border-top:1px solid #2d3d44; background:#0e1823; }
+.pvp-picker-footer strong { display:block; color:#d4ecdb; font-size:12px; }.pvp-picker-footer small { display:block; font-size:9px; color:#7e98a6; margin-top:5px; }.pvp-picker-footer>div:last-child { display:flex; gap:10px; }
+.pvp-empty-result { grid-column:1/-1; text-align:center; color:#9eb5c1; font-size:13px; line-height:1.8; padding:40px 10px; }
+#pvpModal .pvp-picker-more { flex-shrink:0; padding:8px; background:#152332; margin:0 26px 10px; }
+[data-rarity="Rare"].pvp-card-tile,[data-rarity="Rare"].pvp-deck-slot,[data-rarity="Rare"].pvp-fighter { --card-color:#5c9bd2; }
+[data-rarity="Epic"].pvp-card-tile,[data-rarity="Epic"].pvp-deck-slot,[data-rarity="Epic"].pvp-fighter { --card-color:#9b77d8; }
+[data-rarity="Legendary"].pvp-card-tile,[data-rarity="Legendary"].pvp-deck-slot,[data-rarity="Legendary"].pvp-fighter { --card-color:#bda36b; }
+[data-rarity="Mythic"].pvp-card-tile,[data-rarity="Mythic"].pvp-deck-slot,[data-rarity="Mythic"].pvp-fighter { --card-color:#d0879a; }
+[data-rarity="Secret"].pvp-card-tile,[data-rarity="Secret"].pvp-deck-slot,[data-rarity="Secret"].pvp-fighter { --card-color:#69b9bc; }
+
+/* Battle presentation reads the verified simulation without mutating it. */
+.pvp-arena-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.pvp-strike-bar { display:flex; justify-content:space-between; align-items:center; gap:15px; padding:12px 16px; background:#152431; border:1px solid #2b4451; border-radius:10px; margin-bottom:20px; }
+#pvpTurnLabel { display:block; color:#d4edf5; font-size:13px; font-weight:650; }#pvpTurnHint { display:block; color:#819eaf; font-size:10px; margin-top:5px; line-height:1.6; }
+.pvp-combat-teams { display:grid; grid-template-columns:1fr 1fr; gap:28px; position:relative; }
+.pvp-team { min-width:0; padding:14px; border:1px solid #263d4a; border-radius:13px; background:radial-gradient(ellipse at top,#1c3a3944,transparent 65%),#09121c; }
+.pvp-team.is-acting { border-color:#8ebd71; box-shadow:0 0 24px #bdfc700a; }
+.pvp-team-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }.pvp-team-title h3 { font-size:10px; letter-spacing:.08em; color:#d1e7e7; margin:0; overflow-wrap:anywhere; }.pvp-team-title>span { font-size:9px; color:#7d9da9; white-space:nowrap; }
+.pvp-fighter { --card-color:#617b8f; border:1px solid var(--card-color); border-radius:10px; overflow:hidden; background:#13222d; margin:0; }
+.pvp-fighter-art { aspect-ratio:16/10; border-radius:0; }.pvp-fighter-art>img { object-fit:contain; }.pvp-fighter-art:after { content:""; position:absolute; inset:40% 0 0; background:linear-gradient(transparent,#0d1a26f2); pointer-events:none; }
+.pvp-fighter-name { position:absolute; bottom:13px; left:16px; right:10px; z-index:1; }.pvp-fighter-name>strong { display:block; font-size:21px; line-height:1.3; font-weight:650; margin-top:2px; overflow-wrap:anywhere; }.pvp-fighter-name>.pvp-level { color:#abbdc9; }
+.pvp-front-tag { position:absolute; right:10px; top:10px; color:#c9e9bb; background:#12231ddd; border:1px solid #617e56; border-radius:4px; padding:5px 7px; font-size:8px; }
+.pvp-fighter-info { padding:14px 16px; }.pvp-hp-label { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:10px; margin-bottom:6px; color:#c5e8d8; }.pvp-hp-label>b { font-size:9px; color:#88c2a9; }
+.pvp-hp-bar { display:block; width:100%; height:7px; border:0; border-radius:8px; overflow:hidden; appearance:none; background:#283844; accent-color:#b7ec6e; }.pvp-hp-bar::-webkit-progress-bar { background:#283844; border-radius:8px; }.pvp-hp-bar::-webkit-progress-value { background:linear-gradient(90deg,#5dac76,#c3f78e); border-radius:8px; }.pvp-hp-bar::-moz-progress-bar { background:#b7ec6e; }
+.pvp-fighter-extras { display:flex; justify-content:space-between; gap:8px; color:#86a7b7; font-size:10px; padding:9px 0 11px; }.pvp-fighter-extras>span:first-child { color:#dbc38c; }
+.pvp-passive { border-top:1px solid #ffffff10; padding-top:10px; }.pvp-passive summary { font-size:11px; color:#bdd6df; cursor:pointer; }.pvp-passive p { white-space:pre-line; font-size:11px; color:#8facbb; line-height:1.8; margin:9px 0 0; }
+.pvp-reserve-rail { display:flex; gap:8px; padding-top:12px; overflow:auto; }.pvp-reserve { flex:0 0 82px; min-width:0; padding:4px; border:1px solid #354b55; border-radius:6px; background:#14232f; }.pvp-reserve>.pvp-art { aspect-ratio:1; }.pvp-reserve>strong { display:block; padding:5px 2px 3px; font-size:8px; line-height:1.4; overflow-wrap:anywhere; }.pvp-reserve>small { display:block; font-size:8px; color:#83b6a3; padding:1px 2px 3px; }
+.pvp-fighter.is-defeated,.pvp-reserve.is-defeated { opacity:.45; filter:grayscale(1); }
+.pvp-log { margin-top:20px; border:1px solid #263c49; border-radius:8px; background:#0a1420; }.pvp-log>summary { display:flex; justify-content:space-between; padding:12px 16px; color:#91aabb; cursor:pointer; font-size:10px; }.pvp-log>div { max-height:190px; overflow:auto; padding:0 16px 12px; color:#91a8b9; font:10px/1.8 ui-monospace,monospace; }.pvp-log p { margin:6px 0; }
+@media(max-width:950px) {
+ .pvp-draft-board { grid-template-columns:1fr; }.pvp-blind-panel { display:grid; grid-template-columns:auto 1fr auto; gap:4px 15px; text-align:left; padding:14px 18px; }.pvp-blind-symbol { grid-row:1/4; margin:0; }.pvp-blind-panel .pvp-kicker { grid-column:2; }.pvp-blind-panel h4 { display:none; }.pvp-blind-panel>p:not(.pvp-kicker) { grid-column:2; max-width:none; margin:0; }.pvp-blind-panel .pvp-hidden-slots { grid-column:3; grid-row:1/4; }.pvp-lock-note { grid-column:2; margin-top:4px; }
+ .pvp-card-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+}
+@media(max-width:650px) {
+ #pvpModal { padding:8px; }#pvpModal .pvp-modal { width:100%; max-height:96dvh; border-radius:14px; }
+ .pvp-header { padding:18px 16px 14px; gap:10px; }.pvp-header h2 { font-size:25px; }.pvp-header-actions { flex-direction:column-reverse; align-items:flex-end; gap:7px; }.pvp-header-actions .pvp-button { min-height:32px; padding:5px 10px; font-size:10px; }.pvp-connection { font-size:9px; }.pvp-kicker { font-size:8px; }.pvp-kicker>span { margin-left:5px; font-size:7px; }
+ .pvp-phase-track { padding:0 12px; }.pvp-phase-track>span { padding:12px 4px; font-size:10px; }.pvp-phase-track b { margin-right:4px; font-size:8px; }
+ .pvp-content { padding:14px 14px 20px; }.pvp-status { font-size:11px; margin-bottom:16px; }
+ .pvp-room-controls { grid-template-columns:1fr 1fr; gap:12px; }.pvp-room-controls>button { min-height:44px; }.pvp-room-controls>.pvp-room-input { grid-column:1; }
+ .pvp-room-strip { gap:8px; flex-wrap:wrap; margin-bottom:14px; }.pvp-room-strip>div { gap:10px; }#pvpRoomCode { margin-left:6px; font-size:11px; }
+ .pvp-pick-heading { align-items:flex-start; flex-direction:column; gap:10px; margin-bottom:18px; }.pvp-pick-heading h3 { font-size:20px; }.pvp-rules-chip { font-size:8px; }
+ .pvp-pick-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }.pvp-pick-grid[data-size="1"] { grid-template-columns:minmax(170px,225px); }.pvp-deck-slot { min-height:230px; }.pvp-slot-top { font-size:8px; }.pvp-slot-name { font-size:11px; }.pvp-card-stats b { font-size:10px; }
+ .pvp-blind-panel { gap:5px 10px; padding:14px 12px; }.pvp-blind-symbol { display:none; }.pvp-blind-panel .pvp-kicker,.pvp-blind-panel>p:not(.pvp-kicker),.pvp-lock-note { grid-column:1/3; }.pvp-blind-panel .pvp-hidden-slots { grid-column:3; }.pvp-hidden-slots { gap:4px; }.pvp-hidden-slots>span { width:20px; height:29px; font-size:10px; }.pvp-lock-note { font-size:7px; }
+ .pvp-ready-bar { flex-direction:column; align-items:stretch; gap:10px; padding:13px 14px; }.pvp-ready-bar small { line-height:1.7; font-size:8px; }#pvpModal .pvp-ready { width:100%; min-width:0; }
+ .pvp-footer { padding:12px 14px; font-size:8px; gap:8px; flex-wrap:wrap; }.pvp-footer>span:first-child { font-size:7px; }
+ .pvp-picker-overlay { padding:8px; }.pvp-picker-panel { height:96dvh; border-radius:12px; }.pvp-picker-header { padding:18px 16px; }.pvp-picker-header h2 { font-size:22px; }.pvp-picker-header .pvp-kicker { font-size:7px; }.pvp-picker-header h2>span { font-size:10px; margin-left:4px; }
+ .pvp-picker-tools { padding:14px 14px 12px; }.pvp-element-filters { gap:5px; }#pvpModal .pvp-filter { font-size:9px; padding:5px 9px; min-height:30px; }
+ .pvp-picker-caption { padding:0 14px 12px; font-size:8px; }.pvp-picker-caption>span:last-child { text-align:right; }
+ .pvp-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:2px 14px 16px; }.pvp-tile-name { font-size:11px; }.pvp-card-tile .pvp-card-stats b { font-size:10px; }
+ .pvp-picker-footer { padding:12px 14px; align-items:stretch; flex-direction:column; gap:10px; }.pvp-picker-footer>div:first-child { display:flex; align-items:center; justify-content:space-between; gap:10px; }.pvp-picker-footer small { margin:0; text-align:right; font-size:8px; max-width:140px; }.pvp-picker-footer>div:last-child>.pvp-button { flex:1; padding:10px; font-size:11px; white-space:nowrap; }
+ .pvp-combat-teams { grid-template-columns:1fr 1fr; gap:10px; }.pvp-team { padding:7px; border-radius:9px; }.pvp-fighter-art { aspect-ratio:3/4; }.pvp-fighter-name { bottom:9px; left:8px; }.pvp-fighter-name>strong { font-size:14px; }.pvp-fighter-name>.pvp-level { font-size:6px; }.pvp-front-tag { top:34px; left:6px; right:auto; font-size:6px; padding:4px; }.pvp-fighter-art>.pvp-element { font-size:7px; top:6px; left:6px; }.pvp-fighter-info { padding:10px 8px; }.pvp-hp-label { flex-wrap:wrap; font-size:8px; gap:4px; }.pvp-fighter-extras { flex-direction:column; font-size:8px; gap:5px; padding:8px 0; }.pvp-passive summary,.pvp-passive p { font-size:9px; }.pvp-team-title { gap:6px; flex-wrap:wrap; min-height:29px; }.pvp-team-title h3 { font-size:8px; }.pvp-team-title>span { font-size:8px; }.pvp-reserve { flex-basis:64px; }
+ .pvp-strike-bar { padding:10px; gap:9px; }.pvp-strike-bar .pvp-button { font-size:11px; padding:10px 12px; min-height:44px; }#pvpTurnLabel { font-size:11px; }#pvpTurnHint { font-size:9px; }
+}
+@media(prefers-reduced-motion:reduce) {
+ #pvpModal *,#pvpModal *:before,#pvpModal *:after { animation:none !important; transition:none !important; }
+}

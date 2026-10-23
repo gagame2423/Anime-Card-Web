@@ -1,10 +1,11 @@
 /* Deterministic, Level-1 PvP combat. No storage, rewards, quests or host writes. */
 (function(host){
  'use strict';
- const BUILD='acr-online-20261023-v1',U=host.OnlineUtils,MAX_TURNS=300,MAX_UNITS=400;
+ const BUILD='acr-online-20261023-v2',U=host.OnlineUtils,MAX_TURNS=300,MAX_UNITS=400;
  const cards=new Map((host.ALL_CARDS||[]).map(card=>[card.id,card]));let signatureJob=null;
  function signature(){return signatureJob ||= U.hash(BUILD+U.stable([...cards.values()].map(card=>({id:card.id,stats:card.stats,element:card.element,category:card.category,passive:card.passive})).sort((a,b)=>a.id.localeCompare(b.id))));}
- function validTeam(ids,size){return Array.isArray(ids)&&ids.length===size&&new Set(ids).size===size&&ids.every(id=>typeof id==='string'&&cards.has(id));}
+ // Array.every skips empty slots: a three-card sparse array must never count as 4v4 Ready.
+ function validTeam(ids,size){return [1,4].includes(size)&&Array.isArray(ids)&&ids.length===size&&new Set(ids).size===size&&Array.from({length:size},(_,i)=>i).every(i=>Object.prototype.hasOwnProperty.call(ids,i)&&typeof ids[i]==='string'&&cards.has(ids[i]));}
  function commitment(team,nonce){return U.hash(U.stable({team,nonce}));}
  function generator(seed){let state=seed>>>0,count=0;const random=()=>{state=(state+0x6D2B79F5)>>>0;let t=Math.imul(state^state>>>15,1|state);t^=t+Math.imul(t^t>>>7,61|t);count++;return((t^t>>>14)>>>0)/4294967296;};return{random,info:()=>({state,count})};}
  function clone(value){return JSON.parse(JSON.stringify(value));}

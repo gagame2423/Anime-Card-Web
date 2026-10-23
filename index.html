@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261023-cloud-pvp-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261023-cloud-pvp-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261023-pvp-ui-2" />
+  <link rel="stylesheet" href="./passives.css?v=20261023-pvp-ui-2" />
+  <link rel="stylesheet" href="./pvp.css?v=20261023-pvp-ui-2" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -63,7 +64,7 @@
           <div class="utility-menu__panel" aria-label="Game utilities">
             <button id="inventoryOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🧪</span><span><small>STORAGE</small><strong>Items</strong></span></button>
             <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
-            <button id="cloudLoginOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">☁</span><span><small id="cloudSyncIndicator">Offline</small><strong>... Login</strong></span></button>
+            <button id="cloudLoginOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">☁</span><span><small id="cloudSyncIndicator">Offline</small><strong>Login</strong></span></button>
             <button id="leaderboardOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">♛</span><span><small>GLOBAL</small><strong>Leaderboard</strong></span></button>
             <button id="craftingOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚗</span><span><small>UPGRADE</small><strong>Crafting</strong></span></button>
             <button id="questOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">?</span><span><small>DISCOVER</small><strong>Quests</strong></span></button>
@@ -859,16 +860,38 @@
   <div id="bossEventShopModal" class="modal-backdrop hidden">
     <section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="bossEventShopTitle"><header class="modal-header"><h2 id="bossEventShopTitle">🩸 Boss Event Shop</h2><button class="modal-close" data-close-modal="bossEventShopModal" type="button" aria-label="Close Boss Event shop">×</button></header><p id="bossEventShopBalance" class="module-description"></p><div id="bossEventShopGrid" class="module-grid"></div></section>
   </div>
-  <div id="pvpModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pvpTitle"><section class="modal-panel pvp-modal">
-    <header class="modal-header"><div><p class="eyebrow">CASUAL · ZERO PROGRESSION</p><h2 id="pvpTitle">Online PvP</h2></div><button id="pvpExit" type="button" class="ghost-button">Exit PvP</button></header>
-    <div class="online-content"><p>Level 1 base stats · Normal cards · Native passives · No weather, equipment, potion effects or rewards.</p>
-      <div class="pvp-room-controls"><label class="online-field">Format<select id="pvpMode"><option value="1">1v1</option><option value="4">4v4</option></select></label><button id="pvpCreate" type="button">Create Room</button><label class="online-field">Room ID<input id="pvpJoinCode" maxlength="10" placeholder="PVP-A1B2C3" autocomplete="off" spellcheck="false"></label><button id="pvpJoin" type="button">Join Room</button></div>
-      <div class="online-actions"><strong id="pvpRoomCode">No room</strong><button id="pvpCopyRoom" type="button">Copy ID</button><button id="pvpLeaveRoom" type="button" hidden>Leave Room</button></div>
-      <p id="pvpStatus" class="online-status" role="status" aria-live="polite"></p><h3 id="pvpFormatLabel">1v1 · Level 1 · Normal cards</h3><div id="pvpPickGrid" class="pvp-pick-grid"></div>
-      <div class="online-actions"><button id="pvpReady" type="button" class="online-primary" disabled>Lock In / Ready</button><span id="pvpOpponentPick">Opponent picks remain hidden until both players are Ready.</span></div><div id="pvpOpponentTeam"></div>
-      <div class="pvp-strike-bar"><strong id="pvpTurnLabel">15-second turn timer</strong><button id="pvpStrike" type="button" class="online-primary" disabled>Strike</button></div><div id="pvpCombatTeams" class="pvp-combat-teams"></div><details class="pvp-log"><summary>Combat Log</summary><div id="pvpLog"></div></details>
+  <div id="pvpModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pvpTitle">
+    <section class="modal-panel pvp-modal" id="pvpMainPanel">
+      <header class="pvp-header"><div><p class="pvp-kicker">DUEL LINK <span>LIVE MATCH</span></p><h2 id="pvpTitle">Online <em>PvP</em></h2></div><div class="pvp-header-actions"><span id="pvpConnectionBadge" class="pvp-connection">Not connected</span><button id="pvpExit" type="button" class="pvp-button pvp-button-quiet">Exit PvP ↗</button></div></header>
+      <nav class="pvp-phase-track" aria-label="Match phase"><span data-pvp-phase="connect" aria-current="step"><b>01</b> Connect</span><span data-pvp-phase="pick"><b>02</b> Blind Pick</span><span data-pvp-phase="battle"><b>03</b> Battle</span></nav>
+      <div class="pvp-content">
+        <p id="pvpStatus" class="pvp-status" role="status" aria-live="polite"></p>
+        <section id="pvpLobbyView">
+          <div class="pvp-room-controls"><div><span class="pvp-field-label">Match format</span><div class="pvp-format-switch" role="group" aria-label="PvP format"><input id="pvpMode" type="hidden" value="1"><button data-pvp-mode="1" class="is-active" aria-pressed="true" type="button">1v1</button><button data-pvp-mode="4" aria-pressed="false" type="button">4v4</button></div></div><button id="pvpCreate" class="pvp-button" type="button">+ Create Room</button><label class="pvp-room-input">Room ID<input id="pvpJoinCode" maxlength="10" placeholder="PVP-A1B2C3" autocomplete="off" spellcheck="false"></label><button id="pvpJoin" class="pvp-button pvp-button-quiet" type="button">Join Room →</button></div>
+          <div class="pvp-room-strip"><span class="pvp-field-label">ROOM <strong id="pvpRoomCode">No room</strong></span><div><button id="pvpCopyRoom" type="button" class="pvp-text-button" disabled>Copy ID</button><button id="pvpLeaveRoom" type="button" class="pvp-text-button" hidden>Leave Room</button></div></div>
+          <div class="pvp-pick-heading"><div><p class="pvp-kicker">BUILD YOUR FORMATION</p><h3>Your side. <em>Your strategy.</em></h3></div><span id="pvpFormatLabel" class="pvp-rules-chip">1v1 · Level 1 · Normal cards</span></div>
+          <div class="pvp-draft-board"><section class="pvp-your-draft"><div class="pvp-section-label"><span>YOUR FORMATION</span><span id="pvpSelectionCount">0 / 1 selected</span></div><div id="pvpPickGrid" class="pvp-pick-grid"></div></section><aside class="pvp-blind-panel"><span class="pvp-blind-symbol" aria-hidden="true">◇</span><p class="pvp-kicker">BLIND PICK</p><h4>Keep them guessing.</h4><div id="pvpHiddenSlots" class="pvp-hidden-slots" aria-hidden="true"></div><p id="pvpOpponentPick">Opponent picks remain hidden until both players are Ready.</p><span class="pvp-lock-note">SEALED UNTIL BOTH PLAYERS ARE READY</span></aside></div>
+
+        </section>
+        <section id="pvpBattleView" hidden aria-label="PvP battle arena">
+          <div class="pvp-arena-heading"><span class="pvp-kicker">LIVE ARENA</span><span id="pvpBattleFormat" class="pvp-rules-chip">LEVEL 1 / NORMAL</span></div>
+          <div class="pvp-strike-bar"><div><span id="pvpTurnLabel">15-second turn timer</span><small id="pvpTurnHint">Both clients verify every turn.</small></div><button id="pvpStrike" type="button" class="pvp-button" disabled>Strike <span aria-hidden="true">⚡</span></button></div>
+          <div id="pvpCombatTeams" class="pvp-combat-teams"></div>
+          <details class="pvp-log"><summary>Combat Log <span>⌄</span></summary><div id="pvpLog"></div></details>
+        </section>
+      </div>
+      <div id="pvpReadyPanel" class="pvp-ready-bar"><div><strong id="pvpReadyHint">Choose a card for every slot.</strong><small>Level 1 · Normal · Native passives · No rewards</small></div><button id="pvpReady" type="button" class="pvp-button pvp-ready" disabled>Lock In / Ready <span aria-hidden="true">↗</span></button></div>
+      <footer class="pvp-footer"><span>◈ CASUAL PLAY</span><span>No EXP, currency, drops or quest progress.</span><button id="pvpBattleLeave" type="button" class="pvp-text-button" hidden>Leave Room</button></footer>
+    </section>
+    <div id="pvpCardPicker" class="pvp-picker-overlay" role="dialog" aria-modal="true" aria-labelledby="pvpPickerTitle" hidden>
+      <section class="pvp-picker-panel"><header class="pvp-picker-header"><div><p class="pvp-kicker">YOUR COLLECTION / LEVEL 1 NORMALIZED</p><h2 id="pvpPickerTitle">Select Card <span id="pvpPickerSlot">/ Slot 01</span></h2></div><button id="pvpPickerClose" type="button" class="pvp-icon-button" aria-label="Close Select Card">×</button></header>
+        <div class="pvp-picker-tools"><label class="pvp-search"><span aria-hidden="true">⌕</span><input id="pvpCardSearch" type="search" placeholder="Search your cards..." autocomplete="off" aria-label="Search PvP cards by name"></label><div id="pvpElementFilters" class="pvp-element-filters" role="group" aria-label="Filter by element"></div></div>
+        <div class="pvp-picker-caption"><span id="pvpPickerCount" role="status"></span><span>Owned cards only · Each card once</span></div>
+        <div id="pvpCardGrid" class="pvp-card-grid" aria-label="Owned cards"></div><button id="pvpPickerMore" class="pvp-text-button pvp-picker-more" type="button" hidden>Load more cards</button>
+        <footer class="pvp-picker-footer"><div><strong id="pvpPickerChoice">Choose a card</strong><small>HP / ATK use Level 1 base stats.</small></div><div><button id="pvpPickerCancel" type="button" class="pvp-button pvp-button-quiet">Cancel</button><button id="pvpPickerConfirm" type="button" class="pvp-button" disabled>Confirm Card ✓</button></div></footer>
+      </section>
     </div>
-  </section></div>
+  </div>
   <div id="sandboxModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="sandboxTitle">
     <section class="modal-panel sandbox-modal">
       <header class="modal-header"><div><p class="eyebrow">COMBAT LAB</p><h2 id="sandboxTitle">Sandbox Mode</h2></div><button id="sandboxExitButton" type="button" class="ghost-button">Exit Sandbox</button></header>
@@ -898,53 +921,54 @@
   <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="./online_utils.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./firebase.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./startup.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./mutations.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./weathers.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./cards.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./category.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./elements.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./background.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./levels.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./roll_performance.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./ui_performance.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./roll_view.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./grimoire.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./yuno.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./requiem.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./reagan.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./fate.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./spooky_passives.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./gomen.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./shibuya.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./companions.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./combat_stats.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./passives.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./inventory.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./exp_food.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./tower.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./timetrial.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./raid.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./boss_event.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./achievements.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./evolution.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./equipment.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./spooky.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./quests.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./crafting.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./drop_audio.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./sandbox.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./online_utils.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./firebase.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./startup.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./mutations.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./weathers.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./cards.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./category.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./elements.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./background.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./levels.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./roll_performance.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./ui_performance.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./roll_view.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./grimoire.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./yuno.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./requiem.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./reagan.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./fate.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./spooky_passives.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./gomen.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./shibuya.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./companions.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./combat_stats.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./passives.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./inventory.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./exp_food.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./tower.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./timetrial.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./raid.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./boss_event.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./achievements.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./evolution.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./equipment.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./spooky.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./quests.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./crafting.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./drop_audio.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./sandbox.js?v=20261023-pvp-ui-2"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script defer src="./weather_hud.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./weather_hud.js?v=20261023-pvp-ui-2"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script defer src="./potion_hud.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./settings.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./storage.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./pvp_combat.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./pvp.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./leaderboard.js?v=20261023-cloud-pvp-1"></script>
-  <script defer src="./app.js?v=20261023-cloud-pvp-1"></script>
+  <script defer src="./potion_hud.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./settings.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./storage.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./pvp_combat.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./pvp_view.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./pvp.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./leaderboard.js?v=20261023-pvp-ui-2"></script>
+  <script defer src="./app.js?v=20261023-pvp-ui-2"></script>
 </body>
 </html>
