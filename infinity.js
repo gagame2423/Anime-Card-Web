@@ -37,32 +37,217 @@
  }
  let data;try{const saved=JSON.parse(host.localStorage.getItem(KEY)||'null');data=validSave(saved)?saved:fresh();}catch(_){data=fresh();}
  let bridge={},active=false,combat=null,timer=null,uiTimer=null,runId='',runWeek=null,selections=[],sessionOrbs=0,busy=false,reporting=null,lastReport=0,reportAgain=false,blocked=false,clockText='',bound=false;
- const fighterNodes=new WeakMap();
- const el=id=>host.document.getElementById(id),make=(tag,cls='',text)=>U.make(tag,cls,text),text=(id,value)=>U.text(el(id),value);
+ const fighterNodes=new WeakMap(),nodeCache=new Map();
+ const el=id=>{if(nodeCache.has(id))return nodeCache.get(id);const node=host.document.getElementById(id);if(node)nodeCache.set(id,node);return node;},make=(tag,cls='',text)=>U.make(tag,cls,text),text=(id,value)=>U.text(el(id),value);
  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();return true;}catch(_){return false;}}
  function commitReward(){const p=data.pending;if(!p)return true;if(!host.InventorySystem.grantOnce('infinity_wave',p.receipt,'star_orb',p.orbs))return false;data.best[p.weekId]=Math.max(data.best[p.weekId]||0,p.wave);data.reports[p.weekId]=Math.max(data.reports[p.weekId]||0,p.wave);if(data.infinityMetadata?.lastClaimedWeek===p.weekId)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,p.wave);data.lastReceipt=p.receipt;data.pending=null;return persist();}
  if(!commitReward())blocked=true;
  function week(){return R.rotation();}
+ // The picker owns only presentation state; combat/save adapters stay unchanged.
+ const PAGE_SIZE=24,VARIANT_PAGE_SIZE=12;
+ const rowById=new Map();
+ let rows=[],eligibleCount=0,activeSlot=0,page=0,loading=false,collectionWeek='',collectionToken=0,collectionFrame=null,renderFrame=null,searchTimer=null;
+ let query='',elementFilter='',categoryFilter='',sortMode='atk-desc',slotRenderKey='',gridRenderKey='',pickedSlot=-1,focusSlotAfterRender=false;
+ let variantTarget=null,variantPage=0,variantReturnFocus=null;
+ const number=value=>Math.max(0,Math.round(Number(value)||0)).toLocaleString('en-US');
+ const button=(label,cls='')=>Object.assign(make('button',cls,label),{type:'button'});
+ const labelFor=variant=>(variant?.mutations||[]).map(m=>m.name).filter(Boolean).join(' + ')||'Normal';
+ const editable=()=>active&&!busy&&!loading&&!combat;
+ const usedIds=()=>new Set(selections.filter(Boolean).map(slot=>String(slot.cardId)));
+ const selectedIndex=id=>selections.findIndex(slot=>String(slot?.cardId)===String(id));
  function cards(){return (bridge.cards?.()||[]).filter(card=>host.CategorySystem.has(card,week().category));}
  function variants(id){return bridge.variants?.(id)||[];}
- function autoFill(){selections=[];const used=new Map();for(const card of cards())for(const v of variants(card.id)){for(let i=0;i<Math.min(4, v.count);i++){if(selections.length===4)return;const n=used.get(v.key)||0;if(n>=v.count)break;selections.push({cardId:card.id,variantKey:v.key});used.set(v.key,n+1);}}}
- function validTeam(){if(selections.length!==4||cards().length===0)return false;const used=new Map(),eligible=new Set(cards().map(card=>card.id));for(const slot of selections){if(!slot||!eligible.has(slot.cardId))return false;const v=variants(slot.cardId).find(v=>v.key===slot.variantKey);if(!v)return false;used.set(v.key,(used.get(v.key)||0)+1);if(used.get(v.key)>v.count)return false;}return true;}
- function renderSetup(){
-  const grid=el('infinityTeam');if(!grid)return;grid.replaceChildren();const eligible=cards();
-  for(let i=0;i<4;i++){
-   const slot=selections[i],box=make('article','infinity-slot'),select=make('select'),mutation=make('select');select.setAttribute('aria-label','Infinity player slot '+(i+1));mutation.setAttribute('aria-label','Infinity slot '+(i+1)+' variant');
-   const empty=make('option','','Select card');empty.value='';select.append(empty);
-   for(const card of eligible){const option=make('option','',card.name);option.value=card.id;select.append(option);}select.value=slot?.cardId||'';
-   for(const v of variants(slot?.cardId)){const option=make('option','',(v.mutations.map(m=>m.name).join(' + ')||'Normal')+' · x'+v.count);option.value=v.key;mutation.append(option);}mutation.value=slot?.variantKey||'';
-   select.addEventListener('change',()=>{selections[i]=select.value?{cardId:select.value,variantKey:variants(select.value)[0]?.key||''}:null;renderSetup();});
-   mutation.addEventListener('change',()=>{if(selections[i])selections[i].variantKey=mutation.value;renderSetup();});
-   box.append(make('strong','','SLOT '+(i+1)),select,mutation);
-   if(slot){const card=eligible.find(c=>c.id===slot.cardId),v=variants(slot.cardId).find(v=>v.key===slot.variantKey);if(card&&v){const stats=bridge.describe(card,v),image=make('img');image.src=card.image||'';image.alt=card.name;image.loading='lazy';image.addEventListener('error',()=>image.hidden=true,{once:true});box.append(image,make('small','',`Lvl ${stats.level} · HP ${Math.round(stats.hp).toLocaleString('en-US')} · ATK ${Math.round(stats.atk).toLocaleString('en-US')}`));}}
-   grid.append(box);
+ function validTeam(){
+  if(selections.length!==4||loading)return false;
+  const used=new Set(),eligible=new Set(cards().map(card=>String(card.id)));
+  for(const slot of selections){
+   const id=String(slot?.cardId||'');if(!id||used.has(id)||!eligible.has(id))return false;
+   if(!variants(id).some(v=>v.key===slot.variantKey&&v.count>0))return false;used.add(id);
   }
-  if(el('infinityStart'))el('infinityStart').disabled=busy||blocked||!validTeam();
+  return used.size===4;
  }
- function renderClock(){const w=week(),remaining=Math.max(0,w.endMs-host.InfinityCloudSystem.now()),days=Math.floor(remaining/R.DAY),hours=Math.floor(remaining/3600000)%24,minutes=Math.floor(remaining/60000)%60;const label=`${w.id} · Category: ${w.category} · Enemy Element: ${w.element} · Reset: ${days}d ${hours}h ${minutes}m (Monday 00:00 UTC)`;if(label!==clockText){text('infinityRotation',label);clockText=label;}if(active&&runWeek&&runWeek.id!==w.id&&!combat?.battle.finished)end('Weekly rotation ended. Start a new run with this week’s Category.');}
+ function toast(message){host.ShopBulkSystem.notify(message);}
+ function scheduleSetup(){if(renderFrame!==null)return;renderFrame=host.requestAnimationFrame(()=>{renderFrame=null;renderSetup();});}
+ function cancelSetupWork(){
+  collectionToken++;if(collectionFrame!==null)host.cancelAnimationFrame(collectionFrame);collectionFrame=null;
+  if(renderFrame!==null)host.cancelAnimationFrame(renderFrame);renderFrame=null;
+  host.clearTimeout(searchTimer);searchTimer=null;
+ }
+ function refreshCollection(keepTeam=false){
+  cancelSetupWork();closeVariants(false);loading=true;collectionWeek=week().id;rows=[];rowById.clear();page=0;
+  for(const menu of el('infinityLobby')?.querySelectorAll('.infinity-filter-menu')||[])menu.open=false;
+  if(!keepTeam)selections=Array(4).fill(null);
+  activeSlot=Math.max(0,selections.findIndex(slot=>!slot));slotRenderKey='';gridRenderKey='';
+  const source=[...new Map(cards().map(card=>[String(card.id),card])).values()];eligibleCount=source.length;
+  const ticket=collectionToken;let cursor=0;
+  renderFilterMenus();renderSetup();
+  const collect=()=>{
+   collectionFrame=null;if(!active||combat||ticket!==collectionToken)return;
+   if(collectionWeek!==week().id){refreshCollection(false);return;}
+   const until=host.performance.now()+5;let worked=0;
+   try{
+    while(cursor<source.length&&worked<8&&host.performance.now()<until){
+     const card=source[cursor++],owned=variants(card.id).filter(v=>v.count>0),views=[];
+     for(const variant of owned){const stats=bridge.describe(card,variant);views.push({variant,stats});}
+     if(views.length){
+      const row={card,id:String(card.id),search:String(card.name+' '+(card.category||[]).join(' ')).toLocaleLowerCase(),views,byVariant:new Map(views.map(view=>[view.variant.key,view]))};
+      row.bestAtk=views.reduce((a,b)=>b.stats.atk>a.stats.atk?b:a);row.bestHp=views.reduce((a,b)=>b.stats.hp>a.stats.hp?b:a);
+      rows.push(row);rowById.set(row.id,row);
+     }
+     worked++;
+    }
+   }catch(error){loading=false;text('infinityStatus','Could not prepare card previews: '+error.message);scheduleSetup();return;}
+   if(cursor<source.length){collectionFrame=host.requestAnimationFrame(collect);return;}
+   loading=false;eligibleCount=rows.length;
+   const used=new Set();selections=Array.from({length:4},(_,i)=>{const slot=selections[i],id=String(slot?.cardId||''),row=rowById.get(id);if(!row||used.has(id)||!row.byVariant.has(slot.variantKey))return null;used.add(id);return{cardId:id,variantKey:slot.variantKey};});
+   activeSlot=Math.max(0,selections.findIndex(slot=>!slot));renderFilterMenus();slotRenderKey='';scheduleSetup();
+  };
+  collectionFrame=host.requestAnimationFrame(collect);
+ }
+ function viewFor(row){
+  const selected=selections.find(slot=>slot?.cardId===row.id),chosen=selected&&row.byVariant.get(selected.variantKey);
+  return chosen||(sortMode.startsWith('hp')?row.bestHp:row.bestAtk);
+ }
+ function artwork(card,large=false){
+  const box=make('span','infinity-card-art'),fallback=make('span','infinity-art-fallback',String(card.name||'Card').split(/\s+/).map(word=>word[0]).slice(0,3).join(''));
+  fallback.setAttribute('aria-hidden','true');box.append(fallback);
+  if(card.image){const img=make('img');img.alt=card.name+' artwork';img.loading=large?'eager':'lazy';img.decoding='async';img.addEventListener('error',()=>img.hidden=true,{once:true});img.src=card.image;box.append(img);}
+  return box;
+ }
+ function elementBadge(card){
+  const badge=make('span','infinity-element',card.element);badge.dataset.element=card.element;
+  const path=host.ElementSystem.ICONS[card.element];if(path){const img=make('img');img.src=path;img.alt='';img.width=18;img.height=18;img.addEventListener('error',()=>img.hidden=true,{once:true});badge.prepend(img);}return badge;
+ }
+ function statPair(stats){
+  const root=make('span','infinity-card-stats');
+  for(const [name,value]of [['HP',stats.hp],['ATK',stats.atk]]){const entry=make('span');entry.append(make('small','',name),make('b','',number(value)));entry.title=name+' '+number(value);root.append(entry);}return root;
+ }
+ function decorate(node,row,view){
+  node.classList.add('rarity-'+String(row.card.rarity||'Common').toLowerCase());node.dataset.element=row.card.element;
+  node.dataset.mutated=String(Boolean(view.variant.mutations?.length));bridge.decorate?.(node,view.variant.mutations);
+ }
+ function cardContents(row,view,large=false){
+  const fragment=host.document.createDocumentFragment(),art=artwork(row.card,large);art.append(elementBadge(row.card));
+  const name=make('strong','infinity-card-name',row.card.name),meta=make('span','infinity-card-meta'),mutation=make('span','infinity-variant-badge',labelFor(view.variant));mutation.title=labelFor(view.variant);
+  meta.append(make('span','infinity-card-level','Lvl '+number(view.stats.level)),mutation);
+  fragment.append(art,name,meta,statPair(view.stats));return fragment;
+ }
+ function renderSlots(){
+  const root=el('infinityTeam');if(!root)return;
+  const key=JSON.stringify([selections,activeSlot,busy,loading,rows.length]);if(key===slotRenderKey)return;slotRenderKey=key;
+  const fragment=host.document.createDocumentFragment();
+  for(let i=0;i<4;i++){
+   const slot=selections[i],row=slot&&rowById.get(slot.cardId),view=row?.byVariant.get(slot.variantKey),filled=Boolean(view);
+   const frame=make('article','infinity-deck-slot'+(activeSlot===i?' is-active':'')+(filled?' is-filled':' is-empty')+(pickedSlot===i?' is-picked':''));frame.setAttribute('role','group');frame.setAttribute('aria-label','Infinity slot '+(i+1));
+   const header=make('div','infinity-slot-top');header.append(make('span','','SLOT '+String(i+1).padStart(2,'0')),make('span','infinity-slot-state',activeSlot===i?'ACTIVE':filled?'READY':'EMPTY'));
+   const pick=button('','infinity-slot-pick');pick.dataset.infinitySlot=String(i);pick.disabled=busy||loading;pick.setAttribute('aria-pressed',String(activeSlot===i));pick.setAttribute('aria-label','Slot '+(i+1)+(filled?': '+row.card.name+'. Click to swap.':': Empty. Choose card.'));
+   frame.append(header);
+   if(filled){
+    decorate(frame,row,view);pick.append(cardContents(row,view,true));frame.append(pick);
+    const actions=make('div','infinity-slot-actions'),change=button('Mutation ···','infinity-quiet-button'),clear=button('Clear Slot','infinity-clear-slot');
+    change.dataset.infinityVariants=row.id;change.dataset.infinityEditSlot=String(i);change.disabled=clear.disabled=busy||loading;clear.dataset.infinityClear=String(i);actions.append(change,clear);frame.append(actions);
+   }else{
+    const empty=make('span','infinity-empty-slot');empty.append(make('b','','+'),make('strong','','EMPTY'),make('small','','Choose a card below'));pick.append(empty);frame.append(pick);
+   }
+   fragment.append(frame);
+  }
+  root.replaceChildren(fragment);pickedSlot=-1;
+  if(focusSlotAfterRender){focusSlotAfterRender=false;root.querySelector('[data-infinity-slot="'+activeSlot+'"]')?.focus({preventScroll:true});}
+ }
+ const SORTS=[['atk-desc','Attack: High → Low'],['atk-asc','Attack: Low → High'],['hp-desc','HP: High → Low'],['hp-asc','HP: Low → High'],['level-desc','Level: High → Low'],['name','Name: A → Z']];
+ function menu(id,values,current,attribute){
+  const root=el(id);if(!root)return;const fragment=host.document.createDocumentFragment();
+  for(const [value,label]of values){const item=button(label,'infinity-menu-option');item.dataset[attribute]=value;item.setAttribute('aria-pressed',String(current===value));fragment.append(item);}root.replaceChildren(fragment);
+ }
+ function renderFilterMenus(){
+  const allowed=new Set(rows.flatMap(row=>row.card.category||[]));
+  menu('infinityElementOptions',[['','All Elements'],...host.ElementSystem.TYPES.map(type=>[type,type])],elementFilter,'infinityElement');
+  menu('infinityCategoryOptions',[['','All '+week().category+' Cards'],...host.CategorySystem.TYPES.filter(type=>type!==week().category&&allowed.has(type)).map(type=>[type,type])],categoryFilter,'infinityCategory');
+  menu('infinitySortOptions',SORTS,sortMode,'infinitySort');
+  text('infinityElementLabel',elementFilter||'All Elements');text('infinityCategoryLabel',categoryFilter||'All '+week().category+' Cards');text('infinitySortLabel',SORTS.find(([key])=>key===sortMode)[1]);
+ }
+ function renderPicker(){
+  const grid=el('infinityCardGrid');if(!grid)return;
+  const key=JSON.stringify([collectionToken,loading,query,elementFilter,categoryFilter,sortMode,page,selections]);if(key===gridRenderKey)return;gridRenderKey=key;
+  const filtered=rows.filter(row=>(!query||row.search.includes(query))&&(!elementFilter||row.card.element===elementFilter)&&(!categoryFilter||host.CategorySystem.has(row.card,categoryFilter)));
+  const entries=filtered.map(row=>({row,view:viewFor(row)}));entries.sort((a,b)=>{
+   const order=sortMode.startsWith('atk')?(a.view.stats.atk-b.view.stats.atk)*(sortMode.endsWith('desc')?-1:1):sortMode.startsWith('hp')?(a.view.stats.hp-b.view.stats.hp)*(sortMode.endsWith('desc')?-1:1):sortMode==='level-desc'?b.view.stats.level-a.view.stats.level:0;
+   return order||a.row.card.name.localeCompare(b.row.card.name)||a.row.id.localeCompare(b.row.id);
+  });
+  const pages=Math.max(1,Math.ceil(entries.length/PAGE_SIZE));page=Math.min(page,pages-1);
+  const fragment=host.document.createDocumentFragment(),used=usedIds();
+  if(loading){fragment.append(make('div','infinity-grid-message','Preparing your collection…'));grid.setAttribute('aria-busy','true');}
+  else{grid.setAttribute('aria-busy','false');for(const {row,view}of entries.slice(page*PAGE_SIZE,(page+1)*PAGE_SIZE)){
+   const inUse=used.has(row.id),tile=make('article','infinity-picker-card'+(inUse?' is-in-use':''));decorate(tile,row,view);tile.dataset.infinityCard=row.id;
+   const pick=button('','infinity-card-pick');pick.dataset.infinityPick=row.id;pick.setAttribute('aria-label',row.card.name+', '+labelFor(view.variant)+', HP '+number(view.stats.hp)+', ATK '+number(view.stats.atk)+(inUse?', already in lineup':', select card'));pick.setAttribute('aria-pressed',String(inUse));pick.append(cardContents(row,view));
+   if(inUse)pick.append(make('span','infinity-in-use','IN USE · SLOT '+String(selectedIndex(row.id)+1).padStart(2,'0')));
+   const foot=make('div','infinity-picker-card-foot'),variantsButton=button('···','infinity-card-more');variantsButton.dataset.infinityVariants=row.id;variantsButton.setAttribute('aria-label','Choose owned mutation for '+row.card.name);variantsButton.title='Choose owned mutation';foot.append(make('small','',row.views.length+' variant'+(row.views.length===1?'':'s')),variantsButton);tile.append(pick,foot);fragment.append(tile);
+  }
+  if(!entries.length)fragment.append(make('div','infinity-grid-message',eligibleCount?'No weekly cards match these filters. Try another search or clear the filters.':'No unlocked '+week().category+' cards yet. Roll eligible cards to build your team.'));
+  }
+  grid.replaceChildren(fragment);
+  text('infinityWeeklyCategory','Active Weekly Category: '+week().category);text('infinityEligibleCount',loading?'Preparing '+eligibleCount+' eligible cards…':'Showing '+entries.length+' of '+eligibleCount+' eligible cards');
+  text('infinityPageLabel','Page '+(page+1)+' / '+pages);el('infinityPagePrevious').disabled=loading||page===0;el('infinityPageNext').disabled=loading||page>=pages-1;
+ }
+ function renderSetup(){
+  if(!active||combat)return;renderSlots();renderPicker();
+  const count=selections.filter(Boolean).length,ready=validTeam();text('infinityTeamCount',count+' / 4 selected');
+  text('infinityTeamHint',loading?'Preparing combat stats…':eligibleCount<4?'You need 4 different '+week().category+' cards. '+eligibleCount+' unlocked.':ready?'Lineup ready. Four unique cards, one weekly Category.':'Picking SLOT '+String(activeSlot+1).padStart(2,'0')+' · Choose four different cards.');
+  if(el('infinityStart')){el('infinityStart').hidden=false;el('infinityStart').disabled=busy||blocked||!ready;}
+  el('infinityClearTeam').disabled=busy||loading||!count;
+ }
+ function nextEmpty(after){for(let n=1;n<=4;n++){const index=(after+n)%4;if(!selections[index])return index;}return after;}
+ function chooseCard(id,key){
+  if(!editable())return false;id=String(id);
+  if(usedIds().has(id)){toast('This card is already in your lineup!');return false;}
+  const row=rowById.get(id),view=key?row?.byVariant.get(key):row&&viewFor(row);if(!view||!host.CategorySystem.has(row.card,week().category))return false;
+  if(!variants(id).some(v=>v.key===view.variant.key&&v.count>0)){toast('This card variant is no longer owned.');refreshCollection(true);return false;}
+  selections[activeSlot]={cardId:id,variantKey:view.variant.key};pickedSlot=activeSlot;activeSlot=nextEmpty(activeSlot);focusSlotAfterRender=true;scheduleSetup();return true;
+ }
+ function setVariantBackground(inert){for(const id of ['infinityMainHeader','infinityContent','infinityFooter']){const node=el(id);if(node)node.inert=inert;}}
+ function openVariants(id,editSlot=null){
+  if(!editable())return;const row=rowById.get(String(id));if(!row)return;
+  const existing=selectedIndex(row.id);variantTarget={id:row.id,slot:existing>=0?existing:editSlot};variantPage=0;variantReturnFocus=host.document.activeElement;
+  setVariantBackground(true);el('infinityVariantPicker').hidden=false;renderVariants();el('infinityVariantClose').focus({preventScroll:true});
+ }
+ function closeVariants(restoreFocus=true){
+  if(!variantTarget)return;variantTarget=null;const overlay=el('infinityVariantPicker');if(overlay)overlay.hidden=true;setVariantBackground(false);el('infinityVariantGrid')?.replaceChildren();
+  if(restoreFocus){const target=variantReturnFocus?.isConnected?variantReturnFocus:el('infinityTeam')?.querySelector('[data-infinity-slot="'+activeSlot+'"]');target?.focus({preventScroll:true});}variantReturnFocus=null;
+ }
+ function renderVariants(){
+  const row=rowById.get(variantTarget?.id);if(!row){closeVariants();return;}
+  text('infinityVariantTitle',row.card.name+' · Mutations');text('infinityVariantHint',variantTarget.slot>=0&&variantTarget.slot!==null?'Change mutation for SLOT '+String(variantTarget.slot+1).padStart(2,'0'):'Choose a variant for SLOT '+String(activeSlot+1).padStart(2,'0'));
+  const pages=Math.max(1,Math.ceil(row.views.length/VARIANT_PAGE_SIZE));variantPage=Math.min(variantPage,pages-1);const fragment=host.document.createDocumentFragment();
+  for(const view of row.views.slice(variantPage*VARIANT_PAGE_SIZE,(variantPage+1)*VARIANT_PAGE_SIZE)){
+   const choice=button('','infinity-variant-option');choice.dataset.infinityVariantKey=view.variant.key;decorate(choice,row,view);choice.append(make('strong','',labelFor(view.variant)),make('small','','Owned x'+number(view.variant.count)),statPair(view.stats));
+   const selected=variantTarget.slot!==null&&selections[variantTarget.slot]?.variantKey===view.variant.key;choice.classList.toggle('is-selected',selected);choice.setAttribute('aria-pressed',String(selected));fragment.append(choice);
+  }
+  el('infinityVariantGrid').replaceChildren(fragment);text('infinityVariantPage','Page '+(variantPage+1)+' / '+pages);el('infinityVariantPrevious').disabled=variantPage===0;el('infinityVariantNext').disabled=variantPage>=pages-1;
+ }
+ function chooseVariant(key){
+  if(!editable()||!variantTarget)return;const target={...variantTarget},row=rowById.get(target.id),view=row?.byVariant.get(key);if(!view)return;
+  if(target.slot!==null&&target.slot>=0){
+   if(selections[target.slot]?.cardId!==row.id)return;
+   if(!variants(row.id).some(v=>v.key===key&&v.count>0)){toast('This card variant is no longer owned.');return;}
+   selections[target.slot]={cardId:row.id,variantKey:key};activeSlot=nextEmpty(target.slot);pickedSlot=target.slot;focusSlotAfterRender=true;closeVariants(false);scheduleSetup();
+  }else{closeVariants(false);chooseCard(row.id,key);}
+ }
+ function setupClick(event){
+  if(!event.target.closest('.infinity-filter-menu'))for(const menu of el('infinityLobby')?.querySelectorAll('.infinity-filter-menu[open]')||[])menu.open=false;
+  const node=event.target.closest('button');if(!node||!el('infinityModal')?.contains(node))return;
+  if(node.dataset.infinityVariantKey!==undefined){chooseVariant(node.dataset.infinityVariantKey);return;}
+  if(node.dataset.infinityVariants!==undefined){openVariants(node.dataset.infinityVariants,node.dataset.infinityEditSlot===undefined?null:Number(node.dataset.infinityEditSlot));return;}
+  if(!editable())return;
+  if(node.dataset.infinityPick!==undefined){chooseCard(node.dataset.infinityPick);return;}
+  if(node.dataset.infinitySlot!==undefined){activeSlot=Number(node.dataset.infinitySlot);scheduleSetup();return;}
+  if(node.dataset.infinityClear!==undefined){const index=Number(node.dataset.infinityClear);selections[index]=null;activeSlot=index;focusSlotAfterRender=true;scheduleSetup();return;}
+  let filtered=false;
+  if(node.dataset.infinityElement!==undefined){elementFilter=node.dataset.infinityElement;filtered=true;}
+  if(node.dataset.infinityCategory!==undefined){categoryFilter=node.dataset.infinityCategory;filtered=true;}
+  if(node.dataset.infinitySort!==undefined){sortMode=node.dataset.infinitySort;filtered=true;}
+  if(filtered){node.closest('details').open=false;page=0;renderFilterMenus();scheduleSetup();}
+ }
+ function renderClock(){const w=week(),remaining=Math.max(0,w.endMs-host.InfinityCloudSystem.now()),days=Math.floor(remaining/R.DAY),hours=Math.floor(remaining/3600000)%24,minutes=Math.floor(remaining/60000)%60;const label=`${w.id} · Category: ${w.category} · Enemy Element: ${w.element} · Reset: ${days}d ${hours}h ${minutes}m (Monday 00:00 UTC)`;if(label!==clockText){text('infinityRotation',label);clockText=label;}if(active&&runWeek&&runWeek.id!==w.id&&!combat?.battle.finished)end('Weekly rotation ended. Start a new run with this week’s Category.');if(active&&!combat&&collectionWeek&&collectionWeek!==w.id){query='';elementFilter='';categoryFilter='';el('infinitySearch').value='';refreshCollection(false);}}
  function fighterTile(unit){
   let row=fighterNodes.get(unit);
   if(!row){
@@ -75,7 +260,7 @@
   const passive=combat.engine.getPassiveDescription(unit);U.text(row.summary,passive.name);U.text(row.description,passive.description);return row.tile;
  }
  function renderBattle(){
-  if(!combat)return;const bs=combat.battle;el('infinityLobby').hidden=true;el('infinityBattle').hidden=false;
+  if(!combat)return;const bs=combat.battle;el('infinityLobby').hidden=true;el('infinityBattle').hidden=false;el('infinityStart').hidden=true;text('infinityTeamCount','INFINITY RUN');text('infinityTeamHint',bs.finished?'Run ended. Your wave rewards are saved.':'Lineup locked · HP, buffs and counters carry forward.');
   text('infinityWave',`WAVE ${bs.infinity.wave} · Highest cleared ${bs.infinity.highest} · Star Orbs +${sessionOrbs.toLocaleString('en-US')}`);
   text('infinityTurn',bs.finished?'RUN ENDED':`${bs.turn==='player'?'PLAYER':'ENEMY'} STRIKE · ${host.InventorySystem.combatTurnMs(3000)/1000}s`);
   for(const [id,team]of [['infinityPlayers',bs.playerTeam],['infinityEnemies',bs.enemyTeam]]){
@@ -110,17 +295,43 @@
   reporting=(async()=>{try{if(await host.CloudSaveSystem.flush(true)!==true)throw Error('Cloud Save is busy. Weekly best remains queued.');const response=await host.InfinityCloudSystem.submit({weekId:current.id,highestWave:score,category:current.category});if(host.CloudSaveSystem.activeUser?.uid!==uid)return;if(Number.isSafeInteger(response.highestWave))data.best[current.id]=Math.max(data.best[current.id]||0,response.highestWave);if(data.infinityMetadata?.lastClaimedWeek===current.id)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,data.best[current.id]||0);if((data.reports[current.id]||0)<=score)delete data.reports[current.id];persist();text('infinityStatus','Weekly best synced · Star Orbs are stored in EXP Food.');}catch(error){text('infinityStatus','Weekly score pending sync · '+error.message);}finally{reporting=null;if(reportAgain){reportAgain=false;queueMicrotask(()=>void report(true));}}})();return reporting;
  }
  async function start(){
-  if(busy||blocked||!validTeam()||host.CloudSaveSystem?.playAllowed!==true)return false;
-  busy=true;renderSetup();try{runWeek=week();const players=bridge.units(selections);if(players.length!==4||players.some(u=>!host.CategorySystem.has(u,runWeek.category)))throw Error('All four cards must match '+runWeek.category+'.');runId=U.token();sessionOrbs=0;
+  if(!editable()||blocked||!validTeam()||host.CloudSaveSystem?.playAllowed!==true)return false;
+  busy=true;cancelSetupWork();closeVariants(false);renderSetup();try{runWeek=week();const players=bridge.units(selections);if(players.length!==4||new Set(players.map(u=>String(u.card.id))).size!==4||players.some(u=>!host.CategorySystem.has(u,runWeek.category)))throw Error('Choose four different cards matching '+runWeek.category+'.');runId=U.token();sessionOrbs=0;
    combat=host.InfinityCombat.create(players,runWeek,{onWave:rewardWave,onUnitDefeated:bridge.onUnitDefeated,isWeatherActive:bridge.isWeatherActive,addWeather:bridge.addWeather,prepare:bs=>{bs.startedAt=Date.now();bridge.prepare?.(bs);}});
    renderBattle();schedule();return true;
-  }catch(error){text('infinityStatus',error.message);return false;}finally{busy=false;}
+  }catch(error){text('infinityStatus',error.message);return false;}finally{busy=false;if(!combat)scheduleSetup();}
  }
- function open(){if(active||bridge.canEnter?.()!==true)return false;active=true;host.document.body.classList.add('infinity-open');combat=null;runWeek=null;sessionOrbs=0;bridge.onEnter?.();bridge.open?.('infinityModal');el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;autoFill();renderSetup();renderClock();text('infinityStatus',`4v4 continuous waves · No VNĐ / direct EXP · Best this week: ${data.best[week().id]||0}. ${host.InfinityCloudSystem.status.message}`);host.clearInterval(uiTimer);uiTimer=host.setInterval(()=>{renderClock();if(Date.now()-lastReport>REPORT_MS)void report();},1000);void report();return true;}
- function exit(){if(!active)return;if(combat&&!combat.battle.finished)end('Run exited. Cleared-wave rewards retained.');stopTimer();host.clearInterval(uiTimer);uiTimer=null;active=false;host.document.body.classList.remove('infinity-open');combat=null;el('infinityModal')?.classList.add('hidden');bridge.onExit?.();}
- function suspend(){stopTimer();host.clearInterval(uiTimer);uiTimer=null;if(combat){combat.battle.finished=true;combat.battle.isBattling=false;}active=false;host.document.body.classList.remove('infinity-open');combat=null;el('infinityModal')?.classList.add('hidden');}
- function mount(){if(bound)return;bound=true;el('infinityOpenButton')?.addEventListener('click',open);el('infinityExit')?.addEventListener('click',exit);el('infinityStart')?.addEventListener('click',()=>void start());el('infinityRestart')?.addEventListener('click',()=>{combat=null;runWeek=null;el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;autoFill();renderSetup();});el('infinityRetrySync')?.addEventListener('click',()=>{lastReport=0;void report(true);});el('infinityLeaderboard')?.addEventListener('click',()=>{if(combat&&!combat.battle.finished)return;const select=el('leaderboardMetric');if(select)select.value='infinity';bridge.open?.('leaderboardModal');void host.LeaderboardSystem.render(true);});host.addEventListener('pagehide',suspend);}
+ function open(){if(active||bridge.canEnter?.()!==true)return false;active=true;host.document.body.classList.add('infinity-open');combat=null;runWeek=null;sessionOrbs=0;bridge.onEnter?.();bridge.open?.('infinityModal');el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;query='';elementFilter='';categoryFilter='';sortMode='atk-desc';el('infinitySearch').value='';refreshCollection(false);renderClock();text('infinityStatus',`4v4 continuous waves · No VNĐ / direct EXP · Best this week: ${data.best[week().id]||0}. ${host.InfinityCloudSystem.status.message}`);host.clearInterval(uiTimer);uiTimer=host.setInterval(()=>{renderClock();if(Date.now()-lastReport>REPORT_MS)void report();},1000);void report();return true;}
+ function exit(){if(!active)return;if(combat&&!combat.battle.finished)end('Run exited. Cleared-wave rewards retained.');stopTimer();cancelSetupWork();closeVariants(false);host.clearInterval(uiTimer);uiTimer=null;active=false;host.document.body.classList.remove('infinity-open');combat=null;el('infinityModal')?.classList.add('hidden');bridge.onExit?.();}
+ function suspend(){stopTimer();cancelSetupWork();closeVariants(false);host.clearInterval(uiTimer);uiTimer=null;if(combat){combat.battle.finished=true;combat.battle.isBattling=false;}active=false;host.document.body.classList.remove('infinity-open');combat=null;el('infinityModal')?.classList.add('hidden');}
+ function mount(){
+  if(bound)return;bound=true;
+  el('infinityOpenButton')?.addEventListener('click',open);el('infinityExit')?.addEventListener('click',exit);
+  el('infinityStart')?.addEventListener('click',()=>void start());
+  el('infinityRestart')?.addEventListener('click',()=>{combat=null;runWeek=null;el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;el('infinityLeaderboard').disabled=false;refreshCollection(collectionWeek===week().id);});
+  el('infinityRetrySync')?.addEventListener('click',()=>{lastReport=0;void report(true);});
+  el('infinityLeaderboard')?.addEventListener('click',()=>{if(combat&&!combat.battle.finished)return;const select=el('leaderboardMetric');if(select)select.value='infinity';bridge.open?.('leaderboardModal');void host.LeaderboardSystem.render(true);});
+  el('infinityModal')?.addEventListener('click',setupClick);
+  el('infinityClearTeam')?.addEventListener('click',()=>{if(!editable())return;selections=Array(4).fill(null);activeSlot=0;focusSlotAfterRender=true;scheduleSetup();});
+  el('infinitySearch')?.addEventListener('input',event=>{const value=event.target.value;host.clearTimeout(searchTimer);searchTimer=host.setTimeout(()=>{searchTimer=null;query=value.trim().toLocaleLowerCase();page=0;scheduleSetup();},120);});
+  el('infinityPagePrevious')?.addEventListener('click',()=>{if(editable()&&page>0){page--;scheduleSetup();el('infinityCardGrid').scrollTop=0;}});
+  el('infinityPageNext')?.addEventListener('click',()=>{if(editable()){page++;scheduleSetup();el('infinityCardGrid').scrollTop=0;}});
+  el('infinityVariantPrevious')?.addEventListener('click',()=>{if(variantTarget&&variantPage>0){variantPage--;renderVariants();}});
+  el('infinityVariantNext')?.addEventListener('click',()=>{if(variantTarget){variantPage++;renderVariants();}});
+  el('infinityVariantClose')?.addEventListener('click',()=>closeVariants());
+  el('infinityVariantPicker')?.addEventListener('click',event=>{if(event.target===el('infinityVariantPicker'))closeVariants();});
+  el('infinityModal')?.addEventListener('keydown',event=>{
+   if(!variantTarget){const menu=el('infinityLobby')?.querySelector('.infinity-filter-menu[open]');if(event.key==='Escape'&&menu){event.preventDefault();event.stopImmediatePropagation();menu.open=false;menu.querySelector('summary').focus();}return;}
+   if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();closeVariants();}
+   if(event.key==='Tab'){
+    const choices=[...el('infinityVariantPicker').querySelectorAll('button:not(:disabled)')];if(!choices.length)return;
+    const first=choices[0],last=choices[choices.length-1];if(event.shiftKey&&host.document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&host.document.activeElement===last){event.preventDefault();first.focus();}
+   }
+  },true);
+  for(const menu of el('infinityLobby')?.querySelectorAll('.infinity-filter-menu')||[])menu.addEventListener('toggle',()=>{if(menu.open)for(const other of el('infinityLobby').querySelectorAll('.infinity-filter-menu'))if(other!==menu)other.open=false;});
+  host.addEventListener('pagehide',suspend);
+ }
  function presentReward(){const notice=data.rewardNotice;if(!notice||active||host.CloudSaveSystem?.playAllowed!==true||!el('infinityRewardModal'))return;text('infinityRewardMessage',`Weekly Reset! You received ${notice.orbs.toLocaleString('en-US')} Star Orbs for reaching Wave ${notice.highestWave.toLocaleString('en-US')} last week!`);text('infinityRewardWeek',notice.sourceWeek+' → '+notice.weekId+' · Saved to EXP Food');bridge.open?.('infinityRewardModal');}
  function dismissReward(){if(!data.rewardNotice)return;data.rewardNotice=null;if(!persist())blocked=true;else void host.CloudSaveSystem.flush(true);}
- host.InfinitySystem=Object.freeze({KEY,validSave,validMetadata,prepareSave,presentReward,dismissReward,week,getISOWeek:R.getISOWeek,getISOWeekAndYear:R.getISOWeekAndYear,open,exit,start,suspend,report,get metadata(){return data.infinityMetadata?{...data.infinityMetadata}:null;},get active(){return active;},get blocked(){return blocked;},get battle(){return combat?.battle||null;},getBest:id=>data.best[id]||0,flush:()=>!blocked&&persist(),reset(){suspend();data=fresh();persist();},configure(options){bridge=options||{};mount();if(!persist())blocked=true;}});
+ host.InfinitySystem=Object.freeze({KEY,validSave,validMetadata,prepareSave,presentReward,dismissReward,week,getISOWeek:R.getISOWeek,getISOWeekAndYear:R.getISOWeekAndYear,open,exit,start,suspend,report,get metadata(){return data.infinityMetadata?{...data.infinityMetadata}:null;},get active(){return active;},get blocked(){return blocked;},get battle(){return combat?.battle||null;},get lineup(){return selections.map(slot=>slot?{...slot}:null);},getBest:id=>data.best[id]||0,flush:()=>!blocked&&persist(),reset(){suspend();data=fresh();persist();},configure(options){bridge=options||{};mount();if(!persist())blocked=true;}});
 })(window);

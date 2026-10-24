@@ -5767,6 +5767,7 @@ window.PvPSystem.configure({
 // Infinity has its own battle state; existing Arena modes keep their engine and UI.
 window.ShopBulkSystem.configure({canAct:()=>window.CloudSaveSystem.playAllowed&&!isImportingSave&&!isSimulationActive()&&!window.InfinitySystem.active&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked});
 window.InfinitySystem.configure({
+  decorate:(node,mutations)=>applyMutationStyleTokens(node,mutations),
   canEnter:()=>!isBattleMatchActive()&&!isImportingSave&&!gameInputLocked()&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked,
   cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),
   variants:id=>getVariantEntries(id).filter(v=>v.count>0),
