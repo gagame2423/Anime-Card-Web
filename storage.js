@@ -36,7 +36,7 @@
       for(const row of pool){const card=host.ALL_CARDS.find(card=>card.id===row.cardId);result.push(`${card?.name||row.cardId}: weight ${row.weight} → ${(row.chance*100).toFixed(4)}%.`);}
       if(!pool.some(row=>row.cardId==='tower-champion-heavenly'))result.push('The Judgement locked: complete Heavenly Tower Floor 100. Eligible weights are normalized.');
     }
-    if(id==='star_orb')result.push('Infinity Mode: clear waves for 1–2 Orbs at Wave 1 up to 8–10 at Wave 100. Personal weekly reward: highest wave × 100 Star Orbs, claimed on Google login.');
+    if(id==='star_orb')result.push('Infinity Mode: clear waves for 1–2 Orbs at Wave 1 up to 8–10 at Wave 100. Personal weekly reward: highest wave × 100 Star Orbs, claimed automatically on local startup; Google sync is optional.');
     if(id==='bread')result.push('Win any real battle mode: 1–3 Bread per victory. Sandbox excluded. Feed from an owned card’s details → Feed.');
     if(item?.type==='exp_food')result.push('EXP gained = total base Food EXP × Player EXP Multiplier; capped at Lvl 1000. Feed from card details.');
     if(!result.length)result.push(item?.metadata?.source||'No acquisition source is currently registered for this item.');

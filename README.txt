@@ -1,64 +1,64 @@
-NHẬT KÝ CẬP NHẬT — CHỌN ĐỘI INFINITY BẰNG THẺ TRỰC QUAN
+NHẬT KÝ CẬP NHẬT — KHỞI ĐỘNG TRỰC TIẾP, ƯU TIÊN SAVE CỤC BỘ
 Ngày cập nhật: 24/10/2026
 
-1. GIAO DIỆN ĐỘI HÌNH MỚI
+1. BỎ YÊU CẦU ĐĂNG NHẬP GOOGLE KHI KHỞI ĐỘNG
 
-- Thay toàn bộ dropdown chọn nhân vật và mutation trong sảnh Infinity bằng giao diện dựng đội trực quan. Trong modal Infinity không còn phần tử HTML select.
-- Bốn khung SLOT 01, SLOT 02, SLOT 03, SLOT 04 hiển thị EMPTY và dấu + khi chưa chọn. Ô đang thao tác có viền sáng và nhãn ACTIVE.
-- Khi đã chọn, khung hiển thị artwork từ đường dẫn ảnh hiện có, biểu tượng Element, tên thẻ, Level, mutation và HP/ATK. Chỉ số lấy từ cùng bộ tính Level/mutation đang dùng khi vào trận; không đổi cấp hoặc chỉ số chiến đấu.
-- Bấm vào ô để chọn vị trí cần thay. Clear Slot bỏ riêng thẻ ở ô đó; Clear Team xóa toàn bộ lựa chọn trong sảnh. Không xóa thẻ khỏi kho.
-- Sau khi chọn thẻ hoặc đổi mutation, con trỏ chuyển sang ô trống tiếp theo. Nếu đủ bốn ô, giữ vị trí đang thao tác và báo Lineup ready.
-- Sảnh mới mở bắt đầu với bốn ô trống. New Run trong cùng tuần có thể giữ đội hình hợp lệ của lượt trước để chỉnh sửa nhanh.
+- Xóa overlay Google Sign-In toàn màn hình, trạng thái inert của giao diện chính và CSS khóa trang. Không còn chặn phím Escape/Tab hoặc ép người chơi trở lại màn hình đăng nhập.
+- Nạp các module trò chơi theo đúng thứ tự và đọc localStorage ngay khi trang sẵn sàng. Đồng hồ, roll, Inventory, Arena và các nút điều khiển hoạt động mà không chờ Firebase, Google OAuth hoặc kiểm tra token.
+- Người chơi mới có UID cục bộ ổn định dạng local_... và tên Guest. UID được lưu riêng trên thiết bị, giữ nguyên sau refresh, kết nối/ngắt Google và nạp Cloud thủ công.
+- Phiên chơi cục bộ mới không tải Firebase SDK. Với tài khoản từng bật đồng bộ, Firebase chỉ được khởi tạo phía sau sau khi game đã chạy; CDN hoặc mạng bị lỗi không trì hoãn gameplay.
+- Hết hạn token, mất mạng hoặc Google đăng xuất chỉ tạm dừng đồng bộ Cloud. Không dừng trận, xóa đội hình, tắt auto-roll, khóa shop hoặc tải lại trang do thay đổi Auth.
 
-2. LƯỚI THẺ ĐÃ MỞ KHÓA VÀ BỘ LỌC
+2. LOCAL-FIRST VÀ ĐỒNG BỘ CLOUD TÙY CHỌN
 
-- Phần Unlocked Cards hiển thị artwork, Element, Level, mutation và chỉ số. Mỗi ID thẻ chỉ có một mục trong lưới, bất kể sở hữu bao nhiêu bản sao hoặc biến thể.
-- Search card... hỗ trợ tìm tên và Category. Bộ lọc Element, Additional Category và sắp xếp dùng menu trực quan, không dùng dropdown HTML select.
-- Các kiểu sắp xếp: ATK cao/thấp, HP cao/thấp, Level cao trước và tên A–Z. Chỉ số dùng để sắp xếp khớp với biến thể đang hiển thị.
-- Với thẻ chưa chọn, preview ưu tiên biến thể có ATK cao nhất hoặc HP cao nhất tương ứng kiểu sắp xếp. Với thẻ đang trong đội, preview hiển thị chính biến thể đã chọn.
-- Banner Active Weekly Category luôn hiển thị Category bắt buộc và số thẻ hợp lệ. Additional Category chỉ lấy giao với nhóm tuần, không mở rộng sang thẻ trái điều kiện.
-- Thay đổi tìm kiếm hoặc bộ lọc không tự xóa đội hình đã chọn. Khi đổi tuần UTC, sảnh làm mới điều kiện và bỏ các lựa chọn của tuần cũ.
-- Khi không có thẻ phù hợp, hiển thị hướng dẫn rõ ràng. Nếu chưa có đủ bốn ID thẻ khác nhau thuộc Category tuần, Start Infinity Run luôn bị khóa, kể cả khi có nhiều bản sao của một thẻ.
+- Save trong localStorage là dữ liệu được dùng khi khởi động. Đăng nhập và refresh không tự tải Cloud đè lên tiến trình cục bộ.
+- Login vẫn mở Cloud Account theo yêu cầu của người chơi. Modal có thể đóng bình thường; Google không còn là điều kiện vào game.
+- Nếu tài khoản Google chưa có Cloud Save, hệ thống sao lưu tiến trình cục bộ hiện tại lên Cloud. Nếu Cloud và thông tin phiên đồng bộ khớp nhau, tiếp tục sao lưu thay đổi nền theo cơ chế gom lượt ghi 60 giây.
+- Nếu đã có Cloud khác phiên bản hoặc mới hơn, giữ nguyên tiến trình cục bộ và bản Cloud. Chỉ hiển thị trạng thái trong Cloud Account; không bật popup lựa chọn, không tự thay save và không tự ghi đè bản Cloud chưa được xác nhận.
+- Upload Local Save: người chơi chủ động sao lưu bản đang chơi lên Google. Khi thay bản Cloud cũ, giữ bản trước trong vùng recovery hiện có trên Firestore.
+- Load Cloud Save: chỉ chạy khi người chơi chủ động bấm nút và đã kết thúc hoạt động đang diễn ra. Kiểm tra định dạng, checksum/digest và tính toàn vẹn, lưu bản cục bộ dự phòng trong IndexedDB, kiểm tra lại tiến trình/tài khoản trước khi thay dữ liệu. Trang chỉ reload sau thao tác nạp Cloud thủ công thành công.
+- Nếu tiến trình cục bộ thay đổi trong lúc đang tải bản Cloud, hủy việc thay save để tránh mất thay đổi mới. Lỗi mạng hoặc ghi Cloud không xóa save cục bộ.
+- Disconnect Google ngắt đồng bộ và đăng xuất Google; giữ nguyên thẻ, item, VNĐ, roll, tiến trình, UID cục bộ và trận đang chơi.
+- Giữ nguyên cấu hình dự án Firebase, định dạng save bảo vệ, giới hạn/chunk payload, kiểm tra revision và Firestore Rules. Không bật Anonymous Auth hoặc nới quyền ghi công khai.
 
-3. KHÓA CHỌN TRÙNG THẺ
+3. INFINITY VÀ BẢNG XẾP HẠNG KHI CHƠI GUEST
 
-- Một đội Infinity chỉ được có bốn ID thẻ khác nhau. Normal, mutation đơn và double mutation của cùng ID vẫn được tính là cùng một thẻ.
-- Thẻ đã chọn có lớp IN USE kèm số SLOT trong lưới. Artwork được giảm độ bão hòa để dễ nhận biết; các chỉ số vẫn đọc được.
-- Bấm chọn lại thẻ đang dùng không ghi đè hoặc lấp ô khác. Hiển thị toast đúng nội dung: This card is already in your lineup!
-- Kiểm tra trùng lặp được thực hiện ở thao tác chọn, xác nhận đội và bước chuyển các ô thành đơn vị chiến đấu. Đồng thời kiểm tra thẻ còn được sở hữu, biến thể còn số lượng và Category tuần còn hợp lệ.
-- Clear Slot giải phóng trạng thái IN USE để có thể chọn lại thẻ đó. Quy tắc này chỉ áp dụng đội hình ban đầu; không thay đổi summon/clone do nội tại tạo ra trong trận.
+- Infinity không kiểm tra Google trước khi mở sảnh, bắt đầu trận, xử lý turn, ghi wave hoặc nhận Star Orb. Đội hình trực quan, điều kiện Category tuần và chống chọn trùng vẫn giữ nguyên.
+- Best tuần, hàng đợi score và Star Orb được lưu cục bộ. Khi có đồng bộ Google hợp lệ, có thể gửi best lên bảng tuần; không có mạng vẫn tiếp tục chơi.
+- Nhận thưởng đổi tuần trực tiếp từ save cục bộ khi khởi động hoặc mở lượt Infinity mới. Công thức giữ nguyên: Star Orb thưởng tuần = highestWave của tuần trước x100. UTC ISO week, seed, scaling và thưởng từng wave không đổi.
+- Thêm sổ giao dịch cục bộ cho thưởng tuần: lưu số lượng item sau giao dịch cùng trạng thái Infinity và metadata. Nếu ghi bị gián đoạn, lần nạp sau hoàn tất cùng giao dịch bằng giá trị tuyệt đối, tránh cộng thưởng hai lần. Thông báo nhận thưởng vẫn có thể xác nhận bình thường mà không cần Google.
+- Bảng xếp hạng khi chưa kết nối Google hiển thị thành tích của hồ sơ trên thiết bị và ghi rõ phạm vi cục bộ. Khi kết nối Google và có mạng, truy vấn bảng toàn cầu qua Firestore như trước. Lỗi đọc online chuyển về kết quả cục bộ.
+- Không yêu cầu Cloud Functions, backend riêng hoặc API mới; giữ kiến trúc client-side tương thích Firebase Spark.
 
-4. CHỌN MUTATION VÀ HOÀN THIỆN TRẢI NGHIỆM
+4. TƯƠNG THÍCH GAMEPLAY
 
-- Nút ··· ở thẻ và Mutation ··· tại ô đội hình mở bảng biến thể đang sở hữu, kèm số lượng và HP/ATK đầy đủ. Hỗ trợ cả mutation đơn và double mutation.
-- Đổi mutation của thẻ đang dùng chỉ sửa biến thể trong đúng ô hiện có, không tạo thêm bản sao trong đội hình.
-- Bảng mutation hỗ trợ Escape, nút đóng, phím Tab/Shift+Tab và trả focus về giao diện chọn đội. Phần sảnh phía sau tạm khóa thao tác khi bảng đang mở.
-- Thanh cuối modal luôn giữ các nút Sync Best, Weekly Top 50 và Start Infinity Run trong vùng nhìn thấy. Ghi đè riêng quy tắc footer toàn trang để tránh ép chiều cao hoặc làm mất nút trên mobile.
-- Bố cục đội hình bốn cột trên PC, hai cột trên mobile; lưới thẻ điều chỉnh theo chiều rộng. Viền rarity, màu mutation, Element và nút hành động dùng phong cách của giao diện Arena hiện có.
-- Hiệu ứng xác nhận lựa chọn chạy ngắn 0,28 giây; tôn trọng prefers-reduced-motion. Toast nằm phía trên thanh hành động để tránh che nút Start.
-- Nếu ảnh chưa có hoặc tải lỗi, hiển thị ký tự đại diện; gói nguồn không tạo hoặc kèm asset ảnh mới.
+- PvP Create Room/Join Room không còn phụ thuộc đăng nhập Google. Vẫn cần mạng để liên lạc PeerJS/WebRTC; không thay quy trình blind pick, commitment, đồng bộ trận, Level 1 hoặc quy tắc không thưởng.
+- Không sửa online_utils.js: giữ nguyên STUN, TURN, debug và timeout kết nối.
+- Giữ nguyên combat, nội tại, chỉ số thẻ, EXP, Tower, Time Trial, Raid, Boss Event, Spooky Hunt, Sandbox, Evolution, nhiệm vụ và cơ chế mua gộp shop.
+- Gỡ điều kiện Auth ở các adapter điều phối game, lưu cục bộ, mở modal và mua shop. Các khóa an toàn liên quan đến battle/simulation, giao dịch item hoặc lỗi lưu trữ thực sự vẫn được giữ.
+- Khi thoát Infinity, vòng lặp Arena và auto-roll được khôi phục cho cả guest. Việc đăng xuất hoặc mất token không phá trận Infinity đang chạy.
 
-5. HIỆU NĂNG VÀ KIỂM TRA
+5. KIỂM TRA VÀ TRIỂN KHAI
 
-- Cache phần tử giao diện và preview chỉ số trong phiên mở sảnh. Tìm kiếm chờ 120 ms sau lần nhập gần nhất, không tính lại toàn bộ chỉ số theo mỗi ký tự.
-- Lưới nhân vật tối đa 24 thẻ/trang; bảng mutation tối đa 12 biến thể/trang. Không dựng toàn bộ biến thể trên từng khung thẻ.
-- Chuẩn bị collection theo từng khung hình, mục tiêu khoảng 5 ms hoặc tối đa 8 thẻ mỗi đợt. Gộp cập nhật DOM bằng requestAnimationFrame và DocumentFragment; hủy công việc chờ khi thoát hoặc đổi tuần.
-- Kiểm tra trình duyệt với Auth/Firestore mô phỏng: sảnh rỗng, một thẻ có nhiều bản sao/biến thể, chọn trùng, tự chuyển ô, đổi mutation, tìm kiếm/lọc, đội bốn ID khác nhau, khởi chạy, chuyển wave liên tục và thoát về Arena.
-- Kiểm tra dữ liệu mẫu lớn: phân trang 24 thẻ và 12 mutation, cache chỉ số, sắp xếp, xóa ô/đội, đổi tuần UTC và chặn adapter trả đội hình trùng ID.
-- Kiểm tra bố cục điện thoại rộng 320 px, mobile 390 px, tablet và PC thấp 640 px; nút Start luôn nhìn thấy; kiểm tra cú pháp JavaScript/CSS và ID/đường dẫn HTML.
-- Kiểm tra lại mô phỏng nhận thưởng tuần đồng thời: vẫn chỉ ghi một lần, không cộng trùng khi đăng nhập lại.
-- Không đổi combat Infinity, scaling, Star Orb, seed tuần, logic thưởng, Firestore Rules, Google Auth, TURN/STUN, PvP, Tower, Raid, Time Trial hoặc shop mua gộp. Không yêu cầu Cloud Functions hay API mới.
-- Không kèm test runner, log, Excel, node_modules hoặc asset nhị phân trong gói nguồn. Các kiểm tra dịch vụ online là mô phỏng; không có thay đổi trực tiếp trên Firebase hoặc website đang chạy.
+- Đã kiểm tra trình duyệt: khởi động không Firebase SDK, roll, đồng hồ, lưu/refresh giữ UID và tiến trình, dùng item khi mất mạng, mở/thoát Infinity, đóng modal tài khoản và bảng xếp hạng cục bộ.
+- Đã kiểm tra bằng Auth/Firestore/PeerJS mô phỏng: tạo phòng guest, upload save cục bộ lần đầu, Cloud mới hơn không đè local, upload có recovery, lỗi ghi Cloud, token hết hạn, đăng xuất/mất mạng giữa trận Infinity và nạp Cloud thủ công.
+- Đã kiểm tra shop mua gộp của cả 5 nhóm khi chơi guest, giới hạn theo ngân sách và số dư; chuyển wave Infinity liên tục và lưu thưởng wave.
+- Đã kiểm tra phục hồi thưởng tuần khi cố ý làm gián đoạn ghi, refresh nhiều lần không nhận trùng và Firebase CDN bị chặn ở hồ sơ từng kết nối Google.
+- Kiểm tra cú pháp JavaScript, CSS và đường dẫn/ID HTML trong gói nguồn. Không triển khai trực tiếp website hoặc Firebase; đăng nhập Google thật, quy tắc Firestore trên dự án thật và kết nối WebRTC giữa hai mạng vẫn cần kiểm tra sau khi upload.
+- Upload đầy đủ các tệp nguồn lên GitHub Pages và nhấn Ctrl+F5. Cache tag mới: 20261024-local-first-1. Không cần thay hoặc publish lại Firestore Rules cho cập nhật này.
+- Chơi cục bộ không cần tài khoản sau khi trang và tệp game đã tải được. Việc mở lại website khi hoàn toàn mất mạng vẫn phụ thuộc cache trình duyệt; bản cập nhật này không thêm Service Worker. Đồng bộ Cloud và PvP online cần kết nối mạng.
+- Gói chỉ chứa mã nguồn sản xuất và README.txt; không kèm test runner, log, Excel, node_modules hoặc asset nhị phân. Artwork/audio hiện có tiếp tục do người dùng quản lý.
 
-6. TRIỂN KHAI
+6. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
 
-- Cập nhật đầy đủ nguồn lên GitHub Pages và Ctrl+F5 để nạp cache tag 20261024-infinity-lineup-1.
-- Đây là cập nhật giao diện và kiểm tra đội hình; không cần đổi hoặc publish lại Firebase Rules nếu đã triển khai bản Spark trước đó.
-
-7. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
-
-- infinity.js: Đội hình trực quan, bộ lọc, phân trang, bảng mutation, cache preview, kiểm tra ID duy nhất và điều khiển bàn phím.
-- infinity.css: Khung thẻ, Element/mutation badge, menu lọc, lớp IN USE, thanh hành động, bảng mutation, responsive và hiệu ứng nhẹ.
-- index.html: Cấu trúc sảnh/picker/footer mới, các nút và vùng truy cập hỗ trợ, đổi cache tag.
-- app.js: Thêm một adapter dùng lại màu/gradient mutation hiện có cho renderer Infinity; không thay đổi tính chỉ số hoặc gameplay.
+- startup.js: Khởi động gameplay trực tiếp, bỏ chờ xác thực và khóa bàn phím/focus; giữ kiểm tra module bị thiếu.
+- firebase.js: Hồ sơ guest cục bộ, Google tùy chọn, đồng bộ local-first, thao tác Cloud thủ công, bỏ khóa/reload theo Auth và fallback leaderboard cục bộ.
+- app.js: Gỡ Auth khỏi vòng lặp, local save, modal và adapter shop; giữ reload riêng cho Load Cloud Save thủ công; khôi phục runtime guest và tích hợp sổ thưởng tuần.
+- index.html: Xóa overlay/inert, cập nhật mô tả tài khoản, nút Cloud tùy chọn và cache tag.
+- styles.css: Xóa CSS overlay và trạng thái khóa Auth không còn dùng.
+- infinity.js: Cho guest chơi/nhận thưởng, nhận thưởng đổi tuần cục bộ và phục hồi giao dịch khi ghi bị gián đoạn.
+- infinity_cloud.js: Ghi score Firestore tùy chọn, fallback best/bảng tuần cục bộ khi không có Google hoặc mạng.
+- leaderboard.js: Kết quả cục bộ cho guest và tách cache theo hồ sơ/trạng thái Cloud.
+- pvp.js: Chỉ thay hai điều kiện đầu vào Create/Join để bỏ yêu cầu Auth; không sửa giao thức hoặc combat.
+- storage.js: Mô tả nguồn Star Orb cập nhật theo nhận thưởng tuần cục bộ.
 - README.txt: Chỉ ghi changelog của bản cập nhật này và danh sách tệp thay đổi.

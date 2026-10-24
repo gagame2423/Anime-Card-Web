@@ -1,30 +1,28 @@
-/* Bảng tuần dùng trực tiếp Firestore Client SDK; không gọi API bên ngoài. */
+/* Local Infinity scores work offline; Firestore publishing is optional. */
 (function(host){
  'use strict';
  const MAX_WAVE=Math.floor(Number.MAX_SAFE_INTEGER/100),U=host.OnlineUtils;
- function session(){const cloud=host.CloudSaveSystem,user=cloud?.activeUser,db=cloud?.firestore;if(!cloud?.playAllowed||!user||!db)throw Error('Google sign-in is required.');return{cloud,user,db};}
+ function localResult(){const week=host.InfinityRules.rotation(),highestWave=host.InfinitySystem.getBest(week.id),user=host.CloudSaveSystem.activeUser;return{week,localOnly:true,rows:highestWave>0?[{uid:user.uid,displayName:host.CloudSaveSystem.publicName,highestWave,updatedAt:{seconds:Math.floor(Date.now()/1000)}}]:[]};}
  async function submit(input){
-  const {cloud,user,db}=session(),week=host.InfinityRules.rotation();
-  if(input.weekId!==week.id||input.category!==week.category||!Number.isSafeInteger(input.highestWave)||input.highestWave<1||input.highestWave>MAX_WAVE)throw Error('Invalid wave or expired UTC week.');
-  const ref=db.collection('infinity_leaderboards').doc(week.id);
+  const cloud=host.CloudSaveSystem,week=host.InfinityRules.rotation();if(input.weekId!==week.id||input.category!==week.category||!Number.isSafeInteger(input.highestWave)||input.highestWave<1||input.highestWave>MAX_WAVE)throw Error('Invalid wave or expired UTC week.');
+  if(!cloud.cloudReady||!cloud.firestore)return{week,highestWave:Math.max(input.highestWave,host.InfinitySystem.getBest(week.id)),localOnly:true};
+  const user=cloud.activeUser,db=cloud.firestore,ref=db.collection('infinity_leaderboards').doc(week.id);
   const highestWave=await U.timeout(db.runTransaction(async tx=>{
    const snapshot=await tx.get(ref),previous=snapshot.exists?snapshot.data()[user.uid]:null;
-   if(!cloud.playAllowed||cloud.activeUser?.uid!==user.uid||host.InfinityRules.rotation().id!==week.id)throw Error('Session or UTC week changed.');
-   const highest=Math.max(input.highestWave,Number.isSafeInteger(previous?.highestWave)?previous.highestWave:0);
-   if(highest>MAX_WAVE)throw Error('Invalid saved weekly score.');
+   if(!cloud.cloudReady||cloud.activeUser.uid!==user.uid||host.InfinityRules.rotation().id!==week.id)throw Error('Cloud session or UTC week changed; local score is kept.');
+   const highest=Math.max(input.highestWave,Number.isSafeInteger(previous?.highestWave)?previous.highestWave:0);if(highest>MAX_WAVE)throw Error('Invalid saved weekly score.');
    if(previous&&highest===previous.highestWave)return highest;
    tx.set(ref,{[user.uid]:{displayName:(cloud.publicName||'Player').slice(0,40),highestWave:highest,updatedAt:host.firebase.firestore.FieldValue.serverTimestamp()}},{merge:true});return highest;
-  }),20000,'Weekly score could not sync. Please retry.');
-  return{week,highestWave};
+  }),20000,'Weekly score remains local. Cloud sync can be retried later.');return{week,highestWave,localOnly:false};
  }
  async function board(){
-  const {cloud,user,db}=session(),week=host.InfinityRules.rotation();
-  const snapshot=await U.timeout(db.collection('infinity_leaderboards').doc(week.id).get({source:'server'}));
-  if(!cloud.playAllowed||cloud.activeUser?.uid!==user.uid)throw Error('Google session changed.');
-  const millis=value=>typeof value?.toMillis==='function'?value.toMillis():Number(value?.seconds||0)*1000;
-  const rows=Object.entries(snapshot.exists?snapshot.data():{}).filter(([,v])=>v&&typeof v.displayName==='string'&&Number.isSafeInteger(v.highestWave)&&v.highestWave>0&&v.highestWave<=MAX_WAVE).map(([uid,row])=>({...row,uid}));
-  rows.sort((a,b)=>b.highestWave-a.highestWave||millis(a.updatedAt)-millis(b.updatedAt)||a.uid.localeCompare(b.uid));
-  return{week,rows:rows.slice(0,50)};
+  const cloud=host.CloudSaveSystem;if(!cloud.cloudReady||!cloud.firestore)return localResult();const user=cloud.activeUser,week=host.InfinityRules.rotation();
+  try{
+   const snapshot=await U.timeout(cloud.firestore.collection('infinity_leaderboards').doc(week.id).get({source:'server'}));if(!cloud.cloudReady||cloud.activeUser.uid!==user.uid)return localResult();
+   const millis=v=>typeof v?.toMillis==='function'?v.toMillis():Number(v?.seconds||0)*1000;
+   const rows=Object.entries(snapshot.exists?snapshot.data():{}).filter(([,v])=>v&&typeof v.displayName==='string'&&Number.isSafeInteger(v.highestWave)&&v.highestWave>0&&v.highestWave<=MAX_WAVE).map(([uid,row])=>({...row,uid}));
+   rows.sort((a,b)=>b.highestWave-a.highestWave||millis(a.updatedAt)-millis(b.updatedAt)||a.uid.localeCompare(b.uid));return{week,rows:rows.slice(0,50),localOnly:false};
+  }catch(_){return localResult();}
  }
- host.InfinityCloudSystem=Object.freeze({submit,board,now:()=>Date.now(),get status(){return{available:Boolean(host.CloudSaveSystem?.playAllowed),message:'Client-side weekly rotation · Firestore sync.',week:host.InfinityRules.rotation()};}});
+ host.InfinityCloudSystem=Object.freeze({submit,board,now:()=>Date.now(),get status(){return{available:host.CloudSaveSystem.cloudReady,message:host.CloudSaveSystem.cloudReady?'Local progress + optional Firestore sync.':'Local weekly rotation · offline play ready.',week:host.InfinityRules.rotation()};}});
 })(window);

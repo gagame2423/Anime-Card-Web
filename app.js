@@ -10,7 +10,7 @@
 // ============================================================
 
 function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active);}
-function gameInputLocked(){return isSimulationActive()||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||window.CloudSaveSystem?.playAllowed!==true||Boolean(window.GameStartup?.failed);}
+function gameInputLocked(){return isSimulationActive()||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed);}
 
 const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
@@ -1037,7 +1037,7 @@ function loadState() {
 }
 
 function saveState(canonicalOwnership = false, progressChanged = true) {
-  if (window.ShopBulkSystem?.blocked || window.InfinitySystem?.blocked || !window.CloudSaveSystem?.googleVerified || isImportingSave || isSimulationActive() || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked || window.CloudSaveSystem?.recoveryBlocked) return false;
+  if (window.ShopBulkSystem?.blocked || window.InfinitySystem?.blocked || isImportingSave || isSimulationActive() || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked) return false;
   try {
     // Rolls already update all three canonical ownership stores together.
     if (!canonicalOwnership) syncOwnershipRecords();
@@ -4543,7 +4543,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [window.InfinitySystem.KEY,window.ShopBulkSystem.KEY,STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.ExpFoodSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.SettingsSystem.KEY, window.EquipmentSystem.KEY, window.SpookySystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
+  return [window.InfinitySystem.KEY,window.InfinitySystem.WEEKLY_KEY,window.ShopBulkSystem.KEY,STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.ExpFoodSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.SettingsSystem.KEY, window.EquipmentSystem.KEY, window.SpookySystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4567,6 +4567,7 @@ function validateSaveRecord(key, value) {
   const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
   const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
   if ([window.BackgroundActivitySystem.VOLUME_KEY, window.DropAudioSystem.VOLUME_KEY].includes(key)) { ensure(typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1, 'Audio volume must be between 0 and 1.'); return value; }
+  if(key===window.InfinitySystem.WEEKLY_KEY){ensure(window.InfinitySystem.validWeeklySave(value),'unfinished weekly reward.');return value;}
   if(key===window.InfinitySystem.KEY){ensure(window.InfinitySystem.validSave(value),'invalid Infinity progression.');return value;}
   if(key===window.ShopBulkSystem.KEY){ensure(window.ShopBulkSystem.validSave(value),'unfinished bulk purchase.');return value;}
   if(key===window.ExpFoodSystem.KEY){ensure(window.ExpFoodSystem.validSave(value),'unfinished or invalid feeding transaction.');return value;}
@@ -4695,7 +4696,7 @@ function parseCloudSaveBundle(text) {
   return result;
 }
 // Evolution changes a cloned save first; no live ownership changes before commit.
-function canEvolveNow() { return !window.CloudSaveSystem?.blocking && !window.ExpFoodSystem?.blocked && !window.EquipmentSystem?.blocked && !isSimulationActive() && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
+function canEvolveNow() { return !window.ExpFoodSystem?.blocked && !window.EquipmentSystem?.blocked && !isSimulationActive() && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
 function prepareEquipmentCraft(recipe, selected) {
   if(!canEvolveNow()||state.currency<recipe.cost)throw Error('Finish the current battle or check VNĐ.');
   if(!saveState()||!window.InventorySystem.flush())throw Error('Unable to save before crafting.');
@@ -4878,7 +4879,7 @@ function globalTick() {
   if(window.EquipmentSystem?.blocked)return;
   if (isImportingSave) return;
   window.PotionHudSystem?.render();
-  if(window.InfinitySystem?.active && window.CloudSaveSystem?.playAllowed===true){const now=Date.now(),previous=Number(state.weather.lastRealTimestamp);state.weather.lastRealTimestamp=now;advanceGameClock(Number.isFinite(previous)?Math.max(0,(now-previous)/1000):0);window.QuestsSystem?.tick(state.weather.gameSeconds);window.InventorySystem.tick(now);renderClockAndWeather(false);saveState(true,false);return;}
+  if(window.InfinitySystem?.active){const now=Date.now(),previous=Number(state.weather.lastRealTimestamp);state.weather.lastRealTimestamp=now;advanceGameClock(Number.isFinite(previous)?Math.max(0,(now-previous)/1000):0);window.QuestsSystem?.tick(state.weather.gameSeconds);window.InventorySystem.tick(now);renderClockAndWeather(false);saveState(true,false);return;}
   if (gameInputLocked()) return;
   refreshAchievements(!(window.RollViewSystem?.enabled && isAutoRolling));
   const now = Date.now();
@@ -4912,7 +4913,7 @@ function globalTick() {
 }
 
 function startGlobalLoop() {
-  if (window.CloudSaveSystem?.playAllowed !== true || window.GameStartup?.failed) return;
+  if (window.GameStartup?.failed) return;
   if (globalTickTimer !== null) window.clearInterval(globalTickTimer);
   globalTickTimer = window.setInterval(globalTick, GLOBAL_TICK_MS);
 }
@@ -4955,7 +4956,6 @@ function setBattleModalLock(active) {
 }
 
 function openModal(id) {
-  if (window.CloudSaveSystem?.playAllowed !== true) return;
   if (window.SandboxSystem?.active && id !== 'sandboxModal') return;
   if (window.PvPSystem?.active && id !== 'pvpModal') return;
   if (window.InfinitySystem?.active && !['infinityModal','leaderboardModal'].includes(id)) return;
@@ -5063,7 +5063,6 @@ function surrenderBattle() {
 
 function closeModal(id) {
   if (id === 'infinityRewardModal') window.InfinitySystem?.dismissReward();
-  if(id==='cloudAccountModal'&&window.CloudSaveSystem?.blocking)return;
   if(id==='arenaMutationModal')window.UIPerformanceSystem.closePicker();
   if (id === 'sandboxModal') { window.SandboxSystem?.exit?.(); return; }
   if (id === 'infinityModal') { window.InfinitySystem?.exit(); return; }
@@ -5698,31 +5697,26 @@ document.getElementById('spookyChooseButton')?.addEventListener('click',showSpoo
 
 // Online modules receive narrow read/serialize/lifecycle adapters only.
 async function applyCloudProgress(payload,options={}){
-  if(isBattleMatchActive()||isSimulationActive()||window.InfinitySystem?.active||isImportingSave)throw Error('Finish the current activity before restoring cloud progress.');
-  if(options.canApply&&options.canApply()!==true)throw Error('Authentication changed before Cloud restore.');
+  if(options.manual!==true)throw Error('Cloud progress is loaded only through the optional Load Cloud Save action.');
+  if(isBattleMatchActive()||isSimulationActive()||window.InfinitySystem?.active||isImportingSave)throw Error('Finish the current activity before loading a Cloud copy.');
+  if(options.canApply&&options.canApply()!==true)throw Error('Local progress changed before Cloud restore.');
   const imported=parseCloudSaveBundle(await decryptGameSave(payload));
   const gameKeys=getGameSaveKeys(),records=Object.fromEntries(gameKeys.map(key=>[key,Object.hasOwn(imported,key)?imported[key]:null]));
-  // Prepare a one-use, per-tab receipt for the exact Cloud records. The next boot
-  // validates it against both local bytes and the server, avoiding reload loops.
-  const receipt=options.cloudFirst?await window.CloudSaveSystem.restoreReceipt(options.meta,records):null;
-  if(options.canApply&&options.canApply()!==true)throw Error('Authentication changed before Cloud restore.');
-  const previousReceipt=receipt===null?null:sessionStorage.getItem(window.CloudSaveSystem.BOOT_KEY);
-  const keys=[...gameKeys,window.CloudSaveSystem.META_KEY],previous=Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)]));
-  const previousAutoRoll=isAutoRolling;
+  if(options.canApply&&options.canApply()!==true)throw Error('Local progress changed before Cloud restore.');
+  const keys=[...gameKeys,window.CloudSaveSystem.META_KEY],previous=Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)])),previousAutoRoll=isAutoRolling;
   isImportingSave=true;isAutoRolling=false;clearCooldownExpiryTimer();clearAutoContinueBattleTimer();clearBattleTurnTimer();
   try{
     localStorage.setItem(window.CloudSaveSystem.RESTORE_KEY,JSON.stringify({version:1,previous}));
-    for(const [key,value]of Object.entries(records)){if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}
+    for(const[key,value]of Object.entries(records)){if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}
     if(options.meta)localStorage.setItem(window.CloudSaveSystem.META_KEY,JSON.stringify(options.meta));
-    if(receipt!==null)sessionStorage.setItem(window.CloudSaveSystem.BOOT_KEY,receipt);
     localStorage.removeItem(window.CloudSaveSystem.RESTORE_KEY);
   }catch(error){
-    let restored=true;for(const [key,value]of Object.entries(previous))try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}catch(_){restored=false;}
-    if(receipt!==null)try{if(previousReceipt===null)sessionStorage.removeItem(window.CloudSaveSystem.BOOT_KEY);else sessionStorage.setItem(window.CloudSaveSystem.BOOT_KEY,previousReceipt);}catch(_){}
+    let restored=true;for(const[key,value]of Object.entries(previous))try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}catch(_){restored=false;}
     if(restored)localStorage.removeItem(window.CloudSaveSystem.RESTORE_KEY);
-    isImportingSave=!restored;if(restored){isAutoRolling=previousAutoRoll;if(els.autoRollToggle)els.autoRollToggle.checked=previousAutoRoll;}else window.CloudSaveSystem.blockForRecovery('Storage unavailable. Reload to recover the interrupted cloud restore.');
-    throw Error(restored?'Cloud restore failed; previous local progress was recovered.':'Storage unavailable. Reload to recover the interrupted cloud restore.');
+    isImportingSave=!restored;if(restored){isAutoRolling=previousAutoRoll;if(els.autoRollToggle)els.autoRollToggle.checked=previousAutoRoll;}else window.CloudSaveSystem.blockForRecovery('Storage unavailable. Reload to recover the interrupted manual restore.');
+    throw Error(restored?'Cloud restore failed; local progress was recovered.':'Storage unavailable. Reload to recover the interrupted manual restore.');
   }
+  // This reload belongs only to the player's explicit Load Cloud Save action.
   if(globalTickTimer!==null){clearInterval(globalTickTimer);globalTickTimer=null;}window.TimeTrialSystem.detach();window.location.reload();
 }
 
@@ -5730,29 +5724,12 @@ function cloudProgressSummary(){
   let strongestPower=0;for(const card of ALL_CARDS){if(!isCardOwned(card.id))continue;for(const variant of getVariantEntries(card.id)){const stats=getDisplayCard(card,variant.mutations);strongestPower=Math.max(strongestPower,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(stats.hp+stats.atk*2)));}}
   return{totalRolls:Math.min(Number.MAX_SAFE_INTEGER,state.totalRolls||0),strongestPower,timeTrialRoom:window.TimeTrialSystem.bestRoom||0,uniqueCards:getUniqueCount()};
 }
-let authRuntimeUnlocked=false;
-function suspendGameForAuthentication(){
-  isAutoRolling=false;if(els.autoRollToggle)els.autoRollToggle.checked=false;
-  clearCooldownExpiryTimer();stopCooldownVisualLoop();clearAutoContinueBattleTimer();clearBattleTurnTimer();clearBattleAnimationTimers();
-  if(globalTickTimer!==null){clearInterval(globalTickTimer);globalTickTimer=null;}
-  window.InfinitySystem?.suspend();window.TimeTrialSystem?.detach();window.PvPSystem?.exit();window.SandboxSystem?.exit();
-  if(battleState){battleState.finished=true;battleState.isBattling=false;battleState=null;}
-  window.DropAudioSystem?.stop();window.BackgroundActivitySystem?.holdSpecial();
-  for(const modal of document.querySelectorAll('.modal-backdrop'))modal.classList.add('hidden');
-  document.body.classList.remove('battle-lock','modal-open');authRuntimeUnlocked=false;
-}
 window.CloudSaveSystem.configure({
-  open:openModal,storageKeys:getGameSaveKeys,onSessionEnd:suspendGameForAuthentication,
+  open:openModal,storageKeys:getGameSaveKeys,summary:cloudProgressSummary,
   canRestore:()=>!isBattleMatchActive()&&!isSimulationActive()&&!window.InfinitySystem?.active&&!isImportingSave,
   canSnapshot:()=>!window.ShopBulkSystem.blocked&&!window.InfinitySystem.blocked&&!isSimulationActive()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked&&window.EvolutionSystem.flush(),
   capture:async()=>{const bundle=buildCloudSaveBundle(),summary=cloudProgressSummary();return{payload:await encryptGameSave(JSON.stringify(bundle)),summary,meaningful:summary.totalRolls>0||summary.uniqueCards>0||state.currency>0||Object.values(state.upgrades||{}).some(n=>n>0)};},
-  validate:async payload=>parseCloudSaveBundle(await decryptGameSave(payload)),apply:applyCloudProgress,
-  prepareInfinity:async payload=>{const bundle=JSON.parse(await decryptGameSave(payload)),plan=window.InfinitySystem.prepareSave(bundle);if(!plan.changed)return null;parseCloudSaveBundle(JSON.stringify(plan.bundle));return{payload:await encryptGameSave(JSON.stringify(plan.bundle))};},
-  onBlocking:blocked=>{
-    if(blocked){clearAutoContinueBattleTimer();clearCooldownExpiryTimer();if(globalTickTimer!==null){clearInterval(globalTickTimer);globalTickTimer=null;}authRuntimeUnlocked=false;}
-    else if(!authRuntimeUnlocked){authRuntimeUnlocked=true;resumeGameRuntime();window.BackgroundActivitySystem?.releaseSpecial();queueMicrotask(()=>window.InfinitySystem?.presentReward());void window.InfinitySystem?.report();}
-    else{if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();if(battleState?.finished)scheduleAutoContinueBattle();}
-  }
+  validate:async payload=>parseCloudSaveBundle(await decryptGameSave(payload)),apply:applyCloudProgress
 });
 window.LeaderboardSystem.configure({open:openModal});
 window.PvPSystem.configure({
@@ -5765,7 +5742,7 @@ window.PvPSystem.configure({
 });
 
 // Infinity has its own battle state; existing Arena modes keep their engine and UI.
-window.ShopBulkSystem.configure({canAct:()=>window.CloudSaveSystem.playAllowed&&!isImportingSave&&!isSimulationActive()&&!window.InfinitySystem.active&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked});
+window.ShopBulkSystem.configure({canAct:()=>!isImportingSave&&!isSimulationActive()&&!window.InfinitySystem.active&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked});
 window.InfinitySystem.configure({
   decorate:(node,mutations)=>applyMutationStyleTokens(node,mutations),
   canEnter:()=>!isBattleMatchActive()&&!isImportingSave&&!gameInputLocked()&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked,
@@ -5775,10 +5752,12 @@ window.InfinitySystem.configure({
   units:slots=>slots.map(slot=>{const card=getCardById(slot.cardId),variant=getVariantEntries(card.id).find(v=>v.key===slot.variantKey);if(!variant)throw Error('Owned card variant unavailable.');const display=getDisplayCard(card,variant.mutations);return{card:JSON.parse(JSON.stringify(card)),display:{...display},mutations:[...variant.mutations],variantKey:variant.key,level:getCardLevelInfo(card.id).level,hp:display.hp,maxHp:display.hp,atk:display.atk,defeated:false};}),
   open:openModal,
   onEnter:()=>{clearAutoContinueBattleTimer();clearCooldownExpiryTimer();els.battleModal?.classList.add('hidden');},
-  onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.afterActivity();if(window.CloudSaveSystem.ready){resumeGameRuntime();void window.CloudSaveSystem.flush(true);if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();}},
+  onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.afterActivity();resumeGameRuntime();void window.CloudSaveSystem.flush();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();},
   isWeatherActive,addWeather:addCombatWeather,
   prepare:battle=>{battle.questContext=window.QuestSystem.battleContext(battle,getActiveWeatherDefinitions().map(w=>w.id));},
   onUnitDefeated:recordQuestEnemyDefeat,
   onReward:()=>{saveState();updateStats();},
   onEnd:battle=>{if(battle.playerTeam.some(u=>u.hp>0&&!u.defeated))return;battle.questResultWon=false;battle.outcome='defeat';recordQuestBattleCompletion(battle);saveState();}
 });
+
+window.GameStartup.ready(()=>{resumeGameRuntime();window.InfinitySystem.presentReward();void window.InfinitySystem.report();});

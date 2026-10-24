@@ -43,17 +43,6 @@
 
 * { box-sizing: border-box; }
 
-/* Mandatory Google gate, visible before any gameplay script is loaded. */
-.auth-gate { background:radial-gradient(ellipse at 30% 0,#25484e55,transparent 55%),#070b14 !important; }
-.auth-gate-card { width:min(440px,100%); padding:38px 32px; border:1px solid #3c5263; border-radius:20px; background:linear-gradient(145deg,#142332,#0b1320); box-shadow:0 24px 90px #0008; text-align:center; }
-.auth-gate-eyebrow { font-size:9px; font-weight:700; letter-spacing:.16em; color:#9cd5c9; margin:0 0 24px; }
-.auth-gate-symbol { display:grid; place-items:center; width:64px; height:64px; margin:0 auto 22px; border:1px solid #5b8178; border-radius:16px; color:#bdfc70; font-size:38px; background:#1b332e; }
-.auth-gate-card h1 { font-size:29px; font-weight:600; letter-spacing:-.8px; line-height:1.4; margin:0 0 22px; }.auth-gate-card h1 em { color:#bdfc70; font-style:normal; }
-.auth-gate-status { color:#a3b8c9; font-size:12px; line-height:1.8; min-height:44px; margin:0 0 22px; overflow-wrap:anywhere; }
-#authGoogleButton { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; min-height:50px; padding:12px 14px; border:1px solid #c4eeaf; border-radius:9px; background:#d3f3c3; color:#15251d; font:700 13px system-ui,sans-serif; cursor:pointer; }
-#authGoogleButton>span { font:bold 20px system-ui,sans-serif; }#authGoogleButton:disabled { opacity:.45; cursor:wait; }
-.auth-gate-note { color:#718c9f; font-size:10px; line-height:1.8; margin:20px 0 0; }
-@media(max-width:480px){.auth-gate-card{padding:30px 20px}.auth-gate-card h1{font-size:25px}}
 
 html {
   height: 100%;

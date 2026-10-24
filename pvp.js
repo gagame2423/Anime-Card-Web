@@ -48,14 +48,14 @@
  function roomCode(){return 'PVP-'+U.token(3).toUpperCase();}
  function peerId(code){return 'acr-'+code.toLowerCase();}
  async function createRoom(){
-  if(!active||peer||handling||host.CloudSaveSystem?.playAllowed!==true)return;
+  if(!active||peer||handling||host.GameStartup?.failed)return;
   handling=true;startConnectionTimer();renderControls();const ticket=generation;
   try{await ensurePeer();if(ticket!==generation||!active)return;mode=Number(el('pvpMode')?.value)===4?4:1;role='host';room=roomCode();session=U.token();resetPicks();text('pvpStatus','Connecting to room service…');makePeer(peerId(room),true);}
   catch(error){if(ticket===generation)abort(connectionError(error),false);}
   finally{if(ticket===generation){handling=false;renderControls();}}
  }
  async function joinRoom(){
-  if(!active||peer||handling||host.CloudSaveSystem?.playAllowed!==true)return;
+  if(!active||peer||handling||host.GameStartup?.failed)return;
   const code=String(el('pvpJoinCode')?.value||'').trim().toUpperCase();if(!/^PVP-[A-F0-9]{6}$/.test(code)){text('pvpStatus','Enter a room code such as PVP-A1B2C3.');return;}
   handling=true;startConnectionTimer();renderControls();const ticket=generation;
   try{await ensurePeer();if(ticket!==generation||!active)return;role='guest';room=code;session='';resetPicks();text('pvpStatus','Connecting to room…');makePeer(undefined,false);}
