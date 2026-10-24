@@ -4558,7 +4558,7 @@ function buildCloudSaveBundle() {
     const value = localStorage.getItem(key);
     if (value !== null) storage[key] = JSON.parse(value);
   }
-  return { format: 'anime-card-rng-save', version: 1, exportedAt: new Date().toISOString(), storage };
+  return { format: 'anime-card-rng-save', version: 1, exportedAt: new Date().toISOString(), storage, infinityMetadata: window.InfinitySystem.metadata };
 }
 function validateSaveRecord(key, value) {
   const object = item => Boolean(item && typeof item === 'object' && !Array.isArray(item));
@@ -4675,7 +4675,13 @@ function parseCloudSaveBundle(text) {
     storage = file.storage;
     const keys = getGameSaveKeys();
     for (const key of Object.keys(storage)) if (!keys.includes(key) && !LEGACY_SAVE_TRANSFER_KEYS.includes(key)) throw new Error(`Unsupported game store: ${key}`);
-    for (const key of keys.slice(0, 4)) if (!(key in storage)) throw new Error('The save is incomplete: a game data store is missing.');
+    for (const key of [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY]) if (!(key in storage)) throw new Error('The save is incomplete: a game data store is missing.');
+    if(file.infinityMetadata!=null){
+      if(!window.InfinitySystem.validMetadata(file.infinityMetadata))throw Error('Invalid Infinity reward metadata.');
+      const infinity=storage[window.InfinitySystem.KEY];
+      if(infinity?.infinityMetadata&&(infinity.infinityMetadata.lastClaimedWeek!==file.infinityMetadata.lastClaimedWeek||infinity.infinityMetadata.lastWeekHighestWave!==file.infinityMetadata.lastWeekHighestWave))throw Error('Inconsistent Infinity reward metadata.');
+      if(infinity)infinity.infinityMetadata={...file.infinityMetadata};
+    }
   } else { throw new Error('Save bảo vệ phải chứa đầy đủ gói dữ liệu game.'); }
   const result = {};
   for (const [key, entry] of Object.entries(storage)) if(!LEGACY_SAVE_TRANSFER_KEYS.includes(key)) result[key] = JSON.stringify(validateSaveRecord(key, entry));
@@ -5056,6 +5062,7 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if (id === 'infinityRewardModal') window.InfinitySystem?.dismissReward();
   if(id==='cloudAccountModal'&&window.CloudSaveSystem?.blocking)return;
   if(id==='arenaMutationModal')window.UIPerformanceSystem.closePicker();
   if (id === 'sandboxModal') { window.SandboxSystem?.exit?.(); return; }
@@ -5740,9 +5747,10 @@ window.CloudSaveSystem.configure({
   canSnapshot:()=>!window.ShopBulkSystem.blocked&&!window.InfinitySystem.blocked&&!isSimulationActive()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked&&window.EvolutionSystem.flush(),
   capture:async()=>{const bundle=buildCloudSaveBundle(),summary=cloudProgressSummary();return{payload:await encryptGameSave(JSON.stringify(bundle)),summary,meaningful:summary.totalRolls>0||summary.uniqueCards>0||state.currency>0||Object.values(state.upgrades||{}).some(n=>n>0)};},
   validate:async payload=>parseCloudSaveBundle(await decryptGameSave(payload)),apply:applyCloudProgress,
+  prepareInfinity:async payload=>{const bundle=JSON.parse(await decryptGameSave(payload)),plan=window.InfinitySystem.prepareSave(bundle);if(!plan.changed)return null;parseCloudSaveBundle(JSON.stringify(plan.bundle));return{payload:await encryptGameSave(JSON.stringify(plan.bundle))};},
   onBlocking:blocked=>{
     if(blocked){clearAutoContinueBattleTimer();clearCooldownExpiryTimer();if(globalTickTimer!==null){clearInterval(globalTickTimer);globalTickTimer=null;}authRuntimeUnlocked=false;}
-    else if(!authRuntimeUnlocked){authRuntimeUnlocked=true;resumeGameRuntime();window.BackgroundActivitySystem?.releaseSpecial();void window.InfinitySystem?.report();}
+    else if(!authRuntimeUnlocked){authRuntimeUnlocked=true;resumeGameRuntime();window.BackgroundActivitySystem?.releaseSpecial();queueMicrotask(()=>window.InfinitySystem?.presentReward());void window.InfinitySystem?.report();}
     else{if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();if(battleState?.finished)scheduleAutoContinueBattle();}
   }
 });

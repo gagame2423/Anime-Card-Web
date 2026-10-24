@@ -2,15 +2,5 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "infinity",
-      "ignore": [
-        "node_modules",
-        "*.log"
-      ]
-    }
-  ]
+  }
 }

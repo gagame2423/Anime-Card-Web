@@ -1,19 +1,48 @@
 /* Weekly Infinity lobby, continuous-run controller, food receipts and score outbox. */
 (function(host){
  'use strict';
- const KEY='anime_card_rng_infinity_v1',MAX=Number.MAX_SAFE_INTEGER,R=host.InfinityRules,U=host.OnlineUtils;
- const fresh=()=>({version:1,best:{},reports:{},lastReceipt:'',pending:null});
+ const REPORT_MS=60000,KEY='anime_card_rng_infinity_v1',MAX=Number.MAX_SAFE_INTEGER,R=host.InfinityRules,U=host.OnlineUtils;
+ const fresh=()=>({version:1,best:{},reports:{},lastReceipt:'',pending:null,infinityMetadata:null,rewardNotice:null});
  const record=v=>Boolean(v&&typeof v==='object'&&!Array.isArray(v));
- const weekId=id=>/^\d{4}_W\d{2}$/.test(id),count=n=>Number.isSafeInteger(n)&&n>=0;
- function validSave(v){return Boolean(record(v)&&v.version===1&&record(v.best)&&record(v.reports)&&Object.entries(v.best).every(([id,n])=>weekId(id)&&count(n))&&Object.entries(v.reports).every(([id,n])=>weekId(id)&&count(n))&&typeof v.lastReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(v.lastReceipt)&&(v.pending===null||v.pending&&weekId(v.pending.weekId)&&count(v.pending.wave)&&v.pending.wave>0&&count(v.pending.orbs)&&v.pending.orbs>0&&/^[a-zA-Z0-9_-]{1,100}$/.test(v.pending.receipt)));}
+ const weekId=id=>/^\d{4}_W(0[1-9]|[1-4]\d|5[0-3])$/.test(id),count=n=>Number.isSafeInteger(n)&&n>=0;
+ function validMetadata(v){return Boolean(record(v)&&weekId(v.lastClaimedWeek)&&count(v.lastWeekHighestWave)&&v.lastWeekHighestWave<=Math.floor(MAX/100));}
+ function validNotice(v){return Boolean(record(v)&&weekId(v.weekId)&&weekId(v.sourceWeek)&&count(v.highestWave)&&v.highestWave>0&&Number.isSafeInteger(v.orbs)&&v.orbs===v.highestWave*100);}
+ function validSave(v){return Boolean(record(v)&&v.version===1&&record(v.best)&&record(v.reports)&&Object.entries(v.best).every(([id,n])=>weekId(id)&&count(n))&&Object.entries(v.reports).every(([id,n])=>weekId(id)&&count(n))&&typeof v.lastReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(v.lastReceipt)&&(v.infinityMetadata==null||validMetadata(v.infinityMetadata))&&(v.rewardNotice==null||validNotice(v.rewardNotice))&&(v.pending===null||v.pending&&weekId(v.pending.weekId)&&count(v.pending.wave)&&v.pending.wave>0&&count(v.pending.orbs)&&v.pending.orbs>0&&/^[a-zA-Z0-9_-]{1,100}$/.test(v.pending.receipt)));}
+ // Chỉ chuẩn bị bản sao save; giao dịch Cloud sẽ ghi thưởng và cờ cùng lúc.
+ function prepareSave(bundle,at=Date.now()){
+  const value=bundle.storage[KEY]||fresh();if(!validSave(value))throw Error('Invalid Infinity progression.');
+  const before=JSON.stringify(value),current=R.rotation(at).id;
+  let metadata=value.infinityMetadata||bundle.infinityMetadata;
+  if(metadata!=null&&!validMetadata(metadata))throw Error('Invalid Infinity reward metadata.');
+  const completed=Object.keys(value.best).filter(id=>id<current&&value.best[id]>0).sort();
+  if(!metadata){const source=completed.at(-1)||current;metadata={lastClaimedWeek:source,lastWeekHighestWave:value.best[source]||0};}
+  metadata={...metadata};let reward=null;
+  if(metadata.lastClaimedWeek<current){
+   const source=metadata.lastClaimedWeek,highest=metadata.lastWeekHighestWave;
+   if(highest>0){
+    const amount=highest*100;if(!Number.isSafeInteger(amount))throw Error('Weekly reward exceeds the item limit.');
+    const key=host.InventorySystem.KEY,inventory=bundle.storage[key];if(!record(inventory)||!inventory.items)throw Error('Item storage is missing.');
+    if(Array.isArray(inventory.items))inventory.items=Object.fromEntries(inventory.items.map(item=>[item.id,item]));
+    const old=inventory.items.star_orb,quantity=typeof old==='number'?old:Number(old?.quantity??old?.count??0);
+    if(!count(quantity)||quantity>MAX-amount)throw Error('Star Orb storage is full. Weekly reward remains unclaimed.');
+    const food=host.ExpFoodSystem.FOODS.find(food=>food.id==='star_orb');
+    inventory.items.star_orb={...food,...(record(old)?old:{}),id:'star_orb',quantity:quantity+amount};
+    reward={weekId:current,sourceWeek:source,highestWave:highest,orbs:amount};value.rewardNotice=reward;
+   }
+   metadata={lastClaimedWeek:current,lastWeekHighestWave:value.best[current]||0};
+  }
+  value.infinityMetadata=metadata;bundle.storage[KEY]=value;
+  const changed=before!==JSON.stringify(value)||JSON.stringify(bundle.infinityMetadata)!==JSON.stringify(metadata);
+  bundle.infinityMetadata={...metadata};return{changed,bundle,reward};
+ }
  let data;try{const saved=JSON.parse(host.localStorage.getItem(KEY)||'null');data=validSave(saved)?saved:fresh();}catch(_){data=fresh();}
  let bridge={},active=false,combat=null,timer=null,uiTimer=null,runId='',runWeek=null,selections=[],sessionOrbs=0,busy=false,reporting=null,lastReport=0,reportAgain=false,blocked=false,clockText='',bound=false;
  const fighterNodes=new WeakMap();
  const el=id=>host.document.getElementById(id),make=(tag,cls='',text)=>U.make(tag,cls,text),text=(id,value)=>U.text(el(id),value);
  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();return true;}catch(_){return false;}}
- function commitReward(){const p=data.pending;if(!p)return true;if(!host.InventorySystem.grantOnce('infinity_wave',p.receipt,'star_orb',p.orbs))return false;data.best[p.weekId]=Math.max(data.best[p.weekId]||0,p.wave);data.reports[p.weekId]=Math.max(data.reports[p.weekId]||0,p.wave);data.lastReceipt=p.receipt;data.pending=null;return persist();}
+ function commitReward(){const p=data.pending;if(!p)return true;if(!host.InventorySystem.grantOnce('infinity_wave',p.receipt,'star_orb',p.orbs))return false;data.best[p.weekId]=Math.max(data.best[p.weekId]||0,p.wave);data.reports[p.weekId]=Math.max(data.reports[p.weekId]||0,p.wave);if(data.infinityMetadata?.lastClaimedWeek===p.weekId)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,p.wave);data.lastReceipt=p.receipt;data.pending=null;return persist();}
  if(!commitReward())blocked=true;
- function week(){const now=host.InfinityCloudSystem.now(),remote=host.InfinityCloudSystem.status.week;return remote&&now>=remote.startMs&&now<remote.endMs?remote:R.rotation(now);}
+ function week(){return R.rotation();}
  function cards(){return (bridge.cards?.()||[]).filter(card=>host.CategorySystem.has(card,week().category));}
  function variants(id){return bridge.variants?.(id)||[];}
  function autoFill(){selections=[];const used=new Map();for(const card of cards())for(const v of variants(card.id)){for(let i=0;i<Math.min(4, v.count);i++){if(selections.length===4)return;const n=used.get(v.key)||0;if(n>=v.count)break;selections.push({cardId:card.id,variantKey:v.key});used.set(v.key,n+1);}}}
@@ -75,10 +104,10 @@
  }
  async function report(force=false){
   if(reporting){if(force)reportAgain=true;return reporting;}
-  if(host.CloudSaveSystem?.playAllowed!==true||!force&&Date.now()-lastReport<15000&&week().endMs-host.InfinityCloudSystem.now()>30000)return;
+  if(host.CloudSaveSystem?.playAllowed!==true||!force&&Date.now()-lastReport<REPORT_MS&&week().endMs-host.InfinityCloudSystem.now()>30000)return;
   const current=week(),score=data.reports[current.id];if(!score)return;
   lastReport=Date.now();const uid=host.CloudSaveSystem.activeUser?.uid;
-  reporting=(async()=>{try{if(await host.CloudSaveSystem.flush(true)!==true)throw Error('Cloud Save is busy. Weekly best remains queued.');const response=await host.InfinityCloudSystem.request('score',{weekId:current.id,highestWave:score,category:current.category,displayName:host.CloudSaveSystem.publicName});if(host.CloudSaveSystem.activeUser?.uid!==uid)return;if(Number.isSafeInteger(response.highestWave))data.best[current.id]=Math.max(data.best[current.id]||0,response.highestWave);if((data.reports[current.id]||0)<=score)delete data.reports[current.id];persist();text('infinityStatus','Weekly best synced · Star Orbs are stored in EXP Food.');}catch(error){text('infinityStatus','Weekly score pending sync · '+error.message);}finally{reporting=null;if(reportAgain){reportAgain=false;queueMicrotask(()=>void report(true));}}})();return reporting;
+  reporting=(async()=>{try{if(await host.CloudSaveSystem.flush(true)!==true)throw Error('Cloud Save is busy. Weekly best remains queued.');const response=await host.InfinityCloudSystem.submit({weekId:current.id,highestWave:score,category:current.category});if(host.CloudSaveSystem.activeUser?.uid!==uid)return;if(Number.isSafeInteger(response.highestWave))data.best[current.id]=Math.max(data.best[current.id]||0,response.highestWave);if(data.infinityMetadata?.lastClaimedWeek===current.id)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,data.best[current.id]||0);if((data.reports[current.id]||0)<=score)delete data.reports[current.id];persist();text('infinityStatus','Weekly best synced · Star Orbs are stored in EXP Food.');}catch(error){text('infinityStatus','Weekly score pending sync · '+error.message);}finally{reporting=null;if(reportAgain){reportAgain=false;queueMicrotask(()=>void report(true));}}})();return reporting;
  }
  async function start(){
   if(busy||blocked||!validTeam()||host.CloudSaveSystem?.playAllowed!==true)return false;
@@ -87,9 +116,11 @@
    renderBattle();schedule();return true;
   }catch(error){text('infinityStatus',error.message);return false;}finally{busy=false;}
  }
- function open(){if(active||bridge.canEnter?.()!==true)return false;active=true;host.document.body.classList.add('infinity-open');combat=null;runWeek=null;sessionOrbs=0;bridge.onEnter?.();bridge.open?.('infinityModal');el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;autoFill();renderSetup();renderClock();text('infinityStatus',`4v4 continuous waves · No VNĐ / direct EXP · Best this week: ${data.best[week().id]||0}. ${host.InfinityCloudSystem.status.message}`);host.clearInterval(uiTimer);uiTimer=host.setInterval(()=>{renderClock();if(Date.now()-lastReport>30000)void report();},1000);void report();return true;}
+ function open(){if(active||bridge.canEnter?.()!==true)return false;active=true;host.document.body.classList.add('infinity-open');combat=null;runWeek=null;sessionOrbs=0;bridge.onEnter?.();bridge.open?.('infinityModal');el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;autoFill();renderSetup();renderClock();text('infinityStatus',`4v4 continuous waves · No VNĐ / direct EXP · Best this week: ${data.best[week().id]||0}. ${host.InfinityCloudSystem.status.message}`);host.clearInterval(uiTimer);uiTimer=host.setInterval(()=>{renderClock();if(Date.now()-lastReport>REPORT_MS)void report();},1000);void report();return true;}
  function exit(){if(!active)return;if(combat&&!combat.battle.finished)end('Run exited. Cleared-wave rewards retained.');stopTimer();host.clearInterval(uiTimer);uiTimer=null;active=false;host.document.body.classList.remove('infinity-open');combat=null;el('infinityModal')?.classList.add('hidden');bridge.onExit?.();}
  function suspend(){stopTimer();host.clearInterval(uiTimer);uiTimer=null;if(combat){combat.battle.finished=true;combat.battle.isBattling=false;}active=false;host.document.body.classList.remove('infinity-open');combat=null;el('infinityModal')?.classList.add('hidden');}
  function mount(){if(bound)return;bound=true;el('infinityOpenButton')?.addEventListener('click',open);el('infinityExit')?.addEventListener('click',exit);el('infinityStart')?.addEventListener('click',()=>void start());el('infinityRestart')?.addEventListener('click',()=>{combat=null;runWeek=null;el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;autoFill();renderSetup();});el('infinityRetrySync')?.addEventListener('click',()=>{lastReport=0;void report(true);});el('infinityLeaderboard')?.addEventListener('click',()=>{if(combat&&!combat.battle.finished)return;const select=el('leaderboardMetric');if(select)select.value='infinity';bridge.open?.('leaderboardModal');void host.LeaderboardSystem.render(true);});host.addEventListener('pagehide',suspend);}
- host.InfinitySystem=Object.freeze({KEY,validSave,week,getISOWeek:R.getISOWeek,open,exit,start,suspend,report,get active(){return active;},get blocked(){return blocked;},get battle(){return combat?.battle||null;},getBest:id=>data.best[id]||0,flush:()=>!blocked&&persist(),reset(){suspend();data=fresh();persist();},configure(options){bridge=options||{};mount();if(!persist())blocked=true;}});
+ function presentReward(){const notice=data.rewardNotice;if(!notice||active||host.CloudSaveSystem?.playAllowed!==true||!el('infinityRewardModal'))return;text('infinityRewardMessage',`Weekly Reset! You received ${notice.orbs.toLocaleString('en-US')} Star Orbs for reaching Wave ${notice.highestWave.toLocaleString('en-US')} last week!`);text('infinityRewardWeek',notice.sourceWeek+' → '+notice.weekId+' · Saved to EXP Food');bridge.open?.('infinityRewardModal');}
+ function dismissReward(){if(!data.rewardNotice)return;data.rewardNotice=null;if(!persist())blocked=true;else void host.CloudSaveSystem.flush(true);}
+ host.InfinitySystem=Object.freeze({KEY,validSave,validMetadata,prepareSave,presentReward,dismissReward,week,getISOWeek:R.getISOWeek,getISOWeekAndYear:R.getISOWeekAndYear,open,exit,start,suspend,report,get metadata(){return data.infinityMetadata?{...data.infinityMetadata}:null;},get active(){return active;},get blocked(){return blocked;},get battle(){return combat?.battle||null;},getBest:id=>data.best[id]||0,flush:()=>!blocked&&persist(),reset(){suspend();data=fresh();persist();},configure(options){bridge=options||{};mount();if(!persist())blocked=true;}});
 })(window);

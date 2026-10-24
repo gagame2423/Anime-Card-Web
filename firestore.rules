@@ -56,18 +56,23 @@ service cloud.firestore {
         && request.resource.data.timeTrialRoom == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.timeTrialRoom
         && request.resource.data.uniqueCards == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.uniqueCards;
     }
-    match /infinity_weeks/{week} {
-      allow get: if googleUser();
-      allow list, write: if false;
-      match /entries/{uid} {
-        allow get: if googleUser();
-        allow list: if googleUser() && request.query.limit != null && request.query.limit <= 50;
-        allow write: if false;
+    match /infinity_leaderboards/{week} {
+      function validEntry(d) {
+        let row = d[request.auth.uid];
+        return row is map && row.keys().hasOnly(['displayName','highestWave','updatedAt'])
+          && row.displayName is string && row.displayName.size() > 0 && row.displayName.size() <= 40
+          && row.highestWave is int && row.highestWave > 0 && row.highestWave <= 90071992547409
+          && row.updatedAt == request.time;
       }
-    }
-    match /infinity_mailboxes/{uid}/rewards/{week} {
-      allow get, list: if owner(uid);
-      allow write: if false;
+      function validWeek() { return week.matches('^[0-9]{4}_W(0[1-9]|[1-4][0-9]|5[0-3])$'); }
+      allow get: if googleUser();
+      allow list, delete: if false;
+      allow create: if googleUser() && validWeek()
+        && request.resource.data.keys().hasOnly([request.auth.uid]) && validEntry(request.resource.data);
+      allow update: if googleUser() && validWeek() && validEntry(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([request.auth.uid])
+        && (!(request.auth.uid in resource.data)
+          || request.resource.data[request.auth.uid].highestWave >= resource.data[request.auth.uid].highestWave);
     }
     match /{document=**} { allow read, write: if false; }
   }

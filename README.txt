@@ -1,135 +1,117 @@
-NHẬT KÝ CẬP NHẬT — INFINITY MODE VÀ MUA VẬT PHẨM SỐ LƯỢNG LỚN
-Ngày cập nhật: 23/10/2026
+NHẬT KÝ CẬP NHẬT — INFINITY THUẦN CLIENT, TƯƠNG THÍCH FIREBASE SPARK
+Ngày cập nhật: 24/10/2026
 
-1. STAR ORB — THỨC ĂN EXP MỚI
+1. KIẾN TRÚC MIỄN PHÍ PHÍA TRÌNH DUYỆT
 
-- Thêm Star Orb, ID star_orb, loại exp_food, ảnh assets/items/starorb.png.
-- Mỗi Star Orb cung cấp 1.000 EXP cơ bản. Khi Feed, EXP nhận được = 1.000 x số lượng sử dụng x EXP Multiplier của người chơi, làm tròn theo cơ chế Feed hiện có. Giữ nguyên giới hạn Level 1000 và quy tắc không Feed thẻ đã đạt cấp tối đa.
-- Star Orb nằm trong Storage > EXP Food, dùng được trong Feed XP Food và có thông tin nguồn nhận. Nguồn mới: hoàn thành từng wave Infinity và thưởng hạng 1 tuần.
-- Gói nguồn không chứa ảnh; người dùng tự đặt starorb.png vào đúng đường dẫn trên.
+- Infinity chạy hoàn toàn bằng JavaScript trong trình duyệt, sử dụng Google Auth và Firestore Client SDK đã có. Không cần Cloud Functions, Cloud Scheduler, máy chủ Node, API riêng hoặc gói Blaze.
+- Xóa toàn bộ mã backend trong thư mục functions và cấu hình Functions khỏi firebase.json. Tệp quy tắc tuần chuyển ra infinity_rules.js ở thư mục gốc.
+- infinity_cloud.js chỉ đọc/ghi Firestore trực tiếp. Không còn fetch tới endpoint Infinity, bootstrap API hoặc lỗi chặn đăng nhập liên quan đến kiểm tra thưởng tuần.
+- Sau xác thực Google, đọc ngay users/{uid} theo quy tắc Cloud-first. Giữ nguyên Google Auth bắt buộc, di chuyển Local lần đầu, checksum, revision, journal và cơ chế khôi phục save.
+- Không sửa online_utils.js, TURN/STUN, startup.js, mã PvP hoặc quy tắc PvP không thưởng.
 
-2. INFINITY MODE — XOAY VÒNG THEO TUẦN UTC
+2. XOAY VÒNG TUẦN ISO THEO UTC
 
-- Thêm Infinity Mode trong Arena, với sảnh chọn 4 thẻ và màn hình chiến đấu riêng. Không dùng lại hoặc ghi đè battleState của các chế độ Arena hiện có.
-- Tuần được tính theo ISO week-year, bắt đầu Thứ Hai 00:00 UTC, tương ứng 07:00 tại Việt Nam. Xử lý đúng tuần giao năm, ví dụ ngày đầu tháng 1 có thể thuộc tuần cuối năm ISO trước.
-- Seed = FNV-1a của chuỗi infinity-v1:YYYY_WNN. Bộ sinh Mulberry32 chọn một Category và một Element cố định cho toàn bộ tuần. Trình duyệt và máy chủ dùng chung functions/infinity_rules.js.
-- Category tuần lấy từ 28 Category hợp lệ hiện có. Người chơi chỉ được dùng biến thể thẻ đang sở hữu thuộc Category đó; cần đủ số bản sao cho từng vị trí đã chọn. Không áp dụng thêm điều kiện thời tiết của Tower vào Infinity.
-- Element tuần chỉ dùng sáu hệ đang có: Fire, Water, Nature, Electric, Dark, Holy. Không thêm Earth hoặc Light. Tất cả đối thủ, kể cả đơn vị được triệu hồi ở phía địch, nhận Element tuần; vẫn sử dụng nội tại của thẻ.
-- Giao diện hiển thị mã tuần, Category, Element, thời gian còn lại, wave hiện tại, wave cao nhất đã hoàn thành và Star Orb đã nhận trong lượt chơi.
-- Khi đổi tuần, lượt chơi đang mở được dừng an toàn. Bắt đầu lượt mới dùng quy tắc tuần mới.
+- getISOWeekAndYear() tính năm ISO và tuần ISO bằng UTC, xử lý đúng tuần giao năm. InfinitySystem cũng cung cấp helper này để sử dụng lại.
+- Seed = Year x 100 + ISOWeek. Ví dụ năm ISO 2026, tuần 43 dùng seed 202643.
+- Dùng Mulberry32 với seed trên để chọn một Category và một Element. Mọi người chơi dùng cùng phiên bản nguồn và đồng hồ thiết bị chính xác sẽ có cùng lựa chọn trong tuần.
+- Category lấy trực tiếp từ CategorySystem.TYPES; Element lấy từ ElementSystem.TYPES gồm Fire, Water, Nature, Electric, Dark, Holy. Không thêm hệ hoặc Category ngoài game.
+- Người chơi phải chọn đủ 4 bản sao thẻ đang sở hữu thuộc Category tuần. Toàn bộ địch, kể cả summon phía địch, giữ Element tuần và nội tại gốc.
+- Tuần mới bắt đầu Thứ Hai 00:00 UTC, tương ứng 07:00 Việt Nam. Client đổi quy tắc và vùng leaderboard khi sang tuần; lượt Infinity đang dở kết thúc an toàn.
+- Thay thuật toán seed có thể thay Category/Element của tuần hiện tại so với bản trước. Giữ nguyên Orb và kỷ lục đã lưu; không xóa tiến độ để đổi seed.
 
-3. CHIẾN ĐẤU LIÊN TỤC VÀ CÔNG THỨC WAVE
+3. LEADERBOARD TUẦN GHI TRỰC TIẾP VÀO FIRESTORE
 
-- Mỗi wave có ba đối thủ thường/elite và một boss. Bốn thẻ đối thủ trong cùng wave luôn khác nhau, được chọn từ toàn bộ Index, kể cả thẻ không thể roll thông thường.
-- Chất lượng thẻ được quy đổi từ log10 của mẫu số RNG; thẻ 1 in 0 dùng giá trị thay thế 10.000.000 chỉ cho việc chọn đối thủ. Theo độ sâu, trọng số thẻ hiếm tăng dần. Boss được chọn trước với trọng số ưu tiên thẻ hiếm cao hơn ba vị trí còn lại.
-- Không giới hạn tiến trình tại Wave 100. Hệ số chỉ số tại wave w là w^1,365, tương đương Math.pow(w, 1.365). HP và ATK từng vị trí được nhân hệ số rồi làm tròn.
-- Chỉ số gốc Wave 1:
-  Đối thủ 1: HP 1.000; ATK 100.
-  Đối thủ 2: HP 1.500; ATK 300.
-  Đối thủ 3: HP 2.000; ATK 400.
-  Boss: HP 5.000; ATK 500.
-- Tổng HP + ATK gốc Wave 1 = 10.800. Tại Wave 100, tổng sau làm tròn = 5.799.945, nằm trong khoảng 5.000.000–6.000.000 yêu cầu. Đây là tổng trước các hiệu ứng nội tại trong trận.
-- Chỉ khi toàn bộ hàng địch, bao gồm quân dự bị/clone/summon, đã bị hạ mới hoàn thành wave. Hạ boss không bỏ qua địch còn sống.
-- Wave mới chỉ thay đội địch. Giữ nguyên đối tượng thẻ người chơi, HP hiện tại, shield, buff/debuff, thời gian hiệu lực, bộ đếm đòn đánh, giới hạn hồi sinh và triệu hồi trong cùng lượt chơi. Không gọi lại bước khởi tạo toàn trận.
-- Giữ đúng quyền đánh lượt tiếp theo, kể cả hiệu ứng thêm lượt. Hiệu ứng Meteor còn chờ của đối thủ đã chết tiếp tục chạy sau khi đổi wave; chỉ giữ bản ghi cần thiết và bỏ khi hiệu ứng hoàn tất.
-- Nhịp chiến đấu dùng nhịp Arena 3 giây; Speed Battle Potion có hiệu lực theo quy tắc hiện có, giảm còn 1 giây. Không sửa nhịp Time Trial, Spooky, PvP hoặc các chế độ khác.
-- Infinity không phát VNĐ hoặc EXP trực tiếp. Phần thưởng wave là Star Orb; dùng Feed sau trận để nhận EXP. Sự kiện hạ đối thủ thật vẫn đi qua bộ ghi quest hiện có, không giả lập một chiến thắng Arena riêng sau mỗi wave.
-- Thua, thoát hoặc tải lại sẽ bắt đầu lượt chơi tiếp theo từ Wave 1. Star Orb đã lưu và kỷ lục tuần được giữ lại; trạng thái chiến đấu đang dở không được khôi phục.
+- Collection: infinity_leaderboards.
+- Document: YYYY_WNN, ví dụ 2026_W43.
+- Mỗi UID là một trường cấp cao nhất trong document, chứa đúng displayName, highestWave, updatedAt.
+- Ví dụ cấu trúc: { "UID_NGUOI_CHOI": { "displayName": "Player", "highestWave": 100, "updatedAt": "Firestore Timestamp" } }.
+- Transaction đọc giá trị cũ rồi chỉ ghi kỷ lục cao hơn của chính UID đó. Không ghi đè toàn bộ document hoặc dữ liệu người chơi khác. updatedAt dùng serverTimestamp của Firestore Client SDK.
+- Top 50 được sắp xếp trên client theo wave giảm dần, thời điểm đạt mốc tăng dần, rồi UID. Một lần tải đọc document của tuần; kết quả giao diện được cache 30 giây.
+- Gộp gửi kỷ lục theo nhịp 60 giây để tiết kiệm hạn mức. Thoát lượt, nút Sync Weekly Best và gần giờ đổi tuần có thể yêu cầu đồng bộ sớm. Điểm chưa gửi được giữ để thử lại trong tuần hiện tại.
+- Rules chỉ cho tài khoản Google thay trường UID của chính mình, kiểm tra schema, số wave dương và không cho giảm kỷ lục. Không cho xóa document hoặc ghi trường của người khác.
+- Leaderboard mới không cần composite index. Cấu hình index cho payload/chunk/recovery của Cloud Save được giữ nguyên; bỏ composite index riêng của backend Infinity cũ.
 
-4. STAR ORB THEO WAVE
+4. THƯỞNG TUẦN CÁ NHÂN — TỰ NHẬN KHI ĐĂNG NHẬP
 
+- Thay thưởng chỉ dành hạng 1 bằng thưởng dựa trên kỷ lục tuần của từng người chơi theo yêu cầu mới.
+- Metadata nằm bên trong payload Cloud Save dưới tên infinityMetadata:
+  { "lastClaimedWeek": "2026_W43", "lastWeekHighestWave": 0 }
+- Bản metadata tương ứng được giữ trong store Infinity để khôi phục vào localStorage cùng các module khác. Hai bản được kiểm tra nhất quán khi tải save.
+- Trong tuần, lastWeekHighestWave lưu kỷ lục đã hoàn thành để làm cơ sở thưởng khi sang tuần tiếp theo; cập nhật bằng max, không cộng dồn số wave.
+- Khi đăng nhập, nếu tuần hiện tại lớn hơn lastClaimedWeek và có kỷ lục tuần đã kết thúc, thưởng = highestWave x 100 Star Orb. Ví dụ Wave 100 nhận 10.000 Star Orb.
+- Sau xử lý, lastClaimedWeek chuyển sang tuần hiện tại và lastWeekHighestWave về 0. Nếu save đã có kỷ lục của tuần hiện tại, giữ kỷ lục đó để không mất tiến độ khi khôi phục.
+- Save cũ chưa có metadata được di chuyển tự động, dùng tuần có tiến độ gần nhất đã kết thúc. Với save đã có metadata, số thưởng luôn là lastWeekHighestWave x 100; không cộng thêm điểm lịch sử hoặc nhân thưởng cho các tuần không chơi.
+- Client chuẩn bị bản sao payload, cộng Star Orb và cập nhật metadata trong cùng một lần publish có kiểm tra revision bằng transaction Firestore. Chỉ khôi phục bản đã được Cloud xác nhận vào localStorage; không phát thưởng Local trước rồi mới đánh dấu Cloud.
+- Hai tab/thiết bị cùng đăng nhập: một revision được ghi trước; bên xung đột đọc lại Cloud và thấy metadata đã cập nhật. Refresh hoặc đăng nhập lại không cộng thưởng trùng.
+- Khi kho đầy hoặc ghi thưởng thất bại, không xóa metadata cũ và không đánh dấu đã nhận. Vẫn tải tiến độ Cloud hiện có; thử nhận lại ở lần đăng nhập sau. Không thêm cổng kiểm tra API vào màn hình đăng nhập.
+- Sau khi Cloud được khôi phục, hiển thị modal Weekly Reset với số Star Orb và wave đạt được. Đóng modal chỉ xác nhận thông báo; vật phẩm đã được lưu trước đó. Thông báo chưa xác nhận có thể xuất hiện lại sau reload, nhưng không phát thêm Orb.
+- Không còn yêu cầu lịch cron hoặc một client khác phải online để chốt tuần. Người chơi nhận thưởng khi chính họ đăng nhập.
+
+5. GIỮ NGUYÊN INFINITY COMBAT VÀ STAR ORB
+
+- Infinity vẫn là chiến đấu 4v4 liên tục: thay đội địch sau khi toàn bộ địch, bao gồm quân dự bị/summon, bị hạ. Không reset HP, shield, buff/debuff, bộ đếm đòn đánh hoặc trạng thái người chơi giữa các wave.
+- Không chỉnh sửa infinity_combat.js hoặc passives.js trong lần cập nhật này.
+- Chỉ số Wave 1: đối thủ 1 HP 1.000 / ATK 100; đối thủ 2 HP 1.500 / ATK 300; đối thủ 3 HP 2.000 / ATK 400; boss HP 5.000 / ATK 500.
+- Hệ số = Math.pow(wave, 1.365), nhân từng chỉ số gốc rồi làm tròn. Tổng HP + ATK Wave 1 = 10.800; Wave 100 = 5.799.945 trước nội tại. Không có giới hạn tại Wave 100.
+- Bốn thẻ địch khác nhau trong từng wave; ưu tiên thẻ hiếm tăng theo wave và trọng số rarity của boss cao hơn vị trí thường.
 - minOrbs = floor(1 + (wave - 1) x 7/99).
 - maxOrbs = floor(2 + (wave - 1) x 8/99).
-- Số nhận được là số nguyên ngẫu nhiên đều trong đoạn minOrbs đến maxOrbs, bao gồm hai đầu.
-- Wave 1: 1–2 Star Orb. Wave 100: 8–10 Star Orb. Công thức tiếp tục áp dụng sau Wave 100.
-- Lượng Orb theo wave là phần thưởng cố định theo công thức trên, không nhân Drop Multiplier. EXP Multiplier chỉ được áp dụng khi Feed.
-- Dùng journal và biên nhận để lưu thưởng wave, cập nhật kỷ lục và khôi phục thao tác bị ngắt. Nếu bộ nhớ không ghi được hoặc kho đạt giới hạn số nguyên an toàn, dừng lượt chơi và báo lỗi; không tiếp tục phát thưởng chưa lưu.
+- Mỗi clear nhận số nguyên ngẫu nhiên trong khoảng trên: Wave 1 nhận 1–2 Orb; Wave 100 nhận 8–10 Orb. Công thức tiếp tục sau Wave 100; không nhân Drop Multiplier.
+- Star Orb tiếp tục dùng ID chuẩn star_orb, ảnh assets/items/starorb.png, giá trị 1.000 EXP cơ bản. Feed áp dụng EXP Multiplier hiện có; không thay EXP Requirement hoặc giới hạn cấp.
+- Không thay nhịp đánh, lựa chọn thẻ, phần thưởng hay logic của Tower, Time Trial, Raid, Spooky, Sandbox và PvP.
 
-5. BẢNG XẾP HẠNG TUẦN VÀ THƯỞNG HẠNG 1
+6. GIỮ NGUYÊN MUA GỘP ARENA SHOP
 
-- Mỗi tuần có vùng dữ liệu riêng: infinity_weeks/{YYYY_WNN}/entries/{uid}. Chỉ lưu wave cao nhất đã hoàn thành của mỗi tài khoản, không phải wave đang đánh.
-- Top 50 hiển thị trong Leaderboard > Infinity tuần và mở được từ sảnh hoặc sau khi kết thúc lượt Infinity.
-- Xếp hạng theo wave giảm dần; bằng wave thì ưu tiên người đạt mốc sớm hơn; nếu vẫn bằng thì dùng UID để có thứ tự ổn định.
-- Tiến độ gửi lên được gộp để giảm số yêu cầu. Trước khi gửi điểm, đồng bộ Cloud Save; máy chủ xác minh điểm không vượt kỷ lục Infinity trong Cloud Save của chính UID đã xác thực. Điểm chưa gửi được giữ trong hàng đợi của tuần hiện tại và có nút thử lại.
-- Thứ Hai 00:00 UTC, Cloud Scheduler gọi finalizeInfinityWeek để chốt tuần đã kết thúc. Bootstrap khi đăng nhập cũng xử lý tuần chưa được chốt nếu lịch bị chậm.
-- Hạng 1 nhận Star Orb = highestWaveCleared x 100. Ví dụ hoàn thành Wave 100 nhận 10.000 Star Orb.
-- Phần thưởng tạo trong infinity_mailboxes/{uid}/rewards/{weekId}. Khi đăng nhập lần tiếp theo, máy chủ cộng vào save bảo vệ trên Cloud trước khi trình duyệt tải save đó.
-- Chốt tuần, tạo thư thưởng và nhận thưởng dùng giao dịch Firestore. Giao dịch nhận thưởng đồng thời sửa số Orb, revision, digest, bản phục hồi Cloud và đánh dấu thư đã nhận; đăng nhập lại hoặc nhiều yêu cầu đồng thời không nhận trùng.
-- Giữ tương thích save chia chunk. Nếu kho Orb đầy hoặc Cloud Save không hợp lệ, thư chưa nhận được giữ lại để xử lý sau, không bị đánh dấu đã phát.
-- Tuần mới có bảng riêng trống; dữ liệu tuần cũ được lưu làm lịch sử, không xóa lịch sử để mô phỏng reset.
-- Firestore Rules cấm trình duyệt ghi trực tiếp leaderboard/phiếu thưởng Infinity. API yêu cầu ID token Google và lấy UID từ token, không tin UID do client gửi.
-- Đây vẫn là game tính trận ở trình duyệt: kiểm tra kỷ lục Cloud không thay thế hệ thống chống gian lận chiến đấu do máy chủ xác minh.
+- Quantity mặc định 1 tiếp tục có trên cả năm nhóm shop hiện có: Tower, Time Trial, Raid, Boss Event và Spooky.
+- actualPurchaseQty = min(số lượng yêu cầu, floor(số dư / đơn giá), phần stack còn trống).
+- Trừ đúng actualPurchaseQty x đơn giá, cấp đúng số lượng mua; không đủ một món thì báo thiếu tiền. Giữ journal/receipt, rollback khi lưu lỗi và ví riêng từng loại Raid/Boss Event.
+- Không sửa shop_bulk.js hoặc logic mua của các chế độ trong bản này. PvP tiếp tục không có tiền thưởng hoặc shop mới.
 
-6. MUA SỐ LƯỢNG LỚN TRONG ARENA SHOP
+7. TRIỂN KHAI TRÊN SPARK
 
-- Thêm ô Quantity mặc định 1 trên header của tất cả shop Arena đang có: Tower, Time Trial, Raid, Boss Event và Spooky. Các loại Raid/Boss Event dùng đúng ví tiền riêng hiện có.
-- Quantity được chuẩn hóa thành số nguyên dương trong giới hạn số nguyên an toàn của JavaScript.
-- maxAffordable = floor(số dư / giá một món).
-- actualPurchaseQty = min(số yêu cầu, maxAffordable, chỗ còn trống trong stack).
-- Trừ đúng actualPurchaseQty x giá một món và cộng đúng actualPurchaseQty vật phẩm. Nếu yêu cầu 100 nhưng chỉ đủ tiền mua 7, tự mua 7.
-- Không đủ mua một món: hiển thị thông báo thiếu tiền, không thay đổi ví hoặc kho. Mua thành công: Successfully purchased [số lượng] x [tên vật phẩm]!
-- Không thực hiện vòng lặp mua từng món. Một giao dịch cập nhật số lượng gộp; journal/biên nhận và rollback bảo vệ thao tác ghi bị lỗi hoặc reload giữa chừng. Spooky tiếp tục dùng cơ chế biên nhận bền vững riêng.
-- Header đáp ứng màn hình nhỏ, ô Quantity và nút đóng không đè nhau. Các nút nâng cấp chỉ số Raid vẫn dùng quy tắc/cấp nâng riêng; Quantity chỉ áp dụng mua vật phẩm.
-- PvP hiện không có shop hoặc tiền thưởng; không tạo shop PvP hay sửa quy tắc PvP không thưởng trong lần cập nhật này.
+- Tải toàn bộ tệp nguồn tĩnh lên GitHub Pages, giữ đúng chữ hoa/thường. Nếu cập nhật repo bản cũ, gỡ thư mục functions khỏi repo và dùng index.html mới. Cache tag mới: 20261024-infinity-spark-1. Người chơi cần Ctrl+F5 sau khi cập nhật.
+- Publish firestore.rules đi kèm để cho phép ghi leaderboard bằng Client SDK. Có thể dán nội dung trong Firebase Console hoặc dùng lệnh:
+  firebase deploy --only firestore:rules,firestore:indexes --project anime-card-web
+- Không cài dependency cho thư mục functions, không deploy Functions và không cần máy chủ Node chạy cùng game. Firebase CLI chỉ là công cụ triển khai tùy chọn.
+- Nếu đã tự triển khai Functions/lịch Scheduler của bản trước, xóa các tài nguyên Infinity cũ trong Firebase/Google Cloud Console. Bản nguồn mới không gọi chúng, nhưng xóa mã nguồn trên GitHub không tự xóa tài nguyên đang chạy trong dự án.
+- Kiến trúc tương thích hạn mức miễn phí Spark, không có nghĩa là lưu lượng không giới hạn. Firestore miễn phí hiện có 1 GiB dữ liệu, 50.000 lượt đọc/ngày, 20.000 lượt ghi/ngày, 20.000 lượt xóa/ngày và 10 GiB truyền ra/tháng. Theo dõi Usage trong Console; hết hạn mức có thể làm đồng bộ tạm ngừng.
+- Document Firestore có giới hạn 1 MiB. Cấu trúc một document/tuần được giữ đúng yêu cầu; cần đánh giá lại cách chia dữ liệu nếu số người chơi tăng đến giới hạn này.
+- Rotation và chiến đấu chạy ở client nên phụ thuộc đồng hồ thiết bị; không cung cấp khả năng chống gian lận cấp máy chủ. Quyền Firestore vẫn bảo vệ dữ liệu của người chơi khác.
 
-7. TRIỂN KHAI BACKEND TRƯỚC KHI CẬP NHẬT GITHUB PAGES
+8. KIỂM TRA BẢN CẬP NHẬT
 
-- GitHub Pages chỉ phục vụ tệp tĩnh, không thể tự chạy lịch thưởng tuần đáng tin cậy. Gói có thêm mã Firebase Functions; cần triển khai backend trước khi đẩy bản web mới.
-- Chuẩn bị Node.js 22, Firebase CLI, quyền với dự án anime-card-web, gói Firebase Blaze và Cloud Scheduler API. Các dịch vụ này có thể phát sinh chi phí theo mức sử dụng; mã nguồn bàn giao chưa kích hoạt hoặc triển khai dịch vụ.
-- Tại thư mục gốc dự án, chạy:
-  npm --prefix functions install
-  firebase deploy --only functions:infinity,firestore:rules,firestore:indexes --project anime-card-web
-- Chờ các index Firestore xây dựng xong. Xác nhận có infinityApi và finalizeInfinityWeek tại asia-east1; lịch chốt tuần là 0 0 * * 1, múi giờ Etc/UTC.
-- Địa chỉ API nằm trong API_URL ở đầu infinity_cloud.js, mặc định:
-  https://asia-east1-anime-card-web.cloudfunctions.net/infinityApi
-  Nếu đổi dự án/vùng triển khai, sửa địa chỉ tương ứng trước khi phát hành web.
-- Sau khi backend sẵn sàng, đẩy toàn bộ tệp nguồn tĩnh lên GitHub Pages, giữ nguyên chữ hoa/thường và cấu trúc functions/infinity_rules.js vì tệp quy tắc này cũng được trình duyệt nạp. Cache tag bản web: 20261023-infinity-1. Người chơi cần Ctrl+F5.
-- Giữ nguyên cấu hình Google Auth, Cloud-first và TURN/PvP đang có. Chỉ bổ sung kiểm tra nhận thưởng Infinity trước lần đọc Cloud lúc đăng nhập.
-- Nếu API trả lỗi rõ ràng, không tự phát thưởng ở client; điểm giữ chờ đồng bộ. Nếu yêu cầu kiểm tra thưởng bị mất mạng/timeout và không xác định máy chủ đã sửa save hay chưa, giữ màn hình đăng nhập để người chơi thử lại, tránh tải nhầm bản save trước thưởng rồi ghi đè lên thưởng đến muộn.
-- Điểm tuần cũ chưa gửi trước giờ chốt không được tự ý cộng vào bảng đã chốt. Thưởng tuần cần backend và mạng hoạt động; chỉ cập nhật các tệp HTML/JS trên GitHub không triển khai được lịch thưởng.
-
-8. KIỂM TRA ĐÃ THỰC HIỆN
-
-- Kiểm tra cú pháp toàn bộ JavaScript và cú pháp JSON; kiểm tra thứ tự nạp module, ID giao diện, tên đường dẫn phân biệt chữ hoa/thường và cache tag mới.
-- Kiểm tra trình duyệt với Auth/Firestore/API mô phỏng: vào Infinity, đội theo Category, bốn địch khác nhau cùng Element, địch triệu hồi ngăn kết thúc sớm, chuyển wave giữ thẻ và bộ đếm, đúng thứ tự lượt/extra turn, Meteor chờ qua wave, thoát về Arena và Feed Star Orb.
-- Kiểm tra mua gộp đủ/thiếu tiền ở năm shop, header mobile, rollback khi chèn lỗi lưu kho và khôi phục journal sau khi bị ngắt.
-- Kiểm tra máy chủ bằng mô phỏng giao dịch Firestore có xung đột: tuần ISO giao năm, chốt tuần đồng thời, nhận thưởng đồng thời không trùng, save chia chunk, kho đầy giữ thư chờ và ràng buộc UID Google.
-- Kiểm tra lại luồng đăng nhập Cloud-first và PvP mô phỏng 1v1/4v4, blind pick, Ready, đồng bộ lượt và không phát thưởng PvP.
-- Chưa triển khai hoặc kiểm tra trực tiếp Cloud Functions, Scheduler, index, Google OAuth hay kết nối WebRTC qua mạng thật trong lần bàn giao này. Cần xác nhận trên dự án sau triển khai.
-- Không kèm test runner, log, Excel, thư mục node_modules hoặc ảnh/âm thanh trong gói nguồn.
+- Kiểm tra cú pháp toàn bộ JavaScript/JSON, đường dẫn phân biệt chữ hoa/thường, ID giao diện và thứ tự script sau khi bỏ thư mục functions.
+- Kiểm tra trình duyệt với Google Auth/Firestore mô phỏng: migration, Cloud-first, không yêu cầu endpoint Infinity, thưởng tuần, modal mobile, reload không phát thưởng trùng, leaderboard trực tiếp, chuyển wave giữ trạng thái và Feed Star Orb.
+- Kiểm tra hai client đăng nhập đồng thời bằng mô phỏng transaction có xung đột: một lần cộng thưởng, cùng kết quả trên cả hai client, giữ nguyên dữ liệu không liên quan.
+- Kiểm tra save cũ không metadata, save chia chunk, kho đầy, lỗi ghi thưởng và năm shop mua gộp đúng ngân sách.
+- Đối chiếu byte: online_utils.js, startup.js, pvp.js, pvp_view.js, pvp_combat.js, infinity_combat.js, passives.js và các module giao dịch shop không thay đổi.
+- Chưa publish Rules hoặc kiểm tra OAuth/Firestore thật trên dự án trong lần bàn giao này. Không kèm test runner, log, Excel, node_modules hoặc asset nhị phân trong gói nguồn.
 
 9. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
 
-- app.js: Điều phối Infinity, khóa thao tác xung đột, lưu các store mới, nối shop bulk, quest và vòng thời tiết.
-- boss_event.js: Mua gộp theo số lượng với từng ví Boss Event.
-- exp_food.js: Đăng ký Star Orb 1.000 EXP cơ bản trong Feed.
-- firebase.js: Gọi kiểm tra thư thưởng Infinity trước khi đọc Cloud Save.
-- firebase.json: Khai báo Firebase Functions codebase infinity.
-- firestore.indexes.json: Thêm index chốt tuần và xếp hạng Infinity, giữ cấu hình loại trừ payload.
-- firestore.rules: Quyền đọc bảng tuần/thư thưởng và cấm ghi Infinity trực tiếp từ client.
-- functions/index.js: Mới: HTTP API xác thực Google và lịch chốt tuần UTC.
-- functions/infinity_rules.js: Mới: quy tắc ISO week, seed, Category, Element và dải Orb dùng chung.
-- functions/infinity_service.js: Mới: điểm tuần, Top 50, chốt hạng 1 và giao dịch nhận thưởng.
-- functions/package.json: Mới: runtime Node.js 22 và dependency Firebase backend.
-- functions/save_codec.js: Mới: đọc/ghi định dạng save bảo vệ tương thích để cộng thưởng trên Cloud.
-- index.html: Thêm Infinity trong Arena, modal, lựa chọn leaderboard, stylesheet/module và cache tag.
-- infinity.css: Mới: bố cục Infinity, header số lượng shop, toast và responsive.
-- infinity.js: Mới: sảnh, chọn đội, lượt chơi liên tục, biên nhận Orb và hàng đợi điểm tuần.
-- infinity_cloud.js: Mới: API Google ID token, đồng hồ máy chủ và bootstrap thưởng.
-- infinity_combat.js: Mới: chọn bốn địch, ưu tiên rarity boss, scaling và chuyển wave liên tục.
-- leaderboard.js: Thêm metric Infinity tuần và tải Top 50.
-- passives.js: Hook riêng Infinity: nhập đội địch wave mới, giữ trạng thái, Element summon, hàng đợi, lượt và hiệu ứng chết chờ.
-- raid.js: Mua vật phẩm gộp theo từng loại Raid; không đổi nâng cấp chỉ số.
-- shop_bulk.js: Mới: Quantity dùng chung, tính ngân sách, giao dịch phục hồi và thông báo.
-- spooky.js: Mua gộp qua cơ chế receipt sẵn có; không đổi mở capsule hoặc combat.
-- startup.js: Kiểm tra các module Infinity/shop mới sau khi nạp.
-- storage.js: Thông tin nguồn Star Orb trong EXP Food.
-- timetrial.js: Mua gộp vật phẩm trong shop; không đổi EXP hoặc nhịp chiến đấu.
-- tower.js: Mua gộp vật phẩm shop; không đổi scaling, lựa chọn địch hoặc phần thưởng Tower.
-- README.txt: Chỉ ghi changelog bản cập nhật này, công thức, triển khai và danh sách tệp.
+- app.js: Lưu metadata trong payload, chuẩn bị thưởng Cloud, hỗ trợ save cũ và điều phối modal thông báo.
+- exp_food.js: Cập nhật mô tả nguồn Star Orb sang thưởng tuần cá nhân.
+- firebase.js: Bỏ kiểm tra API trước Cloud Save; xử lý thưởng bằng publish transaction và tải lại khi xung đột revision; cung cấp Firestore Client SDK cho Infinity.
+- firebase.json: Bỏ cấu hình Functions, giữ cấu hình Firestore.
+- firestore.indexes.json: Bỏ composite index của backend Infinity; giữ miễn lập chỉ mục payload/chunk/recovery.
+- firestore.rules: Thêm quyền cho infinity_leaderboards và giới hạn ghi theo UID; bỏ đường dẫn backend Infinity cũ.
+- index.html: Đổi thứ tự nạp script thuần client, đường dẫn rules, mô tả thưởng, modal thông báo và cache tag.
+- infinity.css: Bố cục modal Weekly Reset đáp ứng màn hình nhỏ, biểu tượng CSS không cần asset mới.
+- infinity.js: Metadata, kế hoạch thưởng không ghi trực tiếp Local, thông báo, seed helper và đồng bộ kỷ lục theo nhịp tiết kiệm.
+- infinity_cloud.js: Thay API ngoài bằng Firestore Client SDK transaction và đọc Top 50 từ document tuần.
+- infinity_rules.js: Tệp mới ở thư mục gốc; tuần ISO UTC, seed Year x 100 + ISOWeek, Category/Element và công thức Orb.
+- leaderboard.js: Gọi bảng Infinity trực tiếp từ Firestore và hiển thị mô tả thưởng cá nhân.
+- storage.js: Cập nhật thông tin nguồn Star Orb.
+- README.txt: Chỉ ghi changelog và hướng dẫn của bản cập nhật này.
 
-TÀI LIỆU TRIỂN KHAI
-https://firebase.google.com/docs/functions/get-started
-https://firebase.google.com/docs/functions/manage-functions
-https://firebase.google.com/docs/functions/schedule-functions
-https://firebase.google.com/docs/functions/http-events
+Tệp đã gỡ khỏi gói nguồn:
+- functions/index.js
+- functions/infinity_rules.js (thay bằng infinity_rules.js thuần trình duyệt ở gốc)
+- functions/infinity_service.js
+- functions/save_codec.js
+- functions/package.json
+
+TÀI LIỆU THAM CHIẾU
+https://firebase.google.com/docs/firestore/quotas
+https://firebase.google.com/docs/firestore/manage-data/transactions
+https://firebase.google.com/docs/firestore/security/rules-fields

@@ -32,7 +32,6 @@
   const job=(async()=>{try{
    if(!await checkToken(user,cycle))return;googleVerified=true;
    // Read the server before gameplay modules can normalize any local stores.
-   await host.InfinityCloudSystem?.bootstrap(user);if(cycle!==identityCycle||auth.currentUser?.uid!==user.uid)return;
    const loginRemote=await readRemote(user.uid);if(cycle!==identityCycle||auth.currentUser?.uid!==user.uid)return;
    await host.GameStartup.loadGame();if(cycle!==identityCycle||auth.currentUser?.uid!==user.uid)return;
    if(!configured)throw Error('Game could not initialize. Reload the complete update.');
@@ -118,18 +117,40 @@
   const nextMeta={...meta,uid,revision:remote.revision,digest:remote.digest,dirty:false};
   await bridge.apply(payload,{meta:nextMeta,cloudFirst:true,canApply:()=>current(ticket,uid)});meta=nextMeta;
  }
+ async function settleInfinity(remote,payload,ticket,uid){
+  // Thưởng và metadata nằm trong cùng một revision của Cloud Save.
+  for(let attempt=0;attempt<4;attempt++){
+   if(!current(ticket,uid))return{remote,payload,changed:false};
+   let plan;try{plan=await bridge.prepareInfinity?.(payload);}catch(error){host.console?.warn('Weekly reward remains unclaimed:',error.message);return{remote,payload,changed:false};}
+   if(!plan)return{remote,payload,changed:false};
+   if(!current(ticket,uid))return{remote,payload,changed:false};
+   try{
+    const result=await publish({payload:plan.payload,summary:remote.summary},remote.revision,remote.summary.displayName);
+    return{remote:{...remote,revision:result.revision,digest:result.digest},payload:plan.payload,changed:true};
+   }catch(error){
+    if(error.code!=='cloud/conflict'){host.console?.warn('Weekly reward postponed:',error.message);return{remote,payload,changed:false};}
+    remote=await readRemote(uid);payload=await remotePayload(uid,remote);
+   }
+  }
+  return{remote,payload,changed:false};
+ }
  async function reconcile(user,loginRemote){
   if(!hasGoogle(user)||!googleVerified||host.navigator.onLine===false){suspendSession('Google sign-in and an Internet connection are required.');return;}
   foreignTabChanged=false;waitingForActivity=false;const ticket=++epoch;clearTimer();watch?.();watch=null;pendingRemote=null;ready=false;account=user;
   try{
    if(bridge.canRestore?.()!==true){handoff=null;waitingForActivity=true;setBlocking(false);update('Cloud Save will restore automatically when the current activity ends.');return;}
    sessionReady=false;loadingCloud=true;setBlocking(true);update('Loading your Cloud Save…');
-   const remote=loginRemote===undefined?await readRemote(user.uid):loginRemote;if(!current(ticket,user.uid))return;
+   let remote=loginRemote===undefined?await readRemote(user.uid):loginRemote;if(!current(ticket,user.uid))return;
    if(!remote){
     handoff=null;meta={...meta,uid:user.uid,revision:0,digest:'',dirty:true};saveMeta();ready=true;blocking=false;dirty++;
-    const saved=await flush(true);if(saved&&current(ticket,user.uid)){sessionReady=true;setBlocking(false);update('Google account connected · Cloud migration complete');}return;
+    const saved=await flush(true);if(saved&&current(ticket,user.uid)){
+     const migrated=await readRemote(user.uid),payload=await remotePayload(user.uid,migrated),weekly=await settleInfinity(migrated,payload,ticket,user.uid);
+     if(!current(ticket,user.uid))return;if(weekly.changed){await useRemote(weekly.remote,weekly.payload,ticket);return;}
+     sessionReady=true;setBlocking(false);update('Google account connected · Cloud migration complete');
+    }return;
    }
-   const payload=await remotePayload(user.uid,remote);if(!current(ticket,user.uid))return;
+   let payload=await remotePayload(user.uid,remote);if(!current(ticket,user.uid))return;
+   const weekly=await settleInfinity(remote,payload,ticket,user.uid);remote=weekly.remote;payload=weekly.payload;if(!current(ticket,user.uid))return;
    const receipt=handoff;handoff=null;
    if(receipt&&receipt.uid===user.uid&&receipt.revision===remote.revision&&receipt.digest===remote.digest&&await receipt.fingerprint===receipt.localHash){
     if(!current(ticket,user.uid))return;
@@ -144,9 +165,9 @@
  async function deleteSnapshot(uid,id){
   if(!id)return;try{const chunks=await db.collection('users').doc(uid).collection('snapshots').doc(id).collection('chunks').get();if(!chunks.docs.length)return;const batch=db.batch();for(const row of chunks.docs)batch.delete(row.ref);await batch.commit();}catch(_){/* Cleanup never changes the committed save. */}
  }
- async function publish(local,expected){
+ async function publish(local,expected,displayName){
   const uid=account?.uid,ticket=epoch,digest=await U.hash(local.payload);if(!uid||ticket!==epoch)throw Error('Account changed before saving.');if(U.bytes(local.payload).length>MAX_BYTES)throw Error('Cloud save exceeds 16 MiB. Local save is preserved.');
-  const body=await stage(uid,local.payload),ref=db.collection('users').doc(uid),name=((meta.displayName||account.displayName||'').trim()||(account.isAnonymous?'Guest':'Player')+' '+uid.slice(0,5)).slice(0,40);
+  const body=await stage(uid,local.payload),ref=db.collection('users').doc(uid),name=(((displayName??meta.displayName)||account.displayName||'').trim()||(account.isAnonymous?'Guest':'Player')+' '+uid.slice(0,5)).slice(0,40);
   let result;try{result=await db.runTransaction(async tx=>{const latest=await tx.get(ref),previousBackup=await tx.get(ref.collection('recovery').doc('previous')),previous=latest.exists?latest.data():null;if((previous?.revision||0)!==expected)throw U.error('Newer Cloud Save detected. Restoring Cloud Save automatically.','cloud/conflict');if(ticket!==epoch||auth.currentUser?.uid!==uid)throw Error('Account changed before commit.');
    const revision=expected+1,summary={...local.summary,displayName:name};
    const next={format:'anime-card-cloud-v1',revision,digest,payload:body.payload,manifest:body.manifest,summary,updatedAt:host.firebase.firestore.FieldValue.serverTimestamp()};
@@ -211,5 +232,5 @@
  // Do not start an upload while refreshing/leaving: the next login must read
  // Cloud first instead of racing an unload-time write of unsynced local data.
  host.addEventListener('storage',event=>{if(event.key===META_KEY){try{const other=JSON.parse(event.newValue||'null');if(other&&(other.uid!==meta.uid||other.revision!==meta.revision||other.digest!==meta.digest)){foreignTabChanged=true;ready=false;clearTimer();update('Another browser tab changed this save. Reload before syncing.');}}catch(_){}}});
- host.CloudSaveSystem=Object.freeze({CONFIG,META_KEY,RESTORE_KEY,BOOT_KEY,recovered,restoreReceipt,markDirty,blockForRecovery,afterActivity,start,initialize,retry,flush,google,logout,leaderboard,get googleVerified(){return googleVerified&&hasGoogle(auth?.currentUser)&&host.navigator.onLine!==false;},get playAllowed(){return playAllowed();},get publicName(){return (meta.displayName||account?.displayName||'Player').trim().slice(0,40);},get activeUser(){return account;},get recoveryBlocked(){return recoveryBlocked;},get blocking(){return !playAllowed();},get status(){return status;},get ready(){return ready;},configure(options){bridge=options||{};configured=true;mount();if(recoveryBlocked)update('Unable to recover a Cloud restore. Reload before playing.');}});
+ host.CloudSaveSystem=Object.freeze({CONFIG,META_KEY,RESTORE_KEY,BOOT_KEY,recovered,restoreReceipt,markDirty,blockForRecovery,afterActivity,start,initialize,retry,flush,google,logout,leaderboard,get firestore(){return playAllowed()?db:null;},get googleVerified(){return googleVerified&&hasGoogle(auth?.currentUser)&&host.navigator.onLine!==false;},get playAllowed(){return playAllowed();},get publicName(){return (meta.displayName||account?.displayName||'Player').trim().slice(0,40);},get activeUser(){return account;},get recoveryBlocked(){return recoveryBlocked;},get blocking(){return !playAllowed();},get status(){return status;},get ready(){return ready;},configure(options){bridge=options||{};configured=true;mount();if(recoveryBlocked)update('Unable to recover a Cloud restore. Reload before playing.');}});
 })(window);

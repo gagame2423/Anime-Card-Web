@@ -3,7 +3,7 @@
  'use strict';
  const KEY='anime_card_rng_food_v1',MAIN_KEY='anime_card_rng_save_v1',MAX=Number.MAX_SAFE_INTEGER;
  const FOODS=Object.freeze([
-  Object.freeze({id:'star_orb',name:'Star Orb',type:'exp_food',tier:'epic',icon:'🌟',image:'assets/items/starorb.png',baseExp:1000,description:'1,000 base EXP × your EXP Multiplier. Infinity wave clears and weekly #1 rewards.'}),
+  Object.freeze({id:'star_orb',name:'Star Orb',type:'exp_food',tier:'epic',icon:'🌟',image:'assets/items/starorb.png',baseExp:1000,description:'1,000 base EXP × your EXP Multiplier. Infinity wave clears and personal weekly rewards.'}),
   Object.freeze({id:'spooky_candy',name:'Spooky Candy',type:'exp_food',tier:'rare',icon:'🍬',image:'assets/items/spcandy.png',baseExp:1000,description:'1,000 base EXP × your EXP Multiplier. Spooky Shop: 100 Spooky Coins.'}),
   Object.freeze({id:'bread',name:'Bread',type:'exp_food',tier:'common',icon:'🍞',image:'assets/items/bread.png',baseExp:25,description:'25 base EXP × your EXP Multiplier. Win any real battle mode to receive 1–3 Bread. Sandbox excluded.'})
  ]),byId=new Map(FOODS.map(food=>[food.id,food]));
