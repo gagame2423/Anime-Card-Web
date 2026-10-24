@@ -305,11 +305,11 @@
     delete data.encounters[id]; persist();
     return { awarded: true, coins: granted, unlockRequirement: floor >= 100 ? rewardRequirement(id) : null, nextFloor: nextFloor(id), completed: completed(id), elite: isElite(floor) };
   }
-  function purchasePotion(id, inventory) {
+  function purchasePotion(id, inventory, quantity = 1) {
     const offer = SHOP_ITEMS.find(item => item.id === id);
-    if (!offer || !inventory?.POTIONS?.[id] || data.coins < offer.cost) return false;
-    if (!inventory.grant(id, 1)) return false;
-    data.coins -= offer.cost; persist(); return true;
+    if (!offer || !inventory?.POTIONS?.[id]) return false;
+    return host.ShopBulkSystem.purchase({key:KEY,id,cost:offer.cost,balance:data.coins,count:quantity,
+      setBalance:value=>{data.coins=value;return persist();}});
   }
   function rewardRequirement(mode) { return `tower_floor_100_${weatherId(mode)}`; }
   function getProgressSnapshot() { return { ...data.cleared }; }

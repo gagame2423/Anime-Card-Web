@@ -1,79 +1,135 @@
-NHẬT KÝ CẬP NHẬT — ĐĂNG NHẬP GOOGLE BẮT BUỘC VÀ SỬA KẾT NỐI PVP
+NHẬT KÝ CẬP NHẬT — INFINITY MODE VÀ MUA VẬT PHẨM SỐ LƯỢNG LỚN
 Ngày cập nhật: 23/10/2026
 
+1. STAR ORB — THỨC ĂN EXP MỚI
 
-BỔ SUNG — TURN METERED ASIA-EAST CHO PVP KHÁC MẠNG
+- Thêm Star Orb, ID star_orb, loại exp_food, ảnh assets/items/starorb.png.
+- Mỗi Star Orb cung cấp 1.000 EXP cơ bản. Khi Feed, EXP nhận được = 1.000 x số lượng sử dụng x EXP Multiplier của người chơi, làm tròn theo cơ chế Feed hiện có. Giữ nguyên giới hạn Level 1000 và quy tắc không Feed thẻ đã đạt cấp tối đa.
+- Star Orb nằm trong Storage > EXP Food, dùng được trong Feed XP Food và có thông tin nguồn nhận. Nguồn mới: hoàn thành từng wave Infinity và thưởng hạng 1 tuần.
+- Gói nguồn không chứa ảnh; người dùng tự đặt starorb.png vào đúng đường dẫn trên.
 
-- Đã thêm TURN Metered vùng asia-east qua cổng 80/443, UDP/TCP và TLS bên cạnh ba STUN Google hiện có; giữ debug: 1. TURN chuyển tiếp dữ liệu khi đường kết nối trực tiếp bị NAT/firewall chặn. Timeout kết nối và chờ ICE phục hồi tăng lên 20.000 ms.
-- Sửa username và credential trong hằng TURN_SERVER ở đầu online_utils.js. Đã điền thông tin người dùng cung cấp; không cần dán lại mật khẩu. Nếu credential rỗng hoặc còn PASTE_YOUR_PASSWORD_HERE, game chỉ dùng STUN và ghi console.warn rõ ràng, không làm hỏng quá trình tạo Peer.
-- Kiểm tra tại https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/ : thêm từng URI TURN trong TURN_SERVER cùng username/password, chọn Add Server rồi Gather candidates. Có thể chọn IceTransports = relay để kiểm tra relay. Kết quả cần xuất hiện Type = relay; chuỗi ICE tương ứng có “typ relay”. Nên thử từng URI trên cả hai mạng rồi thử kết nối PvP thực tế.
-- CẢNH BÁO: credential nằm trong JavaScript phía trình duyệt nên công khai. Theo dõi mức sử dụng trong Metered dashboard và tạo lại credential nếu bị lạm dụng; sau đó cập nhật TURN_SERVER và triển khai lại. README không chứa mật khẩu thật.
-- Tệp thay đổi trong bản bổ sung: online_utils.js (TURN và timeout 20 giây), index.html (toàn bộ cache tag thành 20261023-google-pvp-2), README.txt (hướng dẫn và ghi chú tương ứng). pvp.js được kiểm tra cú pháp, không chỉnh sửa; heartbeat và timeout băm lựa chọn vẫn giữ nhịp riêng 10 giây, không phải timeout kết nối.
-- Cần làm thủ công: đẩy nguồn lên GitHub Pages; nhờ cả hai người chơi Ctrl+F5; kiểm tra relay và chơi thử từ hai mạng khác nhau. Không cần thay đổi Firebase hay giao diện.
+2. INFINITY MODE — XOAY VÒNG THEO TUẦN UTC
 
+- Thêm Infinity Mode trong Arena, với sảnh chọn 4 thẻ và màn hình chiến đấu riêng. Không dùng lại hoặc ghi đè battleState của các chế độ Arena hiện có.
+- Tuần được tính theo ISO week-year, bắt đầu Thứ Hai 00:00 UTC, tương ứng 07:00 tại Việt Nam. Xử lý đúng tuần giao năm, ví dụ ngày đầu tháng 1 có thể thuộc tuần cuối năm ISO trước.
+- Seed = FNV-1a của chuỗi infinity-v1:YYYY_WNN. Bộ sinh Mulberry32 chọn một Category và một Element cố định cho toàn bộ tuần. Trình duyệt và máy chủ dùng chung functions/infinity_rules.js.
+- Category tuần lấy từ 28 Category hợp lệ hiện có. Người chơi chỉ được dùng biến thể thẻ đang sở hữu thuộc Category đó; cần đủ số bản sao cho từng vị trí đã chọn. Không áp dụng thêm điều kiện thời tiết của Tower vào Infinity.
+- Element tuần chỉ dùng sáu hệ đang có: Fire, Water, Nature, Electric, Dark, Holy. Không thêm Earth hoặc Light. Tất cả đối thủ, kể cả đơn vị được triệu hồi ở phía địch, nhận Element tuần; vẫn sử dụng nội tại của thẻ.
+- Giao diện hiển thị mã tuần, Category, Element, thời gian còn lại, wave hiện tại, wave cao nhất đã hoàn thành và Star Orb đã nhận trong lượt chơi.
+- Khi đổi tuần, lượt chơi đang mở được dừng an toàn. Bắt đầu lượt mới dùng quy tắc tuần mới.
 
-1. ĐĂNG NHẬP GOOGLE NGAY KHI KHỞI ĐỘNG
+3. CHIẾN ĐẤU LIÊN TỤC VÀ CÔNG THỨC WAVE
 
-- Thêm lớp đăng nhập toàn màn hình có duy nhất hành động chính Sign in with Google. Không có nút đóng, chơi khách hoặc tiếp tục offline. Phím Escape và thao tác bên ngoài không thể đóng lớp này; bàn phím không truy cập được các điều khiển game phía sau.
-- Trước khi xác minh Google, chỉ nạp online_utils.js, firebase.js và startup.js. Ngay sau xác minh, đọc Cloud từ máy chủ trước khi thực thi module gameplay; sau đó nạp các module tuần tự theo đúng quan hệ phụ thuộc. Giao diện game vẫn bị khóa trong lúc khôi phục hoặc di chuyển save lên Cloud.
-- Chỉ chấp nhận tài khoản không ẩn danh, có nhà cung cấp google.com và ID token được Firebase xác nhận đăng nhập bằng Google, còn hạn. Tài khoản khách hoặc đăng nhập bằng nhà cung cấp khác không được vào game.
-- Khi mất mạng hoặc phiên xác thực hết hạn, khóa game, dừng auto roll, lịch auto continue, bộ đếm chiến đấu và mô phỏng PvP/Sandbox. Không ghi nhận chiến thắng hoặc thưởng do việc dừng phiên. Khi kết nối lại, xác minh tài khoản và đọc lại Cloud trước khi mở game.
-- Lỗi popup bị chặn, người dùng đóng popup, tên miền chưa được cấp quyền và lỗi dịch vụ được xử lý thành thông báo có thể thử lại. Firebase SDK quản lý signInWithPopup; mã game không tự kiểm tra window.closed hoặc đọc cửa sổ khác nguồn.
+- Mỗi wave có ba đối thủ thường/elite và một boss. Bốn thẻ đối thủ trong cùng wave luôn khác nhau, được chọn từ toàn bộ Index, kể cả thẻ không thể roll thông thường.
+- Chất lượng thẻ được quy đổi từ log10 của mẫu số RNG; thẻ 1 in 0 dùng giá trị thay thế 10.000.000 chỉ cho việc chọn đối thủ. Theo độ sâu, trọng số thẻ hiếm tăng dần. Boss được chọn trước với trọng số ưu tiên thẻ hiếm cao hơn ba vị trí còn lại.
+- Không giới hạn tiến trình tại Wave 100. Hệ số chỉ số tại wave w là w^1,365, tương đương Math.pow(w, 1.365). HP và ATK từng vị trí được nhân hệ số rồi làm tròn.
+- Chỉ số gốc Wave 1:
+  Đối thủ 1: HP 1.000; ATK 100.
+  Đối thủ 2: HP 1.500; ATK 300.
+  Đối thủ 3: HP 2.000; ATK 400.
+  Boss: HP 5.000; ATK 500.
+- Tổng HP + ATK gốc Wave 1 = 10.800. Tại Wave 100, tổng sau làm tròn = 5.799.945, nằm trong khoảng 5.000.000–6.000.000 yêu cầu. Đây là tổng trước các hiệu ứng nội tại trong trận.
+- Chỉ khi toàn bộ hàng địch, bao gồm quân dự bị/clone/summon, đã bị hạ mới hoàn thành wave. Hạ boss không bỏ qua địch còn sống.
+- Wave mới chỉ thay đội địch. Giữ nguyên đối tượng thẻ người chơi, HP hiện tại, shield, buff/debuff, thời gian hiệu lực, bộ đếm đòn đánh, giới hạn hồi sinh và triệu hồi trong cùng lượt chơi. Không gọi lại bước khởi tạo toàn trận.
+- Giữ đúng quyền đánh lượt tiếp theo, kể cả hiệu ứng thêm lượt. Hiệu ứng Meteor còn chờ của đối thủ đã chết tiếp tục chạy sau khi đổi wave; chỉ giữ bản ghi cần thiết và bỏ khi hiệu ứng hoàn tất.
+- Nhịp chiến đấu dùng nhịp Arena 3 giây; Speed Battle Potion có hiệu lực theo quy tắc hiện có, giảm còn 1 giây. Không sửa nhịp Time Trial, Spooky, PvP hoặc các chế độ khác.
+- Infinity không phát VNĐ hoặc EXP trực tiếp. Phần thưởng wave là Star Orb; dùng Feed sau trận để nhận EXP. Sự kiện hạ đối thủ thật vẫn đi qua bộ ghi quest hiện có, không giả lập một chiến thắng Arena riêng sau mỗi wave.
+- Thua, thoát hoặc tải lại sẽ bắt đầu lượt chơi tiếp theo từ Wave 1. Star Orb đã lưu và kỷ lục tuần được giữ lại; trạng thái chiến đấu đang dở không được khôi phục.
 
-2. CLOUD-FIRST VÀ ĐĂNG XUẤT
+4. STAR ORB THEO WAVE
 
-- Mỗi lần đăng nhập hoặc tải lại trang, đọc users/{uid} từ máy chủ. Nếu đã có Cloud Save hợp lệ, tự động thay toàn bộ kho save game trong localStorage bằng dữ liệu Cloud. Không hỏi chọn Local/Cloud, không gộp và không tải Local chưa đồng bộ ngược lên trước lần đọc này.
-- Nếu chưa có Cloud Save, tự động di chuyển tiến độ Local hiện có lên tài khoản Google. Chỉ mở giao diện sau khi việc lưu đầu tiên thành công. Giữ nguyên level, biến thể mutation và vật phẩm trong dữ liệu hợp lệ.
-- Giữ kiểm tra định dạng, checksum, schema, revision, cơ chế journal/rollback và biên nhận dùng một lần để chống lặp reload. Tác vụ khôi phục cũ không được ghi dữ liệu sau khi tài khoản thay đổi hoặc đăng xuất.
-- Autosync tiến độ vẫn được gộp theo nhịp hiện có. localStorage dùng làm bộ đệm phục hồi; không còn là chế độ chơi offline. Lỗi đọc/ghi Cloud hoặc lỗi listener khóa phiên và hiển thị thông báo.
-- Sign Out khóa giao diện ngay, dừng toàn bộ hoạt động phiên, đăng xuất Firebase, xóa dữ liệu game và metadata phiên trên thiết bị, xóa bản sao phục hồi riêng trong IndexedDB rồi tải lại màn hình đăng nhập. Không xóa save trên Firestore. Cờ đăng xuất đang chờ ngăn mở lại phiên cũ nếu quá trình bị ngắt.
+- minOrbs = floor(1 + (wave - 1) x 7/99).
+- maxOrbs = floor(2 + (wave - 1) x 8/99).
+- Số nhận được là số nguyên ngẫu nhiên đều trong đoạn minOrbs đến maxOrbs, bao gồm hai đầu.
+- Wave 1: 1–2 Star Orb. Wave 100: 8–10 Star Orb. Công thức tiếp tục áp dụng sau Wave 100.
+- Lượng Orb theo wave là phần thưởng cố định theo công thức trên, không nhân Drop Multiplier. EXP Multiplier chỉ được áp dụng khi Feed.
+- Dùng journal và biên nhận để lưu thưởng wave, cập nhật kỷ lục và khôi phục thao tác bị ngắt. Nếu bộ nhớ không ghi được hoặc kho đạt giới hạn số nguyên an toàn, dừng lượt chơi và báo lỗi; không tiếp tục phát thưởng chưa lưu.
 
-3. KẾT NỐI PVP VÀ XỬ LÝ LỖI
+5. BẢNG XẾP HẠNG TUẦN VÀ THƯỞNG HẠNG 1
 
-- Mọi Peer mới dùng debug: 1 và ba STUN server:
-  stun:stun.l.google.com:19302
-  stun:stun1.l.google.com:19302
-  stun:stun2.l.google.com:19302
-- Bắt đầu ngân sách kết nối 20.000 ms từ thao tác Create Room hoặc Join Room, bao gồm thời gian nạp SDK và chuẩn bị phiên.
-- Create Room: nếu chưa đăng ký được phòng sau 20 giây, hủy và bật lại điều khiển. Khi phòng đã đăng ký thành công và báo Room ready, phòng được giữ để chủ phòng chia sẻ mã và chờ bạn; không đóng phòng chỉ vì bạn chưa vào trong 20 giây.
-- Join Room và kênh đến chủ phòng: nếu kênh dữ liệu/handshake chưa hoàn tất sau 20 giây, hủy kết nối đang chờ, hủy timer/listener liên quan, trả giao diện về trạng thái có thể thử lại.
-- Thông báo timeout chính xác: Connection timed out. Please verify Room ID or network firewall.
-- Xử lý peer.error, peer.disconnected, peer.close, conn.error và conn.close. Lỗi peer-unavailable, network hoặc ID trùng không giữ nút ở trạng thái Connecting.
-- Theo dõi connectionState và iceConnectionState của RTCPeerConnection. Trạng thái failed/closed kết thúc phiên an toàn; disconnected được chờ phục hồi tối đa 20 giây. Mất kết nối signaling nhưng kênh dữ liệu đã xác minh vẫn mở thì tiếp tục dùng kênh đang có.
-- Callback thuộc kết nối cũ không được sửa trạng thái phòng mới. Giữ nguyên blind pick SHA-256, khóa lựa chọn Ready, chuẩn hóa Level 1, đồng bộ lượt và quy tắc PvP không có thưởng/tiến độ.
-- STUN hỗ trợ tìm đường kết nối NAT, không bảo đảm vượt mọi NAT đối xứng hoặc firewall. Bản cập nhật đã cấu hình TURN Metered asia-east để chuyển tiếp khi kết nối trực tiếp thất bại; việc sử dụng phụ thuộc credential hợp lệ và dịch vụ TURN hoạt động.
+- Mỗi tuần có vùng dữ liệu riêng: infinity_weeks/{YYYY_WNN}/entries/{uid}. Chỉ lưu wave cao nhất đã hoàn thành của mỗi tài khoản, không phải wave đang đánh.
+- Top 50 hiển thị trong Leaderboard > Infinity tuần và mở được từ sảnh hoặc sau khi kết thúc lượt Infinity.
+- Xếp hạng theo wave giảm dần; bằng wave thì ưu tiên người đạt mốc sớm hơn; nếu vẫn bằng thì dùng UID để có thứ tự ổn định.
+- Tiến độ gửi lên được gộp để giảm số yêu cầu. Trước khi gửi điểm, đồng bộ Cloud Save; máy chủ xác minh điểm không vượt kỷ lục Infinity trong Cloud Save của chính UID đã xác thực. Điểm chưa gửi được giữ trong hàng đợi của tuần hiện tại và có nút thử lại.
+- Thứ Hai 00:00 UTC, Cloud Scheduler gọi finalizeInfinityWeek để chốt tuần đã kết thúc. Bootstrap khi đăng nhập cũng xử lý tuần chưa được chốt nếu lịch bị chậm.
+- Hạng 1 nhận Star Orb = highestWaveCleared x 100. Ví dụ hoàn thành Wave 100 nhận 10.000 Star Orb.
+- Phần thưởng tạo trong infinity_mailboxes/{uid}/rewards/{weekId}. Khi đăng nhập lần tiếp theo, máy chủ cộng vào save bảo vệ trên Cloud trước khi trình duyệt tải save đó.
+- Chốt tuần, tạo thư thưởng và nhận thưởng dùng giao dịch Firestore. Giao dịch nhận thưởng đồng thời sửa số Orb, revision, digest, bản phục hồi Cloud và đánh dấu thư đã nhận; đăng nhập lại hoặc nhiều yêu cầu đồng thời không nhận trùng.
+- Giữ tương thích save chia chunk. Nếu kho Orb đầy hoặc Cloud Save không hợp lệ, thư chưa nhận được giữ lại để xử lý sau, không bị đánh dấu đã phát.
+- Tuần mới có bảng riêng trống; dữ liệu tuần cũ được lưu làm lịch sử, không xóa lịch sử để mô phỏng reset.
+- Firestore Rules cấm trình duyệt ghi trực tiếp leaderboard/phiếu thưởng Infinity. API yêu cầu ID token Google và lấy UID từ token, không tin UID do client gửi.
+- Đây vẫn là game tính trận ở trình duyệt: kiểm tra kỷ lục Cloud không thay thế hệ thống chống gian lận chiến đấu do máy chủ xác minh.
 
-4. CẤU HÌNH TRIỂN KHAI
+6. MUA SỐ LƯỢNG LỚN TRONG ARENA SHOP
 
-- Tải lên đầy đủ nguồn, giữ đúng chữ hoa/thường của tên tệp. Mã cache mới: 20261023-google-pvp-2. Tiếp tục dùng các asset ảnh/âm thanh hiện có do người dùng quản lý; gói này không chứa asset mới.
-- Trong Firebase Authentication, bật Google và thêm tên miền triển khai vào Authorized domains. Anonymous không còn được mã game sử dụng; nên tắt nhà cung cấp Anonymous nếu dự án không có ứng dụng khác cần nó.
-- Triển khai firestore.rules đi kèm. Hàm kiểm tra quyền yêu cầu request.auth.token.firebase.sign_in_provider == 'google.com', đồng thời giữ giới hạn UID và kiểm tra schema/revision hiện có. Chỉ thay tệp nguồn trên web không tự cập nhật Firestore Rules.
-- Có thể triển khai Rules bằng Firebase CLI: firebase deploy --only firestore:rules --project anime-card-web
-- Dùng HTTPS hoặc localhost cho Web Crypto/WebRTC. Nếu máy chủ đặt Cross-Origin-Opener-Policy quá chặt và chặn popup OAuth, điều chỉnh response header tại nơi hosting, ví dụ same-origin-allow-popups cho luồng popup phù hợp. JavaScript hoặc thẻ meta không thể sửa response header này; cảnh báo COOP do trình duyệt phát ra không được che giấu bằng mã game.
-- Không có thay đổi trực tiếp trên Firebase Console, Rules đang chạy hoặc website đã triển khai trong lần bàn giao này.
+- Thêm ô Quantity mặc định 1 trên header của tất cả shop Arena đang có: Tower, Time Trial, Raid, Boss Event và Spooky. Các loại Raid/Boss Event dùng đúng ví tiền riêng hiện có.
+- Quantity được chuẩn hóa thành số nguyên dương trong giới hạn số nguyên an toàn của JavaScript.
+- maxAffordable = floor(số dư / giá một món).
+- actualPurchaseQty = min(số yêu cầu, maxAffordable, chỗ còn trống trong stack).
+- Trừ đúng actualPurchaseQty x giá một món và cộng đúng actualPurchaseQty vật phẩm. Nếu yêu cầu 100 nhưng chỉ đủ tiền mua 7, tự mua 7.
+- Không đủ mua một món: hiển thị thông báo thiếu tiền, không thay đổi ví hoặc kho. Mua thành công: Successfully purchased [số lượng] x [tên vật phẩm]!
+- Không thực hiện vòng lặp mua từng món. Một giao dịch cập nhật số lượng gộp; journal/biên nhận và rollback bảo vệ thao tác ghi bị lỗi hoặc reload giữa chừng. Spooky tiếp tục dùng cơ chế biên nhận bền vững riêng.
+- Header đáp ứng màn hình nhỏ, ô Quantity và nút đóng không đè nhau. Các nút nâng cấp chỉ số Raid vẫn dùng quy tắc/cấp nâng riêng; Quantity chỉ áp dụng mua vật phẩm.
+- PvP hiện không có shop hoặc tiền thưởng; không tạo shop PvP hay sửa quy tắc PvP không thưởng trong lần cập nhật này.
 
-5. KIỂM TRA VÀ PHẠM VI XÁC NHẬN
+7. TRIỂN KHAI BACKEND TRƯỚC KHI CẬP NHẬT GITHUB PAGES
 
-- Đã chạy kiểm tra cú pháp các module và kiểm tra trình duyệt với Auth/Firestore/PeerJS mô phỏng: khóa khi chưa đăng nhập, từ chối guest/nhà cung cấp khác, lỗi popup, migration trước khi mở game, Cloud ghi đè Local khi refresh, giữ thẻ Level 157/biến thể/vật phẩm, lỗi Cloud, hết hạn token, mất mạng, kết nối lại và đăng xuất trong lúc khôi phục.
-- Đã kiểm tra timeout đăng ký phòng và Join Room, lỗi peer-unavailable/network, lỗi và đóng DataConnection, ICE failed, thử lại sau lỗi, phòng chờ hợp lệ không tự hết hạn và cấu hình STUN chính xác.
-- Hai client mô phỏng đã kiểm tra blind pick, khóa Ready, đồng bộ lượt 1v1/4v4 và dữ liệu tiến độ không đổi trong PvP. Các kiểm tra này không thay thế việc thử Google OAuth thật, quyền Firestore thực tế và WebRTC trên hai mạng khác nhau sau triển khai.
-- Không thay đổi cân bằng, EXP, nội tại, Tower, Raid, Time Trial hoặc nội dung thẻ. Không kèm test runner, log, Excel hay asset nhị phân trong gói nguồn.
+- GitHub Pages chỉ phục vụ tệp tĩnh, không thể tự chạy lịch thưởng tuần đáng tin cậy. Gói có thêm mã Firebase Functions; cần triển khai backend trước khi đẩy bản web mới.
+- Chuẩn bị Node.js 22, Firebase CLI, quyền với dự án anime-card-web, gói Firebase Blaze và Cloud Scheduler API. Các dịch vụ này có thể phát sinh chi phí theo mức sử dụng; mã nguồn bàn giao chưa kích hoạt hoặc triển khai dịch vụ.
+- Tại thư mục gốc dự án, chạy:
+  npm --prefix functions install
+  firebase deploy --only functions:infinity,firestore:rules,firestore:indexes --project anime-card-web
+- Chờ các index Firestore xây dựng xong. Xác nhận có infinityApi và finalizeInfinityWeek tại asia-east1; lịch chốt tuần là 0 0 * * 1, múi giờ Etc/UTC.
+- Địa chỉ API nằm trong API_URL ở đầu infinity_cloud.js, mặc định:
+  https://asia-east1-anime-card-web.cloudfunctions.net/infinityApi
+  Nếu đổi dự án/vùng triển khai, sửa địa chỉ tương ứng trước khi phát hành web.
+- Sau khi backend sẵn sàng, đẩy toàn bộ tệp nguồn tĩnh lên GitHub Pages, giữ nguyên chữ hoa/thường và cấu trúc functions/infinity_rules.js vì tệp quy tắc này cũng được trình duyệt nạp. Cache tag bản web: 20261023-infinity-1. Người chơi cần Ctrl+F5.
+- Giữ nguyên cấu hình Google Auth, Cloud-first và TURN/PvP đang có. Chỉ bổ sung kiểm tra nhận thưởng Infinity trước lần đọc Cloud lúc đăng nhập.
+- Nếu API trả lỗi rõ ràng, không tự phát thưởng ở client; điểm giữ chờ đồng bộ. Nếu yêu cầu kiểm tra thưởng bị mất mạng/timeout và không xác định máy chủ đã sửa save hay chưa, giữ màn hình đăng nhập để người chơi thử lại, tránh tải nhầm bản save trước thưởng rồi ghi đè lên thưởng đến muộn.
+- Điểm tuần cũ chưa gửi trước giờ chốt không được tự ý cộng vào bảng đã chốt. Thưởng tuần cần backend và mạng hoạt động; chỉ cập nhật các tệp HTML/JS trên GitHub không triển khai được lịch thưởng.
 
-6. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
+8. KIỂM TRA ĐÃ THỰC HIỆN
 
-- online_utils.js: Cấu hình STUN dùng chung, hằng timeout 20 giây, trình nạp module có thứ tự và thông báo lỗi dịch vụ.
-- pvp.js: Timeout, hủy kết nối, khôi phục điều khiển, xử lý sự kiện PeerJS/DataConnection và trạng thái ICE.
-- startup.js: Lớp xác thực bắt buộc, khóa focus/Escape, nạp gameplay sau Google và kiểm tra module sau khi nạp.
-- firebase.js: Xác minh Google/token, điều phối Cloud-first, bỏ guest/offline, khóa khi lỗi/mất mạng, xóa phiên khi đăng xuất và chặn khôi phục từ tác vụ cũ.
-- app.js: Khóa đầu vào và vòng lặp theo phiên Google, dừng hoạt động khi mất xác thực, kiểm tra phiên trước khi ghi bản Cloud.
-- index.html: Lớp đăng nhập tĩnh, bỏ lựa chọn khách/phục hồi offline, khai báo module chờ xác thực, đổi cache tag.
-- styles.css: Giao diện lớp đăng nhập và bố cục đáp ứng màn hình nhỏ.
-- firestore.rules: Bắt buộc nhà cung cấp Google cho dữ liệu người dùng và leaderboard; giữ kiểm tra dữ liệu hiện có.
-- README.txt: Chỉ ghi changelog của lần cập nhật này, hướng dẫn triển khai và danh sách tệp thay đổi.
+- Kiểm tra cú pháp toàn bộ JavaScript và cú pháp JSON; kiểm tra thứ tự nạp module, ID giao diện, tên đường dẫn phân biệt chữ hoa/thường và cache tag mới.
+- Kiểm tra trình duyệt với Auth/Firestore/API mô phỏng: vào Infinity, đội theo Category, bốn địch khác nhau cùng Element, địch triệu hồi ngăn kết thúc sớm, chuyển wave giữ thẻ và bộ đếm, đúng thứ tự lượt/extra turn, Meteor chờ qua wave, thoát về Arena và Feed Star Orb.
+- Kiểm tra mua gộp đủ/thiếu tiền ở năm shop, header mobile, rollback khi chèn lỗi lưu kho và khôi phục journal sau khi bị ngắt.
+- Kiểm tra máy chủ bằng mô phỏng giao dịch Firestore có xung đột: tuần ISO giao năm, chốt tuần đồng thời, nhận thưởng đồng thời không trùng, save chia chunk, kho đầy giữ thư chờ và ràng buộc UID Google.
+- Kiểm tra lại luồng đăng nhập Cloud-first và PvP mô phỏng 1v1/4v4, blind pick, Ready, đồng bộ lượt và không phát thưởng PvP.
+- Chưa triển khai hoặc kiểm tra trực tiếp Cloud Functions, Scheduler, index, Google OAuth hay kết nối WebRTC qua mạng thật trong lần bàn giao này. Cần xác nhận trên dự án sau triển khai.
+- Không kèm test runner, log, Excel, thư mục node_modules hoặc ảnh/âm thanh trong gói nguồn.
 
-TÀI LIỆU THAM CHIẾU
-https://peerjs.com/client/api/peer
-https://peerjs.com/client/api/data-connection
-https://firebase.google.com/docs/auth/web/google-signin
-https://firebase.google.com/docs/reference/rules/rules.firestore.Request#auth
-https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#cross_origin_opener_policy
+9. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
+
+- app.js: Điều phối Infinity, khóa thao tác xung đột, lưu các store mới, nối shop bulk, quest và vòng thời tiết.
+- boss_event.js: Mua gộp theo số lượng với từng ví Boss Event.
+- exp_food.js: Đăng ký Star Orb 1.000 EXP cơ bản trong Feed.
+- firebase.js: Gọi kiểm tra thư thưởng Infinity trước khi đọc Cloud Save.
+- firebase.json: Khai báo Firebase Functions codebase infinity.
+- firestore.indexes.json: Thêm index chốt tuần và xếp hạng Infinity, giữ cấu hình loại trừ payload.
+- firestore.rules: Quyền đọc bảng tuần/thư thưởng và cấm ghi Infinity trực tiếp từ client.
+- functions/index.js: Mới: HTTP API xác thực Google và lịch chốt tuần UTC.
+- functions/infinity_rules.js: Mới: quy tắc ISO week, seed, Category, Element và dải Orb dùng chung.
+- functions/infinity_service.js: Mới: điểm tuần, Top 50, chốt hạng 1 và giao dịch nhận thưởng.
+- functions/package.json: Mới: runtime Node.js 22 và dependency Firebase backend.
+- functions/save_codec.js: Mới: đọc/ghi định dạng save bảo vệ tương thích để cộng thưởng trên Cloud.
+- index.html: Thêm Infinity trong Arena, modal, lựa chọn leaderboard, stylesheet/module và cache tag.
+- infinity.css: Mới: bố cục Infinity, header số lượng shop, toast và responsive.
+- infinity.js: Mới: sảnh, chọn đội, lượt chơi liên tục, biên nhận Orb và hàng đợi điểm tuần.
+- infinity_cloud.js: Mới: API Google ID token, đồng hồ máy chủ và bootstrap thưởng.
+- infinity_combat.js: Mới: chọn bốn địch, ưu tiên rarity boss, scaling và chuyển wave liên tục.
+- leaderboard.js: Thêm metric Infinity tuần và tải Top 50.
+- passives.js: Hook riêng Infinity: nhập đội địch wave mới, giữ trạng thái, Element summon, hàng đợi, lượt và hiệu ứng chết chờ.
+- raid.js: Mua vật phẩm gộp theo từng loại Raid; không đổi nâng cấp chỉ số.
+- shop_bulk.js: Mới: Quantity dùng chung, tính ngân sách, giao dịch phục hồi và thông báo.
+- spooky.js: Mua gộp qua cơ chế receipt sẵn có; không đổi mở capsule hoặc combat.
+- startup.js: Kiểm tra các module Infinity/shop mới sau khi nạp.
+- storage.js: Thông tin nguồn Star Orb trong EXP Food.
+- timetrial.js: Mua gộp vật phẩm trong shop; không đổi EXP hoặc nhịp chiến đấu.
+- tower.js: Mua gộp vật phẩm shop; không đổi scaling, lựa chọn địch hoặc phần thưởng Tower.
+- README.txt: Chỉ ghi changelog bản cập nhật này, công thức, triển khai và danh sách tệp.
+
+TÀI LIỆU TRIỂN KHAI
+https://firebase.google.com/docs/functions/get-started
+https://firebase.google.com/docs/functions/manage-functions
+https://firebase.google.com/docs/functions/schedule-functions
+https://firebase.google.com/docs/functions/http-events

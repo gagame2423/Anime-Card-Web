@@ -53,13 +53,13 @@
     if(a!==null&&(!object(a)||!receipt(a.id)||!integer(a.wave,1,50)||a.wave!==v.run.wave||!integer(a.startedAt)||!integer(a.killSequence)||!integer(a.killCoins)))return false;
     const p=v.pending;if(p===null)return true;
     if(!object(p)||!receipt(p.id)||!['kill','wave','loss','purchase','capsule'].includes(p.kind)||!Number.isSafeInteger(p.coinsDelta)||Math.abs(p.coinsDelta)>MAX||!Array.isArray(p.items)||!Array.isArray(p.cards)||!Array.isArray(p.costs)||p.items.length>3||p.cards.length>1||p.costs.length>1)return false;
-    if(!p.items.every(row=>object(row)&&integer(row.quantity,1,4)&&[EQUIPMENT,'machete',...SHOP.map(s=>s.id)].includes(row.id)))return false;
+    if(!p.items.every(row=>object(row)&&integer(row.quantity,1,p.kind==='purchase'?MAX:4)&&[EQUIPMENT,'machete',...SHOP.map(s=>s.id)].includes(row.id)))return false;
     if(!p.cards.every(row=>object(row)&&[...CAPSULE_POOL.map(row=>row[0]),'myers'].includes(row.cardId)&&Array.isArray(row.mutationIds)&&row.mutationIds.length<=2&&new Set(row.mutationIds).size===row.mutationIds.length&&row.mutationIds.every(id=>Object.hasOwn(host.MUTATION_BY_ID||{},id))))return false;
     if(!p.costs.every(row=>object(row)&&row.id===CAPSULE.id&&row.quantity===1))return false;
     if(p.nextRun!==null&&!validRun(p.nextRun))return false;
     if(typeof p.completedRun!=='boolean'||!object(p.summary))return false;
     if(['kill','wave','loss'].includes(p.kind)&&(!a||p.attemptId!==a.id))return false;
-    if(p.kind==='purchase'&&(!SHOP.some(offer=>offer.id===p.items[0]?.id&&p.coinsDelta===-offer.cost)||p.items.length!==1||p.items[0].quantity!==1||p.cards.length||p.costs.length||p.nextRun!==null||p.completedRun))return false;
+    if(p.kind==='purchase'&&(!SHOP.some(offer=>offer.id===p.items[0]?.id&&p.coinsDelta===-offer.cost*p.items[0].quantity)||p.items.length!==1||p.cards.length||p.costs.length||p.nextRun!==null||p.completedRun))return false;
     if(p.kind==='capsule'&&(p.costs.length!==1||p.cards.length!==1||p.items.length||p.coinsDelta!==0||p.nextRun!==null||p.completedRun))return false;
     if(['kill','wave','loss'].includes(p.kind)&&p.coinsDelta<0)return false;
     if(p.kind==='capsule'&&!CAPSULE_POOL.some(row=>row[0]===p.cards[0].cardId))return false;
@@ -165,9 +165,11 @@
     const eligible=CAPSULE_POOL.filter(([id])=>id!=='tower-champion-heavenly'||bridge.hasJudgement?.()===true),total=eligible.reduce((sum,row)=>sum+row[1],0);
     return eligible.map(([cardId,weight])=>({cardId,weight,chance:weight/total}));
   }
-  function purchase(id){
-    const offer=SHOP.find(offer=>offer.id===id);if(!offer||data.pending||busy||host.SandboxSystem?.active||bridge.canAct?.()!==true||data.coins<offer.cost||host.InventorySystem.quantity(id)>=MAX)return false;
-    busy=true;try{queue('purchase',{coinsDelta:-offer.cost,items:[{id,quantity:1}],summary:{kind:'purchase'}});notify('purchase');return true;}catch(e){host.alert?.(e.message);return false;}finally{busy=false;}
+  function purchase(id,quantity=1){
+    const offer=SHOP.find(offer=>offer.id===id);if(!offer||data.pending||busy||host.SandboxSystem?.active||bridge.canAct?.()!==true)return false;
+    const order=host.ShopBulkSystem.plan(data.coins,offer.cost,id,quantity);
+    if(!order.quantity){host.ShopBulkSystem.notify(order.message);return false;}
+    busy=true;try{queue('purchase',{coinsDelta:-order.total,items:[{id,quantity:order.quantity}],summary:{kind:'purchase'}});notify('purchase');host.ShopBulkSystem.success(id,order.quantity);return true;}catch(e){host.alert?.(e.message);return false;}finally{busy=false;}
   }
   function openCapsule(random=Math.random){
     if(data.pending||busy||host.SandboxSystem?.active||bridge.canAct?.()!==true||host.InventorySystem.quantity(CAPSULE.id)<1)return null;
@@ -188,11 +190,11 @@
     if(!view){
       grid.replaceChildren();view={rows:[],onChange};const doc=grid.ownerDocument,fragment=doc.createDocumentFragment();
       for(const offer of SHOP){const item=host.InventorySystem.getItem(offer.id);if(!item)continue;const box=doc.createElement('article');box.className='module-item';const name=doc.createElement('strong');name.textContent=`${item.icon} ${item.name}`;const text=doc.createElement('p');text.textContent=item.description;const button=doc.createElement('button');button.type='button';button.textContent=`${offer.cost.toLocaleString('en-US')} Spooky Coins`;button.dataset.spookyPurchase=offer.id;
-        button.addEventListener('click',()=>{if(purchase(offer.id))view.onChange();});box.append(name,text,button);fragment.append(box);view.rows.push({offer,button});}
+        button.addEventListener('click',()=>{if(purchase(offer.id,host.ShopBulkSystem.requested(grid)))view.onChange();});box.append(name,text,button);fragment.append(box);view.rows.push({offer,button});}
       grid.append(fragment);shopViews.set(grid,view);
     }
     view.onChange=onChange;const allowed=bridge.canAct?.()===true&&!data.pending&&!busy;
-    for(const {offer,button}of view.rows)button.disabled=!allowed||data.coins<offer.cost||host.InventorySystem.quantity(offer.id)>=MAX;
+    for(const {offer,button}of view.rows)button.disabled=!allowed||host.InventorySystem.quantity(offer.id)>=MAX;
   }
   function sources(id){const result=[];for(const offer of SHOP)if(offer.id===id)result.push(`Spooky Shop: ${offer.cost.toLocaleString('en-US')} Spooky Coins.`);if(id===EQUIPMENT)result.push('Spooky Hunt: independent 5% chance only after winning Wave 50.');if(id==='machete')result.push('Spooky Hunt: independent 1% chance only after winning Wave 50; evolves Lv.100+ The Trapper.');return result;}
   function snapshot(){return JSON.parse(JSON.stringify({coins:data.coins,runs:data.runs,wave:data.run.wave,choices:data.run.choices,pendingChoice:data.run.pendingChoice,available:isOpen(),blocked:Boolean(data.pending)}));}

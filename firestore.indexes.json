@@ -1,8 +1,53 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "infinity_weeks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "finalized",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "endMs",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "highestWave",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "reachedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": [
-    { "collectionGroup": "users", "fieldPath": "payload", "indexes": [] },
-    { "collectionGroup": "chunks", "fieldPath": "text", "indexes": [] },
-    { "collectionGroup": "recovery", "fieldPath": "payload", "indexes": [] }
+    {
+      "collectionGroup": "users",
+      "fieldPath": "payload",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "chunks",
+      "fieldPath": "text",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "recovery",
+      "fieldPath": "payload",
+      "indexes": []
+    }
   ]
 }

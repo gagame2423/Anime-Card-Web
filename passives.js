@@ -100,6 +100,7 @@
   function ensureRuntime(unit) {
     // Copies created by enemy summons/conversions also inherit the event element.
     if(unit?.card&&activeCombat?.mode==='spooky-hunt'&&activeCombat.enemyTeam?.includes(unit)&&unit.card.element!=='Fire')unit.card={...unit.card,element:'Fire'};
+    if(unit?.card&&activeCombat?.mode==='infinity'&&activeCombat.enemyTeam?.includes(unit)&&unit.card.element!==activeCombat.infinity.element)unit.card={...unit.card,element:activeCombat.infinity.element};
     if (!unit) return null;
     combatStats.ensure(unit);
     if (!unit.passiveState || typeof unit.passiveState !== 'object') {
@@ -209,7 +210,8 @@
   function allUnits(battleState) {
     return [
       ...(Array.isArray(battleState?.playerTeam) ? battleState.playerTeam : []),
-      ...(Array.isArray(battleState?.enemyTeam) ? battleState.enemyTeam : [])
+      ...(Array.isArray(battleState?.enemyTeam) ? battleState.enemyTeam : []),
+      ...(battleState?.mode === 'infinity' ? battleState.infinity.retiredEnemies || [] : [])
     ].filter(Boolean);
   }
 
@@ -273,6 +275,7 @@
     if (!battleState) return;
     const playerTeam = battleState.playerTeam || [];
     const enemyTeam = battleState.enemyTeam || [];
+    if(battleState.mode==='infinity'&&battleState.infinity?.element)for(const unit of enemyTeam)if(unit.card?.element!==battleState.infinity.element)unit.card={...unit.card,element:battleState.infinity.element};
     if(battleState.mode==='spooky-hunt')for(const unit of enemyTeam)if(unit.card?.element!=='Fire')unit.card={...unit.card,element:'Fire'};
     if (battleState.mode === 'tower') enemyTeam.forEach(unit => window.TowerSystem?.protectEnemyUnit?.(unit));
     const nextPlayer = firstLiving(playerTeam, Number(battleState.playerIndex || 0));
@@ -3529,7 +3532,7 @@
   }
 
   function checkBattleWinner(battleState) {
-    const includeReserves = battleState?.sandbox === true || battleState?.mode === 'sandbox' || battleState?.mode === 'tower' || battleState?.mode === 'raid' || battleState?.mode === 'boss-event' || battleState?.mode === 'spooky-hunt' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
+    const includeReserves = battleState?.sandbox === true || battleState?.mode === 'sandbox' || battleState?.mode === 'tower' || battleState?.mode === 'raid' || battleState?.mode === 'boss-event' || battleState?.mode === 'spooky-hunt' || battleState?.mode === 'infinity' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
     if (isTeamDefeated(battleState?.enemyTeam, includeReserves)) return 'player';
     if (isTeamDefeated(battleState?.playerTeam, includeReserves)) return 'enemy';
     return null;
@@ -3557,7 +3560,7 @@
     }
 
     shibuya.startTurn(battleState,attacker,battleState.turn);
-    if(!isAlive(attacker)){ensureCurrentIndices(battleState);const winner=checkBattleWinner(battleState);battleState.turn=battleState.turn==='player'?'enemy':'player';return {ended:Boolean(winner),winner};}
+    if(!isAlive(attacker)){ensureCurrentIndices(battleState);const winner=checkBattleWinner(battleState);battleState.turn=battleState.turn==='player'?'enemy':'player';if(battleState.mode==='infinity')battleState.infinity.turnAdvanced=true;return {ended:Boolean(winner),winner};}
     spooky.startTurn(battleState,attacker,battleState.turn);
     fate.startTurn(battleState,attacker,battleState.turn);
     requiem.turn(battleState);
@@ -3569,6 +3572,7 @@
     const control = resolveActiveTurnControl(battleState, attacker);
     if (control.skipped) {
       battleState.turn = battleState.turn === 'player' ? 'enemy' : 'player';
+      if(battleState.mode==='infinity')battleState.infinity.turnAdvanced=true;
       const winner = checkBattleWinner(battleState);
       return { ended: Boolean(winner), winner };
     }
@@ -3606,6 +3610,7 @@
 
     battleState.turn = battleState.requiemExtraSide || (battleState.turn === 'player' ? 'enemy' : 'player');
     delete battleState.requiemExtraSide;
+    if(battleState.mode==='infinity')battleState.infinity.turnAdvanced=true;
     ensureCurrentIndices(battleState);
 
     winner = checkBattleWinner(battleState);
@@ -3614,6 +3619,7 @@
 
   function resolveTurn(battleState) {
     if (!battleState || battleState.finished) return { ended: true, winner: null };
+    if(battleState.mode==='infinity')battleState.infinity.turnAdvanced=false;
     expireFirstHumanCopies(battleState);
     ensureCurrentIndices(battleState);
     const actedSide=battleState.turn;
@@ -4303,6 +4309,20 @@
       questSkills.turn(battleState);
       ensureCurrentIndices(battleState);
       host.renderBattleStats?.();
+    },
+    enterInfinityWave(battleState, enemies) {
+      if (battleState?.mode !== 'infinity' || !Array.isArray(enemies)) throw Error('Invalid Infinity wave.');
+      // Giữ hiệu ứng sau khi chết còn chờ; bỏ các bản ghi đã hoàn tất.
+      battleState.infinity.retiredEnemies=[...(battleState.infinity.retiredEnemies||[]),...battleState.enemyTeam].filter(unit=>!isAlive(unit)&&passiveRuntimeFor(unit,'jogo').shibuya?.meteorPending);
+      battleState.enemyTeam=enemies; battleState.enemyIndex=0;
+      for (const [index,unit] of enemies.entries()) {
+        combatStats.reset(unit);const runtime=ensureRuntime(unit);
+        runtime.initialLineupIndex=index;runtime.baseAtkAtBattleStart=unit.atk;
+        runtime.fateOriginal={hp:unit.maxHp,atk:unit.atk};refreshUnitDisplay(unit);
+      }
+      ensureCurrentIndices(battleState);
+      for (const unit of enemies) {if(!isAlive(unit))continue;runOnEntry(battleState,unit);champions.entry(battleState,unit);expansion.entry(battleState,unit);}
+      ensureCurrentIndices(battleState);
     },
     resolveTurn,
     performAttack,

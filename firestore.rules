@@ -56,6 +56,19 @@ service cloud.firestore {
         && request.resource.data.timeTrialRoom == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.timeTrialRoom
         && request.resource.data.uniqueCards == getAfter(/databases/$(database)/documents/users/$(uid)).data.summary.uniqueCards;
     }
+    match /infinity_weeks/{week} {
+      allow get: if googleUser();
+      allow list, write: if false;
+      match /entries/{uid} {
+        allow get: if googleUser();
+        allow list: if googleUser() && request.query.limit != null && request.query.limit <= 50;
+        allow write: if false;
+      }
+    }
+    match /infinity_mailboxes/{uid}/rewards/{week} {
+      allow get, list: if owner(uid);
+      allow write: if false;
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }

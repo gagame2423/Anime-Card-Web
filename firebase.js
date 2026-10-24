@@ -32,6 +32,7 @@
   const job=(async()=>{try{
    if(!await checkToken(user,cycle))return;googleVerified=true;
    // Read the server before gameplay modules can normalize any local stores.
+   await host.InfinityCloudSystem?.bootstrap(user);if(cycle!==identityCycle||auth.currentUser?.uid!==user.uid)return;
    const loginRemote=await readRemote(user.uid);if(cycle!==identityCycle||auth.currentUser?.uid!==user.uid)return;
    await host.GameStartup.loadGame();if(cycle!==identityCycle||auth.currentUser?.uid!==user.uid)return;
    if(!configured)throw Error('Game could not initialize. Reload the complete update.');

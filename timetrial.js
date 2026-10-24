@@ -211,13 +211,11 @@
     if (!battle?.trial || battle.trial.completed) return;
     try { finish(battle, false, reason); } catch (error) { console.warn(error.message); }
   }
-  function purchase(id) {
-    const offer = SHOP_ITEMS.find(item => item.id === id), inventory = host.InventorySystem;
-    if (!offer || data.shards < offer.cost || inventory.quantity(id) >= Number.MAX_SAFE_INTEGER) return false;
-    const previous = data.shards; data.shards -= offer.cost;
-    if (!persist()) { data.shards = previous; return false; }
-    if (!inventory.grant(id, 1)) { data.shards = previous; persist(); return false; }
-    return true;
+  function purchase(id, quantity = 1) {
+    const offer = SHOP_ITEMS.find(item => item.id === id);
+    if (!offer) return false;
+    return host.ShopBulkSystem.purchase({key:KEY,id,cost:offer.cost,balance:data.shards,count:quantity,
+      setBalance:value=>{data.shards=value;return persist();}});
   }
   function renderShop(grid, onPurchase = () => {}) {
     if (!grid) return;
@@ -228,8 +226,8 @@
       const name = doc.createElement('strong'); name.textContent = `${item.icon} ${item.name}`;
       const description = doc.createElement('p'); description.textContent = item.description;
       const button = doc.createElement('button'); button.type = 'button'; button.textContent = `Exchange • ${offer.cost} Shards`;
-      button.disabled = data.shards < offer.cost;
-      button.addEventListener('click', () => { if (purchase(offer.id)) onPurchase(offer.id); else host.alert('Không thể đổi vật phẩm. Kiểm tra Shards hoặc bộ nhớ lưu game.'); });
+      button.disabled = host.ShopBulkSystem.blocked;
+      button.addEventListener('click', () => { if (purchase(offer.id,host.ShopBulkSystem.requested(grid))) onPurchase(offer.id); else host.alert('Không thể đổi vật phẩm. Kiểm tra Shards hoặc bộ nhớ lưu game.'); });
       card.append(name, description, button); grid.append(card);
     }
   }

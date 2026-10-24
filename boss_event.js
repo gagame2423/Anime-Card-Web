@@ -101,11 +101,11 @@
     const result=commitPending();run.completed=true;return result;
   }
   function abort(battle){if(battle?.bossEvent&&!battle.bossEvent.completed&&!data.pendingReward){try{finish(battle,false);}catch(e){console.warn(e.message);}}}
-  function purchase(type,id){
+  function purchase(type,id,quantity=1){
     const e=data.events[type],offer=offers(type).find(o=>o.id===id);
-    if(!e||!offer||(type==='gomen'&&!data.gomenRaidMigrated)||data.pendingReward||e.coins<offer.cost||host.InventorySystem.quantity(id)>=Number.MAX_SAFE_INTEGER)return false;
-    e.coins-=offer.cost;if(!persist()){e.coins+=offer.cost;return false;}
-    if(!host.InventorySystem.grant(id,1)){e.coins+=offer.cost;persist();return false;}return true;
+    if(!e||!offer||(type==='gomen'&&!data.gomenRaidMigrated)||data.pendingReward)return false;
+    return host.ShopBulkSystem.purchase({key:KEY,id,cost:offer.cost,balance:e.coins,count:quantity,
+      setBalance:value=>{e.coins=value;return persist();}});
   }
   function renderShop(grid,type='alucard',onChange=()=>{}){
     if(!grid||!TYPES[type])return;grid.replaceChildren();const doc=grid.ownerDocument;
@@ -113,8 +113,8 @@
       const item=host.InventorySystem.getItem(offer.id),box=doc.createElement('article');box.className='module-item';
       const name=doc.createElement('strong');name.textContent=`${item.icon} ${item.name}`;
       const text=doc.createElement('p');text.textContent=item.description;
-      const button=doc.createElement('button');button.type='button';button.textContent=`${offer.cost} ${TYPES[type].coinName}`;button.disabled=data.events[type].coins<offer.cost||Boolean(data.pendingReward);
-      button.addEventListener('click',()=>{if(purchase(type,offer.id))onChange();else host.alert('Không thể mua vật phẩm Boss Event.');});if(item.image){const image=doc.createElement('img');image.src=item.image;image.alt=item.name;image.width=48;image.height=48;image.loading='lazy';box.append(image);}box.append(name,text,button);grid.append(box);
+      const button=doc.createElement('button');button.type='button';button.textContent=`${offer.cost} ${TYPES[type].coinName}`;button.disabled=host.ShopBulkSystem.blocked||Boolean(data.pendingReward)||(type==='gomen'&&!data.gomenRaidMigrated);
+      button.addEventListener('click',()=>{if(purchase(type,offer.id,host.ShopBulkSystem.requested(grid)))onChange();else host.alert('Không thể mua vật phẩm Boss Event.');});if(item.image){const image=doc.createElement('img');image.src=item.image;image.alt=item.name;image.width=48;image.height=48;image.loading='lazy';box.append(image);}box.append(name,text,button);grid.append(box);
     }
   }
   function reset(){data={...fresh(),gomenRaidMigrated:true};persist();}

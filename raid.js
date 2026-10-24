@@ -183,13 +183,12 @@
     if(randomUnit(random)>=.50)return 0;
     const quantity=host.InventorySystem.scaleDrop(1,random);return host.InventorySystem.grant(GRAIL_KEY.id,quantity)?quantity:0;
   }
-  function purchase(type, id) {
+  function purchase(type, id, quantity = 1) {
     if (!validType(type)) return false;
     const offer = offers(type).find(item => item.id === id), entry = data.types[type];
-    if (!offer || !entry || data.pendingReward || entry.coins < offer.cost || host.InventorySystem.quantity(id) >= Number.MAX_SAFE_INTEGER) return false;
-    entry.coins -= offer.cost;
-    if (!persist()) { entry.coins += offer.cost; return false; }
-    if (!host.InventorySystem.grant(id, 1)) { entry.coins += offer.cost; persist(); return false; } return true;
+    if (!offer || !entry || data.pendingReward) return false;
+    return host.ShopBulkSystem.purchase({key:KEY,id,cost:offer.cost,balance:entry.coins,count:quantity,
+      setBalance:value=>{entry.coins=value;return persist();}});
   }
   function upgradeCost(type) { return 5 + 5 * Math.floor((data.types[type]?.upgradeLevel || 0) / 10); }
   function upgrade(type) {
@@ -212,8 +211,8 @@
       const item = host.InventorySystem.getItem(offer.id), box = doc.createElement('article'); box.className = 'module-item';
       const name = doc.createElement('strong'); name.textContent = `${item.icon} ${item.name}`;
       const text = doc.createElement('p'); text.textContent = item.description;
-      const button = doc.createElement('button'); button.type = 'button'; button.textContent = `${offer.cost} ${TYPES[type].coinName}`; button.disabled = entry.coins < offer.cost || Boolean(data.pendingReward);
-      button.addEventListener('click', () => { if (purchase(type, offer.id)) onChange(); else host.alert('Không thể mua vật phẩm Raid.'); }); box.append(name, text, button); grid.append(box);
+      const button = doc.createElement('button'); button.type = 'button'; button.textContent = `${offer.cost} ${TYPES[type].coinName}`; button.disabled = host.ShopBulkSystem.blocked || Boolean(data.pendingReward);
+      button.addEventListener('click', () => { if (purchase(type, offer.id, host.ShopBulkSystem.requested(grid))) onChange(); else host.alert('Không thể mua vật phẩm Raid.'); }); box.append(name, text, button); grid.append(box);
     }
     const box = doc.createElement('article'); box.className = 'module-item';
     const name = doc.createElement('strong'); name.textContent = `Team HP / ATK +${entry.upgradeLevel}%`;
