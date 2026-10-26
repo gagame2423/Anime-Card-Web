@@ -3276,15 +3276,18 @@ function openBattleModal() {
   openModal('battleModal');
 }
 
+// External continuous modes reuse the same renderer without replacing Arena state.
+function getArenaBattleState(){return window.InfinityViewSystem?.battle || battleState;}
+function getArenaRuntime(){return window.InfinityViewSystem?.runtime || window.PassiveSystem;}
 var pendingBattleLogs;
 function appendBattleLog(message,tone=''){
   if(!els.battleLog)return;pendingBattleLogs ||= [];
-  pendingBattleLogs.push({message:String(message),tone:String(tone),battle:battleState});
+  pendingBattleLogs.push({message:String(message),tone:String(tone),battle:getArenaBattleState()});
   if(pendingBattleLogs.length>260)pendingBattleLogs.shift();window.RollPerformanceSystem.schedule(paintBattleLog);
 }
 function paintBattleLog(){
   const queued=pendingBattleLogs||[];pendingBattleLogs=[];if(!els.battleLog)return;
-  const fragment=document.createDocumentFragment();for(const entry of queued){if(entry.battle!==battleState)continue;const line=document.createElement('div');line.className=`battle-log__line ${entry.tone?'is-'+entry.tone:''}`;line.textContent=entry.message;fragment.append(line);}
+  const fragment=document.createDocumentFragment();for(const entry of queued){if(entry.battle!==getArenaBattleState())continue;const line=document.createElement('div');line.className=`battle-log__line ${entry.tone?'is-'+entry.tone:''}`;line.textContent=entry.message;fragment.append(line);}
   els.battleLog.append(fragment);while(els.battleLog.children.length>260)els.battleLog.firstElementChild.remove();els.battleLog.scrollTop=els.battleLog.scrollHeight;
 }
 
@@ -3528,8 +3531,9 @@ function renderBattleRewardMetricLabels(tower) {
 }
 
 function showBattleFloatingText(unit, text, tone = 'damage', duration = 1150) {
-  if (!unit || !battleState) return;
-  const side = battleState.playerTeam?.includes(unit) ? 'player' : battleState.enemyTeam?.includes(unit) ? 'enemy' : null;
+  const view = getArenaBattleState();
+  if (!unit || !view) return;
+  const side = view.playerTeam?.includes(unit) ? 'player' : view.enemyTeam?.includes(unit) ? 'enemy' : null;
   if (!side) return;
   const container = side === 'player' ? els.battlePlayerFloatingText : els.battleEnemyFloatingText;
   if (!container) return;
@@ -3589,16 +3593,16 @@ function renderBattleCombatant(side, unit) {
   renderMutationBadges(mutationBadges, unit?.mutations);
   applyCardMutationVisual(cardEl, unit?.mutations);
 
-  const passive = window.PassiveSystem?.getPassiveDescription?.(unit) || {
+  const passive = getArenaRuntime()?.getPassiveDescription?.(unit) || {
     name: String(unit?.card?.passive?.name || 'Passive'),
     description: String(unit?.card?.passive?.description || '')
   };
-  const passiveTooltip = window.PassiveSystem?.getPassiveTooltipData?.(unit) || {
+  const passiveTooltip = getArenaRuntime()?.getPassiveTooltipData?.(unit) || {
     name: passive.name,
     description: passive.description,
     status: unit?.passiveState?.lastPassiveTrigger ? `Triggered: ${unit.passiveState.lastPassiveTrigger}` : 'Active'
   };
-  const statuses = window.PassiveSystem?.getPassiveStatusBadges?.(unit) || [];
+  const statuses = getArenaRuntime()?.getPassiveStatusBadges?.(unit) || [];
 
   if (passiveStatus) {
     passiveStatus.innerHTML = '';
@@ -3667,7 +3671,7 @@ function renderBattleCombatModifiers(side, unit) {
   const effectsEl = side === 'player' ? els.battlePlayerStatusEffects : els.battleEnemyStatusEffects;
   if (!statusEl || !effectsEl) return;
 
-  const summary = window.PassiveSystem?.getCombatStatusSummary?.(unit, battleState) || {
+  const summary = getArenaRuntime()?.getCombatStatusSummary?.(unit, getArenaBattleState()) || {
     atkMultiplierPct: 0, hpPct: 100, currentHp: Math.max(0, Number(unit?.hp) || 0), maxHp: Math.max(1, Number(unit?.maxHp) || 1), dodgePct: 0, damageReductionPct: 0, shield: 0, shieldPct: 0, effects: []
   };
 
@@ -3741,21 +3745,23 @@ function renderBattleLineup(side,team,activeIndex){
 
 function renderBattleStats() { window.RollPerformanceSystem.schedule(paintBattleStats); }
 function paintBattleStats() {
-  if (!battleState?.playerTeam || !battleState?.enemyTeam || battleState.finished) return;
-  const player = battleState.playerTeam[battleState.playerIndex];
-  const enemy = battleState.enemyTeam[battleState.enemyIndex];
+  const view=getArenaBattleState();
+  if (!view?.playerTeam || !view?.enemyTeam || (view.finished && !window.InfinityViewSystem?.active)) return;
+  const player = view.playerTeam[view.playerIndex];
+  const enemy = view.enemyTeam[view.enemyIndex];
   if (!player || !enemy) return;
 
-  battleState.player = player;
-  battleState.enemy = enemy;
+  view.player = player;
+  view.enemy = enemy;
   renderBattleCombatant('player', player);
   renderBattleCombatant('enemy', enemy);
-  renderBattleLineup('player', battleState.playerTeam, battleState.playerIndex);
-  renderBattleLineup('enemy', battleState.enemyTeam, battleState.enemyIndex);
+  renderBattleLineup('player', view.playerTeam, view.playerIndex);
+  renderBattleLineup('enemy', view.enemyTeam, view.enemyIndex);
 
-  if (els.battlePlayerTeamPower) els.battlePlayerTeamPower.textContent = `PLAYER POWER ${battleState.playerPower.toLocaleString('en-US')}`;
-  if (els.battleEnemyTeamPower) els.battleEnemyTeamPower.textContent = `ENEMY POWER ${battleState.enemyPower.toLocaleString('en-US')}`;
-  if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
+  const external=window.InfinityViewSystem?.active;
+  if (els.battlePlayerTeamPower) els.battlePlayerTeamPower.textContent = `PLAYER POWER ${(external?calculateBattleTeamPower(view.playerTeam):view.playerPower).toLocaleString('en-US')}`;
+  if (els.battleEnemyTeamPower) els.battleEnemyTeamPower.textContent = `ENEMY POWER ${(external?calculateBattleTeamPower(view.enemyTeam):view.enemyPower).toLocaleString('en-US')}`;
+  if (els.battleModeLabel) els.battleModeLabel.textContent = external?window.InfinityViewSystem.modeLabel:getBattleModeLabel();
 }
 
 function animateBattleAttack(side) {
@@ -4958,7 +4964,7 @@ function setBattleModalLock(active) {
 function openModal(id) {
   if (window.SandboxSystem?.active && id !== 'sandboxModal') return;
   if (window.PvPSystem?.active && id !== 'pvpModal') return;
-  if (window.InfinitySystem?.active && !['infinityModal','leaderboardModal'].includes(id)) return;
+  if (window.InfinitySystem?.active && !['infinityModal','leaderboardModal',...(window.InfinityViewSystem?.active?['passiveDetailModal','elementChartModal']:[])].includes(id)) return;
   const modal = document.getElementById(id);
   if (!modal) return;
   document.getElementById('utilityMenu')?.removeAttribute('open');
@@ -5062,6 +5068,7 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if(id==='battleModal' && window.InfinityViewSystem?.active)return;
   if (id === 'infinityRewardModal') window.InfinitySystem?.dismissReward();
   if(id==='arenaMutationModal')window.UIPerformanceSystem.closePicker();
   if (id === 'sandboxModal') { window.SandboxSystem?.exit?.(); return; }
@@ -5321,7 +5328,7 @@ els.buyCoinMultiButton?.addEventListener("click", () => purchaseUpgrade("coinMul
 els.collectionButton?.addEventListener("click", () => openModal("collectionModal"));
 els.upgradesButton?.addEventListener("click", () => openModal("upgradesModal"));
 els.battleButton?.addEventListener("click", openBattleModal);
-els.battleCloseButton?.addEventListener("click", event => { event.preventDefault(); surrenderBattle(); });
+els.battleCloseButton?.addEventListener("click", event => { event.preventDefault(); if(window.InfinityViewSystem?.active){window.InfinitySystem.exit();return;} surrenderBattle(); });
 els.resetButton?.addEventListener("click", resetGame);
 els.autoContinueBattleToggle?.addEventListener('change', () => {
   if(isSpookyBattle()){renderAutoContinueBattleToggle();return;}
@@ -5741,8 +5748,13 @@ window.PvPSystem.configure({
   onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');resumeGameRuntime();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();}
 });
 
-// Infinity has its own battle state; existing Arena modes keep their engine and UI.
+// Infinity retains its continuous battle state and shares the Arena renderer.
 window.ShopBulkSystem.configure({canAct:()=>!isImportingSave&&!isSimulationActive()&&!window.InfinitySystem.active&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked});
+window.InfinityViewSystem.configure({
+  render:renderBattleStats, log:appendBattleLog, float:showBattleFloatingText,
+  attack:animateBattleAttack, promote:animateBattlePromotion, lock:setBattleModalLock,
+  clear:()=>{window.RollPerformanceSystem.cancel(paintBattleStats);window.RollPerformanceSystem.cancel(paintBattleLog);pendingBattleLogs=[];clearBattleAnimationTimers();for(const node of [els.battlePlayerFloatingText,els.battleEnemyFloatingText])node?.replaceChildren();for(const node of [els.battlePlayerCard,els.battleEnemyCard])node?.classList.remove('battle-lunge-player','battle-lunge-enemy','battle-hit','battle-promote');}
+});
 window.InfinitySystem.configure({
   decorate:(node,mutations)=>applyMutationStyleTokens(node,mutations),
   canEnter:()=>!isBattleMatchActive()&&!isImportingSave&&!gameInputLocked()&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked,
@@ -5752,7 +5764,7 @@ window.InfinitySystem.configure({
   units:slots=>slots.map(slot=>{const card=getCardById(slot.cardId),variant=getVariantEntries(card.id).find(v=>v.key===slot.variantKey);if(!variant)throw Error('Owned card variant unavailable.');const display=getDisplayCard(card,variant.mutations);return{card:JSON.parse(JSON.stringify(card)),display:{...display},mutations:[...variant.mutations],variantKey:variant.key,level:getCardLevelInfo(card.id).level,hp:display.hp,maxHp:display.hp,atk:display.atk,defeated:false};}),
   open:openModal,
   onEnter:()=>{clearAutoContinueBattleTimer();clearCooldownExpiryTimer();els.battleModal?.classList.add('hidden');},
-  onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.afterActivity();resumeGameRuntime();void window.CloudSaveSystem.flush();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();},
+  onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');window.BattleWeatherHud?.render();window.CloudSaveSystem.afterActivity();resumeGameRuntime();void window.CloudSaveSystem.flush();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();},
   isWeatherActive,addWeather:addCombatWeather,
   prepare:battle=>{battle.questContext=window.QuestSystem.battleContext(battle,getActiveWeatherDefinitions().map(w=>w.id));},
   onUnitDefeated:recordQuestEnemyDefeat,

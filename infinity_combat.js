@@ -14,10 +14,10 @@
   return cards.map((original,index)=>{const card={...clone(original),element:week.element},value=stats(wave,index);return{card,display:{...value,name:card.name,image:card.image},mutations:[],level:wave,hp:value.hp,maxHp:value.hp,atk:value.atk,defeated:false,infinityBoss:index===3};});
  }
  function create(players,week,options={}){
-  const rng=options.random||Math.random,logs=[],log=message=>{logs.push(String(message));if(logs.length>100)logs.shift();};
-  const engine=host.PassiveSystem.createIsolated({random:rng,getCardById:id=>host.ALL_CARDS.find(c=>c.id===id),isWeatherActive:options.isWeatherActive||(()=>false),appendBattleLog:log,onUnitDefeated:options.onUnitDefeated,addRandomCommonUncommonWeather:options.addWeather});
+  const rng=options.random||Math.random,logs=[],log=(message,tone='')=>{logs.push(String(message));if(logs.length>100)logs.shift();options.onLog?.(message,tone);};
+  const engine=host.PassiveSystem.createIsolated({random:rng,getCardById:id=>host.ALL_CARDS.find(c=>c.id===id),isWeatherActive:options.isWeatherActive||(()=>false),appendBattleLog:log,showBattleFloatingText:options.onFloatingText,renderBattleStats:options.onRender,onUnitDefeated:options.onUnitDefeated,addRandomCommonUncommonWeather:options.addWeather});
   const battle={mode:'infinity',playerTeam:players,enemyTeam:enemies(1,week,rng),playerIndex:0,enemyIndex:0,turn:'player',finished:false,isBattling:true,championChoices:{aqua:options.aqua||'hp'},infinity:{weekId:week.id,element:week.element,wave:1,highest:0}};
-  options.prepare?.(battle);engine.beginBattle(battle);
+  options.prepare?.(battle,engine);engine.beginBattle(battle);
   function settle(){
    const alive=unit=>unit&&unit.hp>0&&!unit.defeated;
    if(!battle.playerTeam.some(alive)){battle.finished=true;battle.isBattling=false;return{ended:true,winner:'enemy'};}
@@ -32,7 +32,10 @@
   }
   function step(){
    if(battle.finished)return{ended:true};const initial=settle();if(initial.ended||initial.cleared)return initial;
-   const acted=battle.turn;engine.resolveTurn(battle);
+   const acted=battle.turn,team=acted==='player'?battle.playerTeam:battle.enemyTeam;
+   const actor=team[acted==='player'?battle.playerIndex:battle.enemyIndex],attacks=actor?.passiveState?.ownAttackCount||0;
+   options.onTurn?.(acted);engine.resolveTurn(battle);
+   if((actor?.passiveState?.ownAttackCount||0)>attacks)options.onAttack?.(acted);
    // The normal engine returns on victory before its usual turn handoff.
    if(!battle.infinity.turnAdvanced&&battle.enemyTeam.every(u=>u.defeated||u.hp<=0)){
     battle.turn=battle.requiemExtraSide||(acted==='player'?'enemy':'player');delete battle.requiemExtraSide;

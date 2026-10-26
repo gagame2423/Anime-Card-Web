@@ -45,8 +45,8 @@
  }
  const weeklyRecovered=recoverWeekly();
  let data;try{const saved=JSON.parse(host.localStorage.getItem(KEY)||'null');data=validSave(saved)?saved:fresh();}catch(_){data=fresh();}
- let bridge={},active=false,combat=null,timer=null,uiTimer=null,runId='',runWeek=null,selections=[],sessionOrbs=0,busy=false,reporting=null,lastReport=0,reportAgain=false,blocked=!weeklyRecovered,clockText='',bound=false;
- const fighterNodes=new WeakMap(),nodeCache=new Map();
+ let bridge={},active=false,combat=null,timer=null,uiTimer=null,runId='',runWeek=null,runMessage='',selections=[],sessionOrbs=0,busy=false,reporting=null,lastReport=0,reportAgain=false,blocked=!weeklyRecovered,clockText='',bound=false;
+ const nodeCache=new Map();
  const el=id=>{if(nodeCache.has(id))return nodeCache.get(id);const node=host.document.getElementById(id);if(node)nodeCache.set(id,node);return node;},make=(tag,cls='',text)=>U.make(tag,cls,text),text=(id,value)=>U.text(el(id),value);
  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();return true;}catch(_){return false;}}
  function commitReward(){const p=data.pending;if(!p)return true;if(!host.InventorySystem.grantOnce('infinity_wave',p.receipt,'star_orb',p.orbs))return false;data.best[p.weekId]=Math.max(data.best[p.weekId]||0,p.wave);data.reports[p.weekId]=Math.max(data.reports[p.weekId]||0,p.wave);if(data.infinityMetadata?.lastClaimedWeek===p.weekId)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,p.wave);data.lastReceipt=p.receipt;data.pending=null;return persist();}
@@ -271,33 +271,12 @@
   if(node.dataset.infinitySort!==undefined){sortMode=node.dataset.infinitySort;filtered=true;}
   if(filtered){node.closest('details').open=false;page=0;renderFilterMenus();scheduleSetup();}
  }
- function renderClock(){const w=week(),remaining=Math.max(0,w.endMs-host.InfinityCloudSystem.now()),days=Math.floor(remaining/R.DAY),hours=Math.floor(remaining/3600000)%24,minutes=Math.floor(remaining/60000)%60;const label=`${w.id} · Category: ${w.category} · Enemy Element: ${w.element} · Reset: ${days}d ${hours}h ${minutes}m (Monday 00:00 UTC)`;if(label!==clockText){text('infinityRotation',label);clockText=label;}if(active&&runWeek&&runWeek.id!==w.id&&!combat?.battle.finished)end('Weekly rotation ended. Start a new run with this week’s Category.');if(active&&!combat&&collectionWeek&&collectionWeek!==w.id){query='';elementFilter='';categoryFilter='';el('infinitySearch').value='';refreshCollection(false);}}
- function fighterTile(unit){
-  let row=fighterNodes.get(unit);
-  if(!row){
-   const tile=make('article','infinity-fighter'),img=make('img'),boss=make('small','infinity-boss-tag','BOSS'),name=make('strong'),stats=make('small'),bar=make('progress'),details=make('details'),summary=make('summary'),description=make('p');
-   img.loading='lazy';img.addEventListener('error',()=>img.hidden=true);details.append(summary,description);tile.append(boss,img,name,stats,bar,details);row={tile,img,boss,name,stats,bar,summary,description};fighterNodes.set(unit,row);
-  }
-  row.tile.classList.toggle('is-defeated',unit.hp<=0||unit.defeated);row.tile.classList.toggle('is-boss',Boolean(unit.infinityBoss));row.boss.hidden=!unit.infinityBoss;
-  if(row.img.dataset.source!==(unit.card.image||'')){row.img.dataset.source=unit.card.image||'';if(unit.card.image)row.img.src=unit.card.image;else row.img.removeAttribute('src');row.img.hidden=!unit.card.image;}row.img.alt=unit.card.name;
-  U.text(row.name,unit.display?.name||unit.card.name);U.text(row.stats,`${unit.card.element} · HP ${Math.ceil(unit.hp).toLocaleString('en-US')} / ${Math.ceil(unit.maxHp).toLocaleString('en-US')} · ATK ${Math.ceil(unit.atk).toLocaleString('en-US')}`);row.bar.max=Math.max(1,unit.maxHp);row.bar.value=Math.max(0,unit.hp);
-  const passive=combat.engine.getPassiveDescription(unit);U.text(row.summary,passive.name);U.text(row.description,passive.description);return row.tile;
- }
- function renderBattle(){
-  if(!combat)return;const bs=combat.battle;el('infinityLobby').hidden=true;el('infinityBattle').hidden=false;el('infinityStart').hidden=true;text('infinityTeamCount','INFINITY RUN');text('infinityTeamHint',bs.finished?'Run ended. Your wave rewards are saved.':'Lineup locked · HP, buffs and counters carry forward.');
-  text('infinityWave',`WAVE ${bs.infinity.wave} · Highest cleared ${bs.infinity.highest} · Star Orbs +${sessionOrbs.toLocaleString('en-US')}`);
-  text('infinityTurn',bs.finished?'RUN ENDED':`${bs.turn==='player'?'PLAYER':'ENEMY'} STRIKE · ${host.InventorySystem.combatTurnMs(3000)/1000}s`);
-  for(const [id,team]of [['infinityPlayers',bs.playerTeam],['infinityEnemies',bs.enemyTeam]]){
-   const root=el(id),fragment=host.document.createDocumentFragment(),alive=team.filter(u=>u.hp>0&&!u.defeated),aliveSet=new Set(alive),rows=[...alive,...team.filter(u=>!aliveSet.has(u))].slice(0,12);
-   for(const unit of rows)fragment.append(fighterTile(unit));
-   if(team.length>12)fragment.append(make('p','',`${team.length-12} additional units · ${alive.length} total alive`));root.replaceChildren(fragment);
-  }
-  el('infinityLog').replaceChildren(...combat.logs.slice(-35).map(line=>make('p','',line)));
-  if(el('infinityRestart'))el('infinityRestart').hidden=!bs.finished;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=!bs.finished;
- }
+ function renderClock(){host.InfinityViewSystem.clock();const w=week(),remaining=Math.max(0,w.endMs-host.InfinityCloudSystem.now()),days=Math.floor(remaining/R.DAY),hours=Math.floor(remaining/3600000)%24,minutes=Math.floor(remaining/60000)%60;const label=`${w.id} · Category: ${w.category} · Enemy Element: ${w.element} · Reset: ${days}d ${hours}h ${minutes}m (Monday 00:00 UTC)`;if(label!==clockText){text('infinityRotation',label);clockText=label;}if(active&&runWeek&&runWeek.id!==w.id&&!combat?.battle.finished)end('Weekly rotation ended. Start a new run with this week’s Category.');if(active&&!combat&&collectionWeek&&collectionWeek!==w.id){query='';elementFilter='';categoryFilter='';el('infinitySearch').value='';refreshCollection(false);}}
+ function battleInfo(){return {week:runWeek,orbs:sessionOrbs,best:data.best[runWeek?.id]||0,message:runMessage};}
+ function renderBattle(){if(combat)host.InfinityViewSystem.render(battleInfo());}
  function stopTimer(){host.clearTimeout(timer);timer=null;}
- function end(message){stopTimer();if(combat&&!combat.battle.finished){combat.battle.finished=true;combat.battle.isBattling=false;bridge.onEnd?.(combat.battle);}text('infinityStatus',message||'Run ended. Star Orbs and weekly best are saved.');renderBattle();void report(true);}
- function schedule(){stopTimer();if(active&&combat&&!combat.battle.finished)timer=host.setTimeout(tick,host.InventorySystem.combatTurnMs(3000));}
+ function end(message){runMessage=message||'Run ended. Star Orbs and weekly best are saved.';stopTimer();if(combat&&!combat.battle.finished){combat.battle.finished=true;combat.battle.isBattling=false;bridge.onEnd?.(combat.battle);}text('infinityStatus',message||'Run ended. Star Orbs and weekly best are saved.');renderBattle();void report(true);}
+ function schedule(){stopTimer();if(active&&combat&&!combat.battle.finished){const delay=host.InventorySystem.combatTurnMs(3000);combat.battle.nextTurnAt=Date.now()+delay;timer=host.setTimeout(tick,delay);host.InfinityViewSystem.clock();}}
  function tick(){
   if(!active||host.GameStartup?.failed){suspend();return;}renderClock();if(combat?.battle.finished)return;
   try{const result=combat.step();if(result.ended){bridge.onEnd?.(combat.battle);end('Team defeated. Highest wave and Star Orbs retained.');}renderBattle();schedule();}catch(error){end(error.message+' Run stopped safely.');}
@@ -322,19 +301,19 @@
  async function start(){
   if(!editable()||blocked||!validTeam()||host.GameStartup?.failed)return false;
   settleLocalWeek();if(blocked)return false;
-  busy=true;cancelSetupWork();closeVariants(false);renderSetup();try{runWeek=week();const players=bridge.units(selections);if(players.length!==4||new Set(players.map(u=>String(u.card.id))).size!==4||players.some(u=>!host.CategorySystem.has(u,runWeek.category)))throw Error('Choose four different cards matching '+runWeek.category+'.');runId=U.token();sessionOrbs=0;
-   combat=host.InfinityCombat.create(players,runWeek,{onWave:rewardWave,onUnitDefeated:bridge.onUnitDefeated,isWeatherActive:bridge.isWeatherActive,addWeather:bridge.addWeather,prepare:bs=>{bs.startedAt=Date.now();bridge.prepare?.(bs);}});
+  busy=true;cancelSetupWork();closeVariants(false);renderSetup();try{runWeek=week();const players=bridge.units(selections);if(players.length!==4||new Set(players.map(u=>String(u.card.id))).size!==4||players.some(u=>!host.CategorySystem.has(u,runWeek.category)))throw Error('Choose four different cards matching '+runWeek.category+'.');runId=U.token();sessionOrbs=0;runMessage='';
+   combat=host.InfinityCombat.create(players,runWeek,{onWave:rewardWave,onUnitDefeated:bridge.onUnitDefeated,isWeatherActive:bridge.isWeatherActive,addWeather:bridge.addWeather,onLog:host.InfinityViewSystem.log,onFloatingText:host.InfinityViewSystem.float,onRender:()=>host.InfinityViewSystem.render(),onTurn:host.InfinityViewSystem.turn,onAttack:host.InfinityViewSystem.attack,prepare:(bs,engine)=>{bs.startedAt=Date.now();bridge.prepare?.(bs);host.InfinityViewSystem.mount(bs,engine,battleInfo());}});
    renderBattle();schedule();return true;
-  }catch(error){text('infinityStatus',error.message);return false;}finally{busy=false;if(!combat)scheduleSetup();}
+  }catch(error){if(!combat)host.InfinityViewSystem.release();text('infinityStatus',error.message);return false;}finally{busy=false;if(!combat)scheduleSetup();}
  }
- function open(){if(active||bridge.canEnter?.()!==true)return false;settleLocalWeek();if(blocked)return false;active=true;host.document.body.classList.add('infinity-open');combat=null;runWeek=null;sessionOrbs=0;bridge.onEnter?.();bridge.open?.('infinityModal');el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;query='';elementFilter='';categoryFilter='';sortMode='atk-desc';el('infinitySearch').value='';refreshCollection(false);renderClock();text('infinityStatus',`4v4 continuous waves · No VNĐ / direct EXP · Best this week: ${data.best[week().id]||0}. ${host.InfinityCloudSystem.status.message}`);host.clearInterval(uiTimer);uiTimer=host.setInterval(()=>{renderClock();if(Date.now()-lastReport>REPORT_MS)void report();},1000);void report();return true;}
- function exit(){if(!active)return;if(combat&&!combat.battle.finished)end('Run exited. Cleared-wave rewards retained.');stopTimer();cancelSetupWork();closeVariants(false);host.clearInterval(uiTimer);uiTimer=null;active=false;host.document.body.classList.remove('infinity-open');combat=null;el('infinityModal')?.classList.add('hidden');bridge.onExit?.();}
- function suspend(){stopTimer();cancelSetupWork();closeVariants(false);host.clearInterval(uiTimer);uiTimer=null;if(combat){combat.battle.finished=true;combat.battle.isBattling=false;}active=false;host.document.body.classList.remove('infinity-open');combat=null;el('infinityModal')?.classList.add('hidden');}
+ function open(){if(active||bridge.canEnter?.()!==true)return false;settleLocalWeek();if(blocked)return false;active=true;host.document.body.classList.add('infinity-open');combat=null;runWeek=null;sessionOrbs=0;bridge.onEnter?.();bridge.open?.('infinityModal');el('infinityLobby').hidden=false;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;query='';elementFilter='';categoryFilter='';sortMode='atk-desc';el('infinitySearch').value='';refreshCollection(false);renderClock();text('infinityStatus',`4v4 continuous waves · No VNĐ / direct EXP · Best this week: ${data.best[week().id]||0}. ${host.InfinityCloudSystem.status.message}`);host.clearInterval(uiTimer);uiTimer=host.setInterval(()=>{renderClock();if(Date.now()-lastReport>REPORT_MS)void report();},1000);void report();return true;}
+ function exit(){if(!active)return;if(combat&&!combat.battle.finished)end('Run exited. Cleared-wave rewards retained.');stopTimer();cancelSetupWork();closeVariants(false);host.clearInterval(uiTimer);uiTimer=null;active=false;host.document.body.classList.remove('infinity-open');host.InfinityViewSystem.release();combat=null;el('infinityModal')?.classList.add('hidden');bridge.onExit?.();}
+ function suspend(){stopTimer();cancelSetupWork();closeVariants(false);host.clearInterval(uiTimer);uiTimer=null;if(combat){combat.battle.finished=true;combat.battle.isBattling=false;}active=false;host.document.body.classList.remove('infinity-open');host.InfinityViewSystem.release();combat=null;el('infinityModal')?.classList.add('hidden');}
  function mount(){
   if(bound)return;bound=true;
   el('infinityOpenButton')?.addEventListener('click',open);el('infinityExit')?.addEventListener('click',exit);
   el('infinityStart')?.addEventListener('click',()=>void start());
-  el('infinityRestart')?.addEventListener('click',()=>{combat=null;runWeek=null;el('infinityLobby').hidden=false;el('infinityBattle').hidden=true;el('infinityLeaderboard').disabled=false;refreshCollection(collectionWeek===week().id);});
+  el('infinityRestart')?.addEventListener('click',()=>{if(!combat?.battle.finished)return;host.InfinityViewSystem.release();combat=null;runWeek=null;el('infinityModal').classList.remove('hidden');el('infinityLobby').hidden=false;el('infinityLeaderboard').disabled=false;refreshCollection(collectionWeek===week().id);});
   el('infinityRetrySync')?.addEventListener('click',()=>{lastReport=0;void report(true);});
   el('infinityLeaderboard')?.addEventListener('click',()=>{if(combat&&!combat.battle.finished)return;const select=el('leaderboardMetric');if(select)select.value='infinity';bridge.open?.('leaderboardModal');void host.LeaderboardSystem.render(true);});
   el('infinityModal')?.addEventListener('click',setupClick);
