@@ -498,6 +498,7 @@
       return false;
     }
     function death(bs, unit, attacker) {
+      if(window.TrainingDummySystem?.isTarget(bs,unit)){window.TrainingDummySystem.restore(unit);return false;}
       if (isAlive(unit)) return false;
       const borrowedReviveForbidden=noExternalRevive(unit);
       requiem.death(bs,unit);
@@ -1623,9 +1624,10 @@
           const absorbed = absorbShieldDamage(unit, dmg, battleState, effect.source);
           const marcoPending = absorbed > 0 && before - absorbed < unit.maxHp * .10 && raidSecrets.canRescue(battleState, unit);
           const prevented = !marcoPending && absorbed >= before && champions.fatal(battleState, unit);
-          if (!prevented) unit.hp = Math.max(marcoPending ? 1 : 0, unit.hp - absorbed);
-          const actualDamage = Math.max(0, before - unit.hp);
-          recordBattleDamage(battleState, effect.source, unit, before);
+          const dummy=window.TrainingDummySystem?.isTarget(battleState,unit);
+          if (!prevented&&!dummy) unit.hp = Math.max(marcoPending ? 1 : 0, unit.hp - absorbed);
+          const actualDamage = dummy?window.TrainingDummySystem.hit(battleState,effect.source,unit,absorbed):Math.max(0, before - unit.hp);
+          if(!dummy)recordBattleDamage(battleState, effect.source, unit, before);
           if (marcoPending) raidSecrets.rescue(battleState, unit);
           questSkills.damaged(battleState, unit, actualDamage);
           runtime.lastDamageTaken = actualDamage;
@@ -1753,6 +1755,7 @@
   // Observe actual HP loss without changing damage, shields or passive hooks.
   function recordBattleDamage(battleState, source, target, previousHp) {
     if (!battleState || !target) return;
+    if(window.TrainingDummySystem?.isTarget(battleState,target)){window.TrainingDummySystem.observe(battleState,source,target,previousHp);return;}
     const damage = Math.max(0, Number(previousHp) - Math.max(0, Number(target.hp) || 0));
     if (!(damage > 0)) return;
     const side = battleState.playerTeam?.includes(source) ? 'player'
@@ -1849,6 +1852,7 @@
 
     targetRuntime.lastDamageTaken = remaining;
     targetRuntime.lastHitReceived = remaining;
+    if(window.TrainingDummySystem?.isTarget(battleState,target)){const damage=window.TrainingDummySystem.hit(battleState,attacker,target,remaining);return{damage,killed:false,reflected:false,shielded};}
 
     const before = Math.max(0, Number(target.hp) || 0);
     if(shibuya.protect(battleState,target,attacker,remaining,meta))return {damage:0,killed:false,preventedFatality:true,todoProtected:true};
@@ -2820,6 +2824,7 @@
 
   function onKill(battleState, killer, victim, context = {}) {
     if (!killer || !victim) return;
+    if(window.TrainingDummySystem?.isTarget(battleState,victim)){window.TrainingDummySystem.restore(victim);return;}
     shibuya.kill(battleState,killer,victim);
     spooky.killed(battleState,killer,victim);
     fate.kill(battleState,killer,victim);

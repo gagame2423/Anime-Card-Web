@@ -198,7 +198,7 @@
       const matchingPool = sourcePool.filter(card => eligible.includes(card));
       // At most 75% weather-matched cards in a weather tower; 25% samples from base pool.
       const pool = weatherId(mode) !== 'normal' && matchingPool.length && random() < .75 ? matchingPool : sourcePool;
-      const card = sample(pool, random);
+      const card = host.EnemyStatsSystem.card(sample(pool, random));
       const matchingMutation = weatherMutation(weatherDefinition(mode, weathers));
       const mutations = weatherId(mode) !== 'normal' && matchingMutation && random() < .75 ? [matchingMutation] : [];
       const stats = floorStats(floor, boss);
@@ -234,7 +234,7 @@
       let draw = Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0))*total;
       let selected=rolePool[rolePool.length-1];
       for(const entry of rolePool){draw-=entry.weight;if(draw<0){selected=entry;break;}}
-      const card=selected.card;used.add(card.id);
+      const card=host.EnemyStatsSystem.card(selected.card);used.add(card.id);
       const matchingMutation = weatherMutation(weatherDefinition(mode, weathers));
       const mutations = weatherId(mode) !== 'normal' && matchingMutation && random() < .75 ? [matchingMutation] : [];
       const stats = floorStats(floor, boss);
@@ -268,7 +268,7 @@
     // Persist only composition. Every attempt receives clean unit objects,
     // full baseline HP and no previous damage, statuses, revivals or clones.
     return record.lineup.map((slot, index) => {
-      const card = cards.find(candidate => candidate.id === slot.cardId);
+      const card = host.EnemyStatsSystem.card(cards.find(candidate => candidate.id === slot.cardId));
       const mutations = slot.mutationIds.map(mutationId => ({ ...host.MUTATION_BY_ID[mutationId] }));
       const stats = floorStats(f, index === 3);
       return protectEnemyUnit({ card, mutations,

@@ -4701,3 +4701,16 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 .arena-run-hud__progress{font-size:11px;color:#a8bdcf}.arena-run-hud__progress>strong{color:#f3dfa2}.arena-run-hud>progress{width:100%;height:5px;accent-color:#84d9ca}
 .arena-run-hud__actions>span{flex:1 1 260px;font-size:10px;line-height:1.5;color:#91a9bc}.arena-run-hud__actions>button{min-height:32px;padding:6px 10px;font-size:10px}
 @media(max-width:600px){.arena-run-hud{padding:10px;gap:6px}.arena-run-hud__heading>strong{font-size:14px}.arena-run-hud__badges>span{font-size:9px}.arena-run-hud__actions>span{flex-basis:100%}}
+
+/* Three reusable teams; ownership/variant checks stay in the Arena adapters. */
+.team-loadouts{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px;border:1px solid #394d73;border-radius:10px;background:#11182bcc;margin:10px 0}
+.team-loadouts__presets,.team-loadouts__actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px}.team-loadouts__actions{margin-left:auto}
+.team-loadouts button{padding:8px 11px;border:1px solid #4b6389;border-radius:7px;background:#18243b;color:#c9dcef;font:inherit;font-size:11px;cursor:pointer}
+.team-loadouts button.is-selected{border-color:#8ad8ee;background:#244455;color:#e5fcff;box-shadow:0 0 12px #5dc9e320}.team-loadouts button:disabled{opacity:.4;cursor:not-allowed}
+.team-loadouts__actions>small{flex-basis:100%;font-size:10px;color:#8fa9c2}
+/* EXP-only animated damage meter, inside the same Arena panel. */
+.training-damage-hud{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;flex:0 0 auto;padding:14px 16px;border:1px solid #8bb6ef;border-radius:12px;background:linear-gradient(110deg,#1f2448f5,#102939f5);box-shadow:0 0 20px #588fdd20}
+.training-damage-hud[hidden]{display:none!important}.training-damage-hud>div:first-child{display:grid;gap:5px;min-width:0}.training-damage-hud strong{font-size:clamp(16px,2vw,24px);color:#d0e9ff;line-height:1.4;overflow-wrap:anywhere}.training-damage-hud strong>b{color:#a2ffdf;font-variant-numeric:tabular-nums}.training-damage-hud__records{display:grid;gap:6px;color:#a6bfd8;font-size:11px;font-variant-numeric:tabular-nums}
+@media(max-width:600px){.team-loadouts__actions{width:100%;margin-left:0}.team-loadouts__presets{width:100%}.team-loadouts__presets>button{flex:1}.training-damage-hud{padding:11px;gap:8px}.training-damage-hud__records{display:flex;gap:12px;font-size:10px}}
+
+#timeTrialSummary.is-new-dps-record{border-color:#e6cc79;box-shadow:0 0 18px #e2be5126;background:linear-gradient(110deg,#302b205e,#151e35);color:#fff0c2}

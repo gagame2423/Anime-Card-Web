@@ -1,7 +1,14 @@
 /* Cached three-panel Storage UI and item source inspection. No reward writes. */
 (function(host){
   'use strict';
-  let bridge={},ui=null,tab='items',selected='',signature='',capsuleResult='';
+  const LOADOUT_KEYS=Object.freeze(['preset1','preset2','preset3']);
+  function normalizeTeamLoadouts(value){
+    return Object.fromEntries(LOADOUT_KEYS.map((key,index)=>{const row=value?.[key];return[key,{name:typeof row?.name==='string'?row.name.slice(0,40):'Preset '+(index+1),slots:Array.from({length:4},(_,i)=>typeof row?.slots?.[i]==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(row.slots[i])?row.slots[i]:null),variantKeys:Array.from({length:4},(_,i)=>typeof row?.variantKeys?.[i]==='string'?row.variantKeys[i].slice(0,250):null)}];}));
+  }
+  function validTeamLoadouts(value){return Boolean(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(key=>LOADOUT_KEYS.includes(key))&&Object.values(value).every(row=>row&&typeof row.name==='string'&&row.name.length<=40&&Array.isArray(row.slots)&&row.slots.length===4&&Array.from(row.slots).every(id=>id===null||typeof id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(id))&&(!row.variantKeys||Array.isArray(row.variantKeys)&&row.variantKeys.length===4&&Array.from(row.variantKeys).every(key=>key===null||typeof key==='string'&&key.length<=250))));}
+  function saveTeamLoadout(value,key,team){if(!LOADOUT_KEYS.includes(key))throw Error('Unknown team preset.');const next=normalizeTeamLoadouts(value);next[key].slots=Array.from({length:4},(_,i)=>team[i]?.cardId||null);next[key].variantKeys=Array.from({length:4},(_,i)=>team[i]?.variantKey||null);return next;}
+  function resolveTeamLoadout(value,key,resolve){const row=normalizeTeamLoadouts(value)[key];if(!row)return null;const used=new Map(),missing=[];const slots=row.slots.map((id,index)=>{if(!id)return null;const slot=resolve(id,row.variantKeys[index],used);if(!slot){missing.push(index+1);return null;}used.set(slot.variantKey,(used.get(slot.variantKey)||0)+1);return slot;});return{slots,missing};}
+  let bridge={},ui=null,tab='items' ,selected='',signature='',capsuleResult='';
   const slots=new Map();
   const text=(node,value)=>{if(node&&node.textContent!==String(value))node.textContent=String(value);};
   const make=(tag,className='',value)=>{const n=host.document.createElement(tag);n.className=className;if(value!==undefined)n.textContent=value;return n;};
@@ -109,5 +116,5 @@
     ui.action.addEventListener('click',()=>{const equipment=host.EquipmentSystem.isEquipment(selected),capsule=selected===host.SpookySystem?.CAPSULE.id;if((equipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(capsule){host.SpookySystem.openCapsule();host.RollPerformanceSystem.schedule(paintStorage);return;}if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
     return true;
   }
-  host.StorageSystem=Object.freeze({render,mount,sources,inspectSource,showCapsuleResult,configure:options=>{bridge=options||{};}});
+  host.StorageSystem=Object.freeze({LOADOUT_KEYS,normalizeTeamLoadouts,validTeamLoadouts,saveTeamLoadout,resolveTeamLoadout,render,mount,sources,inspectSource,showCapsuleResult,configure:options=>{bridge=options||{};}});
 })(window);

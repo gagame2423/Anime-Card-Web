@@ -5,7 +5,6 @@
   const MODES = Object.freeze({ normal: 'time-trial', exp: 'exp-time-trial' });
   const TURN_MS = Object.freeze({ [MODES.normal]: 2000, [MODES.exp]: 1000 });
   function turnMs(mode) { return TURN_MS[mode] || 2000; }
-  const EXP_RATE = Object.freeze({min:.001,max:.015});
   const LIMITS = Object.freeze({ [MODES.normal]: 180000, [MODES.exp]: 300000 });
   const TICKET_ID = 'exp_time_trial_ticket';
   const TICKET = Object.freeze({ id: TICKET_ID, name: 'EXP Time Trial Ticket', type: 'ticket',
@@ -19,13 +18,14 @@
   const record = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
   const isMode = mode => Object.values(MODES).includes(mode);
   const isExp = mode => mode === MODES.exp;
-  const fresh = () => ({ version: 1, shards: 0, room: 1, bestRoom: 0, xpCarry: {}, activeAttempt: null });
+  const fresh = () => ({ version: 1, shards: 0, room: 1, bestRoom: 0, bestDps: 0, xpCarry: {}, activeAttempt: null });
   function validSave(value) {
     if (!record(value) || value.version !== 1 || !Number.isSafeInteger(value.shards) || value.shards < 0 ||
         !Number.isSafeInteger(value.room) || value.room < 1 || !Number.isSafeInteger(value.bestRoom) || value.bestRoom < 0 ||
         value.room > Math.min(Number.MAX_SAFE_INTEGER, value.bestRoom + 1) || !record(value.xpCarry)) return false;
     if (Object.entries(value.xpCarry).some(([id, fraction]) => !host.ALL_CARDS?.some(card => card.id === id) ||
       typeof fraction !== 'number' || !Number.isFinite(fraction) || fraction < 0 || fraction >= 1)) return false;
+    if(value.bestDps!==undefined&&(typeof value.bestDps!=='number'||!Number.isFinite(value.bestDps)||value.bestDps<0))return false;
     const a = value.activeAttempt;
     return a === null || (record(a) && typeof a.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(a.id) && isMode(a.mode) &&
       Number.isSafeInteger(a.startedAt) && a.startedAt >= 0 && Number.isSafeInteger(a.deadline) &&
@@ -36,6 +36,7 @@
     return validSave(saved) ? saved : fresh();
   }
   let data = load(), bridge = {}, activeBattle = null, deadlineTimer = null, serial = 0;
+  data.bestDps ||= 0;
   // Battles are never resumed with stale HP/passive state after reload/import.
   const interrupted = Boolean(data.activeAttempt);
   if (data.activeAttempt?.mode === MODES.normal) data.room = 1;
@@ -50,14 +51,14 @@
   function configure(options = {}) { bridge = options; let changed = false; for (const id of Object.keys(data.xpCarry)) if (bridge.getLevelInfo?.(id)?.level >= host.CardLevelSystem.MAX_LEVEL && data.xpCarry[id]) { data.xpCarry[id] = 0; changed = true; } if (changed) persist(); }
   function detach() {
     if (deadlineTimer !== null) host.clearTimeout(deadlineTimer);
-    deadlineTimer = null; activeBattle = null;
+    deadlineTimer = null; activeBattle = null; host.TrainingDummySystem.hide();
   }
   function expired(battle, now = Date.now()) { return Boolean(battle?.trial && now >= battle.trial.deadline); }
   function remaining(battle, now = Date.now()) { return Math.max(0, (battle?.trial?.deadline || now) - now); }
   function checkDeadline() {
     if (activeBattle?.finished) { detach(); return; }
     if (!activeBattle || !expired(activeBattle)) return;
-    const battle = activeBattle; detach(); bridge.onTimeout?.(battle, isExp(battle.mode));
+    const battle = activeBattle; detach(); bridge.onTimeout?.(battle, isExp(battle.mode)&&battle.playerTeam.some(unit=>unit.hp>0&&!unit.defeated));
   }
   function canEnter(mode) { return isMode(mode) && (!isExp(mode) || host.InventorySystem?.quantity(TICKET_ID) >= 1); }
   function roomStats(room, boss = false) {
@@ -75,16 +76,7 @@
     const multiplier = 1 + Math.floor((Math.max(1, count(room)) - 1) / 10);
     return { min: (boss ? 2 : 1) * multiplier, max: (boss ? 5 : 2) * multiplier };
   }
-  function monster(player) {
-    const hp = Math.max(1, Math.floor(Math.max(1, Number(player?.maxHp) || 1) * .10));
-    const card = { id: 'exp-trial-monster', name: 'EXP Monster', stats: { hp, atk: 0 }, chance: 1,
-      passive: { name: 'Training Dummy', description: '0 ATK. Defeat for 0.1%–1.5% current level EXP.' }, image: '' };
-    const unit = { card, display: { name: card.name, hp, atk: 0 }, hp, maxHp: hp,
-      mutations: [], defeated: false, isExpMonster: true, level: 1 };
-    // Keep zero even when generic passive display helpers normalize stats.
-    Object.defineProperty(unit, 'atk', { enumerable: true, get: () => 0, set: () => {} });
-    return unit;
-  }
+  function monster() { return host.TrainingDummySystem.create(); }
   function enemies(mode, player, random = Math.random) {
     if (isExp(mode)) return [monster(player)];
     const cards = host.ALL_CARDS || [], tower = host.TowerSystem;
@@ -118,7 +110,7 @@
       if (isExp(battle.mode) && !host.InventorySystem.remove(TICKET_ID, 1)) throw new Error('Không thể tiêu vé. Lượt thử chưa bắt đầu.');
     } catch (error) { data = previous; persist(); throw error; }
     battle.trial = { ...attempt, cardId: battle.setup.team[0].cardId, shardsEarned: 0, monsters: 0,
-      experience: 0, progressPercent: 0, levelUps: 0, owner: battle.playerTeam[0] };
+      experience: 0, totalDamage: 0, convertedExperience: 0, progressPercent: 0, levelUps: 0, owner: battle.playerTeam[0] };
     activeBattle = battle;
     deadlineTimer = host.setTimeout(checkDeadline, LIMITS[battle.mode]);
     return battle.trial;
@@ -128,23 +120,7 @@
     if (!run || battle.finished || expired(battle)) return;
     for (const unit of battle.enemyTeam || []) {
       if ((!unit.defeated && unit.hp > 0) || unit.trialRewarded) continue;
-      if (isExp(battle.mode) && unit.isExpMonster) {
-        const info = bridge.getLevelInfo?.(run.cardId);
-        if (!info) throw new Error('Không tìm thấy thông số EXP của thẻ đang luyện.');
-        if (info.level < host.CardLevelSystem.MAX_LEVEL) {
-          // EXP Time Trial deliberately ignores every global EXP bonus.
-          const rate = EXP_RATE.min + (EXP_RATE.max-EXP_RATE.min) * Math.max(0, Math.min(1, Number(random()) || 0));
-          const exact = info.required * rate + (data.xpCarry[run.cardId] || 0);
-          const rounded = Math.floor(exact), carry = exact - rounded;
-          // Preserve fractional base EXP; never multiply it by potion/weather/equipment bonuses.
-          const amount = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, rounded));
-          const result = bridge.grantExperience?.(run.cardId, amount, run.owner);
-          if (!result) throw new Error('Không thể lưu EXP. Lượt thử đã dừng để bảo vệ tiến độ.');
-          data.xpCarry[run.cardId] = result.level >= host.CardLevelSystem.MAX_LEVEL ? 0 : carry;
-          run.experience += result.gained; run.progressPercent += result.gained / info.required * 100; run.levelUps += result.levelUps;
-        }
-        run.monsters++;
-      } else if (!isExp(battle.mode) && unit.isTrialRoomEnemy) {
+      if (!isExp(battle.mode) && unit.isTrialRoomEnemy) {
         const range = shardRange(run.room, unit.trialBoss);
         const baseValue = range.min + Math.min(range.max - range.min, Math.floor(random() * (range.max - range.min + 1)));
         const value = host.InventorySystem.scaleDrop(baseValue, random);
@@ -161,14 +137,8 @@
     if (!isExp(battle.mode)) return resolution;
     if (resolution.winner === 'enemy') return resolution;
     const advanceEnemy = () => {
-      if (expired(battle) || battle.finished) return false;
-      // Reward each defeated dummy exactly once before replacing it. The
-      // battle engine has already emitted its normal death/quest callbacks.
-      settle(battle);
-      if (battle.enemyTeam.every(unit => unit.defeated || unit.hp <= 0)) {
-        battle.enemyTeam = [monster(battle.trial.owner)]; battle.enemyIndex = 0; battle.enemy = battle.enemyTeam[0];
-        battle.turn = side === 'player' ? 'enemy' : 'player';
-      }
+      if(expired(battle)||battle.finished)return false;
+      for(const unit of battle.enemyTeam)if(host.TrainingDummySystem.isTarget(battle,unit))host.TrainingDummySystem.restore(unit);
       return true;
     };
     advanceEnemy();
@@ -176,15 +146,8 @@
     return { ended: false, winner: null };
   }
   function prepareAfterEntry(battle) {
-    if (isExp(battle.mode)) {
-      const unit = battle.enemyTeam[0];
-      if (unit.hp > 0 && !unit.defeated) {
-        const hp = Math.max(1, Math.floor(battle.trial.owner.maxHp * .10));
-        unit.hp = Math.max(1, Math.round(hp * unit.hp / unit.maxHp)); unit.maxHp = hp; unit.display.hp = hp;
-        unit.card.stats.hp = hp;
-      }
-      afterTurn(battle, { ended: false, winner: null }, 'enemy');
-    } else settle(battle);
+    if(isExp(battle.mode)){host.TrainingDummySystem.restore(battle.enemyTeam[0]);afterTurn(battle,{ended:false,winner:null},'enemy');}
+    else settle(battle);
   }
   function finish(battle, won, reason = '') {
     if (!battle?.trial || battle.trial.completed) return null;
@@ -193,6 +156,15 @@
     if (won && !isExp(battle.mode) && battle.enemyTeam.some(unit => !unit.defeated && unit.hp > 0)) return null;
     if (reason !== 'save-error') settle(battle);
     const run = battle.trial;
+    if(isExp(battle.mode)&&won&&expired(battle)&&reason!=='save-error'){
+      run.convertedExperience=host.TrainingDummySystem.expForDamage(run.totalDamage);
+      const info=bridge.getLevelInfo?.(run.cardId);
+      const result=bridge.grantExperience?.(run.cardId,run.convertedExperience,run.owner,run.id);
+      if(!result)throw Error('Không thể lưu EXP luyện tập. Tiến trình cũ được giữ nguyên.');
+      run.experience=result.gained;run.levelUps=result.levelUps;run.progressPercent=info?.required?result.gained/info.required*100:0;
+      run.dps=run.totalDamage/(LIMITS[battle.mode]/1000);run.newDpsRecord=run.dps>data.bestDps;
+      data.bestDps=Math.max(data.bestDps,run.dps);
+    }
     const previousBest = data.bestRoom;
     if (!isExp(battle.mode)) {
       if (won) { data.bestRoom = Math.max(data.bestRoom, run.room); data.room = Math.min(Number.MAX_SAFE_INTEGER, run.room + 1); }
@@ -205,7 +177,7 @@
       throw new Error('Không thể lưu kết quả Time Trial. Lượt thử đã dừng.');
     }
     return { won, exp: isExp(battle.mode), room: run.room, nextRoom: data.room, shards: run.shardsEarned,
-      monsters: run.monsters, experience: run.experience, progressPercent: run.progressPercent, levelUps: run.levelUps, reason: run.reason };
+      monsters: run.monsters, totalDamage: run.totalDamage, convertedExperience: run.convertedExperience, dps: run.dps||0, bestDps: data.bestDps, newDpsRecord: Boolean(run.newDpsRecord), experience: run.experience, progressPercent: run.progressPercent, levelUps: run.levelUps, reason: run.reason };
   }
   function abort(battle, reason = 'surrender') {
     if (!battle?.trial || battle.trial.completed) return;
@@ -232,10 +204,10 @@
     }
   }
   function reset() { detach(); data = fresh(); registerTicket(); persist(); }
-  host.TimeTrialSystem = Object.freeze({ KEY, MODES, TURN_MS, turnMs, EXP_RATE, LIMITS, TICKET_ID, TICKET, SHOP_ITEMS,
+  host.TimeTrialSystem = Object.freeze({ KEY, MODES, TURN_MS, turnMs, LIMITS, TICKET_ID, TICKET, SHOP_ITEMS,
     configure, isMode, isExp, canEnter, roomStats, shardRange, enemies, start, prepareAfterEntry, afterTurn, finish, abort,
     expired, remaining, checkDeadline, detach, purchase, renderShop, validSave, reset, flush: persist,
     getXpCarry: id => data.xpCarry[id] || 0,
     clearXpCarry: id => { if (!data.xpCarry[id]) return true; const before=data.xpCarry[id]; delete data.xpCarry[id]; if(persist())return true; data.xpCarry[id]=before;return false; },
-    get room() { return data.room; }, get bestRoom() { return data.bestRoom; }, get shards() { return data.shards; }, interrupted });
+    get bestDps(){return data.bestDps;}, get room() { return data.room; }, get bestRoom() { return data.bestRoom; }, get shards() { return data.shards; }, interrupted });
 })(window);

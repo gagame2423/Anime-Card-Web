@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261026-infinity-arena-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261026-infinity-arena-1" />
-  <link rel="stylesheet" href="./pvp.css?v=20261026-infinity-arena-1" />
-  <link rel="stylesheet" href="./infinity.css?v=20261026-infinity-arena-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261030-v2-training-loadouts-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261030-v2-training-loadouts-1" />
+  <link rel="stylesheet" href="./pvp.css?v=20261030-v2-training-loadouts-1" />
+  <link rel="stylesheet" href="./infinity.css?v=20261030-v2-training-loadouts-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -521,6 +521,10 @@
               <span class="battle-field-label">TEAM LINEUP</span>
               <span class="battle-variant-section__note">Click a slot to edit it.</span>
             </div>
+            <div id="teamLoadouts" class="team-loadouts" aria-label="Saved team presets">
+              <div class="team-loadouts__presets" role="group" aria-label="Choose preset"><button type="button" data-team-preset="preset1" aria-pressed="true">Preset 1</button><button type="button" data-team-preset="preset2" aria-pressed="false">Preset 2</button><button type="button" data-team-preset="preset3" aria-pressed="false">Preset 3</button></div>
+              <div class="team-loadouts__actions"><button id="saveTeamLoadout" type="button">Save Current Team</button><button id="loadTeamLoadout" type="button">Load</button><small id="teamLoadoutStatus" role="status"></small></div>
+            </div>
             <div id="battleTeamSlots" class="battle-team-slots" aria-label="Battle team slots"></div>
           </div>
 
@@ -573,6 +577,9 @@
           <div class="arena-run-hud__progress"><span id="infinityRunProgress"></span><strong id="infinityOrbTracker">Star Orbs +0</strong></div>
           <progress id="infinityBestBar" max="1" value="0" aria-label="Current run versus weekly best"></progress>
           <div class="arena-run-hud__actions"><span id="infinityArenaMessage" role="status"></span><button id="infinityRestart" class="ghost-button" type="button" hidden>New Run • Wave 1</button><button id="infinityArenaLeaderboard" class="ghost-button" type="button" hidden>Weekly Top 50</button><button id="infinityArenaExit" class="ghost-button" type="button">Exit Infinity</button></div>
+        </section>
+        <section id="trainingDamageHud" class="training-damage-hud" aria-label="EXP training damage meter" hidden>
+          <div><span class="eyebrow">EXP TRAINING</span><strong>Total Damage: <b id="trainingDamageTotal" data-total="0">0</b></strong></div><div class="training-damage-hud__records"><span id="trainingDamageDps">DPS 0</span><span id="trainingDamageBest">Best DPS 0</span></div>
         </section>
         <div class="battle-arena__header">
           <div>
@@ -815,7 +822,7 @@
       <p class="module-description">Normal: 2-second turns • EXP: 1-second turns • Speed Battle Potion does not apply</p>
       <div class="time-trial-mode-options" role="group" aria-label="Time Trial type">
         <button class="battle-mode-option" type="button" data-time-trial-type="time-trial" aria-pressed="false"><strong>⏱ Normal Time Trial</strong><span>4v4 • 2-second turns • 3 minutes per room<br>3 random Minions + 1 Boss • Time Trial Shards<br>Defeat or timeout resets to Room 1</span></button>
-        <button class="battle-mode-option" type="button" data-time-trial-type="exp-time-trial" aria-pressed="false"><strong>✨ EXP Time Trial</strong><span>1v1 • 1-second turns • 5 minutes<br>0 ATK EXP Monsters • Costs 1 EXP Time Trial Ticket<br>Ticket is consumed when the battle starts</span></button>
+        <button class="battle-mode-option" type="button" data-time-trial-type="exp-time-trial" aria-pressed="false"><strong>✨ EXP Time Trial</strong><span>1v1 • 1-second turns • 5 minutes<br>Infinite HP / 1 ATK Dummy • Damage converts to EXP • Costs 1 Ticket<br>Ticket is consumed when the battle starts</span></button>
       </div>
       <p id="timeTrialModeTickets" class="module-description"></p>
     </section>
@@ -967,60 +974,62 @@
   <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="./online_utils.js?v=20261026-infinity-arena-1"></script>
-  <script defer src="./firebase.js?v=20261026-infinity-arena-1"></script>
-  <script defer src="./startup.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./category.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./background.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261026-infinity-arena-1"></script>
+  <script defer src="./online_utils.js?v=20261030-v2-training-loadouts-1"></script>
+  <script defer src="./firebase.js?v=20261030-v2-training-loadouts-1"></script>
+  <script defer src="./startup.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./category.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./background.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261030-v2-training-loadouts-1"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261026-infinity-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261030-v2-training-loadouts-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261026-infinity-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261026-infinity-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261030-v2-training-loadouts-1"></script>
 </body>
 </html>

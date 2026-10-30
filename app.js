@@ -67,6 +67,8 @@ const defaultState = {
   battleDropRateBonus: 0,
   dropChance: 0, // percent points; potion drop logic reads ONLY this stat and pity
   cardProgress: {},
+  teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
+  trainingDummyRewardReceipt: '',
   migrations: {},
   spookyRewardReceipt: '',
   achievementRewardReceipts: {},
@@ -300,6 +302,8 @@ function cloneDefaultState() {
     experience: 0,
     battleDropRateBonus: 0,
     cardProgress: {},
+    teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
+    trainingDummyRewardReceipt: '',
     migrations: {},
     spookyRewardReceipt: '',
   achievementRewardReceipts: {},
@@ -789,6 +793,8 @@ function normalizeState(parsed = {}) {
   };
 
   normalized.schemaVersion = SAVE_SCHEMA_VERSION;
+  normalized.teamLoadouts = window.StorageSystem.normalizeTeamLoadouts(parsed.teamLoadouts);
+  normalized.trainingDummyRewardReceipt = typeof parsed.trainingDummyRewardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(parsed.trainingDummyRewardReceipt)?parsed.trainingDummyRewardReceipt:'';
 
   normalized.totalRolls = Number.isFinite(Number(parsed.totalRolls))
     ? Math.max(0, Math.floor(Number(parsed.totalRolls)))
@@ -2922,7 +2928,7 @@ function isBattleSetupValid(team = getBattleSetupTeam()) {
   if (team.length !== getBattleTeamSize()) return false;
   const usage = new Map();
   for (const slot of team) {
-    const card = getCardById(slot.cardId);
+    const card = getCardById(slot?.cardId);
     const variant = card ? getBattleVariantEntries(card.id).find(entry => entry.key === slot.variantKey) : null;
     if (!card || !variant) return false;
     usage.set(slot.variantKey, (usage.get(slot.variantKey) || 0) + 1);
@@ -2933,6 +2939,33 @@ function isBattleSetupValid(team = getBattleSetupTeam()) {
   return true;
 }
 
+let activeTeamPreset='preset1';
+function canManageTeamLoadout(){return getBattleTeamSize()===4&&!isBattleMatchActive()&&!isImportingSave&&!isSimulationActive()&&!window.InfinitySystem?.active;}
+function renderTeamLoadouts(){
+  state.teamLoadouts ||= window.StorageSystem.normalizeTeamLoadouts(null);
+  const root=document.getElementById('teamLoadouts');if(!root)return;root.classList.toggle('hidden',getBattleTeamSize()!==4);
+  for(const button of root.querySelectorAll('[data-team-preset]')){const selected=button.dataset.teamPreset===activeTeamPreset;button.classList.toggle('is-selected',selected);button.setAttribute('aria-pressed',String(selected));button.disabled=!canManageTeamLoadout();}
+  document.getElementById('saveTeamLoadout').disabled=!canManageTeamLoadout()||!getBattleSetupTeam().some(Boolean);
+  document.getElementById('loadTeamLoadout').disabled=!canManageTeamLoadout();
+  const preset=state.teamLoadouts[activeTeamPreset];setViewText('teamLoadoutStatus',preset.name+' · '+preset.slots.filter(Boolean).length+' / 4 saved');
+}
+function saveCurrentTeamLoadout(){
+  if(!canManageTeamLoadout()||!getBattleSetupTeam().some(Boolean))return;const previous=state.teamLoadouts;
+  state.teamLoadouts=window.StorageSystem.saveTeamLoadout(previous,activeTeamPreset,getBattleSetupTeam());
+  if(!saveState()){state.teamLoadouts=previous;window.ShopBulkSystem.notify('Unable to save this team.');return;}
+  renderTeamLoadouts();window.ShopBulkSystem.notify('Saved '+state.teamLoadouts[activeTeamPreset].name+'.');
+}
+function loadCurrentTeamLoadout(){
+  if(!canManageTeamLoadout())return;const preset=state.teamLoadouts[activeTeamPreset];
+  if(!preset.slots.some(Boolean)){window.ShopBulkSystem.notify(preset.name+' is empty. Save a team first.');return;}
+  const result=window.StorageSystem.resolveTeamLoadout(state.teamLoadouts,activeTeamPreset,(id,key,used)=>{
+    if(!isCardOwned(id))return null;const variants=getBattleVariantEntries(id).filter(v=>v.count>(used.get(v.key)||0));
+    const selected=variants.find(v=>v.key===key)||variants.find(v=>!v.mutations.length)||variants[0];return selected?{cardId:id,variantKey:selected.key}:null;
+  });
+  battleState.setup={team:result.slots,activeIndex:Math.max(0,result.slots.findIndex(slot=>!slot))};
+  renderBattleSelection();populateBattleFighterSelect();
+  window.ShopBulkSystem.notify(result.missing.length?'Loaded '+preset.name+'. Unavailable cards left empty in slots '+result.missing.join(', ')+'.':'Loaded '+preset.name+'.');
+}
 function renderBattleTeamSlots() {
   document.getElementById('aquaBattleChoice')?.classList.toggle('hidden', !getBattleSetupTeam().some(slot => slot?.cardId === 'tower-champion-raining'));
   const container = els.battleTeamSlots;
@@ -2990,7 +3023,7 @@ function renderBattleTeamSlots() {
     container.appendChild(button);
   }
 
-  if (els.battleTeamCount) els.battleTeamCount.textContent = `${team.length}/${getBattleTeamSize()}`;
+  if (els.battleTeamCount) els.battleTeamCount.textContent = `${team.filter(Boolean).length}/${getBattleTeamSize()}`;
 }
 
 function getBattleCardRarityValue(card) {
@@ -3038,7 +3071,7 @@ function populateBattleFighterSelect() {
   let unlocked = getFilteredSortedBattleCards();
   const filterKey=[els.cardSearchInput?.value,els.cardSortSelect?.value,els.battleElementFilter?.value,els.battleCategoryFilter?.value,getBattleMode(),getTowerWeatherMode()].join('|');
   unlocked=window.UIPerformanceSystem.paginate('Arena',unlocked,filterKey,grid,populateBattleFighterSelect);
-  const previousTeam = Array.isArray(battleState?.setup?.team) ? battleState.setup.team.map(slot => ({ ...slot })) : [];
+  const previousTeam = Array.isArray(battleState?.setup?.team) ? battleState.setup.team.map(slot => slot ? ({ ...slot }) : null) : [];
   const previousActive = Number(battleState?.setup?.activeIndex || 0);
   const previousMode = getBattleMode();
   grid.innerHTML = '';
@@ -3102,7 +3135,9 @@ function populateBattleFighterSelect() {
       let targetIndex = existingIndex;
 
       if (targetIndex < 0) {
-        if (getBattleSetupTeam().length < getBattleTeamSize()) {
+        const empty=getBattleSetupTeam().findIndex(slot=>!slot);
+        if(empty>=0){targetIndex=empty;const entry=chooseFirstAvailableBattleVariant(card.id,empty);if(!entry)return;getBattleSetupTeam()[empty]={cardId:card.id,variantKey:entry.key};}
+        else if (getBattleSetupTeam().length < getBattleTeamSize()) {
           targetIndex = getBattleSetupTeam().length;
           const entry = chooseFirstAvailableBattleVariant(card.id, -1);
           if (!entry) return;
@@ -3126,6 +3161,7 @@ function populateBattleFighterSelect() {
 }
 
 function renderBattleSelection() {
+  renderTeamLoadouts();
   renderBattleTeamSlots();
   renderBattleFighterVariants();
   renderBattleSelectionPreview();
@@ -3168,6 +3204,7 @@ function renderBattleSelectionPreview() {
 
   preview.innerHTML = '';
   if (!card) {
+    if(els.battleStartButton)els.battleStartButton.disabled=true;
     const empty = document.createElement('span');
     empty.textContent = 'Select a fighter to assign to the active team slot.';
     preview.appendChild(empty);
@@ -3583,6 +3620,7 @@ function renderBattleCombatant(side, unit) {
     hpEl.textContent = `${Math.max(0, Number(unit?.hp) || 0).toLocaleString('en-US')} / ${Math.max(1, Number(unit?.maxHp) || 1).toLocaleString('en-US')}`;
   }
   if (hpBar) hpBar.style.width = `${ratio * 100}%`;
+  if(unit?.isExpTrainingDummy&&hpEl)hpEl.textContent='∞';
   if (atkEl) atkEl.textContent = Math.max(0, Number(unit?.atk) || 0).toLocaleString('en-US');
   if (levelEl) levelEl.textContent = `Lv. ${levelInfo.level}`;
   if (expTextEl) expTextEl.textContent = side === 'enemy'
@@ -3746,6 +3784,7 @@ function renderBattleLineup(side,team,activeIndex){
 function renderBattleStats() { window.RollPerformanceSystem.schedule(paintBattleStats); }
 function paintBattleStats() {
   const view=getArenaBattleState();
+  window.TrainingDummySystem.render(view);
   if (!view?.playerTeam || !view?.enemyTeam || (view.finished && !window.InfinityViewSystem?.active)) return;
   const player = view.playerTeam[view.playerIndex];
   const enemy = view.enemyTeam[view.enemyIndex];
@@ -4142,10 +4181,12 @@ function executeBattleTurn() {
 // Only UI binding and coordination live here. All mechanics and storage are
 // implemented in inventory.js and tower.js.
 // ============================================================
-function grantTimeTrialExperience(cardId, amount, owner) {
+function grantTimeTrialExperience(cardId, amount, owner, receipt) {
   const info = getCardLevelInfo(cardId);
+  if(receipt&&state.trainingDummyRewardReceipt===receipt)return {gained:0,level:info.level,levelUps:0,duplicate:true};
   if (!amount || info.level >= CARD_LEVEL_MAX) return { gained: 0, level: info.level, levelUps: 0 };
   const before = JSON.parse(JSON.stringify(state));
+  if(receipt)state.trainingDummyRewardReceipt=receipt;
   const oldMultiplier = getCardLevelStatMultiplier(cardId);
   const result = grantCardExperience(cardId, amount);
   state.experience += result.gained;
@@ -4320,6 +4361,7 @@ function finishRaidBattle(won) {
 }
 
 function renderTimeTrialControls() {
+  window.TrainingDummySystem.render(battleState);
   const trial = window.TimeTrialSystem;
   if (!trial) return;
   const mode = getBattleMode(), active = trial.isMode(mode), exp = trial.isExp(mode);
@@ -4328,13 +4370,13 @@ function renderTimeTrialControls() {
   setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`);
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
   setViewText('timeTrialRules', exp
-    ? '1-second turns • 1 Ticket per attempt • 300s • 0 ATK EXP Monsters • 0.1%–1.5% current-level EXP per kill • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
+    ? '1-second turns • 1 Ticket per attempt • 300s • Infinite EXP Training Dummy • Fixed 1 ATK • EXP = floor(total damage × 0.05) • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
     : '2-second turns • 180s per room • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
   const timer = document.getElementById('timeTrialTimer');
   timer?.classList.toggle('hidden', !active || !battleState?.trial || battleState.finished);
   if (timer && active && battleState?.trial) {
     const seconds = Math.ceil(trial.remaining(battleState) / 1000);
-    timer.textContent = `TIME LEFT ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}${exp ? ` • ${battleState.trial.monsters} defeats` : ''}`;
+    timer.textContent = `TIME LEFT ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}${exp ? ' • DAMAGE TRAINING' : ''}`;
     timer.classList.toggle('is-urgent', seconds <= 30);
   }
   if (active && !battleState?.isBattling && els.battleStartButton) {
@@ -4365,7 +4407,7 @@ function finishTimeTrialBattle(won, reason = '') {
   catch (error) {
     const run = battleState.trial;
     summary = { won: false, exp: trial.isExp(battleState.mode), room: run.room, nextRoom: trial.room,
-      shards: run.shardsEarned, monsters: run.monsters, experience: run.experience,
+      shards: run.shardsEarned, monsters: run.monsters, totalDamage:run.totalDamage,convertedExperience:run.convertedExperience,dps:run.dps,bestDps:trial.bestDps,newDpsRecord:false, experience: run.experience,
       progressPercent: run.progressPercent, levelUps: run.levelUps, reason: 'save-error' };
     appendBattleLog(error.message, 'defeat');
   }
@@ -4377,16 +4419,16 @@ function finishTimeTrialBattle(won, reason = '') {
   refreshAchievements(); saveState(); updateStats(); renderCollection(); renderTimeTrialControls();
   const body = document.getElementById('timeTrialSummary');
   body.textContent = summary.exp
-    ? `EXP Monsters Defeated: ${summary.monsters}\nTotal EXP Gained: +${summary.progressPercent.toFixed(2)}% Level Progress\n+${summary.experience.toLocaleString('en-US')} whole EXP • ${summary.levelUps} level-ups\nNo Shards • No VNĐ • Victory: 1–3 Bread`
+    ? `Total Damage Dealt: ${(summary.totalDamage||0).toLocaleString('en-US')}\nConverted EXP Earned: +${(summary.convertedExperience||0).toLocaleString('en-US')} EXP\nApplied: +${summary.experience.toLocaleString('en-US')} EXP • ${summary.levelUps} level-ups • Level 1000 cap respected\nDPS: ${Math.floor(summary.dps||0).toLocaleString('en-US')} • Best: ${Math.floor(summary.bestDps||trial.bestDps).toLocaleString('en-US')}${summary.newDpsRecord?'\n★ NEW HIGHEST DPS RECORD!':''}\nNo global EXP multiplier • No VNĐ or Shards`
     : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • Victory: 1–3 Bread`;
-  body.classList.remove('hidden');
+  body.classList.remove('hidden');body.classList.toggle('is-new-dps-record',Boolean(summary.exp&&summary.newDpsRecord));
   document.getElementById('timeTrialResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '🏆 TIME TRIAL COMPLETE' : '⏱ TIME TRIAL ENDED';
   els.battleResultText.textContent = summary.reason === 'time-limit' ? 'Time limit reached.' : summary.won ? 'All room enemies defeated.' : 'Attempt ended. Your collection is preserved.';
   els.battleResultPower.textContent = `${getBattleModeLabel()} • ${Math.min(trial.LIMITS[battleState.mode] / 1000, (Date.now() - battleState.trial.startedAt) / 1000).toFixed(1)}s`;
-  for (const [id, text] of Object.entries({ battleResultBaseLabel: summary.exp ? 'EXP Monsters' : 'Shards earned',
+  for (const [id, text] of Object.entries({ battleResultBaseLabel: summary.exp ? 'Total Damage' : 'Shards earned',
     battleResultTimeLabel: 'Time limit', battleResultLevelLabel: 'Turn interval' })) setViewText(id, text);
-  els.battleResultBaseValue.textContent = String(summary.exp ? summary.monsters : summary.shards);
+  els.battleResultBaseValue.textContent = summary.exp?(summary.totalDamage||0).toLocaleString('en-US'):String(summary.shards);
   els.battleResultTimeBonus.textContent = `${trial.LIMITS[battleState.mode] / 1000}s`;
   els.battleResultLevelDiff.textContent = `${trial.turnMs(battleState.mode)/1000}s • fixed`; els.battleResultCash.textContent = '0 VNĐ';
   els.battleResultExp.textContent = summary.exp ? `+${summary.experience} EXP` : '0 EXP';
@@ -4587,6 +4629,8 @@ function validateSaveRecord(key, value) {
       ensure(object(value[field]) || Array.isArray(value[field]), `${field} must contain card records.`);
       if (object(value[field])) for (const n of Object.values(value[field])) if (n !== true && n !== false) number(n, field);
     }
+    if('teamLoadouts' in value)ensure(window.StorageSystem.validTeamLoadouts(value.teamLoadouts),'invalid team presets');
+    if('trainingDummyRewardReceipt' in value)ensure(typeof value.trainingDummyRewardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(value.trainingDummyRewardReceipt),'invalid training EXP receipt');
     if ('mutations' in value) counts(value.mutations, 'mutations');
     if ('inventory' in value) {
       ensure(object(value.inventory) || Array.isArray(value.inventory), 'inventory must contain card variants.');
@@ -4999,6 +5043,7 @@ function openModal(id) {
 }
 
 function returnToLobby() {
+  window.TrainingDummySystem.hide();
   window.TimeTrialSystem?.abort(battleState, 'exit');
   window.SpookySystem?.abort(battleState);
   window.RaidSystem?.abort(battleState);
@@ -5032,6 +5077,7 @@ function returnToLobby() {
 }
 
 function surrenderBattle() {
+  window.TrainingDummySystem.hide();
   window.TimeTrialSystem?.abort(battleState, 'surrender');
   window.SpookySystem?.abort(battleState);
   window.RaidSystem?.abort(battleState);
@@ -5226,7 +5272,7 @@ function addCombatWeather(durationSeconds = 180) {
 
 if (window.PassiveSystem?.configureHost) {
   window.PassiveSystem.configureHost({
-    getCardById,
+    getCardById:id=>{const card=getCardById(id);return ['tower','raid','boss-event','spooky-hunt','time-trial'].includes(getBattleMode())?window.EnemyStatsSystem.card(card):card;},
     onUnitDefeated: recordQuestEnemyDefeat,
     appendBattleLog,
     showBattleFloatingText,
@@ -5353,6 +5399,9 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && utilityMenu?.open) { utilityMenu.open = false; utilityMenu.querySelector('summary')?.focus(); }
 });
 
+document.getElementById('teamLoadouts')?.addEventListener('click',event=>{const button=event.target.closest('[data-team-preset]');if(!button||!canManageTeamLoadout())return;activeTeamPreset=button.dataset.teamPreset;renderTeamLoadouts();});
+document.getElementById('saveTeamLoadout')?.addEventListener('click',saveCurrentTeamLoadout);
+document.getElementById('loadTeamLoadout')?.addEventListener('click',loadCurrentTeamLoadout);
 els.battleStartButton?.addEventListener("click", () => startBattle(true));
 els.battleModePicker?.querySelectorAll("[data-battle-mode]").forEach(button => {
   button.addEventListener("click", () => setBattleMode(button.dataset.battleMode));

@@ -1,64 +1,96 @@
-NHẬT KÝ CẬP NHẬT — INFINITY DÙNG CHUNG GIAO DIỆN BATTLE ARENA
-Ngày cập nhật: 26/10/2026
+NHẬT KÝ CẬP NHẬT — V2 STATS, EXP TRAINING DUMMY VÀ TEAM LOADOUTS
+Ngày cập nhật: 30/10/2026
 
-1. INFINITY CHUYỂN SANG BATTLE ARENA CHUẨN
+1. CÂN BẰNG CHỈ SỐ V2 CHO 167 THẺ
 
-- Giữ sảnh dựng đội trực quan của Infinity: 4 SLOT, thẻ đã mở khóa, Category tuần, tìm kiếm, lọc, phân trang, chọn mutation và chống chọn trùng ID.
-- Sau khi bấm Start Infinity Run, trận diễn ra trực tiếp trong battleModal / battleArena hiện có. Dùng đúng hai khung frontline, thanh HP, Shield, chỉ số, dãy đội hình dự bị, nền Standoff và Combat Log của Arena.
-- Không tạo bản sao màn hình chiến đấu hoặc thay thế battleState của các mode Arena khác. Runtime nội tại riêng của lượt Infinity được nối vào cùng các hàm render dùng cho Arena; không đưa nội tại của trận Infinity sang trận thường.
-- Xóa các container chiến đấu riêng infinityBattle, infinityPlayers, infinityEnemies, infinityLog và renderer thẻ Infinity cũ. infinity_combat.js tiếp tục chỉ điều khiển trận liên tục, không chứa DOM combat riêng.
-- Xóa CSS infinity-team, infinity-fighter, infinity-battle-head, infinity-log và các quy tắc layout combat cũ trong infinity.css. Giữ CSS sảnh chọn đội, modal nhận thưởng tuần và mua gộp shop.
+- Đối chiếu đúng sheet Đối chiếu của cards_rebalance_v2.xlsx. Ghép 167 tên thẻ với Tên thẻ bằng tên chính xác; tất cả 167 thẻ đều có bản ghi tương ứng.
+- Chỉ lấy HP mới và ATK mới làm stats.hp và stats.atk trong cards.js. Không dùng HP chuẩn, ATK chuẩn hoặc các cột hệ số tham khảo.
+- Một số mốc kiểm tra, đều là chỉ số Level 1 chưa có mutation:
+  Gilgamesh Chan: HP 63,700; ATK 15,600.
+  Shadow The World Requiem: HP 34,200; ATK 13,100.
+  Madara Lubu: HP 31,800; ATK 12,100.
+  Gilgamesh: HP 77,200; ATK 7,080.
+  Sukuna Shibuya: HP 63,600; ATK 5,830.
+  Wonder Of You: HP 97,100; ATK 863.
+  Aizen Beyond: HP 31,500; ATK 12,000.
+- Không sửa tên, ID, rate, rarity, Element, Category, nội tại, asset, điều kiện mở khóa hoặc thời tiết của thẻ. Giữ nguyên Level hiện có, công thức yêu cầu EXP, tăng trưởng theo Level và multiplier mutation.
+- Theo chỉ dẫn bổ sung: cả hai bên Online PvP dùng đúng base stats V2 của Index tại Level 1. Giao thức PeerJS, blind pick, commitment, RNG đồng bộ và quy tắc không thưởng của PvP giữ nguyên.
 
-2. HUD INFINITY GỌN TRONG ARENA
+2. BẢO TOÀN THÔNG SỐ ĐỊCH NGOÀI EXP TRAINING
 
-- Current Wave: Wave N - Continuous, cập nhật ngay khi chuyển wave.
-- Weekly Modifier Badges: ID tuần ISO UTC, seed tuần, Category bắt buộc và Element chung của đội địch.
-- Rewards Tracker: tổng Star Orb đã nhận trong lượt hiện tại.
-- Best Progress: số wave đã vượt trong lượt, best của tuần và thanh tiến độ so với best đó.
-- Giữ bộ đếm Player/Enemy Strike và nhãn 4V4, thời gian turn theo cùng thiết lập Infinity trước cập nhật. Các thông tin HUD không sửa stat, RNG hoặc phần thưởng.
-- Khi kết thúc, HUD hiển thị thông báo dừng, New Run và Weekly Top 50. Exit Infinity và nút X của Arena kết thúc lượt rồi trở về Arena cũ; không chạy luồng thưởng hay replay của trận thường.
-- Các nút setup hoặc điều khiển chỉ dành cho mode khác được ẩn tạm trong trận Infinity và khôi phục khi rời đi. Không thay trạng thái Auto Continue đã lưu của người chơi.
+- Raid, Boss Event và Spooky tiếp tục lấy HP/ATK từ các bảng khoảng stat và scaling hiện có; không giảm boss hoặc đổi độ khó để bù cho V2.
+- Thêm enemy_stats.js lưu baseline thẻ NPC trước cập nhật từ mã nguồn đang chạy. Tower và Infinity vẫn áp dụng công thức stat theo floor/wave cũ, đồng thời giữ metadata stat NPC cũ cho các nội tại tham chiếu card.stats.
+- Normal Time Trial giữ nguyên roomStats, đội 3 minion + 1 boss, scaling, Shards, thời gian 180 giây và turn 2 giây. Không chuyển Normal Time Trial sang training dummy.
+- Không đổi loại tháp, khóa đội địch khi retry, pool/weight chọn địch, stat ranges, giá shop, tiền thưởng, weekly seed hoặc cơ chế wave liên tục của Infinity.
+- Baseline NPC tách khỏi dữ liệu thẻ sở hữu; thay cards.js không tự đè stat của các mode NPC được bảo toàn. PvP là ngoại lệ có chủ đích theo yêu cầu mới: dùng V2 của Index cho cả hai người.
 
-3. RENDER, HIỆU ỨNG VÀ VÒNG ĐỜI GIAO DIỆN
+3. EXP TIME TRIAL: DAMAGE-BASED TRAINING DUMMY
 
-- Dùng chung renderer cho artwork, Element badge, mutation, HP/ATK, Shield, Dodge/DR, buff/debuff, Burn/Bleed/Freeze/Stun và mô tả nội tại.
-- Damage text, crit/dodge feedback và thông báo kỹ năng từ runtime Infinity đi qua showBattleFloatingText của Arena. Nhật ký đi qua hàng đợi appendBattleLog / paintBattleLog hiện có, giữ tone và giới hạn số dòng của Arena.
-- Hoạt ảnh đánh và đổi frontline dùng animateBattleAttack / animateBattlePromotion hiện có. Chỉ phát lunge khi bộ đếm tấn công xác nhận một đòn được thực hiện, không giả lập đòn đánh khi bị bỏ lượt.
-- Nút mở rộng nội tại và bảng tương khắc Element tiếp tục dùng modal chung; không tạo modal hiệu ứng riêng cho Infinity.
-- Cập nhật thẻ và log được gộp qua requestAnimationFrame của RollPerformanceSystem. Đồng hồ HUD chỉ đổi text theo giây, không dựng lại toàn bộ đội hình theo từng tick giao diện.
-- Khi thoát hoặc bắt đầu lượt mới: hủy công việc render đang chờ, dọn hoạt ảnh và floating text, khôi phục khả năng hiển thị các điều khiển, gỡ khóa Arena và trả đúng runtime cho các mode thường.
-- HUD co giãn theo màn hình; giữ cơ chế cuộn dọc và bố cục mobile vốn có của Battle Arena, không thêm layout chiến đấu riêng trong infinity.css.
+- Giữ điều kiện 1 EXP Time Trial Ticket mỗi lượt, giới hạn 300 giây và turn cố định 1 giây. Speed Battle Potion không làm thay đổi thời gian turn của Time Trial.
+- Giữ lựa chọn ban đầu 1v1 của EXP Time Trial. Damage meter cộng damage từ toàn bộ đội người chơi đang tồn tại trong trận, kể cả clone/summon hoặc đồng đội do nội tại tạo ra.
+- Thay EXP Monsters nối tiếp bằng một EXP Training Dummy duy nhất. ATK luôn bằng 1; HP nội bộ là 999,999,999 và hiển thị vô hạn trong Arena.
+- Dummy không bị hạ và không được thay bằng một enemy mới sau mỗi đòn. Damage được ghi nhận trước khi giữ lại HP của target; một hit vượt 999,999,999 vẫn được tính đầy đủ, không bị cắt theo lượng HP hiển thị.
+- Giữ trigger tấn công, bị đánh, phản đòn, follow-up, counter, trạng thái và timer nội tại trong cùng trận. Không reset đội hình/buff/counter do đổi monster vì không còn đổi monster.
+- Chỉ dummy của mode exp-time-trial đi vào các hook mới. Nhánh damage/death của những target và mode khác không thay đổi.
+- Ghi nhận damage trực tiếp, passive attack, follow-up, clone/summon, phản đòn và Burn/Bleed. Mỗi hit/tick chỉ cộng một lần. Damage bị shield/miễn thương/ngăn chặn không được cộng như damage đã gây ra.
+- Gán HP = 0 để xử tử tức thì không thể giết target vô hạn và không tạo damage giả hoặc kill/quest giả. Dummy không kích hoạt thưởng theo số quái bị hạ.
 
-4. GIỮ NGUYÊN CƠ CHẾ WAVE VÀ TIẾN TRÌNH
+4. DAMAGE METER, EXP VÀ KỶ LỤC DPS
 
-- Hạ hết đội địch sẽ thay 4 đối thủ mới ngay trong cùng đối tượng battle và cùng phần tử Arena. Không gọi lại beginBattle cho đội người chơi ở ranh giới wave.
-- Giữ nguyên đối tượng unit, HP, Shield, buff/debuff, timer nội tại, lượt hồi chiêu, bộ đếm tấn công và đồng đội được triệu hồi. Nội tại on-entry của đội người chơi không được kích hoạt lại khi đổi wave.
-- Giữ nguyên pool chọn địch, 4 ID không trùng trong một wave, trọng số boss/rarity theo độ sâu và Element tuần.
-- Không đổi base stat: 1000 HP/100 ATK, 1500/300, 2000/400, boss 5000/500. Hệ số stat vẫn là wave^1.365; không đổi scaling hoặc tỷ lệ HP/ATK.
-- Không đổi công thức Star Orb từng wave: min = floor(1 + (wave - 1) x7/99), max = floor(2 + (wave - 1) x8/99). Wave 1: 1–2; Wave 100: 8–10.
-- Giữ nguyên lưu best, receipt thưởng wave, sổ phục hồi thưởng tuần, thưởng tuần highestWave x100, đồng bộ Firestore tùy chọn và startup local-first không bắt Google.
-- Không sửa combat/nội tại, stat thẻ, quest, Tower, Time Trial, Raid, Boss Event, Spooky, Sandbox, PvP, STUN/TURN, auth hoặc công thức mua shop.
+- Thêm HUD Total Damage: X,XXX,XXX trong Arena, kèm DPS hiện tại và Best DPS. Counter chuyển số trong 180 ms, cập nhật theo hàng đợi requestAnimationFrame và tôn trọng prefers-reduced-motion.
+- Không tạo một giao diện combat tách biệt. Artwork, HP/Shield, status effects, floating damage và log vẫn dùng renderer Arena hiện có.
+- Khi hết 300 giây và lượt luyện hoàn tất:
+  Converted EXP = floor(Total Damage x 0.05).
+  Ví dụ: 100,000 damage chuyển thành 5,000 EXP.
+- Đây là EXP cơ bản cố định theo damage. Không nhân thêm EXP từ potion, equipment, achievement, weather hoặc upgrade. Không sửa multiplier của các nguồn EXP khác.
+- EXP được áp dụng cho thẻ gốc đã chọn khi vào EXP Time Trial. Clone/summon đóng góp damage, không tạo thêm phần thưởng EXP riêng.
+- Giữ hard cap Level 1000. Summary tách Converted EXP khỏi Applied EXP để thể hiện rõ trường hợp thẻ đã max hoặc chỉ còn một phần EXP cần để đạt max.
+- DPS hoàn tất lượt = Total Damage / 300. Nếu cao hơn Best DPS đã lưu, summary hiện thông báo NEW HIGHEST DPS RECORD và làm nổi bật phần kết quả. Kỷ lục lưu qua refresh và Cloud Save.
+- Modal kết quả có Total Damage Dealt, Converted EXP Earned, Applied EXP, số level-up, DPS và Best DPS. Không dùng summary theo số EXP Monsters hay % EXP mỗi kill nữa.
+- Quy đổi khi hoàn tất timer; thoát hoặc thua trước thời hạn không quy đổi damage chưa chốt. Vé đã dùng không hoàn lại. Không đổi các phần thưởng thắng trận chung đang có ngoài phạm vi EXP/VNĐ/Shards của mode.
+- Thưởng EXP có receipt trong cùng bản lưu tiến trình chính, cùng các guard kết thúc lượt, để timeout/callback lặp không cộng EXP hai lần. Reload không tiếp tục trận với HP hoặc timer cũ, giống chính sách Time Trial trước đó.
+- Tổng damage giới hạn ở Number.MAX_SAFE_INTEGER để giữ phép tính và dữ liệu lưu hữu hạn; không lưu Infinity vào JSON.
 
-5. KIỂM TRA VÀ TRIỂN KHAI
+5. BA TEAM LOADOUTS
 
-- Kiểm tra trình duyệt với nguồn game thật: chọn 4 thẻ hợp lệ từ sảnh rồi vào đúng battleArena, không còn các container combat Infinity cũ.
-- Kiểm tra renderer chung: HP, Shield, Stun, damage text, passive expansion, Element chart, log tấn công và hoạt ảnh turn thực tế.
-- Kiểm tra đổi wave bằng dữ liệu kiểm soát: đối tượng battle, unit, runtime, DOM Arena, HP, Shield, buff và attack counter giữ nguyên; sinh 4 đối thủ mới đúng Element và chỉ cộng Star Orb của wave.
-- Kiểm tra defeat, Weekly Top 50 cục bộ, New Run, nút X, Exit Infinity, khôi phục điều khiển và bắt đầu lại trận 4v4 thường bằng PassiveSystem mặc định.
-- Kiểm tra HUD và khung Arena ở 1440x900, 390x844 và 320x640; vẫn nhìn thấy nút X và truy cập các phần chiến đấu bằng cuộn chuẩn.
-- Kiểm tra cú pháp 53 tệp JavaScript, 4 stylesheet, ID HTML duy nhất, đường dẫn đúng chữ hoa/thường, JSON và cache tag. Các module combat, mạng và save ngoài phạm vi được so sánh byte với bản nguồn trước cập nhật.
-- Gói chỉ có nguồn sản xuất và README.txt, không kèm test runner, log, ảnh, âm thanh, Excel hoặc node_modules. Ảnh/audio vẫn do người dùng đặt vào các đường dẫn asset hiện có.
-- Upload đầy đủ nguồn lên GitHub Pages rồi Ctrl+F5. Cache tag mới: 20261026-infinity-arena-1. Nhớ thêm infinity_view.js mới; thiếu module sẽ được báo khi startup kiểm tra nguồn.
-- Không thay Firestore Rules hoặc cấu hình Firebase; không có thao tác triển khai trực tiếp lên website hay dịch vụ online trong cập nhật này.
+- Thêm Preset 1, Preset 2, Preset 3 cùng Save Current Team và Load ngay phía trên các ô TEAM LINEUP của Arena có 4 slot.
+- Chọn preset rồi Save Current Team để lưu đội đang thiết lập. Load nạp lại đội đó bằng một lần bấm. Mỗi preset độc lập; đổi preset không tự ghi đè đội đã lưu.
+- Lưu trong teamLoadouts của bản save/profile chính:
+  preset1 / preset2 / preset3 gồm name và slots gồm đúng 4 card ID hoặc null.
+  variantKeys bổ sung lưu mutation đã chọn, giúp khôi phục đúng biến thể khi vẫn còn sở hữu.
+- Không lưu bản sao stat vào loadout. Khi nạp, dùng Level và chỉ số hiện tại của thẻ, bao gồm V2 và mutation hiện có.
+- Nếu mutation đã lưu không còn, ưu tiên bản Normal đang có rồi đến biến thể còn dùng được. Không tạo thẻ hoặc mutation không sở hữu.
+- Nếu thiếu thẻ, hết số bản sao cần thiết hoặc không hợp lệ với điều kiện mode hiện tại, giữ đúng vị trí đó EMPTY và báo toast không chặn màn hình. Không dồn các thẻ phía sau lên để lấp chỗ trống.
+- Kiểm tra số lượng theo từng variant khi một preset có nhiều slot cùng thẻ; không cho sử dụng quá số bản sao đang có. Start bị khóa cho tới khi đội đủ slot hợp lệ.
+- Các ô trống có thể chọn thẻ để bổ sung bình thường, giữ nguyên các slot đã nạp. Giữ kiểm tra native weather/mutation của Tower, không cho preset vượt điều kiện mode.
+- Ẩn công cụ loadout khi không phải builder 4 slot. Không can thiệp blind pick PvP, builder riêng Infinity, mode 5/6 thẻ hoặc đội hình đang chiến đấu.
+- Preset lưu vào localStorage qua save chính và đi cùng Cloud Save tùy chọn. Save cũ thiếu teamLoadouts được bổ sung 3 preset trống, không xóa collection hoặc tiến trình.
 
-6. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
+6. KIỂM TRA VÀ TRIỂN KHAI
 
-- infinity_view.js (mới): Điều khiển HUD, nối runtime Infinity vào renderer Arena, mount/release giao diện và khôi phục trạng thái hiển thị; không tạo renderer thẻ riêng.
-- infinity.js: Xóa renderer combat riêng, nối lifecycle/turn/reward vào view chung, chuyển thao tác New Run/Exit và cập nhật HUD.
-- infinity_combat.js: Thêm callback trình bày cho log, floating feedback, render và xác nhận đòn đánh; giữ logic wave, RNG, stat và passive engine.
-- app.js: Chọn ngữ cảnh render Arena theo trận đang hiển thị, dùng runtime đúng cho status/tooltip, nối view Infinity và xử lý X/modal an toàn; giữ battleState và phần thưởng của Arena thường độc lập.
-- index.html: Xóa combat markup Infinity riêng, thêm HUD trong battleArena, nạp infinity_view.js đúng thứ tự và đổi cache tag.
-- infinity.css: Loại bỏ CSS combat riêng dư thừa; giữ deck builder, modal thưởng và shop.
-- styles.css: Thêm quy tắc HUD tối giản và responsive; không ghi đè layout thẻ combat.
-- startup.js: Thêm kiểm tra module InfinityViewSystem vào chuỗi nạp chuẩn.
-- README.txt: Chỉ ghi changelog của bản cập nhật này cùng danh sách tệp thay đổi.
+- Đối chiếu toàn bộ 167 HP/ATK với HP mới / ATK mới. Kiểm tra mọi thuộc tính thẻ còn lại giữ nguyên.
+- So sánh spawn bằng cùng seed trước/sau: 14 loại Tower tại floor 1, 100, 134, 300, 1000; tất cả Raid/Boss Event ở difficulty 1, 50, 1000; Spooky; Infinity wave 1, 100, 134, 1000 và Normal Time Trial. HP, ATK và metadata stat NPC tương ứng giữ nguyên.
+- Kiểm tra cả hai bên PvP lấy V2 Index stats, Level 1. Không thay hoặc triển khai cấu hình TURN/STUN/Firebase.
+- Kiểm tra 3 preset độc lập, mutation, số lượng bản sao, missing card giữ EMPTY, điền lại ô trống, refresh và validate Cloud bundle.
+- Kiểm tra ticket, turn 1 giây, damage trực tiếp/follow-up/clone/DOT/counter, hit 2 tỷ damage qua engine, không cộng trùng, dummy không chết và không cấp EXP giữa trận.
+- Kiểm tra timeout bằng đồng hồ trình duyệt điều khiển: floor(damage x0.05), không bị EXP boost nhân thêm, kỷ lục DPS lưu lại, callback lặp không cộng lại EXP. Kiểm tra Level 1000 và thoát sớm không còn timeout/HUD treo.
+- Kiểm tra layout desktop, 390 px và 320 px; kiểm tra cú pháp JavaScript, CSS, JSON, ID HTML và đường dẫn đúng chữ hoa/thường. Các kiểm tra chạy ngoài gói giao hàng; không kèm test runner hoặc log.
+- Upload đầy đủ nguồn, gồm hai module mới enemy_stats.js và training_dummy.js, lên GitHub Pages. Ctrl+F5 để nạp cache tag 20261030-v2-training-loadouts-1. Hai người chơi PvP cần cùng cập nhật để signature stat khớp nhau.
+- Không có thao tác deploy trực tiếp lên website hoặc Firebase. Kết nối Google/PvP thật qua dịch vụ online vẫn cần kiểm tra sau khi upload; source kiểm tra trình duyệt dùng local play và không gọi tài khoản thật.
+- Không sửa hoặc gửi lại workbook. Gói chỉ có mã nguồn sản xuất và README.txt, không có Excel, asset nhị phân, node_modules, test script hoặc log. Asset cũ vẫn do người dùng quản lý.
+
+7. MODIFIED FILES NOTE — GHI CHÚ TỆP THAY ĐỔI
+
+- cards.js: Thay đúng 167 cặp stats.hp / stats.atk bằng HP mới / ATK mới.
+- enemy_stats.js (mới): Baseline stat thẻ NPC trước V2; không dùng cho PvP.
+- tower.js: Nối metadata NPC vào baseline bảo toàn; không sửa lựa chọn, floorStats, thưởng hoặc khóa encounter.
+- infinity_combat.js: Giữ metadata stat NPC cũ; không sửa scaling, wave, seed hoặc phần thưởng.
+- training_dummy.js (mới): Entity training, damage ledger, bảo vệ target vô hạn, công thức EXP và HUD gộp cập nhật.
+- timetrial.js: Thay EXP monster rewards bằng training 300 giây, chốt EXP cuối timer và lưu Best DPS; giữ Normal Time Trial.
+- passives.js: Hook chỉ dành cho EXP Training Dummy để ghi từng hit/tick và chặn cái chết giả; không thay giá trị hoặc logic nội tại của các mode khác.
+- storage.js: Chuẩn hóa, kiểm tra, lưu cấu trúc và resolve preset theo ownership/variant/quantity.
+- app.js: Adapter UI loadout, empty-slot safety, tích hợp dummy HUD/summary và receipt EXP trong save chính.
+- index.html: Preset controls, damage HUD, mô tả mode, nạp module mới và cache tag.
+- styles.css: Dark neon loadout buttons, damage counter, record highlight và responsive.
+- startup.js: Kiểm tra module EnemyStatsSystem và TrainingDummySystem.
+- README.txt: Chỉ ghi changelog bản cập nhật này cùng danh sách tệp thay đổi.

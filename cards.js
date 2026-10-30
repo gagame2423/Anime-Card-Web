@@ -17,7 +17,7 @@ const CARDS = [
     rarity: "Common",
     chance: 2,
     requiredWeather: null,
-    stats: { hp: 100, atk: 25 },
+    stats: { hp: 109, atk: 42 },
     passive: {
       name: "First Strike",
       description: "Each attack grants +10% ATK, up to +100%."
@@ -31,7 +31,7 @@ const CARDS = [
     rarity: "Common",
     chance: 3,
     requiredWeather: null,
-    stats: { hp: 300, atk: 10 },
+    stats: { hp: 257, atk: 24 },
     passive: {
       name: "Lifesteal",
       description: "Each kill grants +10% max HP."
@@ -45,7 +45,7 @@ const CARDS = [
     rarity: "Common",
     chance: 4,
     requiredWeather: null,
-    stats: { hp: 275, atk: 12 },
+    stats: { hp: 144, atk: 55 },
     passive: {
       name: "Chidori",
       description: "The 3rd attack deals x2.5 ATK damage."
@@ -59,7 +59,7 @@ const CARDS = [
     rarity: "Common",
     chance: 5,
     requiredWeather: null,
-    stats: { hp: 500, atk: 10 },
+    stats: { hp: 296, atk: 27 },
     passive: {
       name: "What can i get you sir",
       description: "Each attack has a 20% chance to heal 20% max HP."
@@ -73,7 +73,7 @@ const CARDS = [
     rarity: "Rare",
     chance: 10,
     requiredWeather: null,
-    stats: { hp: 240, atk: 75 },
+    stats: { hp: 416, atk: 38 },
     passive: {
       name: "Afterimage",
       description: "5% chance to dodge incoming attacks."
@@ -87,7 +87,7 @@ const CARDS = [
     rarity: "Rare",
     chance: 25,
     requiredWeather: null,
-    stats: { hp: 500, atk: 50 },
+    stats: { hp: 300, atk: 115 },
     passive: {
       name: "Rock",
       description: "First attack: 33% chance to deal x2 damage."
@@ -101,7 +101,7 @@ const CARDS = [
     rarity: "Rare",
     chance: 40,
     requiredWeather: null,
-    stats: { hp: 400, atk: 100 },
+    stats: { hp: 724, atk: 66 },
     passive: {
       name: "Rock",
       description: "Battle start: gain +25% max HP."
@@ -115,7 +115,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 50,
     requiredWeather: null,
-    stats: { hp: 420, atk: 150 },
+    stats: { hp: 372, atk: 142 },
     passive: {
       name: "GOMU NO MU NO PISTOL",
       description: "Every 2nd attack deals +50% ATK damage."
@@ -129,7 +129,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 67,
     requiredWeather: null,
-    stats: { hp: 676, atk: 67 },
+    stats: { hp: 871, atk: 53 },
     passive: {
       name: "SIX SEVEN",
       description: "On first entry, Stun the active enemy for 3 turns."
@@ -143,7 +143,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 80,
     requiredWeather: null,
-    stats: { hp: 600, atk: 100 },
+    stats: { hp: 561, atk: 137 },
     passive: {
       name: "GHOUL",
       description: "Every 3rd attack heals HP equal to 25% of the target’s current HP."
@@ -157,7 +157,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 100,
     requiredWeather: null,
-    stats: { hp: 500, atk: 100 },
+    stats: { hp: 454, atk: 174 },
     passive: {
       name: "Trap",
       description: "On entry: 50% chance to strike the active enemy for x5 ATK damage."
@@ -171,7 +171,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 190,
     requiredWeather: null,
-    stats: { hp: 600, atk: 150 },
+    stats: { hp: 634, atk: 242 },
     passive: {
       name: "Bleed",
       description: "Attacks apply Bleed for 2 turns (5% ATK/turn)."
@@ -185,7 +185,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 234,
     requiredWeather: null,
-    stats: { hp: 600, atk: 110 },
+    stats: { hp: 1470, atk: 135 },
     passive: {
       name: "Chop Chop",
       description: "33% chance to dodge incoming attacks. Dodges do not counterattack."
@@ -199,7 +199,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 300,
     requiredWeather: null,
-    stats: { hp: 500, atk: 100 },
+    stats: { hp: 820, atk: 200 },
     passive: {
       name: "BOUNTY",
       description: "Each kill adds VNĐ equal to the defeated enemy’s recorded HP value to the victory reward."
@@ -213,7 +213,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 500,
     requiredWeather: null,
-    stats: { hp: 750, atk: 300 },
+    stats: { hp: 865, atk: 330 },
     passive: {
       name: "Ora Ora",
       description: "Each attack: 50% chance for a follow-up dealing 40% ATK damage; that follow-up has a 25% chance for another."
@@ -227,7 +227,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 777,
     requiredWeather: null,
-    stats: { hp: 777, atk: 377 },
+    stats: { hp: 1110, atk: 426 },
     passive: {
       name: "Lucky Train",
       description: "On the 7th attack: 7% chance to deal x77 ATK damage."
@@ -241,7 +241,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 800,
     requiredWeather: null,
-    stats: { hp: 800, atk: 400 },
+    stats: { hp: 1040, atk: 399 },
     passive: {
       name: "EXCALIBUR!!!",
       description: "The 8th attack deals x8 damage."
@@ -255,7 +255,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 900,
     requiredWeather: null,
-    stats: { hp: 1000, atk: 350 },
+    stats: { hp: 1090, atk: 418 },
     passive: {
       name: "HAMONNN",
       description: "On the 9th attack, gain +900% ATK for the rest of the match."
@@ -269,7 +269,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 1000,
     requiredWeather: null,
-    stats: { hp: 1250, atk: 400 },
+    stats: { hp: 1230, atk: 471 },
     passive: {
       name: "Kamehameha",
       description: "Every 5th attack strikes 10 times for 10% ATK damage per hit."
@@ -283,7 +283,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 1001,
     requiredWeather: null,
-    stats: { hp: 1000, atk: 440 },
+    stats: { hp: 1310, atk: 501 },
     passive: {
       name: "Super Vegeta",
       description: "Below 25% max HP, deal +100% ATK damage."
@@ -297,7 +297,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 4900,
     requiredWeather: null,
-    stats: { hp: 2000, atk: 505 },
+    stats: { hp: 4960, atk: 454 },
     passive: {
       name: "Kamui",
       description: "22% chance to dodge incoming attacks. Dodges do not counterattack."
@@ -311,7 +311,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 20000,
     requiredWeather: null,
-    stats: { hp: 12500, atk: 2500 },
+    stats: { hp: 5110, atk: 1250 },
     passive: {
       name: "KUUGA",
       description: "Every 3rd attack changes form.\nBlue: +20% crit chance. Green: +50% crit damage. Purple: +30% max HP."
@@ -325,7 +325,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 3080,
     requiredWeather: null,
-    stats: { hp: 3080, atk: 100 },
+    stats: { hp: 4350, atk: 266 },
     passive: {
       name: "WISH",
       description: "Each allied turn while not attacking: 10% chance to grant the active attacker +30% damage for that attack."
@@ -339,7 +339,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 3333,
     requiredWeather: null,
-    stats: { hp: 3333, atk: 333 },
+    stats: { hp: 1850, atk: 705 },
     passive: {
       name: "POCHITA",
       description: "Each attack has a 33% chance for a follow-up. Follow-ups can trigger another follow-up."
@@ -353,7 +353,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 5500,
     requiredWeather: null,
-    stats: { hp: 2550, atk: 450 },
+    stats: { hp: 2260, atk: 862 },
     passive: {
       name: "Amaterasu",
       description: "Each attack: 30% chance to apply Burn for 3 turns (5% ATK/turn) and immediately follow up."
@@ -367,7 +367,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 10101,
     requiredWeather: null,
-    stats: { hp: 10101, atk: 101 },
+    stats: { hp: 9100, atk: 81 },
     passive: {
       name: "Madness",
       description: "Every 2nd attack: 40% chance to reduce the target’s ATK by 5%."
@@ -381,7 +381,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 12120,
     requiredWeather: null,
-    stats: { hp: 2550, atk: 450 },
+    stats: { hp: 6190, atk: 568 },
     passive: {
       name: "MAGIC ARMOR",
       description: "Below 50% max HP, become immune to enemy passive effects."
@@ -395,7 +395,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 17000,
     requiredWeather: null,
-    stats: { hp: 4000, atk: 600 },
+    stats: { hp: 3540, atk: 1350 },
     passive: {
       name: "BLACK FLASH",
       description: "Each attack has a 33% chance to deal x3 ATK damage."
@@ -409,7 +409,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 18888,
     requiredWeather: null,
-    stats: { hp: 8000, atk: 800 },
+    stats: { hp: 3990, atk: 1520 },
     passive: {
       name: "OUTRAGE",
       description: "33% chance to enter Berserker mode. In Berserker mode, attacks apply Bleed for 2 turns (10% ATK/turn)."
@@ -423,7 +423,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 36000,
     requiredWeather: null,
-    stats: { hp: 10000, atk: 1000 },
+    stats: { hp: 6880, atk: 1680 },
     passive: {
       name: "SILVER CHARIOT",
       description: "Below 25% max HP, deal +100% ATK damage."
@@ -437,7 +437,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 52000,
     requiredWeather: null,
-    stats: { hp: 5200, atk: 2500 },
+    stats: { hp: 12000, atk: 1100 },
     passive: {
       name: "FLASH",
       description: "60% dodge chance. After more than 3 consecutive successful dodges, die from a heart attack."
@@ -451,7 +451,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 81208,
     requiredWeather: null,
-    stats: { hp: 8120, atk: 2008 },
+    stats: { hp: 7700, atk: 1880 },
     passive: {
       name: "SLIME",
       description: "Each kill grants 1 Slime Point, +30% ATK and +20% max HP. A fatal hit consumes 1 Slime Point to survive."
@@ -465,7 +465,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 100000,
     requiredWeather: null,
-    stats: { hp: 10000, atk: 2000 },
+    stats: { hp: 13400, atk: 1230 },
     passive: {
       name: "Omniscience",
       description: "Immune to enemy passive effects."
@@ -479,7 +479,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 222000,
     requiredWeather: null,
-    stats: { hp: 20000, atk: 2222 },
+    stats: { hp: 10700, atk: 4090 },
     passive: {
       name: "PUNCH",
       description: "Every 3rd attack: 33% chance to deal +222% ATK damage."
@@ -493,7 +493,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 7927,
     requiredWeather: "Eclipsed",
-    stats: { hp: 1927, atk: 792 },
+    stats: { hp: 3750, atk: 918 },
     passive: {
       name: "Idle Transfiguration",
       description: "Killing an enemy below 10% max HP grants 1 Soul. Spend Souls to clear debuffs, 1 per Soul."
@@ -507,7 +507,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 40000,
     requiredWeather: "Shadow",
-    stats: { hp: 8000, atk: 800 },
+    stats: { hp: 6240, atk: 1520 },
     passive: {
       name: "Liberation",
       description: "Each kill grants ATK equal to 25% of the defeated enemy’s ATK."
@@ -521,7 +521,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 38922,
     requiredWeather: null,
-    stats: { hp: 10000, atk: 1500 },
+    stats: { hp: 4940, atk: 1890 },
     passive: {
       name: "Fist of Love",
       description: "The 3rd attack Stuns for 2 turns. If an enemy dies before that attack, deal x2 damage to the next enemy once per match."
@@ -535,7 +535,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 77550,
     requiredWeather: null,
-    stats: { hp: 17555, atk: 75 },
+    stats: { hp: 15200, atk: 135 },
     passive: {
       name: "CAPTAIN",
       description: "Starting in the first slot grants all teammates +100% ATK for the match."
@@ -549,7 +549,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 69000,
     requiredWeather: "Sugar",
-    stats: { hp: 6969, atk: 1069 },
+    stats: { hp: 5770, atk: 2200 },
     passive: {
       name: "Mero Mero",
       description: "Every 2nd attack: 69% chance to Freeze for 1 turn. Deal x1.5 damage to frozen targets."
@@ -563,7 +563,7 @@ const CARDS = [
     rarity: "Rare",
     chance: 550,
     requiredWeather: null,
-    stats: { hp: 1550, atk: 55 },
+    stats: { hp: 2470, atk: 22 },
     passive: {
       name: "Chemistry",
       description: "At the start of allied turns while not attacking, heal the living team for 2.5% max HP. Bleed blocks healing."
@@ -577,7 +577,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 65000,
     requiredWeather: "Reaper",
-    stats: { hp: 6500, atk: 1065 },
+    stats: { hp: 6550, atk: 2500 },
     passive: {
       name: "Gran Rey Cero",
       description: "The 5th attack hits all enemies for x2 ATK damage."
@@ -591,7 +591,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 500000,
     requiredWeather: null,
-    stats: { hp: 100000, atk: 1000 },
+    stats: { hp: 35100, atk: 312 },
     passive: {
       name: "Scam",
       description: "On entry: copy a random living teammate’s passive. If alone, gain +200% ATK and +100% max HP; disable the passive.\nBasic attacks still work while the passive is disabled."
@@ -605,7 +605,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 370000,
     requiredWeather: null,
-    stats: { hp: 5000, atk: 3700 },
+    stats: { hp: 11300, atk: 4320 },
     passive: {
       name: "CLOCK UP",
       description: "Each attack: 10% chance for a follow-up that Stuns for 1 turn. Follow-ups can chain. Attacking a Stunned target heals 5% max HP."
@@ -619,7 +619,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 740000,
     requiredWeather: null,
-    stats: { hp: 74000, atk: 5000 },
+    stats: { hp: 34600, atk: 3170 },
     passive: {
       name: "Aura Synthesis",
       description: "When hit, gain 1 Aura stack (max 5); each grants +10% crit damage. First reaching 5 stacks heals 5% max HP."
@@ -633,7 +633,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 76900,
     requiredWeather: null,
-    stats: { hp: 6090, atk: 3060 },
+    stats: { hp: 8750, atk: 2140 },
     passive: {
       name: "Telekinesis",
       description: "On entry, sort the enemy lineup by ATK, lowest first."
@@ -647,7 +647,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 6970,
     requiredWeather: null,
-    stats: { hp: 2697, atk: 440 },
+    stats: { hp: 2680, atk: 1020 },
     passive: {
       name: "Champion of Light",
       description: "Each attack: 20% chance to Stun for 1 turn. After Stun ends, the target deals 18% less damage."
@@ -661,7 +661,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 207000,
     requiredWeather: "Sugar",
-    stats: { hp: 27000, atk: 2700 },
+    stats: { hp: 20800, atk: 1910 },
     passive: {
       name: "MOCHI",
       description: "Each attack: 27% chance to reduce target ATK by 10% and heal 10% max HP. Also has 7% dodge."
@@ -675,7 +675,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 500100,
     requiredWeather: null,
-    stats: { hp: 50000, atk: 5000 },
+    stats: { hp: 12700, atk: 4870 },
     passive: {
       name: "Quake Hermit",
       description: "The 4th attack hits the 2 nearest enemies for x3 ATK damage and Stuns them for 2 turns."
@@ -689,7 +689,7 @@ const CARDS = [
     rarity: "Rare",
     chance: 1450,
     requiredWeather: "Shadow",
-    stats: { hp: 1450, atk: 145 },
+    stats: { hp: 2650, atk: 243 },
     passive: {
       name: "FROG",
       description: "When hit: 20% chance to gain +20% ATK. Stacks up to +2000% and lasts for the match."
@@ -703,7 +703,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 24740,
     requiredWeather: null,
-    stats: { hp: 4740, atk: 2474 },
+    stats: { hp: 5150, atk: 1260 },
     passive: {
       name: "HAKI",
       description: "30% dodge chance. Each successful dodge grants +25% damage to the next attack."
@@ -717,7 +717,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 80008,
     requiredWeather: null,
-    stats: { hp: 8008, atk: 3232 },
+    stats: { hp: 7660, atk: 1870 },
     passive: {
       name: "CLONE",
       description: "When an original teammate takes a fatal hit, create a Clone behind Metal Cooler with 50% of that teammate’s current max HP/ATK and its passive.\nNo creation cap. Generated units cannot trigger this effect or create companions."
@@ -731,7 +731,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 85000,
     requiredWeather: null,
-    stats: { hp: 8008, atk: 3232 },
+    stats: { hp: 7290, atk: 2780 },
     passive: {
       name: "MASENKO",
       description: "Target the enemy with the highest ATK and deal x2 damage."
@@ -745,7 +745,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 300000,
     requiredWeather: null,
-    stats: { hp: 23000, atk: 4260 },
+    stats: { hp: 12100, atk: 4610 },
     passive: {
       name: "Zephyr Bow",
       description: "Each attack: 45% chance to pierce the next enemy for 100% ATK; a successful pierce has a 15% chance to continue."
@@ -759,7 +759,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 333000,
     requiredWeather: null,
-    stats: { hp: 33000, atk: 3333 },
+    stats: { hp: 25200, atk: 2310 },
     passive: {
       name: "ANTI MAGIC",
       description: "Enemy passive attacks have a 50% chance to be reflected at 50% efficiency."
@@ -773,7 +773,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 3333333,
     requiredWeather: null,
-    stats: { hp: 333000, atk: 9999 },
+    stats: { hp: 34000, atk: 8320 },
     passive: {
       name: "ANTI MAGIC BOOK",
       description: "Each turn, randomly use one mode:\nDemon Slayer: 165% ATK damage, 75% chance to Stun for 1 turn, 25% chance to reflect incoming damage.\nDemon Dweller: 150% ATK + 35% of the last hit received; take 15% less damage."
@@ -788,7 +788,7 @@ const CARDS = [
     rarity: "Rare",
     chance: 45,
     requiredWeather: "Raining",
-    stats: { hp: 50, atk: 10 },
+    stats: { hp: 844, atk: 8 },
     passive: {
       name: "Greedy",
       description: "While on the team, winning grants +100% eligible battle rewards."
@@ -802,7 +802,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 400,
     requiredWeather: "Raining",
-    stats: { hp: 620, atk: 109 },
+    stats: { hp: 1470, atk: 135 },
     passive: {
       name: "Dead Calm",
       description: "The 5th attack Stuns the target for 1 turn and grants immunity to incoming attacks for 3 turns."
@@ -816,7 +816,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 1200,
     requiredWeather: "Raining",
-    stats: { hp: 2000, atk: 200 },
+    stats: { hp: 3140, atk: 28 },
     passive: {
       name: "Big Fish",
       description: "Intercept attacks against teammates and take the damage in their place."
@@ -830,7 +830,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 2400,
     requiredWeather: "Raining",
-    stats: { hp: 2400, atk: 240 },
+    stats: { hp: 3730, atk: 341 },
     passive: {
       name: "ZAWATER",
       description: "Enemies attacking this card have a 24% chance to miss."
@@ -844,7 +844,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 22222,
     requiredWeather: "Raining",
-    stats: { hp: 4444, atk: 222 },
+    stats: { hp: 9070, atk: 832 },
     passive: {
       name: "AQUARIUM",
       description: "During Raining, take 50% less incoming damage."
@@ -858,7 +858,7 @@ const CARDS = [
     rarity: "Epic",
     chance: 400000,
     requiredWeather: "Raining",
-    stats: { hp: 40000, atk: 2000 },
+    stats: { hp: 25100, atk: 2300 },
     passive: {
       name: "Tsunami Water",
       description: "On entry, hit all enemies for 100% ATK. If the wave kills an enemy, gain a Water Shield equal to 100% max HP."
@@ -872,7 +872,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 650000,
     requiredWeather: "Raining",
-    stats: { hp: 50000, atk: 222 },
+    stats: { hp: 30400, atk: 2790 },
     passive: {
       name: "BUBBLE CONTROL",
       description: "Every 3 turns, gain a Weather Shield equal to 30% current max HP for 1 turn. If an enemy destroys it, turn that enemy into a Snail for 2 turns."
@@ -886,7 +886,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 780000,
     requiredWeather: "Raining",
-    stats: { hp: 80000, atk: 5000 },
+    stats: { hp: 32700, atk: 3000 },
     passive: {
       name: "AURA FARMER",
       description: "Each turn without attacking grants +10% ATK damage, with no stack cap. Attacking removes 1 stack."
@@ -900,7 +900,7 @@ const CARDS = [
     rarity: "Common",
     chance: 100,
     requiredWeather: "Sunny",
-    stats: { hp: 1000, atk: 100 },
+    stats: { hp: 981, atk: 90 },
     passive: {
       name: "Plant",
       description: "Below 30% max HP, heal 5% max HP each turn."
@@ -914,7 +914,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 2020,
     requiredWeather: "Sunny",
-    stats: { hp: 2020, atk: 400 },
+    stats: { hp: 1630, atk: 624 },
     passive: {
       name: "Fire Burst",
       description: "Attacks apply Burn for 2 turns (50% ATK/turn)."
@@ -928,7 +928,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 2500,
     requiredWeather: "Sunny",
-    stats: { hp: 2770, atk: 690 },
+    stats: { hp: 1780, atk: 679 },
     passive: {
       name: "SUNNY",
       description: "During Sunny, deal x2 ATK damage."
@@ -942,7 +942,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 250000,
     requiredWeather: "Sunny",
-    stats: { hp: 5000, atk: 5000 },
+    stats: { hp: 22400, atk: 2060 },
     passive: {
       name: "DEVELOPER",
       description: "Each turn, store 10% of the active enemy’s ATK as Tower Power. If it dies while Builderman lives, convert stored power into HP."
@@ -956,7 +956,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 6666,
     requiredWeather: "Eclipse",
-    stats: { hp: 6666, atk: 666 },
+    stats: { hp: 5260, atk: 483 },
     passive: {
       name: "WORLD ENDER",
       description: "Each attack heals 5% max HP."
@@ -970,7 +970,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 8000,
     requiredWeather: "Eclipse",
-    stats: { hp: 9999, atk: 666 },
+    stats: { hp: 2830, atk: 1080 },
     passive: {
       name: "ECLIPSED",
       description: "On entry, sacrifice living teammates and gain +100% ATK per teammate sacrificed."
@@ -984,7 +984,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 10000,
     requiredWeather: "Eclipse",
-    stats: { hp: 10000, atk: 1000 },
+    stats: { hp: 6000, atk: 367 },
     passive: {
       name: "M@!L%#TH",
       description: "Once per match, an enemy defeated by a fatal attack allows one teammate to revive with Dante’s stats and its own passive."
@@ -998,7 +998,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 2500000,
     requiredWeather: "Eclipse",
-    stats: { hp: 250000, atk: 2500 },
+    stats: { hp: 48500, atk: 4450 },
     passive: {
       name: "END!!!",
       description: "Each attack: 25% chance for x4 ATK damage. Below 10% max HP, the chance becomes 50% and damage becomes x6 ATK."
@@ -1012,7 +1012,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 1350,
     requiredWeather: "Snowing",
-    stats: { hp: 1350, atk: 300 },
+    stats: { hp: 1390, atk: 531 },
     passive: {
       name: "Freeze",
       description: "Each attack: 10% chance to Freeze for 1 turn. Deal +35% damage to frozen targets."
@@ -1026,7 +1026,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 5000,
     requiredWeather: "Snowing",
-    stats: { hp: 3000, atk: 1000 },
+    stats: { hp: 2350, atk: 896 },
     passive: {
       name: "Ice Age",
       description: "Critical hits have a 33% chance to Freeze the target for 1 turn."
@@ -1040,7 +1040,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 12000,
     requiredWeather: "Snowing",
-    stats: { hp: 4600, atk: 2050 },
+    stats: { hp: 3080, atk: 1180 },
     passive: {
       name: "Absolute Zero",
       description: "Critical hits have a 67% chance to Freeze the target for 1 turn."
@@ -1054,7 +1054,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 26000,
     requiredWeather: "Snowing",
-    stats: { hp: 10000, atk: 2000 },
+    stats: { hp: 4200, atk: 1600 },
     passive: {
       name: "Absolute Zero",
       description: "On combat turn 5, gain +50% ATK. Later attacks have a 50% chance to Stun for 1 turn."
@@ -1068,7 +1068,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 150000,
     requiredWeather: "Sugar",
-    stats: { hp: 20000, atk: 3000 },
+    stats: { hp: 10600, atk: 2590 },
     passive: {
       name: "Sweet Destruction",
       description: "On kill: heal 30% of the victim’s max HP; gain +20% HP/ATK for 2 turns.\nAfter facing an enemy for more than 3 turns, absorb 50% of its base ATK and prevent it from dodging this card."
@@ -1082,7 +1082,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 191022,
     requiredWeather: "Sugar",
-    stats: { hp: 19100, atk: 2022 },
+    stats: { hp: 18700, atk: 1710 },
     passive: {
       name: "Cursed Love",
       description: "Once per match, survive a fatal hit at 50% max HP, heal another 25% max HP and gain +50% ATK."
@@ -1097,7 +1097,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 9300,
     requiredWeather: "Shadow",
-    stats: { hp: 5000, atk: 1000 },
+    stats: { hp: 5570, atk: 510 },
     passive: {
       name: "ENHANCE",
       description: "When hit, reflect 50% of the damage received to the attacker."
@@ -1111,7 +1111,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 18000,
     requiredWeather: "Shadow",
-    stats: { hp: 6400, atk: 3200 },
+    stats: { hp: 4530, atk: 1110 },
     passive: {
       name: "SHADOW KNIGHT",
       description: "Each attack has a 30% chance to call a teammate for one follow-up attack."
@@ -1125,7 +1125,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 30000,
     requiredWeather: "Shadow",
-    stats: { hp: 6400, atk: 3200 },
+    stats: { hp: 3780, atk: 1440 },
     passive: {
       name: "I AM ATMOIC !!!",
       description: "Every 10th attack hits all enemies for x100 ATK damage."
@@ -1139,7 +1139,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 99999,
     requiredWeather: "Shadow",
-    stats: { hp: 9999, atk: 999 },
+    stats: { hp: 16600, atk: 1520 },
     passive: {
       name: "PEARL",
       description: "Survive one fatal hit at 1 HP per match."
@@ -1153,7 +1153,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 199208,
     requiredWeather: "Shadow",
-    stats: { hp: 20008, atk: 1990 },
+    stats: { hp: 21300, atk: 1300 },
     passive: {
       name: "Time Manipulation",
       description: "Once per match, a heal crossing from below 60% to at least 60% max HP on this card or an ally Freezes an enemy for 5 turns."
@@ -1167,7 +1167,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 200000,
     requiredWeather: "Shadow",
-    stats: { hp: 15000, atk: 5000 },
+    stats: { hp: 10100, atk: 2470 },
     passive: {
       name: "Rider Card",
       description: "On entry, copy an enemy card and its passive while keeping this card’s own HP/ATK."
@@ -1181,7 +1181,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 550000,
     requiredWeather: "Shadow",
-    stats: { hp: 40000, atk: 5500 },
+    stats: { hp: 14200, atk: 5440 },
     passive: {
       name: "Storm Susano",
       description: "Each attack: 15% chance for a follow-up that applies Burn for 3 turns (25% ATK/turn).\nBelow 40% HP: gain +60% ATK and 30% damage reduction for 6 turns."
@@ -1195,7 +1195,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 7000,
     requiredWeather: "Heavenly",
-    stats: { hp: 5000, atk: 1000 },
+    stats: { hp: 5370, atk: 492 },
     passive: {
       name: "Light Speed",
       description: "20% dodge chance. A successful dodge Stuns the attacker for 1 turn."
@@ -1209,7 +1209,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 8888,
     requiredWeather: "Heavenly",
-    stats: { hp: 8888, atk: 888 },
+    stats: { hp: 5090, atk: 466 },
     passive: {
       name: "Infinity",
       description: "88% chance to dodge standard incoming attacks. Cannot dodge passive attacks."
@@ -1223,7 +1223,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 30000,
     requiredWeather: "Heavenly",
-    stats: { hp: 8200, atk: 4100 },
+    stats: { hp: 5560, atk: 1360 },
     passive: {
       name: "Ascension",
       description: "When targeted by a passive attack, copies the attacker’s passive for 3 turns, then loses it. Cooldown: 5 turns after the copy expires."
@@ -1237,7 +1237,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 70007,
     requiredWeather: "Heavenly",
-    stats: { hp: 7007, atk: 7007 },
+    stats: { hp: 7260, atk: 1770 },
     passive: {
       name: "Moon Manipulation",
       description: "Winning a 1v1 battle has a 20% chance to add a random Common or Uncommon weather for 3 minutes."
@@ -1251,7 +1251,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 240000,
     requiredWeather: "Heavenly",
-    stats: { hp: 20000, atk: 7200 },
+    stats: { hp: 10900, atk: 2650 },
     passive: {
       name: "72 Magic Spell",
       description: "When an original teammate dies, create a Clone with Jin Mori’s current HP/ATK and that teammate’s passive. No numeric creation cap; generated units cannot create companions."
@@ -1265,7 +1265,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 115000,
     requiredWeather: "Heavenly",
-    stats: { hp: 15000, atk: 1500 },
+    stats: { hp: 14700, atk: 130 },
     passive: {
       name: "Heavenly Blessing",
       description: "While on the team, all allies gain +150% max HP."
@@ -1279,7 +1279,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 35000,
     requiredWeather: "Tsukuyomi",
-    stats: { hp: 8800, atk: 4700 },
+    stats: { hp: 8800, atk: 807 },
     passive: {
       name: "TSUKUYOMI",
       description: "35% dodge chance. A successful dodge Stuns the attacker for 3 turns."
@@ -1293,7 +1293,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 600000,
     requiredWeather: "Tsukuyomi",
-    stats: { hp: 60000, atk: 6000 },
+    stats: { hp: 27400, atk: 2510 },
     passive: {
       name: "EPITAH",
       description: "35% dodge chance. A successful dodge Stuns the attacker for 3 turns."
@@ -1307,7 +1307,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 999000,
     requiredWeather: "Tsukuyomi",
-    stats: { hp: 66000, atk: 9999 },
+    stats: { hp: 19200, atk: 4700 },
     passive: {
       name: "Dimensional Domain",
       description: "On entry, create a 3-turn domain. Both teams lose one attack cycle; enemies take Burn equal to 100% ATK per turn inside the domain."
@@ -1321,7 +1321,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 22000,
     requiredWeather: "Reaper",
-    stats: { hp: 7000, atk: 3500 },
+    stats: { hp: 3340, atk: 1280 },
     passive: {
       name: "Last Breath",
       description: "Critical hits execute the surviving target, respecting immunity and fatal-hit survival effects."
@@ -1335,7 +1335,7 @@ const CARDS = [
     rarity: "Mythic",
     chance: 53090,
     requiredWeather: "Reaper",
-    stats: { hp: 10000, atk: 1000 },
+    stats: { hp: 9500, atk: 871 },
     passive: {
       name: "Return By Death",
       description: "First fatal hit: revive at 90% max HP. Later fatal hits: 65% chance to revive at 50% max HP. Each revival grants +20% ATK and +15% dodge."
@@ -1349,7 +1349,7 @@ const CARDS = [
     rarity: "Legendary",
     chance: 666,
     requiredWeather: "Malevolent",
-    stats: { hp: 666, atk: 333 },
+    stats: { hp: 970, atk: 370 },
     passive: {
       name: "WGRYYYY",
       description: "Each attack: 20% chance to Freeze for 2 turns. Successful Freeze heals 20% max HP."
@@ -1363,7 +1363,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 45000,
     requiredWeather: "Malevolent",
-    stats: { hp: 11000, atk: 4500 },
+    stats: { hp: 4870, atk: 1860 },
     passive: {
       name: "Malevolent Kitchen",
       description: "The 5th attack repeatedly slashes the active enemy until it falls below 50% max HP."
@@ -1377,7 +1377,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 60220,
     requiredWeather: "Malevolent",
-    stats: { hp: 16000, atk: 4020 },
+    stats: { hp: 6830, atk: 1670 },
     passive: {
       name: "STRING ARMY",
       description: "Each eligible kill has a 30% chance to convert the defeated enemy into a teammate. No creation cap; clones and summons cannot create further units."
@@ -1391,7 +1391,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 777777,
     requiredWeather: "Malevolent",
-    stats: { hp: 77777, atk: 7777 },
+    stats: { hp: 31300, atk: 1910 },
     passive: {
       name: "JACKPOT",
       description: "While on the team, winning grants +100% eligible rewards. Starting in slot 1 grants 7 turns of Invincibility; otherwise gain either +77% ATK or +77% max HP."
@@ -1405,7 +1405,7 @@ const CARDS = [
     rarity: "Secret",
     chance: 800000,
     requiredWeather: "Malevolent",
-    stats: { hp: 80000, atk: 8000 },
+    stats: { hp: 30800, atk: 2820 },
     passive: {
       name: "ADAPTION",
       description: "When hit: 25% chance to Adapt and gain 25% damage reduction; resets against a new enemy. Each kill heals 50% max HP."
@@ -1416,26 +1416,26 @@ const CARDS = [
 
 // Champions retain the existing reward IDs/receipts; exact level-1 Normal specs.
 const TOWER_REWARD_CARDS = [
-  {"id": "tower-champion-normal", "element": "Electric", "image": "assets/cards/equinox.png", "towerType": "normal", "unlockRequirement": "tower_floor_100_normal", "sourceId": "starter-common", "name": "Equinox", category: ["VideoGame", "Alternative", "Brutal"], "chance": 2500025, "requiredWeather": "Normal", "nativeWeather": null, "stats": {"hp": 250000, "atk": 25000}, "passive": {"name": "Emotional Meter", "description": "Start at 50% positive / 50% negative. Primary attacks shift 10–20% toward positive; incoming hits shift 10–20% toward negative.\n100% positive: living team gains +100% max HP and +25% ATK; meter locks.\n100% negative: hit all enemies for x25 current ATK, then die permanently; cannot revive or be cloned."}},
-  {"id": "tower-champion-raining", "element": "Water", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", category: ["Supporter", "Magician", "Unhuman"], "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 222222, "atk": 2222}, "passive": {"name": "Useless", "description": "Before battle, choose +50% team max HP (once/team) or +50% eligible VNĐ/EXP/Reward Bonus. Reward choice excludes Tower Coins, potion chances and Time Trial payouts.\nEach allied turn with another active attacker: heal it for 10% max HP and grant +2.2% current ATK, once/turn."}},
-  {"id": "tower-champion-snowing", "element": "Water", "image": "assets/cards/iceking.png", "towerType": "snowing", "unlockRequirement": "tower_floor_100_snowing", "sourceId": "toshiro", "name": "Ice King", category: ["AntiVillian", "Magician", "Human", "Alternative"], "chance": 1058000, "requiredWeather": "Snowing", "nativeWeather": "snowing", "stats": {"hp": 104600, "atk": 46000}, "passive": {"name": "Ice Manipulation", "description": "When hit: 20% chance to Freeze the attacker for 2 turns. Deal +50% damage to frozen targets.\nFirst eligible fatal hit: revive at full HP for 5 combat turns, then die permanently. No teammate revival.\nOn permanent death: 58% chance to give a living teammate Ice King Crown (10% chance to Freeze targets for 3 turns)."}},
-  {"id": "tower-champion-sunny", "element": "Fire", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", category: ["Unhuman", "Brutal", "Alternative"], "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 78000, "atk": 13000}, "passive": {"name": "Solar Claw", "description": "33% base crit chance. First damaging crit applies Burn for 3 turns (33% current ATK/turn).\nLater crits deal x3 attack damage before the normal crit multiplier. They do not reapply this Burn. No free follow-up or guaranteed crit."}},
-  {"id": "tower-champion-sugar", "element": "Electric", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"], "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 76000, "atk": 7600}, "passive": {"name": "Candy Eater", "description": "Each primary attack gains 1–3 candies; only the current form applies.\n0–10: +25% damage; +1 extra candy/attack.\n11–25: +50% max HP; when hit, spend 1 candy to heal 3% max HP.\n26–50: damaging attacks summon a Ghost (HP = damage dealt; ATK = 10% current ATK).\n51–75: 76% dodge; a dodge skips the next attack, grants 5 candies and heals 7.6% max HP.\n76–99: every 3rd attack also hits up to 3 random enemies for 50% ATK.\n100: hit all enemies each attack; spend 1 candy/attack until 0. Then return to Form 1 and self-Stun for 5 turns; no candy gain or transformation during reversion.\nGenerated units cannot summon Ghosts."}},
-  {"id": "tower-champion-reaper", "element": "Holy", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", category: ["Villian", "Reaper", "Unhuman", "Brutal", "PureEvil"], "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 60000, "atk": 30000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every 2nd primary attack: hit all enemies for 60% of each target’s current ATK.\nWhen damaged: 6% chance to counter for 50% damage received; counters cannot loop.\nFirst eligible fatal hit: revive at full HP, gain +100% current ATK permanently. Cannot be cloned or revived by teammates."}},
-  {"id": "tower-champion-eclipse", "element": "Dark", "image": "assets/cards/wou.png", "towerType": "eclipse", "unlockRequirement": "tower_floor_100_eclipse", "sourceId": "weather-eclipse-harvester", "name": "Wonder Of You", category: ["JoJo", "Supporter", "Magician", "Alternative"], "chance": 8000000, "requiredWeather": "Eclipse", "nativeWeather": "eclipse", "stats": {"hp": 800000, "atk": 8}, "passive": {"name": "Calamity", "description": "Protect a random living teammate; choose another if it dies. No position swap.\nAfter that ally’s shields/reduction, split remaining damage 50%/50%; absorb the shared half, with an 8% chance to reflect it instead. No recursive redirection.\nProtected ally’s kill: heal 80% max HP. Death while protecting: 8% chance to execute the attacker; normal immunity/survival rules apply."}},
-  {"id": "tower-champion-malevolent", "element": "Fire", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", category: ["Jujutsu", "Villian", "Unhuman", "Brutal", "PureEvil"], "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 66666, "atk": 9999}, "passive": {"name": "Malevolent Kitchen", "description": "After 5 primary attacks, hit all living enemies for 25% current ATK at the start of every combat turn while alive.\nWhen hit and surviving: 66% chance to heal 6% max HP and gain +9% current ATK. ATK bonuses stack for the match."}},
-  {"id": "tower-champion-tsukuyomi", "element": "Nature", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", category: ["Ninja", "Protagonist", "Hero", "Human", "Brutal"], "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 200000, "atk": 20000}, "passive": {"name": "Datebayo", "description": "Each new active enemy rolls Naruto/Sasuke mode (50% each); keep the card’s attack counter across target changes.\nNaruto: every 3rd attack deals x3 damage and creates a 10% current HP/ATK Clone. Living Clones follow up each attack; Clone death heals the owner 10% max HP. No count cap; generated units cannot summon.\nSasuke: every 2nd attack hits all enemies for 50% ATK; 20% dodge. Dodge applies Burn for 5 turns (25% ATK/turn) and a 3-combat-turn shield equal to avoided damage. Burn ending naturally Stuns for 1 turn.\nSwitching to Sasuke removes Clones without healing; switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
-  {"id": "tower-champion-heavenly", "element": "Holy", "image": "assets/cards/judgement.png", "towerType": "heavenly", "unlockRequirement": "tower_floor_100_heavenly", "sourceId": "weather-heavenly-seraph", "name": "The Judgement", category: ["Alternative", "Magician", "Unhuman", "Supporter"], "chance": 300300, "requiredWeather": "Heavenly", "nativeWeather": "heavenly", "stats": {"hp": 40000, "atk": 5000}, "passive": {"name": "Divine Light", "description": "Every 2nd attack: 33% chance for a beam hitting all enemies for 50% current ATK; damaged targets have a 66% chance of Heresy for 1–3 turns.\nWhile any enemy has Heresy: beam chance/damage become 66%/66% ATK; Heresy chance becomes 33%.\nHeresy: deal 9% less damage; 3% chance to miss primary attacks."}},
-  {"id": "tower-champion-shadow", "element": "Dark", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", category: ["Villian", "AntiVillian", "Human", "Alternative", "Brutal"], "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 102000, "atk": 28000}, "passive": {"name": "Dark Aurora", "description": "On kill: 29% chance to convert an eligible original enemy and steal its passive (max 2 living summons owned by this card, including summons from stolen passives). Insert the converted unit directly in front of Dark Decade with Dark Decade’s current max HP/ATK and the victim’s passive.\nWhile alive, revive eligible original teammates at the back with Dark Decade’s stats (max 2 revivals/teammate); keep their own passives. Never revive itself, clones or summons.\nGenerated units cannot create companions. Uncloneable enemies and anti-revival restrictions remain excluded."}},
+  {"id": "tower-champion-normal", "element": "Electric", "image": "assets/cards/equinox.png", "towerType": "normal", "unlockRequirement": "tower_floor_100_normal", "sourceId": "starter-common", "name": "Equinox", category: ["VideoGame", "Alternative", "Brutal"], "chance": 2500025, "requiredWeather": "Normal", "nativeWeather": null, "stats": {"hp": 27700, "atk": 6780}, "passive": {"name": "Emotional Meter", "description": "Start at 50% positive / 50% negative. Primary attacks shift 10–20% toward positive; incoming hits shift 10–20% toward negative.\n100% positive: living team gains +100% max HP and +25% ATK; meter locks.\n100% negative: hit all enemies for x25 current ATK, then die permanently; cannot revive or be cloned."}},
+  {"id": "tower-champion-raining", "element": "Water", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", category: ["Supporter", "Magician", "Unhuman"], "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 63700, "atk": 566}, "passive": {"name": "Useless", "description": "Before battle, choose +50% team max HP (once/team) or +50% eligible VNĐ/EXP/Reward Bonus. Reward choice excludes Tower Coins, potion chances and Time Trial payouts.\nEach allied turn with another active attacker: heal it for 10% max HP and grant +2.2% current ATK, once/turn."}},
+  {"id": "tower-champion-snowing", "element": "Water", "image": "assets/cards/iceking.png", "towerType": "snowing", "unlockRequirement": "tower_floor_100_snowing", "sourceId": "toshiro", "name": "Ice King", category: ["AntiVillian", "Magician", "Human", "Alternative"], "chance": 1058000, "requiredWeather": "Snowing", "nativeWeather": "snowing", "stats": {"hp": 15700, "atk": 6010}, "passive": {"name": "Ice Manipulation", "description": "When hit: 20% chance to Freeze the attacker for 2 turns. Deal +50% damage to frozen targets.\nFirst eligible fatal hit: revive at full HP for 5 combat turns, then die permanently. No teammate revival.\nOn permanent death: 58% chance to give a living teammate Ice King Crown (10% chance to Freeze targets for 3 turns)."}},
+  {"id": "tower-champion-sunny", "element": "Fire", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", category: ["Unhuman", "Brutal", "Alternative"], "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 14000, "atk": 5350}, "passive": {"name": "Solar Claw", "description": "33% base crit chance. First damaging crit applies Burn for 3 turns (33% current ATK/turn).\nLater crits deal x3 attack damage before the normal crit multiplier. They do not reapply this Burn. No free follow-up or guaranteed crit."}},
+  {"id": "tower-champion-sugar", "element": "Electric", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"], "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 17200, "atk": 4210}, "passive": {"name": "Candy Eater", "description": "Each primary attack gains 1–3 candies; only the current form applies.\n0–10: +25% damage; +1 extra candy/attack.\n11–25: +50% max HP; when hit, spend 1 candy to heal 3% max HP.\n26–50: damaging attacks summon a Ghost (HP = damage dealt; ATK = 10% current ATK).\n51–75: 76% dodge; a dodge skips the next attack, grants 5 candies and heals 7.6% max HP.\n76–99: every 3rd attack also hits up to 3 random enemies for 50% ATK.\n100: hit all enemies each attack; spend 1 candy/attack until 0. Then return to Form 1 and self-Stun for 5 turns; no candy gain or transformation during reversion.\nGenerated units cannot summon Ghosts."}},
+  {"id": "tower-champion-reaper", "element": "Holy", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", category: ["Villian", "Reaper", "Unhuman", "Brutal", "PureEvil"], "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 31500, "atk": 12000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every 2nd primary attack: hit all enemies for 60% of each target’s current ATK.\nWhen damaged: 6% chance to counter for 50% damage received; counters cannot loop.\nFirst eligible fatal hit: revive at full HP, gain +100% current ATK permanently. Cannot be cloned or revived by teammates."}},
+  {"id": "tower-champion-eclipse", "element": "Dark", "image": "assets/cards/wou.png", "towerType": "eclipse", "unlockRequirement": "tower_floor_100_eclipse", "sourceId": "weather-eclipse-harvester", "name": "Wonder Of You", category: ["JoJo", "Supporter", "Magician", "Alternative"], "chance": 8000000, "requiredWeather": "Eclipse", "nativeWeather": "eclipse", "stats": {"hp": 97100, "atk": 863}, "passive": {"name": "Calamity", "description": "Protect a random living teammate; choose another if it dies. No position swap.\nAfter that ally’s shields/reduction, split remaining damage 50%/50%; absorb the shared half, with an 8% chance to reflect it instead. No recursive redirection.\nProtected ally’s kill: heal 80% max HP. Death while protecting: 8% chance to execute the attacker; normal immunity/survival rules apply."}},
+  {"id": "tower-champion-malevolent", "element": "Fire", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", category: ["Jujutsu", "Villian", "Unhuman", "Brutal", "PureEvil"], "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 14300, "atk": 5460}, "passive": {"name": "Malevolent Kitchen", "description": "After 5 primary attacks, hit all living enemies for 25% current ATK at the start of every combat turn while alive.\nWhen hit and surviving: 66% chance to heal 6% max HP and gain +9% current ATK. ATK bonuses stack for the match."}},
+  {"id": "tower-champion-tsukuyomi", "element": "Nature", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", category: ["Ninja", "Protagonist", "Hero", "Human", "Brutal"], "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 20300, "atk": 7750}, "passive": {"name": "Datebayo", "description": "Each new active enemy rolls Naruto/Sasuke mode (50% each); keep the card’s attack counter across target changes.\nNaruto: every 3rd attack deals x3 damage and creates a 10% current HP/ATK Clone. Living Clones follow up each attack; Clone death heals the owner 10% max HP. No count cap; generated units cannot summon.\nSasuke: every 2nd attack hits all enemies for 50% ATK; 20% dodge. Dodge applies Burn for 5 turns (25% ATK/turn) and a 3-combat-turn shield equal to avoided damage. Burn ending naturally Stuns for 1 turn.\nSwitching to Sasuke removes Clones without healing; switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
+  {"id": "tower-champion-heavenly", "element": "Holy", "image": "assets/cards/judgement.png", "towerType": "heavenly", "unlockRequirement": "tower_floor_100_heavenly", "sourceId": "weather-heavenly-seraph", "name": "The Judgement", category: ["Alternative", "Magician", "Unhuman", "Supporter"], "chance": 300300, "requiredWeather": "Heavenly", "nativeWeather": "heavenly", "stats": {"hp": 10400, "atk": 3970}, "passive": {"name": "Divine Light", "description": "Every 2nd attack: 33% chance for a beam hitting all enemies for 50% current ATK; damaged targets have a 66% chance of Heresy for 1–3 turns.\nWhile any enemy has Heresy: beam chance/damage become 66%/66% ATK; Heresy chance becomes 33%.\nHeresy: deal 9% less damage; 3% chance to miss primary attacks."}},
+  {"id": "tower-champion-shadow", "element": "Dark", "image": "assets/cards/krdarkdecade.png", "towerType": "shadow", "unlockRequirement": "tower_floor_100_shadow", "sourceId": "weather-shadow-monarch", "name": "Kamen Rider Dark Decade", category: ["Villian", "AntiVillian", "Human", "Alternative", "Brutal"], "chance": 2009000, "requiredWeather": "Shadow", "nativeWeather": "shadow", "stats": {"hp": 16700, "atk": 6390}, "passive": {"name": "Dark Aurora", "description": "On kill: 29% chance to convert an eligible original enemy and steal its passive (max 2 living summons owned by this card, including summons from stolen passives). Insert the converted unit directly in front of Dark Decade with Dark Decade’s current max HP/ATK and the victim’s passive.\nWhile alive, revive eligible original teammates at the back with Dark Decade’s stats (max 2 revivals/teammate); keep their own passives. Never revive itself, clones or summons.\nGenerated units cannot create companions. Uncloneable enemies and anti-revival restrictions remain excluded."}},
 ].map(reward => Object.freeze({ ...reward, towerFloor: 100, rarity: 'Secret', image: reward.image, description: `Clear Floor 100 of ${reward.towerType} Tower. Future rolls require the matching weather.` }));
 CARDS.push(...TOWER_REWARD_CARDS);
 // Raid-only secrets never enter RNG pools, including after their first unlock.
 const RAID_SECRET_CARDS = [
-  { id: 'raid-secret-mihawk', element: 'Nature', name: 'Mihawk', category: ["Swordman", "Human", "AntiVillian", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 100000, atk: 5000 }, image: 'assets/cards/mihawk.png',
+  { id: 'raid-secret-mihawk', element: 'Nature', name: 'Mihawk', category: ["Swordman", "Human", "AntiVillian", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 13100, atk: 5000 }, image: 'assets/cards/mihawk.png',
     passive: { name: 'Hawkeye', description: "50% dodge; successful dodge counters for 500% current ATK.\nPrimary attacks pierce the enemy lineup; each damaging hit reduces the next target’s damage by 25%. Dodges/fully blocked hits do not consume a falloff step.\nEach combat turn: 25% chance for Haki for 2 turns (+250% ATK, 25% damage reduction); refreshes without stacking." } },
-  { id: 'raid-secret-ace', element: 'Fire', name: 'Ace', category: ["Pirate", "Human", "Hero", "Supporter", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 10000, atk: 1000 }, image: 'assets/cards/ace.png',
+  { id: 'raid-secret-ace', element: 'Fire', name: 'Ace', category: ["Pirate", "Human", "Hero", "Supporter", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 3970, atk: 1510 }, image: 'assets/cards/ace.png',
     passive: { name: 'Mera Mera', description: "Successful attacks: 10% chance to Burn for 3 turns (100% current ATK/turn).\nOn death: living teammates gain Brother Soul. Their successful attacks have a separate 10% chance to Burn for 1 turn (100% their current ATK). Stacks with other Burns; multiple Ace deaths do not increase the chance." } },
-  { id: 'raid-secret-marco', element: 'Water', name: 'Marco', category: ["Pirate", "Human", "Supporter", "Hero"], rarity: 'Secret', chance: 0, stats: { hp: 500000, atk: 10000 }, image: 'assets/cards/marco.png',
+  { id: 'raid-secret-marco', element: 'Water', name: 'Marco', category: ["Pirate", "Human", "Supporter", "Hero"], rarity: 'Secret', chance: 0, stats: { hp: 51500, atk: 3140 }, image: 'assets/cards/marco.png',
     passive: { name: 'Phoenix Inferno', description: "While alive, attacks against other teammates have a 10% chance to be blocked; counter for 200% current ATK without swapping.\nOnce/match, prevent an ally’s fatal hit or danger below 10% HP, swap positions and heal to max HP. Bleed blocks the heal; fatal rescue leaves at least 1 HP.\n10% dodge; each dodge grants the living team +10% current max HP, stacking for the match." } }
 ].map(card => Object.freeze({ ...card, requiredWeather: null, raidOnly: true, raidType: 'marine_fort', unlockRequirement: `raid_secret_${card.name.toLowerCase()}`, description: 'Exclusive Marine Ford Raid drop. Never available from normal rolls.' }));
 CARDS.push(...RAID_SECRET_CARDS);
@@ -1454,8 +1454,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 214000,
     "stats": {
-      "hp": 21400,
-      "atk": 2140
+      "hp": 11300,
+      "atk": 2770
     },
     "image": "assets/cards/funnyvalentine.png",
     "passive": {
@@ -1471,8 +1471,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 666666,
     "stats": {
-      "hp": 66666,
-      "atk": 6666
+      "hp": 13100,
+      "atk": 4990
     },
     "image": "assets/cards/diotheworld.png",
     "passive": {
@@ -1488,8 +1488,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 120000,
     "stats": {
-      "hp": 20000,
-      "atk": 1200
+      "hp": 15500,
+      "atk": 1420
     },
     "image": "assets/cards/josephjoestar.png",
     "passive": {
@@ -1504,8 +1504,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 206000,
     "stats": {
-      "hp": 26000,
-      "atk": 6000
+      "hp": 8940,
+      "atk": 3410
     },
     "image": "assets/cards/jolynejoestar.png",
     "passive": {
@@ -1521,8 +1521,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 189000,
     "stats": {
-      "hp": 30000,
-      "atk": 1890
+      "hp": 20900,
+      "atk": 1280
     },
     "image": "assets/cards/tohth.png",
     "passive": {
@@ -1538,8 +1538,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 1700000,
     "stats": {
-      "hp": 200000,
-      "atk": 10000
+      "hp": 26000,
+      "atk": 6350
     },
     "image": "assets/cards/emmu.png",
     "passive": {
@@ -1555,8 +1555,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 2400000,
     "stats": {
-      "hp": 240000,
-      "atk": 12000
+      "hp": 49100,
+      "atk": 3000
     },
     "image": "assets/cards/josuke.png",
     "passive": {
@@ -1572,8 +1572,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 8000000,
     "stats": {
-      "hp": 450000,
-      "atk": 40000
+      "hp": 38600,
+      "atk": 14800
     },
     "image": "assets/cards/akaza.png",
     "passive": {
@@ -1589,8 +1589,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 0,
     "stats": {
-      "hp": 60220,
-      "atk": 26200
+      "hp": 21500,
+      "atk": 8190
     },
     "image": "assets/cards/awakeneddoflamingo.png",
     "passive": {
@@ -1606,8 +1606,8 @@ const EXPANSION_CARDS = [
     "rarity": "Secret",
     "chance": 0,
     "stats": {
-      "hp": 38992,
-      "atk": 3899
+      "hp": 10200,
+      "atk": 3900
     },
     "image": "assets/cards/primegarp.png",
     "passive": {
@@ -1629,8 +1629,8 @@ const BOSS_EVENT_CARDS = [{
   "bossEventOnly": true,
   "eventType": "alucard",
   "stats": {
-    "hp": 333333,
-    "atk": 66666
+    "hp": 33700,
+    "atk": 12900
   },
   "image": "assets/cards/alucard.png",
   "passive": {
@@ -1653,8 +1653,8 @@ const QUEST_UPDATE_CARDS = [
     "towerFloor": 200,
     "unlockRequirement": "tower_floor_200_tsukuyomi",
     "stats": {
-      "hp": 500000,
-      "atk": 100000
+      "hp": 31800,
+      "atk": 12100
     },
     "image": "assets/cards/madaralubu.png",
     "passive": {
@@ -1672,8 +1672,8 @@ const QUEST_UPDATE_CARDS = [
     "questOnly": true,
     "unlockRequirement": "quest_card_sung-jin-woo",
     "stats": {
-      "hp": 223000,
-      "atk": 22300
+      "hp": 20400,
+      "atk": 7780
     },
     "image": "assets/cards/sungjinwoo.png",
     "passive": {
@@ -1691,8 +1691,8 @@ const QUEST_UPDATE_CARDS = [
     "questOnly": true,
     "unlockRequirement": "quest_card_frieren",
     "stats": {
-      "hp": 200000,
-      "atk": 25000
+      "hp": 27700,
+      "atk": 6780
     },
     "image": "assets/cards/frieren.png",
     "passive": {
@@ -1710,8 +1710,8 @@ const QUEST_UPDATE_CARDS = [
     "questOnly": true,
     "unlockRequirement": "quest_card_alexander-anderson",
     "stats": {
-      "hp": 77700,
-      "atk": 7700
+      "hp": 15200,
+      "atk": 5810
     },
     "image": "assets/cards/alexanderanderson.png",
     "passive": {
@@ -1733,8 +1733,8 @@ CARDS.push(...[
     "questOnly": true,
     "unlockRequirement": "quest_card_julius",
     "stats": {
-      "hp": 200000,
-      "atk": 15000
+      "hp": 36200,
+      "atk": 3310
     },
     "image": "assets/cards/julius.png",
     "passive": {
@@ -1750,8 +1750,8 @@ CARDS.push(...[
     "chance": 450000,
     "requiredWeather": "Wind",
     "stats": {
-      "hp": 45000,
-      "atk": 4500
+      "hp": 13100,
+      "atk": 5020
     },
     "image": "assets/cards/speedwizard.png",
     "passive": {
@@ -1768,8 +1768,8 @@ CARDS.push(...[
     "bossEventOnly": true,
     "eventType": "lucius",
     "stats": {
-      "hp": 300000,
-      "atk": 30000
+      "hp": 25200,
+      "atk": 6160
     },
     "image": "assets/cards/lucius.png",
     "passive": {
@@ -1785,8 +1785,8 @@ CARDS.push(...[
     "chance": 0,
     "evolutionOnly": true,
     "stats": {
-      "hp": 400000,
-      "atk": 20000
+      "hp": 49600,
+      "atk": 4540
     },
     "image": "assets/cards/seagoddessvalkyrie.png",
     "passive": {
@@ -1806,8 +1806,8 @@ CARDS.push(...[
     "levelingRate": 1500000,
     "evolutionOnly": true,
     "stats": {
-      "hp": 255500,
-      "atk": 19892
+      "hp": 47400,
+      "atk": 2900
     },
     "image": "assets/cards/yunospirit.png",
     "passive": {
@@ -1826,8 +1826,8 @@ CARDS.push(...[
     "towerFloor": 100,
     "unlockRequirement": "tower_floor_100_lucky",
     "stats": {
-      "hp": 444444,
-      "atk": 22222
+      "hp": 38200,
+      "atk": 9330
     },
     "image": "assets/cards/yunospiritdemonic.png",
     "passive": {
@@ -1849,8 +1849,8 @@ CARDS.push(...[
     "towerFloor": 100,
     "unlockRequirement": "tower_floor_100_wind",
     "stats": {
-      "hp": 210000,
-      "atk": 21000
+      "hp": 27800,
+      "atk": 6790
     },
     "image": "assets/cards/xtremechan.png",
     "passive": {
@@ -1869,8 +1869,8 @@ CARDS.push(...[
     "towerFloor": 100,
     "unlockRequirement": "tower_floor_100_bizare",
     "stats": {
-      "hp": 200000,
-      "atk": 33000
+      "hp": 26100,
+      "atk": 9970
     },
     "image": "assets/cards/spr.png",
     "passive": {
@@ -1889,8 +1889,8 @@ CARDS.push(...[
     "towerFloor": 200,
     "unlockRequirement": "tower_floor_200_shadow",
     "stats": {
-      "hp": 600000,
-      "atk": 120000
+      "hp": 34200,
+      "atk": 13100
     },
     "image": "assets/cards/stwr.png",
     "passive": {
@@ -1903,7 +1903,7 @@ CARDS.push(...[
 CARDS.push({
   id: 'tower-champion-normal-200', name: 'Reagan Ridley', category: ["Human", "Supporter", "Alternative"], element: 'Electric', rarity: 'Secret',
   chance: 1692007, requiredWeather: 'Normal', towerType: 'normal', towerFloor: 200,
-  unlockRequirement: 'tower_floor_200_normal', stats: {hp: 200000, atk: 16900},
+  unlockRequirement: 'tower_floor_200_normal', stats: {hp: 42700, atk: 2610},
   image: 'assets/cards/reaganridley.png',
   passive: {name: 'Mad Scientist', description:
     'While supporting, every 3 allied turns create a frontline robot with 10% current max HP / ATK; max 10 active robots per side.\n'+
@@ -1926,8 +1926,8 @@ CARDS.push(...[
     "chance": 850000,
     "requiredWeather": "Sugar",
     "stats": {
-      "hp": 10000,
-      "atk": 8000
+      "hp": 15800,
+      "atk": 6020
     },
     "image": "assets/cards/shirou.png",
     "passive": {
@@ -1948,8 +1948,8 @@ CARDS.push(...[
     "chance": 1850000,
     "requiredWeather": null,
     "stats": {
-      "hp": 150000,
-      "atk": 20000
+      "hp": 23100,
+      "atk": 8830
     },
     "image": "assets/cards/kiritsu.png",
     "passive": {
@@ -1972,8 +1972,8 @@ CARDS.push(...[
     "chance": 2900000,
     "requiredWeather": null,
     "stats": {
-      "hp": 300000,
-      "atk": 20000
+      "hp": 53000,
+      "atk": 3240
     },
     "image": "assets/cards/mash.png",
     "passive": {
@@ -1995,8 +1995,8 @@ CARDS.push(...[
     "chance": 10000000,
     "requiredWeather": "Heavenly",
     "stats": {
-      "hp": 1000000,
-      "atk": 50000
+      "hp": 77200,
+      "atk": 7080
     },
     "image": "assets/cards/gilgamesh.png",
     "passive": {
@@ -2017,8 +2017,8 @@ CARDS.push(...[
     "chance": 4500000,
     "requiredWeather": "Eclipse",
     "stats": {
-      "hp": 200000,
-      "atk": 50000
+      "hp": 30700,
+      "atk": 11700
     },
     "image": "assets/cards/cuchalinn.png",
     "passive": {
@@ -2039,8 +2039,8 @@ CARDS.push(...[
     "chance": 0,
     "requiredWeather": null,
     "stats": {
-      "hp": 80000,
-      "atk": 8000
+      "hp": 15200,
+      "atk": 5820
     },
     "image": "assets/cards/saberknight.png",
     "passive": {
@@ -2064,8 +2064,8 @@ CARDS.push(...[
     "chance": 5500000,
     "requiredWeather": "Sunny",
     "stats": {
-      "hp": 400000,
-      "atk": 27500
+      "hp": 68400,
+      "atk": 4180
     },
     "image": "assets/cards/iskandar.png",
     "passive": {
@@ -2086,8 +2086,8 @@ CARDS.push(...[
     "chance": 3200000,
     "requiredWeather": "Shadow",
     "stats": {
-      "hp": 200000,
-      "atk": 32000
+      "hp": 26800,
+      "atk": 10200
     },
     "image": "assets/cards/medea.png",
     "passive": {
@@ -2109,8 +2109,8 @@ CARDS.push(...[
     "chance": 1700000,
     "requiredWeather": "Sugar",
     "stats": {
-      "hp": 100000,
-      "atk": 17000
+      "hp": 42800,
+      "atk": 2610
     },
     "image": "assets/cards/merlin.png",
     "passive": {
@@ -2132,8 +2132,8 @@ CARDS.push(...[
     "chance": 20000000,
     "requiredWeather": "Heavenly",
     "stats": {
-      "hp": 400000,
-      "atk": 36000
+      "hp": 63700,
+      "atk": 15600
     },
     "image": "assets/cards/gilgameshchan.png",
     "passive": {
@@ -2161,8 +2161,8 @@ CARDS.push(...[
       "Swordman"
     ],
     "stats": {
-      "hp": 66666,
-      "atk": 6666
+      "hp": 14300,
+      "atk": 5460
     },
     "passive": {
       "name": "Frenzy",
@@ -2185,8 +2185,8 @@ CARDS.push(...[
       "Swordman"
     ],
     "stats": {
-      "hp": 33333,
-      "atk": 6666
+      "hp": 10800,
+      "atk": 4140
     },
     "passive": {
       "name": "Potion",
@@ -2209,8 +2209,8 @@ CARDS.push(...[
       "Unhuman"
     ],
     "stats": {
-      "hp": 33333,
-      "atk": 9999
+      "hp": 11700,
+      "atk": 4450
     },
     "passive": {
       "name": "Cursed Blood",
@@ -2234,8 +2234,8 @@ CARDS.push(...[
       "Unhuman"
     ],
     "stats": {
-      "hp": 333333,
-      "atk": 66666
+      "hp": 42100,
+      "atk": 10300
     },
     "passive": {
       "name": "Ki ki ma ma",
@@ -2260,8 +2260,8 @@ CARDS.push(...[
       "Unhuman"
     ],
     "stats": {
-      "hp": 99999,
-      "atk": 33333
+      "hp": 16800,
+      "atk": 6420
     },
     "passive": {
       "name": "Nightmare",
@@ -2286,8 +2286,8 @@ CARDS.push(...[
       "Human"
     ],
     "stats": {
-      "hp": 666666,
-      "atk": 66666
+      "hp": 35900,
+      "atk": 13700
     },
     "passive": {
       "name": "Stalking",
@@ -2312,8 +2312,8 @@ CARDS.push(...[
       "Brutal"
     ],
     "stats": {
-      "hp": 88888,
-      "atk": 8888
+      "hp": 30500,
+      "atk": 2790
     },
     "image": "assets/cards/gojorevice.png",
     "evolutionOnly": true,
@@ -2336,8 +2336,8 @@ CARDS.push(...[
       "Army"
     ],
     "stats": {
-      "hp": 52500,
-      "atk": 4500
+      "hp": 14000,
+      "atk": 5340
     },
     "image": "assets/cards/getoyoung.png",
     "passive": {
@@ -2361,8 +2361,8 @@ CARDS.push(...[
       "AntiHero"
     ],
     "stats": {
-      "hp": 235000,
-      "atk": 35500
+      "hp": 27800,
+      "atk": 10600
     },
     "image": "assets/cards/toji.png",
     "questOnly": true,
@@ -2389,8 +2389,8 @@ CARDS.push(...[
       "PureEvil"
     ],
     "stats": {
-      "hp": 231000,
-      "atk": 31000
+      "hp": 26800,
+      "atk": 10200
     },
     "image": "assets/cards/jogo.png",
     "passive": {
@@ -2415,8 +2415,8 @@ CARDS.push(...[
       "Unhuman"
     ],
     "stats": {
-      "hp": 224000,
-      "atk": 15670
+      "hp": 19000,
+      "atk": 7260
     },
     "image": "assets/cards/truemahito.png",
     "passive": {
@@ -2439,8 +2439,8 @@ CARDS.push(...[
       "Supporter"
     ],
     "stats": {
-      "hp": 100000,
-      "atk": 5000
+      "hp": 29400,
+      "atk": 1790
     },
     "image": "assets/cards/todo.png",
     "passive": {
@@ -2466,8 +2466,8 @@ CARDS.push(...[
       "Army"
     ],
     "stats": {
-      "hp": 400000,
-      "atk": 12000
+      "hp": 46100,
+      "atk": 4230
     },
     "image": "assets/cards/dagon.png",
     "passive": {
@@ -2489,8 +2489,8 @@ CARDS.push(...[
       "Human"
     ],
     "stats": {
-      "hp": 280000,
-      "atk": 32500
+      "hp": 31000,
+      "atk": 11800
     },
     "image": "assets/cards/choso.png",
     "passive": {
@@ -2511,8 +2511,8 @@ CARDS.push(...[
       "Human"
     ],
     "stats": {
-      "hp": 30000,
-      "atk": 7500
+      "hp": 10900,
+      "atk": 4150
     },
     "image": "assets/cards/haruta.png",
     "passive": {
@@ -2536,8 +2536,8 @@ CARDS.push(...[
       "Supporter"
     ],
     "stats": {
-      "hp": 380000,
-      "atk": 18000
+      "hp": 29000,
+      "atk": 7090
     },
     "image": "assets/cards/mechamaru.png",
     "passive": {
@@ -2559,8 +2559,8 @@ CARDS.push(...[
       "Magician"
     ],
     "stats": {
-      "hp": 220000,
-      "atk": 18200
+      "hp": 42700,
+      "atk": 3920
     },
     "image": "assets/cards/hanami.png",
     "passive": {
@@ -2583,8 +2583,8 @@ CARDS.push(...[
       "AntiVillian"
     ],
     "stats": {
-      "hp": 1000000,
-      "atk": 9999
+      "hp": 63600,
+      "atk": 5830
     },
     "image": "assets/cards/sukunashibuya.png",
     "passive": {
