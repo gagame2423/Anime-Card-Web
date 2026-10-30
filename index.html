@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261030-v2-training-loadouts-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261030-v2-training-loadouts-1" />
-  <link rel="stylesheet" href="./pvp.css?v=20261030-v2-training-loadouts-1" />
-  <link rel="stylesheet" href="./infinity.css?v=20261030-v2-training-loadouts-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261030-portal-ui-3" />
+  <link rel="stylesheet" href="./passives.css?v=20261030-portal-ui-3" />
+  <link rel="stylesheet" href="./pvp.css?v=20261030-portal-ui-3" />
+  <link rel="stylesheet" href="./infinity.css?v=20261030-portal-ui-3" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -409,7 +409,7 @@
           <button type="button" role="tab" aria-selected="false" data-storage-tab="equipment">Equipment</button>
           <p data-storage-equipped class="storage-current-slot">Equipment slot: empty · 0 / 1</p>
         </nav>
-        <div class="storage-center"><label class="storage-search" for="inventorySearch"><span class="sr-only">Search items</span><input id="inventorySearch" type="search" placeholder="Search..." autocomplete="off"></label><div id="potionInventoryList" class="storage-grid" aria-label="Stored items"></div><p id="dropChanceDisplay" class="storage-status"></p></div>
+        <div class="storage-center"><label class="storage-search" for="inventorySearch"><span class="sr-only">Search items</span><input id="inventorySearch" type="search" placeholder="Search..." autocomplete="off"></label><button id="portalJoinStorage" type="button" class="ghost-button" hidden>Join Portal Party</button><div id="potionInventoryList" class="storage-grid" aria-label="Stored items"></div><div id="storagePortalPagination" class="portal-pagination" hidden><button id="storagePortalPrev" class="ghost-button" type="button">Previous</button><span id="storagePortalPage"></span><button id="storagePortalNext" class="ghost-button" type="button">Next</button></div><p id="dropChanceDisplay" class="storage-status"></p></div>
         <aside class="storage-detail"><div><h3 data-storage-title>Select an item</h3><p data-storage-type class="storage-type"></p><p data-storage-owned></p></div><div data-storage-art class="storage-detail-art"></div><p data-storage-description class="storage-description"></p><p data-storage-timer class="storage-timer"></p><p data-storage-result class="storage-result" role="status" hidden></p><div class="storage-detail-actions"><button type="button" data-storage-action hidden>Use Potion</button><button type="button" data-storage-info class="storage-source-button" disabled aria-label="View selected item sources">◉ Source Info</button></div></aside>
       </div>
     </section>
@@ -571,6 +571,11 @@
       </div>
 
       <div class="battle-arena hidden" id="battleArena">
+        <section id="portalArenaHud" class="arena-run-hud portal-arena-hud" hidden aria-label="Portal battle">
+          <div class="arena-run-hud__heading"><strong id="portalCombatWave">NAMEK PORTAL</strong><span id="portalCombatAttempts"></span></div>
+          <p id="portalCombatModifiers"></p><p id="portalCombatResult" role="status"></p>
+          <div class="arena-run-hud__actions"><span>Shared Arena · Solo / Online Co-op</span><button id="portalRetrySave" class="ghost-button" type="button" hidden>Retry Save</button><button id="portalBattleExit" class="ghost-button" type="button">Exit Portal</button></div>
+        </section>
         <section id="infinityArenaHud" class="arena-run-hud" aria-label="Infinity run" hidden>
           <div class="arena-run-hud__heading"><strong id="infinityWave">Wave 1 - Continuous</strong><span id="infinityRunState">INFINITY</span></div>
           <div class="arena-run-hud__badges"><span id="infinityWeekBadge"></span><span id="infinityCategoryBadge"></span><span id="infinityElementBadge"></span></div>
@@ -705,6 +710,7 @@
         <div id="spookySummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="raidSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="bossEventSummary" class="time-trial-summary hidden" aria-live="polite"></div>
+        <div id="portalResultActions" class="battle-result__actions" hidden><label class="battle-auto-continue" for="portalResultAuto"><span>Auto Continue</span><input id="portalResultAuto" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label><button id="portalContinue" class="battle-primary-button" type="button">Continue / Next Match</button></div>
         <div class="battle-result__actions">
           <button id="timeTrialResultShopButton" class="ghost-button hidden" type="button">◆ Time Trial Shop</button>
           <button id="bossEventResultShopButton" class="ghost-button hidden" type="button">🩸 Event Shop</button>
@@ -974,62 +980,87 @@
   <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="./online_utils.js?v=20261030-v2-training-loadouts-1"></script>
-  <script defer src="./firebase.js?v=20261030-v2-training-loadouts-1"></script>
-  <script defer src="./startup.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./category.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./background.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261030-v2-training-loadouts-1"></script>
+  <script defer src="./online_utils.js?v=20261030-portal-ui-3"></script>
+  <script defer src="./firebase.js?v=20261030-portal-ui-3"></script>
+  <script defer src="./startup.js?v=20261030-portal-ui-3"></script>
+
+  <!-- PORTALS: entry lives exclusively in Storage. Combat reuses battleArena. -->
+  <div id="portalModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="portalTitle">
+    <section class="modal-panel portal-modal">
+      <header class="modal-header"><div><p class="eyebrow">STORAGE / PORTALS</p><h2 id="portalTitle">Namek Portal</h2></div><button id="portalClose" class="modal-close" type="button" aria-label="Exit Portal">×</button></header>
+      <section class="portal-inspector" aria-label="Pre-match modifiers"><img src="assets/items/nportals.png" alt="Namek Portal" width="80" height="80" onerror="this.hidden=true"><div><p id="portalModifiers"></p><p id="portalAttempts"></p><p id="portalRewards"></p></div></section>
+      <p id="portalStatus" class="portal-status" role="status"></p>
+      <div id="portalChoices" class="portal-actions"><button id="portalSolo" class="battle-primary-button" type="button">Solo · 4 cards</button><button id="portalParty" class="ghost-button" type="button">Party · 2–4 players (Tier 4+)</button></div>
+      <section id="portalRoom" class="portal-room" hidden>
+        <div class="portal-actions"><label>Party size <input id="portalPartySize" type="number" min="2" max="4" step="1" value="2"></label><button id="portalCreateRoom" type="button">Create Room</button><label>Room ID <input id="portalJoinCode" placeholder="PORTAL-A1B2C3D4" maxlength="23" autocomplete="off"></label><button id="portalJoinRoom" type="button">Join Room</button></div>
+        <p><strong id="portalRoomCode">No room</strong> · Host limit: 10 starts per UTC day.</p><p id="portalMembers"></p>
+        <p>2 players: 2 + 2 cards · 3 players: Host 2 + 1 + 1 · 4 players: 1 each. Guest items x0.5; 4-player MVP items x3. Secret cards are never duplicated by MVP.</p>
+      </section>
+      <section id="portalBuilder" hidden>
+        <div id="portalStandardSelector"></div>
+        <label class="battle-auto-continue" for="portalAutoContinue"><span>Auto Continue</span><input id="portalAutoContinue" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label>
+        <div class="portal-actions"><button id="portalReady" type="button" hidden>Lock In / Ready</button><button id="portalHostStart" type="button" hidden>Start Party</button></div>
+      </section>
+    </section>
+  </div>
+  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./category.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./background.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261030-portal-ui-3"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261030-portal-ui-3"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261030-v2-training-loadouts-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261030-v2-training-loadouts-1"></script>
+  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261030-portal-ui-3"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261030-portal-ui-3"></script>
 </body>
 </html>

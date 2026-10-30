@@ -10,7 +10,7 @@
 // ============================================================
 
 function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active);}
-function gameInputLocked(){return isSimulationActive()||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed);}
+function gameInputLocked(){return isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed);}
 
 const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
@@ -2781,6 +2781,7 @@ function getBattleMode() {
 }
 
 function getBattleTeamSize() {
+  if(window.PortalsSystem?.active&&!window.PortalCombatView?.active)return window.PortalParty?.active?window.PortalParty.quota:4;
   return isSpookyBattle() ? window.SpookySystem.PLAYER_TEAM_SIZE : isBossEventBattle() ? 5 : isOneVsOneBattle() ? 1 : BATTLE_TEAM_SIZE;
 }
 
@@ -3314,8 +3315,8 @@ function openBattleModal() {
 }
 
 // External continuous modes reuse the same renderer without replacing Arena state.
-function getArenaBattleState(){return window.InfinityViewSystem?.battle || battleState;}
-function getArenaRuntime(){return window.InfinityViewSystem?.runtime || window.PassiveSystem;}
+function getArenaBattleState(){return window.PortalCombatView?.battle || window.InfinityViewSystem?.battle || battleState;}
+function getArenaRuntime(){return window.PortalCombatView?.runtime || window.InfinityViewSystem?.runtime || window.PassiveSystem;}
 var pendingBattleLogs;
 function appendBattleLog(message,tone=''){
   if(!els.battleLog)return;pendingBattleLogs ||= [];
@@ -3785,7 +3786,7 @@ function renderBattleStats() { window.RollPerformanceSystem.schedule(paintBattle
 function paintBattleStats() {
   const view=getArenaBattleState();
   window.TrainingDummySystem.render(view);
-  if (!view?.playerTeam || !view?.enemyTeam || (view.finished && !window.InfinityViewSystem?.active)) return;
+  if (!view?.playerTeam || !view?.enemyTeam || (view.finished && !window.InfinityViewSystem?.active&&!window.PortalCombatView?.active)) return;
   const player = view.playerTeam[view.playerIndex];
   const enemy = view.enemyTeam[view.enemyIndex];
   if (!player || !enemy) return;
@@ -3797,10 +3798,10 @@ function paintBattleStats() {
   renderBattleLineup('player', view.playerTeam, view.playerIndex);
   renderBattleLineup('enemy', view.enemyTeam, view.enemyIndex);
 
-  const external=window.InfinityViewSystem?.active;
+  const external=window.InfinityViewSystem?.active||window.PortalCombatView?.active;
   if (els.battlePlayerTeamPower) els.battlePlayerTeamPower.textContent = `PLAYER POWER ${(external?calculateBattleTeamPower(view.playerTeam):view.playerPower).toLocaleString('en-US')}`;
   if (els.battleEnemyTeamPower) els.battleEnemyTeamPower.textContent = `ENEMY POWER ${(external?calculateBattleTeamPower(view.enemyTeam):view.enemyPower).toLocaleString('en-US')}`;
-  if (els.battleModeLabel) els.battleModeLabel.textContent = external?window.InfinityViewSystem.modeLabel:getBattleModeLabel();
+  if (els.battleModeLabel) els.battleModeLabel.textContent = external?(window.PortalCombatView?.active?window.PortalCombatView.modeLabel:window.InfinityViewSystem.modeLabel):getBattleModeLabel();
 }
 
 function animateBattleAttack(side) {
@@ -4015,6 +4016,7 @@ function endBattle(playerWon) {
 }
 
 function startBattle(useExistingSetup = true) {
+  if(window.PortalsSystem?.active){if(window.PortalParty?.active){try{window.PortalParty.ready(window.PortalsSystem.getWires());}catch(error){window.PortalsSystem.message(error.message);}}else window.PortalsSystem.startSolo();return;}
   clearAutoContinueBattleTimer();
   if (isBattleMatchActive() || isImportingSave || gameInputLocked() || window.EquipmentSystem?.blocked) return;
   if (isBossEventBattle()) syncGameClockToNow();
@@ -4412,6 +4414,7 @@ function finishTimeTrialBattle(won, reason = '') {
     appendBattleLog(error.message, 'defeat');
   }
   if (!summary) return;
+  if(summary.reason!=='save-error')window.PortalsSystem.dropTimeTrial(battleState,summary.won);
   if (summary.reason !== 'save-error') { battleState.questResultWon = summary.won; recordQuestBattleCompletion(battleState); }
   clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
   battleState.finished = true; battleState.isBattling = false;
@@ -4591,7 +4594,7 @@ async function withSaveTransfer(action, operation) {
 // Validate every store before writing; pagehide must not overwrite an import.
 // ============================================================
 function getGameSaveKeys() {
-  return [window.InfinitySystem.KEY,window.InfinitySystem.WEEKLY_KEY,window.ShopBulkSystem.KEY,STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.ExpFoodSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.SettingsSystem.KEY, window.EquipmentSystem.KEY, window.SpookySystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
+  return [window.PortalsSystem.KEY,window.InfinitySystem.KEY,window.InfinitySystem.WEEKLY_KEY,window.ShopBulkSystem.KEY,STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY, window.ExpFoodSystem.KEY, window.TimeTrialSystem.KEY, window.RaidSystem.KEY, window.BossEventSystem.KEY, window.EvolutionSystem.KEY, window.QuestSystem.KEY, window.QuestsSystem.KEY, window.DropAudioSystem.KEY, window.DropAudioSystem.VOLUME_KEY, window.BackgroundActivitySystem.VOLUME_KEY, window.PotionHudSystem.KEY, window.SettingsSystem.KEY, window.EquipmentSystem.KEY, window.SpookySystem.KEY, (window.RollViewSystem?.KEY || 'anime_card_rng_hide_rolling_card'), window.BackgroundActivitySystem.MUSIC_KEY, ...LEGACY_STORAGE_KEYS, AUTO_CONTINUE_STORAGE_KEY];
 }
 function setSaveTransferStatus(message, failed = false) {
   const status = document.getElementById('saveTransferStatus');
@@ -4599,7 +4602,7 @@ function setSaveTransferStatus(message, failed = false) {
 }
 function buildCloudSaveBundle() {
   syncGameClockToNow(); refreshAchievements(); window.InventorySystem?.tick();
-  if (![window.ExpFoodSystem.flush(), window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.EquipmentSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush(),window.SpookySystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
+  if (![window.PortalsSystem.flush(),window.ExpFoodSystem.flush(), window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.EquipmentSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush(),window.SpookySystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
   if (!window.InfinitySystem.flush() || !window.ShopBulkSystem.flush() || !saveState()) throw new Error('Your progress could not be saved. Please try again.');
   const storage = {};
   for (const key of getGameSaveKeys()) {
@@ -4615,6 +4618,7 @@ function validateSaveRecord(key, value) {
   const flags = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const flag of Object.values(map)) ensure(typeof flag === 'boolean', `${label} flags must be true or false.`); };
   const counts = (map, label) => { ensure(object(map), `${label} must be an object.`); for (const n of Object.values(map)) number(n, label); };
   if ([window.BackgroundActivitySystem.VOLUME_KEY, window.DropAudioSystem.VOLUME_KEY].includes(key)) { ensure(typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1, 'Audio volume must be between 0 and 1.'); return value; }
+  if(key===window.PortalsSystem.KEY){ensure(window.PortalsSystem.validSave(value),'invalid Portal items or unfinished transaction.');return value;}
   if(key===window.InfinitySystem.WEEKLY_KEY){ensure(window.InfinitySystem.validWeeklySave(value),'unfinished weekly reward.');return value;}
   if(key===window.InfinitySystem.KEY){ensure(window.InfinitySystem.validSave(value),'invalid Infinity progression.');return value;}
   if(key===window.ShopBulkSystem.KEY){ensure(window.ShopBulkSystem.validSave(value),'unfinished bulk purchase.');return value;}
@@ -4746,7 +4750,7 @@ function parseCloudSaveBundle(text) {
   return result;
 }
 // Evolution changes a cloned save first; no live ownership changes before commit.
-function canEvolveNow() { return !window.ExpFoodSystem?.blocked && !window.EquipmentSystem?.blocked && !isSimulationActive() && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
+function canEvolveNow() { return !window.PortalsSystem?.active && !window.ExpFoodSystem?.blocked && !window.EquipmentSystem?.blocked && !isSimulationActive() && !isImportingSave && !saveTransferBusy && !isBattleMatchActive() && window.EvolutionSystem.flush(); }
 function prepareEquipmentCraft(recipe, selected) {
   if(!canEvolveNow()||state.currency<recipe.cost)throw Error('Finish the current battle or check VNĐ.');
   if(!saveState()||!window.InventorySystem.flush())throw Error('Unable to save before crafting.');
@@ -4769,7 +4773,7 @@ function evolutionComplete(recipe) { return state.achievementRewardReceipts?.['e
 function prepareEvolution(recipe, variantKey) {
   if (!canEvolveNow() || evolutionComplete(recipe)) throw new Error('Thẻ này đã tiến hóa hoặc game đang bận.');
   const variant = getVariantEntries(recipe.baseId).find(v => v.key === variantKey && v.count > 0);
-  if (!variant || getCardLevelInfo(recipe.baseId).level < recipe.level || window.InventorySystem.quantity(recipe.itemId)<1) throw new Error('Cần đúng biến thể Lv.100+ và vật phẩm tiến hóa.');
+  if (!variant || getCardLevelInfo(recipe.baseId).level < recipe.level || window.InventorySystem.quantity(recipe.itemId)<(recipe.itemCount||1)) throw new Error('Cần đúng biến thể Lv.100+ và vật phẩm tiến hóa.');
   if (!saveState() || !window.InventorySystem.flush()) throw new Error('Không thể lưu tiến độ hiện tại.');
   const mainBefore = localStorage.getItem(STORAGE_KEY), itemsBefore = localStorage.getItem(window.InventorySystem.KEY), original = state;
   let mainAfter;
@@ -4784,7 +4788,7 @@ function prepareEvolution(recipe, variantKey) {
     // Equipment may only refer to copies that still exist after the sacrifice.
     syncOwnershipRecords(); mainAfter = JSON.stringify(state);
   } finally { state = original; }
-  const items = JSON.parse(itemsBefore); items.items[recipe.itemId].quantity--;
+  const items = JSON.parse(itemsBefore); items.items[recipe.itemId].quantity-=(recipe.itemCount||1);
   return {mainBefore,mainAfter,itemsBefore,itemsAfter:JSON.stringify(items)};
 }
 function onEvolutionCommitted() {
@@ -4929,7 +4933,7 @@ function globalTick() {
   if(window.EquipmentSystem?.blocked)return;
   if (isImportingSave) return;
   window.PotionHudSystem?.render();
-  if(window.InfinitySystem?.active){const now=Date.now(),previous=Number(state.weather.lastRealTimestamp);state.weather.lastRealTimestamp=now;advanceGameClock(Number.isFinite(previous)?Math.max(0,(now-previous)/1000):0);window.QuestsSystem?.tick(state.weather.gameSeconds);window.InventorySystem.tick(now);renderClockAndWeather(false);saveState(true,false);return;}
+  if(window.InfinitySystem?.active||window.PortalsSystem?.active){const now=Date.now(),previous=Number(state.weather.lastRealTimestamp);state.weather.lastRealTimestamp=now;advanceGameClock(Number.isFinite(previous)?Math.max(0,(now-previous)/1000):0);window.QuestsSystem?.tick(state.weather.gameSeconds);window.InventorySystem.tick(now);renderClockAndWeather(false);saveState(true,false);return;}
   if (gameInputLocked()) return;
   refreshAchievements(!(window.RollViewSystem?.enabled && isAutoRolling));
   const now = Date.now();
@@ -4986,6 +4990,7 @@ function recoverElapsedRealTime() {
 // ============================================================
 
 function isBattleMatchActive() {
+  if(window.PortalCombatView?.battle?.isBattling&&!window.PortalCombatView.battle.finished)return true;
   return Boolean(
     battleState &&
     battleState.finished !== true &&
@@ -5006,6 +5011,7 @@ function setBattleModalLock(active) {
 }
 
 function openModal(id) {
+  if(window.PortalsSystem?.active&&!['portalModal','arenaMutationModal','passiveDetailModal','elementChartModal'].includes(id))return;
   if (window.SandboxSystem?.active && id !== 'sandboxModal') return;
   if (window.PvPSystem?.active && id !== 'pvpModal') return;
   if (window.InfinitySystem?.active && !['infinityModal','leaderboardModal',...(window.InfinityViewSystem?.active?['passiveDetailModal','elementChartModal']:[])].includes(id)) return;
@@ -5043,6 +5049,7 @@ function openModal(id) {
 }
 
 function returnToLobby() {
+  if(window.PortalsSystem?.active){window.PortalsSystem.exit();return;}
   window.TrainingDummySystem.hide();
   window.TimeTrialSystem?.abort(battleState, 'exit');
   window.SpookySystem?.abort(battleState);
@@ -5077,6 +5084,7 @@ function returnToLobby() {
 }
 
 function surrenderBattle() {
+  if(window.PortalsSystem?.active){window.PortalsSystem.exit();return;}
   window.TrainingDummySystem.hide();
   window.TimeTrialSystem?.abort(battleState, 'surrender');
   window.SpookySystem?.abort(battleState);
@@ -5114,6 +5122,8 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if(id==='portalModal'){window.PortalsSystem.exit();return;}
+  if(id==='battleModal'&&window.PortalCombatView?.active)return;
   if(id==='battleModal' && window.InfinityViewSystem?.active)return;
   if (id === 'infinityRewardModal') window.InfinitySystem?.dismissReward();
   if(id==='arenaMutationModal')window.UIPerformanceSystem.closePicker();
@@ -5161,7 +5171,7 @@ function resetGame() {
   try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
   renderAutoContinueBattleToggle();
   returnToLobby();
-  window.InfinitySystem?.reset(); window.InventorySystem?.reset(); window.ExpFoodSystem?.reset(); window.SpookySystem?.reset(); window.EquipmentSystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.();
+  window.InfinitySystem?.reset(); window.PortalsSystem?.reset(); window.InventorySystem?.reset(); window.ExpFoodSystem?.reset(); window.SpookySystem?.reset(); window.EquipmentSystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.();
 
   clearCooldownExpiryTimer();
   clearBattleTurnTimer();
@@ -5374,7 +5384,7 @@ els.buyCoinMultiButton?.addEventListener("click", () => purchaseUpgrade("coinMul
 els.collectionButton?.addEventListener("click", () => openModal("collectionModal"));
 els.upgradesButton?.addEventListener("click", () => openModal("upgradesModal"));
 els.battleButton?.addEventListener("click", openBattleModal);
-els.battleCloseButton?.addEventListener("click", event => { event.preventDefault(); if(window.InfinityViewSystem?.active){window.InfinitySystem.exit();return;} surrenderBattle(); });
+els.battleCloseButton?.addEventListener("click", event => { event.preventDefault(); if(window.PortalCombatView?.active){window.PortalsSystem.exit();return;}if(window.InfinityViewSystem?.active){window.InfinitySystem.exit();return;} surrenderBattle(); });
 els.resetButton?.addEventListener("click", resetGame);
 els.autoContinueBattleToggle?.addEventListener('change', () => {
   if(isSpookyBattle()){renderAutoContinueBattleToggle();return;}
@@ -5754,7 +5764,7 @@ document.getElementById('spookyChooseButton')?.addEventListener('click',showSpoo
 // Online modules receive narrow read/serialize/lifecycle adapters only.
 async function applyCloudProgress(payload,options={}){
   if(options.manual!==true)throw Error('Cloud progress is loaded only through the optional Load Cloud Save action.');
-  if(isBattleMatchActive()||isSimulationActive()||window.InfinitySystem?.active||isImportingSave)throw Error('Finish the current activity before loading a Cloud copy.');
+  if(isBattleMatchActive()||isSimulationActive()||window.InfinitySystem?.active||window.PortalsSystem?.active||isImportingSave)throw Error('Finish the current activity before loading a Cloud copy.');
   if(options.canApply&&options.canApply()!==true)throw Error('Local progress changed before Cloud restore.');
   const imported=parseCloudSaveBundle(await decryptGameSave(payload));
   const gameKeys=getGameSaveKeys(),records=Object.fromEntries(gameKeys.map(key=>[key,Object.hasOwn(imported,key)?imported[key]:null]));
@@ -5782,8 +5792,8 @@ function cloudProgressSummary(){
 }
 window.CloudSaveSystem.configure({
   open:openModal,storageKeys:getGameSaveKeys,summary:cloudProgressSummary,
-  canRestore:()=>!isBattleMatchActive()&&!isSimulationActive()&&!window.InfinitySystem?.active&&!isImportingSave,
-  canSnapshot:()=>!window.ShopBulkSystem.blocked&&!window.InfinitySystem.blocked&&!isSimulationActive()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked&&window.EvolutionSystem.flush(),
+  canRestore:()=>!isBattleMatchActive()&&!isSimulationActive()&&!window.PortalsSystem?.active&&!window.InfinitySystem?.active&&!isImportingSave,
+  canSnapshot:()=>!window.PortalsSystem.blocked&&!window.ShopBulkSystem.blocked&&!window.InfinitySystem.blocked&&!isSimulationActive()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked&&window.EvolutionSystem.flush(),
   capture:async()=>{const bundle=buildCloudSaveBundle(),summary=cloudProgressSummary();return{payload:await encryptGameSave(JSON.stringify(bundle)),summary,meaningful:summary.totalRolls>0||summary.uniqueCards>0||state.currency>0||Object.values(state.upgrades||{}).some(n=>n>0)};},
   validate:async payload=>parseCloudSaveBundle(await decryptGameSave(payload)),apply:applyCloudProgress
 });
@@ -5822,3 +5832,41 @@ window.InfinitySystem.configure({
 });
 
 window.GameStartup.ready(()=>{resumeGameRuntime();window.InfinitySystem.presentReward();void window.InfinitySystem.report();});
+
+
+// Portal adapters: progression, visual selection and shared Arena rendering remain modular.
+function preparePortalCard(cardId,mutationIds){
+  const card=getCardById(cardId);if(!card?.portalOnly)throw Error('Unknown Portal-exclusive reward.');
+  if(!saveState(true))throw Error('Unable to save current progress.');
+  const original=state;try{
+    state=JSON.parse(localStorage.getItem(STORAGE_KEY));const ids=normalizeCardMutations(mutationIds),key=canonicalVariantKey(cardId,ids);
+    state.unlocked[cardId]=getUnlockedCountById(cardId)+1;state.mutations[key]=(Number(state.mutations[key])||0)+1;
+    state.inventory[key]={id:cardId,cardId,mutationIds:ids,mutation:ids.join('+'),count:(Number(state.inventory[key]?.count)||0)+1};ensureCardProgress(cardId);return JSON.stringify(state);
+  }finally{state=original;window.RollPerformanceSystem.invalidateOwnership();}
+}
+window.PortalCombatView.configure({render:renderBattleStats,log:appendBattleLog,float:showBattleFloatingText,attack:animateBattleAttack,promote:animateBattlePromotion,lock:setBattleModalLock,
+ clear:()=>{window.RollPerformanceSystem.cancel(paintBattleStats);window.RollPerformanceSystem.cancel(paintBattleLog);pendingBattleLogs=[];clearBattleAnimationTimers();for(const node of [els.battlePlayerFloatingText,els.battleEnemyFloatingText])node?.replaceChildren();for(const node of [els.battlePlayerCard,els.battleEnemyCard])node?.classList.remove('battle-lunge-player','battle-lunge-enemy','battle-hit','battle-promote');}});
+window.PortalsSystem.configure({
+ canEnter:()=>!isBattleMatchActive()&&!gameInputLocked()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked,
+ cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),variants:id=>getVariantEntries(id).filter(v=>v.count>0),
+ describe:(card,variant)=>({...getDisplayCard(card,variant.mutations),level:getCardLevelInfo(card.id).level}),
+ displayName:()=>window.CloudSaveSystem.publicName||'Player',weather:()=>getActiveWeatherDefinitions().map(w=>w.name),rollMutations,prepareCard:preparePortalCard,
+ open:openModal,notify:message=>window.ShopBulkSystem.notify(message),
+ selection:()=>getBattleSetupTeam(),selector:renderPortalStandardSelector,
+ onEnter:()=>{clearAutoContinueBattleTimer();clearCooldownExpiryTimer();clearBattleTurnTimer();document.getElementById('inventoryModal')?.classList.add('hidden');saveState();},
+ onExit:()=>{releasePortalStandardSelector();document.getElementById('battleModal')?.classList.add('hidden');document.getElementById('inventoryModal')?.classList.remove('hidden');document.body.classList.add('modal-open');window.BattleWeatherHud.render();renderPotionInventory();updateStats();refreshAchievements();window.CloudSaveSystem.afterActivity();resumeGameRuntime();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();},
+ onReward:()=>{state=loadState();window.RollPerformanceSystem.invalidateOwnership();window.CloudSaveSystem.markDirty();}
+});
+
+let portalSelectorHome=null,portalSavedBattle=null,portalSelectorHidden=[];
+function renderPortalStandardSelector(size,reset,locked){
+ const node=els.battleSetup,root=document.getElementById('portalStandardSelector');if(!node||!root||size<1)return;
+ if(!portalSelectorHome){portalSelectorHome={parent:node.parentNode,next:node.nextSibling};portalSavedBattle=battleState;battleState={mode:'4v4',setup:{team:[],activeIndex:0},finished:true};root.append(node);
+ for(const id of ['battleModePicker','teamLoadouts']){const n=document.getElementById(id);if(n){portalSelectorHidden.push([n,n.classList.contains('hidden')]);n.classList.add('hidden');}}}
+ const old=battleState.setup?.team||[];if(reset||old.length!==size)battleState.setup={team:Array.from({length:size},(_,i)=>reset?null:old[i]||null),activeIndex:0};
+ node.classList.remove('hidden');renderBattleSelection();populateBattleFighterSelect();
+ for(const id of ['battleTeamSlots','battleFighterGrid','battleVariantGrid']){const n=document.getElementById(id);if(n){n.style.pointerEvents=locked?'none':'';n.inert=Boolean(locked);}}
+ els.battleStartButton.textContent=window.PortalParty?.active?'Lock In / Ready':'Start Portal · 2s turns';els.battleStartButton.disabled=Boolean(locked)||!isBattleSetupValid();
+ document.getElementById('teamLoadouts')?.classList.add('hidden');
+}
+function releasePortalStandardSelector(){if(!portalSelectorHome)return;const n=els.battleSetup;portalSelectorHome.parent.insertBefore(n,portalSelectorHome.next);for(const [node,hidden]of portalSelectorHidden)node.classList.toggle('hidden',hidden);portalSelectorHidden=[];for(const id of ['battleTeamSlots','battleFighterGrid','battleVariantGrid']){const node=document.getElementById(id);if(node){node.style.pointerEvents='';node.inert=false;}}battleState=portalSavedBattle;portalSelectorHome=null;portalSavedBattle=null;}

@@ -3,6 +3,8 @@
   'use strict';
   const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
   const RECIPES = Object.freeze([
+    Object.freeze({id:'ultimate-gohan',baseId:'gohan',itemId:'senzu_bean',itemCount:8500,level:100,name:'Ultimate Gohan'}),
+    Object.freeze({id:'golden-frieza',baseId:'frieza',itemId:'senzu_bean',itemCount:7690,level:100,name:'Golden Frieza'}),
     Object.freeze({id:'true-mahito',baseId:'mahito',itemId:'mahito_puppet',level:100,name:'True Mahito'}),
     Object.freeze({id:"gojo-revice",baseId:"gojo-young",itemId:"gojo_eye",level:100,name:"Gojo Revice"}),
     Object.freeze({id:"jason-13th",baseId:"the-trapper",itemId:"machete",level:100,name:"Jason 13th"}),
@@ -80,13 +82,13 @@
       const box=doc.createElement('article');box.className='module-item evolution-recipe';
       const title=doc.createElement('h3');title.textContent=recipe.name;
       const item=host.InventorySystem.getItem(recipe.itemId),info=bridge.describe?.(recipe)||{};
-      const text=doc.createElement('p');text.textContent=`${info.baseName || recipe.baseId} Lv.${recipe.level}+ + 1 ${item?.name || recipe.itemId} (x${host.InventorySystem.quantity(recipe.itemId)} owned). Result: Lv.1; exact mutations inherited. One evolution per result card.`;
+      const text=doc.createElement('p');text.textContent=`${info.baseName || recipe.baseId} Lv.${recipe.level}+ + ${recipe.itemCount||1} ${item?.name || recipe.itemId} (x${host.InventorySystem.quantity(recipe.itemId)} owned). Result: Lv.1; exact mutations inherited. One evolution per result card.`;
       const select=doc.createElement('select'); select.className='select-input'; select.setAttribute('aria-label',`Base mutation for ${recipe.name}`);
       for (const variant of info.variants || []) { const o=doc.createElement('option');o.value=variant.key;o.textContent=`${variant.label} • x${variant.count} • Lv.${info.level}`;select.append(o); }
       if (!select.options.length) { const o=doc.createElement('option');o.textContent='No eligible base card';select.append(o);select.disabled=true; }
       const button=doc.createElement('button');button.type='button';button.className='battle-primary-button';
-      button.textContent=info.completed ? 'Already evolved' : 'Evolve • consumes 1 card + 1 material';
-      button.disabled=info.completed || !info.variants?.length || info.level<recipe.level || host.InventorySystem.quantity(recipe.itemId)<1 || !bridge.canAct?.();
+      button.textContent=info.completed ? 'Already evolved' : `Evolve • 1 card + ${recipe.itemCount||1} material${(recipe.itemCount||1)>1?'s':''}`;
+      button.disabled=info.completed || !info.variants?.length || info.level<recipe.level || host.InventorySystem.quantity(recipe.itemId)<(recipe.itemCount||1) || !bridge.canAct?.();
       button.addEventListener('click',()=>{const result=evolve(recipe.id,select.value); const status=doc.getElementById('evolutionStatus');if(status) status.textContent=result.message;render(container);});
       box.append(title,text,select,button);container.append(box);
     }

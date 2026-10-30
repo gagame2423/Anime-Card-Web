@@ -2594,7 +2594,122 @@ CARDS.push(...[
     "questOnly": true,
     "unlockRequirement": "quest_sukuna-shibuya",
     "requiredWeather": "Malevolent"
+  },
+{
+  "id": "goku-ssj3",
+  "name": "Goku SSJ3",
+  "element": "Electric",
+  "rarity": "Secret",
+  "chance": 3000000,
+  "requiredWeather": "Sunny",
+  "category": [
+    "DragonWarrior",
+    "Hero",
+    "Protagonist"
+  ],
+  "stats": {
+    "hp": 25500,
+    "atk": 10115
+  },
+  "image": "assets/cards/gokussj3.png",
+  "passive": {
+    "name": "Dragon Combo",
+    "description": "Each main attack can chain 30% follow-ups (30% ATK each). Each follow-up adds +5% damage to the next main attack, then resets. A chain of 3+ also hits all enemies for 30% ATK. DragonWarrior allies gain +5% Crit Chance."
   }
+},
+{
+  "id": "vegeta-ssj2",
+  "name": "Vegeta SSJ2",
+  "element": "Water",
+  "rarity": "Secret",
+  "chance": 2000000,
+  "requiredWeather": "Sunny",
+  "category": [
+    "DragonWarrior",
+    "Hero",
+    "AntiHero",
+    "Protagonist"
+  ],
+  "stats": {
+    "hp": 20200,
+    "atk": 7560
+  },
+  "image": "assets/cards/vegetassj2.png",
+  "passive": {
+    "name": "Saiyan Prince",
+    "description": "On the 10th main attack, hit all enemies for x10 ATK, ignoring damage reduction. Each attack adds +1% ATK (max +100%); at +100%, heal fully and reset this bonus. Each hit on allied Bulma adds +5% ATK (separate +100% cap). Block Bulma’s first fatal hit and swap with her while alive."
+  }
+},
+{
+  "id": "broly",
+  "name": "Broly",
+  "element": "Nature",
+  "rarity": "Secret",
+  "chance": 0,
+  "portalOnly": true,
+  "category": [
+    "DragonWarrior",
+    "Hero",
+    "AntiHero",
+    "AntiVillian",
+    "Brutal"
+  ],
+  "stats": {
+    "hp": 31200,
+    "atk": 12200
+  },
+  "image": "assets/cards/broly.png",
+  "passive": {
+    "name": "LEGENDARY SUPER SAIYAN",
+    "description": "Each combat turn grants +1.2% ATK. On turns Broly attacks, gain another +1.8% ATK (+3% total). Bonuses add from starting ATK, without a stack cap. Secret Namek Portal: Solo 100%, Party 10%."
+  }
+},
+{
+  "id": "ultimate-gohan",
+  "name": "Ultimate Gohan",
+  "element": "Holy",
+  "rarity": "Mythic",
+  "chance": 0,
+  "evolutionOnly": true,
+  "evolvesFrom": "gohan",
+  "category": [
+    "DragonWarrior",
+    "Hero"
+  ],
+  "stats": {
+    "hp": 21860,
+    "atk": 6950
+  },
+  "image": "assets/cards/ultimategohan.png",
+  "passive": {
+    "name": "MASENKOO",
+    "description": "First entry: +15% Crit Chance and +30% Crit Damage. While not attacking, an ally’s critical hit triggers a 150% ATK follow-up. DragonWarrior allies gain +5% Crit Chance."
+  }
+},
+{
+  "id": "golden-frieza",
+  "name": "Golden Frieza",
+  "element": "Electric",
+  "rarity": "Mythic",
+  "chance": 0,
+  "evolutionOnly": true,
+  "evolvesFrom": "frieza",
+  "category": [
+    "Villian",
+    "PlanetDestroyer",
+    "Brutal",
+    "AntiHero"
+  ],
+  "stats": {
+    "hp": 21875,
+    "atk": 5350
+  },
+  "image": "assets/cards/goldenfrieza.png",
+  "passive": {
+    "name": "Supernova",
+    "description": "First main attack targets the enemy with the lowest ATK. Each attack has a 30% chance to pierce up to 3 enemies for 50% ATK each. While not attacking, allies gain +10% HP/ATK and enemy healing is reduced by 20%; this aura does not compound."
+  }
+}
 ]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;

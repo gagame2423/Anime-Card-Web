@@ -4714,3 +4714,28 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 @media(max-width:600px){.team-loadouts__actions{width:100%;margin-left:0}.team-loadouts__presets{width:100%}.team-loadouts__presets>button{flex:1}.training-damage-hud{padding:11px;gap:8px}.training-damage-hud__records{display:flex;gap:12px;font-size:10px}}
 
 #timeTrialSummary.is-new-dps-record{border-color:#e6cc79;box-shadow:0 0 18px #e2be5126;background:linear-gradient(110deg,#302b205e,#151e35);color:#fff0c2}
+
+/* Storage Portals use the shared Arena; only inspector and deck builder styles. */
+.portal-modal{width:min(1120px,96vw);max-height:94dvh;overflow-y:auto;background:linear-gradient(145deg,#071622,#101423);border:1px solid #6edbc580;box-shadow:0 0 44px #19c8aa22}
+.portal-inspector{display:flex;align-items:center;gap:20px;padding:16px;border:1px solid #54d3c34d;border-radius:14px;background:#15384133}
+.portal-inspector p{margin:6px 0;font-size:13px;line-height:1.6}.portal-inspector img{object-fit:contain;flex:none}.portal-status{min-height:24px;color:#a6ecdd;line-height:1.5}
+.portal-actions,.portal-picker-filters,.portal-pagination{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:14px 0}.portal-actions .battle-primary-button{width:auto}.portal-actions label,.portal-picker-filters label{display:grid;gap:5px;font-size:12px;color:#a9c6d5}
+.portal-room input,.portal-room select{color:#e2ffff;background:#06131e;border:1px solid #476075;border-radius:8px;padding:10px;min-width:0}.portal-actions input[type=number]{width:80px}.portal-actions input[type=text],#portalJoinCode{width:210px}.portal-room{padding:16px;border:1px solid #476075;border-radius:12px}.portal-room p{line-height:1.6;font-size:13px;color:#bed3dd}
+.portal-team-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}.portal-team-slot{min-height:110px;padding:8px;border:1px solid #466277;border-radius:12px;display:flex;flex-direction:column;gap:8px}.portal-team-slot.is-active{border-color:#63f4cd;box-shadow:0 0 12px #63f4cd22}.portal-slot-target{width:100%;font-size:12px;letter-spacing:.08em}
+.portal-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-height:480px;overflow-y:auto;padding:6px}.portal-card{position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px;border:1px solid #657a9366;border-radius:12px;background:#102234;color:#e5fcff;text-align:left;overflow:hidden}.portal-card img:not(.element-badge img){width:100%;height:140px;object-fit:contain;border-radius:6px}.portal-card .element-badge{position:absolute;top:10px;right:10px}.portal-card .element-badge img{width:25px;height:25px;object-fit:contain}.portal-card small,.portal-card span:not(.element-badge){font-size:11px;line-height:1.5}.portal-card.rarity-secret{border-color:#f0b96b}.portal-card.rarity-mythic{border-color:#c286ef}.portal-card.is-used{opacity:.5}.portal-in-use{position:absolute;top:65px;left:0;right:0;text-align:center;padding:6px;background:#062d36df;color:#88fbd8}.portal-pagination{justify-content:center;font-size:12px}.portal-arena-hud p{margin:6px 0;line-height:1.6;font-size:13px}.portal-arena-hud #portalCombatResult{white-space:pre-line;color:#c3ffdb}
+#portalJoinStorage{margin-bottom:12px}#portalArenaHud[hidden],#portalModal [hidden],#portalJoinStorage[hidden]{display:none!important}
+@media(max-width:600px){.portal-modal{width:96vw;padding:14px}.portal-inspector{align-items:flex-start;gap:10px;padding:10px}.portal-inspector img{width:50px;height:50px}.portal-team-slots{grid-template-columns:repeat(2,minmax(0,1fr))}.portal-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.portal-card{padding:7px}.portal-card img:not(.element-badge img){height:110px}.portal-card strong{font-size:12px}.portal-actions{align-items:stretch}.portal-actions>*{max-width:100%}.portal-actions .battle-primary-button{width:100%}.portal-picker-filters label{flex:1 1 130px}.portal-arena-hud .arena-run-hud__heading{align-items:flex-start;flex-direction:column;gap:6px}}
+
+.portal-modal{padding:20px}.portal-actions button:not(.portal-card):not(.modal-close){color:#d9fff7;background:#11323a;border:1px solid #4b897e;border-radius:9px;padding:10px 14px;cursor:pointer}.portal-actions button:disabled{opacity:.45;cursor:not-allowed}.portal-actions button:not(:disabled):hover{border-color:#80ffe0;background:#17434c}.portal-actions .battle-primary-button{background:linear-gradient(100deg,#16735e,#185372);font-weight:700}.portal-actions button:focus-visible{outline:2px solid #88ffe4;outline-offset:2px}@media(max-width:600px){.portal-modal{padding:14px}.portal-slot-target{padding:8px!important;font-size:10px}}
+
+#storagePortalPagination[hidden]{display:none!important}
+
+#portalResultActions[hidden]{display:none!important}#portalResultActions{align-items:center}#portalStandardSelector .battle-setup{display:block}#portalStandardSelector{width:100%}
+
+#portalStandardSelector .battle-setup{margin:0}#portalStandardSelector button{font-family:inherit}#portalStandardSelector .battle-mode-picker{display:none!important}
+
+/* Shared Arena primary action; Portal controls reuse the standard result row. */
+#portalContinue{border-color:#66f3cf;background:linear-gradient(115deg,#159b85,#1675a1);box-shadow:0 0 20px #37eec22b;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease}
+#portalContinue:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 28px #45f7ce55;filter:brightness(1.12)}
+#portalContinue:focus-visible{outline:2px solid #b3ffed;outline-offset:4px}
+@media(prefers-reduced-motion:reduce){#portalContinue{transition:none}#portalContinue:hover:not(:disabled){transform:none}}
