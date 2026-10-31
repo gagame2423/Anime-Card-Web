@@ -4739,3 +4739,14 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 #portalContinue:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 28px #45f7ce55;filter:brightness(1.12)}
 #portalContinue:focus-visible{outline:2px solid #b3ffed;outline-offset:4px}
 @media(prefers-reduced-motion:reduce){#portalContinue{transition:none}#portalContinue:hover:not(:disabled){transform:none}}
+
+/* Material / Relic Storage additions reuse the standard modal and item frames. */
+.storage-sales{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid #32d9d455;border-radius:10px;margin:10px 0;background:#0b1c2b;}
+.storage-sales[hidden]{display:none;}.storage-sales span{flex:1 1 160px;color:#bde7e8;font-size:12px;}
+.storage-slot{position:relative;}.storage-multiselect{position:relative;z-index:2;display:flex;align-items:center;gap:6px;padding:6px 9px;font-size:12px;color:#a8e6e9;cursor:pointer;}.storage-multiselect input{width:17px;height:17px;accent-color:#49ead4;}
+#relicEquipModal:not(.hidden){z-index:9000!important;}.relic-equip-modal .modal-panel{width:min(620px,94vw);max-height:90dvh;overflow:auto;}.relic-equip-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0;}.relic-equip-fields label{display:flex;flex-direction:column;gap:8px;min-width:0;color:#bfe3ee;}.relic-equip-fields input,.relic-equip-fields select{width:100%;min-width:0;box-sizing:border-box;padding:10px;background:#0a1728;color:#e8faff;border:1px solid #2c6572;border-radius:8px;}
+@media(max-width:600px){.relic-equip-fields{grid-template-columns:1fr;}.storage-sales button{flex:1 1 110px;}}
+
+.arena-copy-control{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#b8dce8;}.arena-copy-control input,.infinity-copy-input{width:75px;padding:6px;background:#0a1828;color:#e2fbff;border:1px solid #32636d;border-radius:7px;}
+
+#storageSellMarked{padding:10px 14px;border:1px solid #69d7bd;border-radius:9px;background:linear-gradient(135deg,#216650,#143d3c);color:#e2fff6;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}#storageSellMarked:disabled{opacity:.45;cursor:not-allowed;}#storageSellMarked:not(:disabled):hover{box-shadow:0 0 16px #45dbb640;border-color:#94ffe4;}

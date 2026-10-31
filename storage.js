@@ -3,18 +3,18 @@
   'use strict';
   const LOADOUT_KEYS=Object.freeze(['preset1','preset2','preset3']);
   function normalizeTeamLoadouts(value){
-    return Object.fromEntries(LOADOUT_KEYS.map((key,index)=>{const row=value?.[key];return[key,{name:typeof row?.name==='string'?row.name.slice(0,40):'Preset '+(index+1),slots:Array.from({length:4},(_,i)=>typeof row?.slots?.[i]==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(row.slots[i])?row.slots[i]:null),variantKeys:Array.from({length:4},(_,i)=>typeof row?.variantKeys?.[i]==='string'?row.variantKeys[i].slice(0,250):null)}];}));
+    return Object.fromEntries(LOADOUT_KEYS.map((key,index)=>{const row=value?.[key];return[key,{name:typeof row?.name==='string'?row.name.slice(0,40):'Preset '+(index+1),slots:Array.from({length:4},(_,i)=>typeof row?.slots?.[i]==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(row.slots[i])?row.slots[i]:null),copyIndices:Array.from({length:4},(_,i)=>Number.isSafeInteger(row?.copyIndices?.[i])&&row.copyIndices[i]>=0?row.copyIndices[i]:0),variantKeys:Array.from({length:4},(_,i)=>typeof row?.variantKeys?.[i]==='string'?row.variantKeys[i].slice(0,250):null)}];}));
   }
   function validTeamLoadouts(value){return Boolean(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(key=>LOADOUT_KEYS.includes(key))&&Object.values(value).every(row=>row&&typeof row.name==='string'&&row.name.length<=40&&Array.isArray(row.slots)&&row.slots.length===4&&Array.from(row.slots).every(id=>id===null||typeof id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(id))&&(!row.variantKeys||Array.isArray(row.variantKeys)&&row.variantKeys.length===4&&Array.from(row.variantKeys).every(key=>key===null||typeof key==='string'&&key.length<=250))));}
-  function saveTeamLoadout(value,key,team){if(!LOADOUT_KEYS.includes(key))throw Error('Unknown team preset.');const next=normalizeTeamLoadouts(value);next[key].slots=Array.from({length:4},(_,i)=>team[i]?.cardId||null);next[key].variantKeys=Array.from({length:4},(_,i)=>team[i]?.variantKey||null);return next;}
-  function resolveTeamLoadout(value,key,resolve){const row=normalizeTeamLoadouts(value)[key];if(!row)return null;const used=new Map(),missing=[];const slots=row.slots.map((id,index)=>{if(!id)return null;const slot=resolve(id,row.variantKeys[index],used);if(!slot){missing.push(index+1);return null;}used.set(slot.variantKey,(used.get(slot.variantKey)||0)+1);return slot;});return{slots,missing};}
+  function saveTeamLoadout(value,key,team){if(!LOADOUT_KEYS.includes(key))throw Error('Unknown team preset.');const next=normalizeTeamLoadouts(value);next[key].slots=Array.from({length:4},(_,i)=>team[i]?.cardId||null);next[key].copyIndices=Array.from({length:4},(_,i)=>team[i]?.copy||0);next[key].variantKeys=Array.from({length:4},(_,i)=>team[i]?.variantKey||null);return next;}
+  function resolveTeamLoadout(value,key,resolve){const row=normalizeTeamLoadouts(value)[key];if(!row)return null;const used=new Map(),missing=[];const slots=row.slots.map((id,index)=>{if(!id)return null;const slot=resolve(id,row.variantKeys[index],used,row.copyIndices[index]);if(!slot){missing.push(index+1);return null;}used.set(slot.variantKey,(used.get(slot.variantKey)||0)+1);return slot;});return{slots,missing};}
   let bridge={},ui=null,tab='items' ,selected='',signature='',capsuleResult='';
-  let portalPage=0;
+  let portalPage=0;const marked=new Set();
   const slots=new Map();
   const text=(node,value)=>{if(node&&node.textContent!==String(value))node.textContent=String(value);};
   const make=(tag,className='',value)=>{const n=host.document.createElement(tag);n.className=className;if(value!==undefined)n.textContent=value;return n;};
   const format=value=>Number(value||0).toLocaleString('en-US');
-  function category(item){return item.type==='exp_food'?'exp_food':item.type==='equipment'||item.type==='gear'?'equipment':['ticket','portal','key'].includes(item.type)?'portals':'items';}
+  function category(item){if(item.type==='relic')return 'relic';if(item.type==='material')return 'material';return item.type==='exp_food'?'exp_food':item.type==='equipment'||item.type==='gear'?'equipment':['ticket','portal','key'].includes(item.type)?'portals':'items';}
   function visual(item){
     const root=make('div','storage-item-art'),fallback=make('span','',item.name.split(/\s+/).map(s=>s[0]).slice(0,3).join(''));
     const potion=host.InventorySystem.POTIONS[item.id];
@@ -26,6 +26,8 @@
   function sources(id){
     const inventory=host.InventorySystem,result=[],equipment=host.EquipmentSystem.recipe(id),item=inventory.getItem(id);
     if(equipment){result.push('Crafting: '+equipment.cards.map(r=>{const card=host.ALL_CARDS.find(c=>c.id===r.cardId);const names=r.mutationIds.map(id=>host.MUTATION_BY_ID[id]?.name||id);return '1x '+(card?.name||r.cardId)+' ['+(names.length?names.join(' + ')+(r.match==='contains'?'; Double Mutation allowed':' ; exact pair'):'Normal only, no Mutations')+']';}).join(' + ')+' + '+format(equipment.cost)+' VNĐ.');}
+    if(item?.type==='relic')result.push('Crafting → Relics: '+host.RelicSystem.describe(item.metadata.relic,item.metadata.binding));
+    if(host.MaterialSystem.get(id))result.push(host.MaterialSystem.get(id).description);
     if(inventory.SUPER_BASE[id])result.push('Crafting: 10x '+inventory.getItem(inventory.SUPER_BASE[id]).name+' → 1x '+item.name+'; 0 VNĐ.');
     if(inventory.BATTLE_DROP_IDS.includes(id))result.push('Regular / Tower battle victories: potion pool, 10% base + pity and Drop Chance stat, capped at 30%; one of 4 standard potions.');
     for(const offer of host.TowerSystem.SHOP_ITEMS)if(offer.id===id)result.push('Tower Shop: '+format(offer.cost)+' Tower Coins.');
@@ -58,10 +60,10 @@
     const title=host.document.getElementById('itemSourceTitle'),list=host.document.getElementById('itemSourceList');if(!title||!list)return;
     text(title,item.name+' · Sources');list.replaceChildren(...sources(id).map(source=>make('li','',source)));bridge.openSource?.();
   }
-  function filtered(){const query=(ui.search.value||'').trim().toLowerCase();return host.InventorySystem.list().filter(item=>category(item)===tab&&(item.type!=='portal'||item.quantity>0)&&`${item.name} ${item.description}`.toLowerCase().includes(query));}
+  function filtered(){const query=(ui.search.value||'').trim().toLowerCase();return host.InventorySystem.list().filter(item=>category(item)===tab&&item.type!=='relic_recipe'&&(!['portal','relic'].includes(item.type)||item.quantity>0)&&`${item.name} ${item.description}`.toLowerCase().includes(query));}
   function details(){
     const item=host.InventorySystem.getItem(selected);ui.art.replaceChildren();
-    if(!item){text(ui.title,'Select an item');text(ui.type,'');text(ui.description,'Choose an item to inspect its details and sources.');text(ui.owned,'');ui.action.hidden=true;ui.info.disabled=true;ui.result.hidden=true;return;}
+    if(!item){const sell=host.document.getElementById('storageSellSingle');if(sell)sell.hidden=true;text(ui.title,'Select an item');text(ui.type,'');text(ui.description,'Choose an item to inspect its details and sources.');text(ui.owned,'');ui.action.hidden=true;ui.info.disabled=true;ui.result.hidden=true;return;}
     ui.art.append(visual(item));text(ui.title,item.name);text(ui.type,category(item)==='equipment'?'Equipment · exclusive slot':item.type);text(ui.description,item.description);ui.info.disabled=false;
     refreshDetails();
   }
@@ -69,11 +71,12 @@
     const item=host.InventorySystem.getItem(selected);if(!item)return;
     text(ui.owned,'Owned: '+format(item.quantity));
     const equipped=host.EquipmentSystem.equipped===selected,isEquipment=host.EquipmentSystem.isEquipment(selected);
-    const capsule=item.id===host.SpookySystem?.CAPSULE.id,portal=item.type==='portal'&&Boolean(host.PortalsSystem?.get(item.id));
+    const relic=item.type==='relic',capsule=item.id===host.SpookySystem?.CAPSULE.id,portal=item.type==='portal'&&Boolean(host.PortalsSystem?.get(item.id));
     ui.result.hidden=!capsule||!capsuleResult;text(ui.result,capsule?capsuleResult:'');
-    ui.action.hidden=!item.usable&&!isEquipment&&!capsule&&!portal;
-    text(ui.action,isEquipment?(equipped?'Unequip':'Equip · replaces current'):capsule?'Open Spooky Capsule':portal?'Inspect / Open Portal':'Use Potion');
-    ui.action.disabled=((isEquipment||capsule||portal)?bridge.canAct?.()===false:bridge.canUse?.()===false)||(isEquipment&&!equipped&&item.quantity<1)||(!isEquipment&&item.quantity<1);
+    ui.action.hidden=!item.usable&&!isEquipment&&!capsule&&!portal&&!relic;
+    text(ui.action,relic?(item.metadata.binding?'Change / Unequip Relic':'Equip Relic'):isEquipment?(equipped?'Unequip':'Equip · replaces current'):capsule?'Open Spooky Capsule':portal?'Inspect / Open Portal':'Use Potion');
+    ui.action.disabled=((isEquipment||capsule||portal||relic)?bridge.canAct?.()===false:bridge.canUse?.()===false)||(isEquipment&&!equipped&&item.quantity<1)||(!isEquipment&&item.quantity<1);
+    const single=host.document.getElementById('storageSellSingle');if(single){single.hidden=!host.StorageSales.canSell(item);single.disabled=bridge.canAct?.()===false;}
     const seconds=Math.ceil(item.remaining/1000);
     text(ui.timer,item.pausedRemaining?'PAUSED · '+Math.ceil(item.pausedRemaining/1000)+'s remaining':seconds>0?'ACTIVE · '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):equipped?'EQUIPPED · bonuses active':'');
   }
@@ -89,8 +92,8 @@
     if(!mount(root)||ui.root.classList.contains('hidden'))return;
     const join=host.document.getElementById('portalJoinStorage');if(join)join.hidden=tab!=='portals';
     const matches=filtered(),pageCount=Math.max(1,Math.ceil(matches.length/32));portalPage=Math.min(portalPage,pageCount-1);
-    const pager=host.document.getElementById('storagePortalPagination');if(pager)pager.hidden=tab!=='portals';text(host.document.getElementById('storagePortalPage'),`${portalPage+1} / ${pageCount}`);const prev=host.document.getElementById('storagePortalPrev'),nextPage=host.document.getElementById('storagePortalNext');if(prev)prev.disabled=portalPage===0;if(nextPage)nextPage.disabled=portalPage===pageCount-1;
-    const items=tab==='portals'?matches.slice(portalPage*32,portalPage*32+32):matches,equipped=host.EquipmentSystem.current(),next=JSON.stringify([tab,ui.search.value,equipped?.id,items.map(i=>[i.id,i.description,i.image])]);
+    const pager=host.document.getElementById('storagePortalPagination');if(pager)pager.hidden=matches.length<=32;text(host.document.getElementById('storagePortalPage'),`${portalPage+1} / ${pageCount}`);const prev=host.document.getElementById('storagePortalPrev'),nextPage=host.document.getElementById('storagePortalNext');if(prev)prev.disabled=portalPage===0;if(nextPage)nextPage.disabled=portalPage===pageCount-1;
+    const items=matches.slice(portalPage*32,portalPage*32+32),equipped=host.EquipmentSystem.current(),next=JSON.stringify([tab,ui.search.value,equipped?.id,items.map(i=>[i.id,i.description,i.image])]);
     text(ui.equipped,equipped?'Equipped: '+equipped.name+' · 1 / 1 slot':'Equipment slot: empty · 0 / 1');
     if(!items.some(item=>item.id===selected))selected=items[0]?.id||'';
     if(next!==signature){signature=next;ui.grid.replaceChildren();slots.clear();const fragment=ui.grid.ownerDocument.createDocumentFragment();
@@ -100,6 +103,7 @@
         button.append(visual(item),make('span','storage-quantity',host.InventorySystem.formatQuantity(item.quantity)),make('strong','',item.name));
         if(equipped?.id===item.id)button.append(make('small','storage-equipped-tag','EQUIPPED'));
         const info=make('button','storage-eye','◉');info.type='button';info.dataset.storageSource=item.id;info.setAttribute('aria-label','View sources for '+item.name);info.title='View item sources';
+        if(host.StorageSales.canSell(item)){const label=make('label','storage-multiselect'),check=make('input');check.type='checkbox';check.dataset.storageMark=item.id;check.checked=marked.has(item.id);check.setAttribute('aria-label','Select '+item.name+' for selling');label.append(check,make('span','','Select'));tile.append(label);}
         tile.append(button,info);fragment.append(tile);slots.set(item.id,{tile,button,quantity:button.querySelector('.storage-quantity')});
       }
       ui.grid.append(fragment);
@@ -107,6 +111,7 @@
       details();
     }else refreshDetails();
     for(const item of items){const slot=slots.get(item.id);if(!slot)continue;text(slot.quantity,host.InventorySystem.formatQuantity(item.quantity));slot.tile.classList.toggle('is-unowned',item.quantity<1);slot.tile.classList.toggle('is-selected',selected===item.id);slot.button.setAttribute('aria-pressed',String(selected===item.id));}
+    renderSales();
     const inventory=host.InventorySystem;text(ui.status,'Item drops x'+inventory.getDropMultiplier().toFixed(3)+' · Equipment buffs apply once from the equipped slot.');
   }
   function mount(root){
@@ -115,15 +120,32 @@
     const next={root,search:root.querySelector('#inventorySearch'),grid:root.querySelector('#potionInventoryList'),title:select('title'),type:select('type'),art:select('art'),description:select('description'),owned:select('owned'),timer:select('timer'),result:select('result'),action:select('action'),info:select('info'),equipped:select('equipped'),status:root.querySelector('#dropChanceDisplay')};
     if(Object.values(next).some(n=>!n))return false;ui=next;
     root.addEventListener('click',event=>{
-      const categoryButton=event.target.closest('[data-storage-tab]');if(categoryButton){tab=categoryButton.dataset.storageTab;portalPage=0;signature='';for(const button of root.querySelectorAll('[data-storage-tab]')){const active=button===categoryButton;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));}render(root);return;}
+      const mark=event.target.closest('[data-storage-mark]');if(mark){if(mark.checked&&marked.size<500)marked.add(mark.dataset.storageMark);else{marked.delete(mark.dataset.storageMark);mark.checked=false;}renderSales();return;}
+      const categoryButton=event.target.closest('[data-storage-tab]');if(categoryButton){tab=categoryButton.dataset.storageTab;portalPage=0;marked.clear();signature='';for(const button of root.querySelectorAll('[data-storage-tab]')){const active=button===categoryButton;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));}render(root);return;}
       const info=event.target.closest('[data-storage-source]');if(info){inspectSource(info.dataset.storageSource);return;}
       const button=event.target.closest('[data-storage-select]');if(button){selected=button.dataset.storageSelect;for(const slot of ui.grid.querySelectorAll('[data-storage-id]')){slot.classList.toggle('is-selected',slot.dataset.storageId===selected);slot.querySelector('.storage-select')?.setAttribute('aria-pressed',String(slot.dataset.storageId===selected));}details();}
     });
     ui.search.addEventListener('input',()=>{portalPage=0;});
     for(const [id,delta]of [['storagePortalPrev',-1],['storagePortalNext',1]])host.document.getElementById(id)?.addEventListener('click',()=>{portalPage=Math.max(0,portalPage+delta);signature='';render(root);});
     ui.info.addEventListener('click',()=>inspectSource(selected));
-    ui.action.addEventListener('click',()=>{if(host.PortalsSystem?.get(selected)){if(bridge.canAct?.()!==false)host.PortalsSystem.open(selected);return;}const equipment=host.EquipmentSystem.isEquipment(selected),capsule=selected===host.SpookySystem?.CAPSULE.id;if((equipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(capsule){host.SpookySystem.openCapsule();host.RollPerformanceSystem.schedule(paintStorage);return;}if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
+    ui.action.addEventListener('click',()=>{if(host.RelicSystem.get(selected)){host.RelicSystem.open(selected);return;}if(host.PortalsSystem?.get(selected)){if(bridge.canAct?.()!==false)host.PortalsSystem.open(selected);return;}const equipment=host.EquipmentSystem.isEquipment(selected),capsule=selected===host.SpookySystem?.CAPSULE.id;if((equipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(capsule){host.SpookySystem.openCapsule();host.RollPerformanceSystem.schedule(paintStorage);return;}if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
+    host.document.getElementById('storageSellSingle')?.addEventListener('click',()=>sellItems([selected]));
+    host.document.getElementById('storageSellMarked')?.addEventListener('click',()=>sellItems([...marked]));
+    host.document.getElementById('storageSelectPage')?.addEventListener('click',()=>{for(const item of filtered().slice(portalPage*32,portalPage*32+32))if(host.StorageSales.canSell(item)&&marked.size<500)marked.add(item.id);renderSales();});
+    host.document.getElementById('storageClearMarked')?.addEventListener('click',()=>{marked.clear();renderSales();});
     return true;
+  }
+  function renderSales(){
+    const root=host.document.getElementById('storageSalesControls');if(!root)return;root.hidden=!['relic','portals'].includes(tab);
+    for(const id of [...marked])if(!host.StorageSales.canSell(host.InventorySystem.getItem(id)))marked.delete(id);
+    text(host.document.getElementById('storageMarkedCount'),marked.size+' selected · Sale reward: 0');
+    const button=host.document.getElementById('storageSellMarked');if(button)button.disabled=!marked.size||bridge.canAct?.()===false;
+    for(const node of ui.grid.querySelectorAll('[data-storage-mark]'))node.checked=marked.has(node.dataset.storageMark);
+  }
+  function sellItems(ids){
+    if(!ids.length||bridge.canAct?.()===false)return;
+    if(!host.confirm('Permanently remove '+ids.length+' selected item(s)? No currency or rewards are granted.'))return;
+    const result=host.StorageSales.sell(ids);host.ShopBulkSystem.notify(result.message);if(result.ok){for(const id of ids)marked.delete(id);signature='';render(ui.root);}
   }
   host.StorageSystem=Object.freeze({LOADOUT_KEYS,normalizeTeamLoadouts,validTeamLoadouts,saveTeamLoadout,resolveTeamLoadout,render,mount,sources,inspectSource,showCapsuleResult,configure:options=>{bridge=options||{};}});
 })(window);

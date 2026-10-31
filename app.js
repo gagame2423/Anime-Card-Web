@@ -2386,6 +2386,7 @@ function salvageVariantCopies(cardId, variantKey, copies = 1) {
   const removed = Math.min(requested, entry.count);
   const cashPerCopy = getSalvageValue(card, entry.mutations);
   const actualRemoved = decrementOwnershipVariant(card.id, entry.key, removed);
+  window.RelicSystem?.ownershipChanged(entry.key,Math.max(0,entry.count-actualRemoved));
   const cash = Math.max(0, cashPerCopy * actualRemoved);
   const scaledCash = getScaledCoinReward(cash);
   state.currency = Math.max(0, Number(state.currency) || 0) + scaledCash;
@@ -2780,7 +2781,7 @@ function getEnemyDisplayCard(card, mutations = [], enemyLevel = 1) {
 }
 
 function getBattleMode() {
-  return ['1v1', 'tower', 'time-trial', 'exp-time-trial', 'raid', 'boss-event', 'spooky-hunt'].includes(battleState?.mode) ? battleState.mode : '4v4';
+  return ['1v1', 'tower', 'time-trial', 'exp-time-trial', 'material-time-trial', 'raid', 'boss-event', 'spooky-hunt'].includes(battleState?.mode) ? battleState.mode : '4v4';
 }
 
 function getBattleTeamSize() {
@@ -2809,7 +2810,7 @@ function getBattleModeLabel() {
   if(isSpookyBattle())return `SPOOKY HUNT • WAVE ${battleState?.spooky?.wave||window.SpookySystem.snapshot().wave} / 50 • 6V3 • ${timing}`;
   if (isBossEventBattle()) return `${window.BossEventSystem.TYPES[getBossEventType()].name.toUpperCase()} • DIFF ${battleState?.bossEvent?.difficulty || window.BossEventSystem.snapshot(getBossEventType()).difficulty} • 5 vs 1 • ${timing}`;
   if (isRaidBattle()) return `${window.RaidSystem.TYPES[getRaidType()].name.toUpperCase()} • DIFF ${battleState?.raid?.difficulty || window.RaidSystem.snapshot(getRaidType()).difficulty} • 4 vs ${window.RaidSystem.TYPES[getRaidType()].enemies.length} • ${timing}`;
-  if (isTimeTrialBattle()) return `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP TIME TRIAL • 1V1' : `TIME TRIAL • ROOM ${battleState?.trial?.room || window.TimeTrialSystem.room} • 4V4`} • ${timing}`;
+  if (isTimeTrialBattle()) return `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP TIME TRIAL • 1V1' : getBattleMode()==='material-time-trial'?`MATERIAL TIME TRIAL • ROOM ${battleState?.trial?.room||window.TimeTrialSystem.currentRoom(getBattleMode())} • 4V4`: `TIME TRIAL • ROOM ${battleState?.trial?.room || window.TimeTrialSystem.room} • 4V4`} • ${timing}`;
   return isTowerBattle() ? `TOWER ${battleState?.towerFloor || window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1} • 4V4 • ${timing}` : `${isOneVsOneBattle() ? '1V1' : '4V4'} • ${timing}`;
 }
 
@@ -2898,8 +2899,8 @@ function getBattleVariantLabel(entry) {
     : 'Normal';
 }
 
-function getBattleVariantDisplay(card, entry) {
-  return getDisplayCard(card, entry.mutations);
+function getBattleVariantDisplay(card, entry, copy=0) {
+  return window.RelicSystem.preview(card,getDisplayCard(card, entry.mutations),entry.key,copy);
 }
 
 function getBattleSetupTeam() {
@@ -2934,7 +2935,7 @@ function isBattleSetupValid(team = getBattleSetupTeam()) {
   for (const slot of team) {
     const card = getCardById(slot?.cardId);
     const variant = card ? getBattleVariantEntries(card.id).find(entry => entry.key === slot.variantKey) : null;
-    if (!card || !variant) return false;
+    if (!card || !variant || !Number.isSafeInteger(slot.copy??0) || (slot.copy??0)<0 || (slot.copy??0)>=variant.count || team.some(other=>other!==slot&&other?.variantKey===slot.variantKey&&(other.copy??0)===(slot.copy??0))) return false;
     usage.set(slot.variantKey, (usage.get(slot.variantKey) || 0) + 1);
   }
   for (const [variantKey, used] of usage) {
@@ -2964,7 +2965,7 @@ function restoreArenaSelection(){
   if(isBattleMatchActive()||window.SandboxSystem?.active||!battleState?.setup)return;
   const key=arenaTeamKey();if(arenaDeckKey===key)return;arenaDeckKey=key;
   const team=savedArenaTeam(key,getBattleTeamSize(),(slot,used)=>{
-    const entry=getBattleVariantEntries(slot.cardId).find(entry=>entry.key===slot.variantKey&&entry.count>(used.get(entry.key)||0));
+    const entry=getBattleVariantEntries(slot.cardId).find(entry=>entry.key===slot.variantKey&&entry.count>Math.max(slot.copy||0,used.get(entry.key)||0));
     return entry?slot:null;
   });
   battleState.setup={team,activeIndex:Math.max(0,team.findIndex(slot=>!slot))};
@@ -2988,9 +2989,9 @@ function saveCurrentTeamLoadout(){
 function loadCurrentTeamLoadout(){
   if(!canManageTeamLoadout())return;const preset=state.teamLoadouts[activeTeamPreset];
   if(!preset.slots.some(Boolean)){window.ShopBulkSystem.notify(preset.name+' is empty. Save a team first.');return;}
-  const result=window.StorageSystem.resolveTeamLoadout(state.teamLoadouts,activeTeamPreset,(id,key,used)=>{
+  const result=window.StorageSystem.resolveTeamLoadout(state.teamLoadouts,activeTeamPreset,(id,key,used,copy)=>{
     if(!isCardOwned(id))return null;const variants=getBattleVariantEntries(id).filter(v=>v.count>(used.get(v.key)||0));
-    const selected=variants.find(v=>v.key===key)||variants.find(v=>!v.mutations.length)||variants[0];return selected?{cardId:id,variantKey:selected.key}:null;
+    const selected=variants.find(v=>v.key===key)||variants.find(v=>!v.mutations.length)||variants[0];return selected?{cardId:id,variantKey:selected.key,copy:Math.min(selected.count-1,copy||used.get(selected.key)||0)}:null;
   });
   battleState.setup={team:result.slots,activeIndex:Math.max(0,result.slots.findIndex(slot=>!slot))};
   renderBattleSelection();populateBattleFighterSelect();
@@ -3044,7 +3045,7 @@ function renderBattleTeamSlots() {
       name.textContent = card?.name || 'Unknown';
       window.ElementSystem.renderBadge(name, card);
       const variantLabel = document.createElement('span');
-      variantLabel.textContent = variant ? getBattleVariantLabel(variant) : 'Normal';
+      variantLabel.textContent = (variant ? getBattleVariantLabel(variant) : 'Normal')+' · Copy '+((slot.copy||0)+1);
       info.append(name, variantLabel);
       button.append(media, info);
       if (variant) applyMutationStyleTokens(button, variant.mutations);
@@ -3062,7 +3063,7 @@ function getBattleCardRarityValue(card) {
 
 function getStrongestBattleVariant(card, stat = 'atk') {
   getBattleVariantEntries(card.id);
-  const key=`strongest:${card.id}:${stat}:${getCardLevelInfo(card).level}:${getTowerWeatherMode()}:${isTowerBattle()}`;
+  const key=`strongest:${card.id}:${stat}:${getCardLevelInfo(card).level}:${getTowerWeatherMode()}:${isTowerBattle()}:${window.InventorySystem.revision}`;
   return window.UIPerformanceSystem.memo(key,()=>buildStrongestBattleVariant(card,stat));
 }
 function buildStrongestBattleVariant(card, stat = 'atk') {
@@ -3214,7 +3215,7 @@ function openArenaMutations() {
     canSelect:entry=>getAvailableBattleVariantCount(entry.key,activeIndex)>0,
     select:entry=>{
       if(isBattleMatchActive()||getBattleSetupTeam()[activeIndex]!==slot||getAvailableBattleVariantCount(entry.key,activeIndex)<=0)return;
-      slot.variantKey=entry.key;closeModal('arenaMutationModal');renderBattleSelection();
+      slot.variantKey=entry.key;slot.copy=0;closeModal('arenaMutationModal');renderBattleSelection();
     },open:()=>openModal('arenaMutationModal')});
 }
 function renderBattleFighterVariants() {
@@ -3225,6 +3226,7 @@ function renderBattleFighterVariants() {
   const variants=getBattleVariantEntries(card.id),selected=variants.find(entry=>entry.key===slot.variantKey);
   summary.textContent=`${selected?getBattleVariantLabel(selected):'Normal'} • ${variants.length} variants`;
   const button=document.createElement('button');button.type='button';button.className='mutation-more-button';button.textContent='...';button.setAttribute('aria-label','Choose mutation for '+card.name);button.setAttribute('aria-haspopup','dialog');button.addEventListener('click',openArenaMutations);grid.append(summary,button);
+  if(selected){const label=document.createElement('label');label.className='arena-copy-control';label.textContent='Owned copy ';const input=document.createElement('input');input.type='number';input.min='1';input.max=String(selected.count);input.step='1';input.value=String((slot.copy||0)+1);input.setAttribute('aria-label','Owned card copy number');input.addEventListener('change',()=>{const copy=Math.max(0,Math.min(selected.count-1,Math.floor(Number(input.value)||1)-1));if(getBattleSetupTeam().some(other=>other!==slot&&other?.variantKey===slot.variantKey&&(other.copy||0)===copy)){window.ShopBulkSystem.notify('That card copy is already selected.');input.value=String((slot.copy||0)+1);return;}slot.copy=copy;renderBattleSelection();});label.append(input);grid.append(label);}
 }
 
 function renderBattleSelectionPreview() {
@@ -3245,7 +3247,7 @@ function renderBattleSelectionPreview() {
 
   const entry = getBattleVariantEntries(card.id).find(candidate => candidate.key === slot.variantKey);
   if (!entry) return;
-  const display = getBattleVariantDisplay(card, entry);
+  const display = getBattleVariantDisplay(card, entry,slot.copy||0);
 
   const media = document.createElement('div');
   media.className = 'battle-selection-preview__art';
@@ -3290,13 +3292,13 @@ function renderBattleModePicker() {
   trialButton?.classList.toggle('is-selected', isTimeTrialBattle());
   trialButton?.setAttribute('aria-pressed', String(isTimeTrialBattle()));
   setViewText('timeTrialModeHint', isTimeTrialBattle()
-    ? window.TimeTrialSystem.isExp(activeMode) ? 'EXP • 1v1 • 5 minutes' : 'Normal • 4v4 • 3 minutes'
-    : 'Choose Normal or EXP');
+    ? window.TimeTrialSystem.isExp(activeMode) ? 'EXP • 1v1 • 5 minutes' : activeMode==='material-time-trial'?'Material • 4v4 • 1 Ticket':'Normal • 4v4 • 3 minutes'
+    : 'Normal / EXP / Material');
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   renderTowerControls();
   renderTimeTrialControls(); renderRaidControls(); renderBossEventControls(); renderSpookyControls(); renderAutoContinueBattleToggle();
   if (els.battleStartButton) {
-    els.battleStartButton.textContent = isSpookyBattle()?`Start Spooky Wave ${window.SpookySystem.snapshot().wave}`:isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • ${window.RaidSystem.TYPES[getRaidType()].keyId?"1 Key":"Free entry"}` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start Time Trial Room ${window.TimeTrialSystem.room}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+    els.battleStartButton.textContent = isSpookyBattle()?`Start Spooky Wave ${window.SpookySystem.snapshot().wave}`:isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • ${window.RaidSystem.TYPES[getRaidType()].keyId?"1 Key":"Free entry"}` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start ${getBattleMode()==='material-time-trial'?'Material Trial • 1 Ticket •':'Time Trial'} Room ${window.TimeTrialSystem.currentRoom(getBattleMode())}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
   }
 }
 
@@ -3307,7 +3309,7 @@ function setBattleMode(mode) {
   window.RaidSystem?.abort(battleState);
   window.BossEventSystem?.abort(battleState);
   clearAutoContinueBattleTimer();
-  const nextMode = ['1v1', 'tower', 'time-trial', 'exp-time-trial', 'raid', 'boss-event', 'spooky-hunt'].includes(mode) ? mode : '4v4';
+  const nextMode = ['1v1', 'tower', 'time-trial', 'exp-time-trial', 'material-time-trial', 'raid', 'boss-event', 'spooky-hunt'].includes(mode) ? mode : '4v4';
   clearBattleTurnTimer();
   battleState = { mode: nextMode, setup: { team: [], activeIndex: 0 } };
   renderBattleModePicker();
@@ -3323,7 +3325,7 @@ function resetBattleView(mode = '4v4') {
   clearAutoContinueBattleTimer();
   clearBattleTurnTimer();
   clearBattleAnimationTimers();
-  battleState = { mode: ['1v1', 'tower', 'time-trial', 'exp-time-trial', 'raid', 'boss-event', 'spooky-hunt'].includes(mode) ? mode : '4v4', setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
+  battleState = { mode: ['1v1', 'tower', 'time-trial', 'exp-time-trial', 'material-time-trial', 'raid', 'boss-event', 'spooky-hunt'].includes(mode) ? mode : '4v4', setup: { team: [], activeIndex: 0 }, isBattling: false, turn: null };
   document.getElementById('timeTrialSummary')?.classList.add('hidden');
   document.getElementById('timeTrialResultShopButton')?.classList.add('hidden');
   document.getElementById('bossEventSummary')?.classList.add('hidden');
@@ -3871,7 +3873,7 @@ function scheduleNextBattleTurn(remainingMs) {
   if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${Math.ceil(delay / 1000)}s`;
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   const autoNote = document.getElementById('battleAutoNote');
-  if (autoNote) autoNote.textContent = isSpookyBattle() ? `Spooky Hunt • ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Manual Continue only` : isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : 'Normal'} Time Trial • ${turnMs / 1000}-second turns • ${window.TimeTrialSystem.isExp(getBattleMode())?'Speed Battle Potion ignored':'Speed Battle Potion: 1s turns / 90s while active'} • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
+  if (autoNote) autoNote.textContent = isSpookyBattle() ? `Spooky Hunt • ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Manual Continue only` : isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : getBattleMode()==='material-time-trial'?'Material':'Normal'} Time Trial • ${turnMs / 1000}-second turns • ${window.TimeTrialSystem.isExp(getBattleMode())?'Speed Battle Potion ignored':'Speed Battle Potion: 1s turns / 90s while active'} • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
   battleTurnTimer = window.setTimeout(() => {
     battleTurnTimer = null;
     executeBattleTurn();
@@ -4087,11 +4089,12 @@ function startBattle(useExistingSetup = true) {
   const playerTeam = setupTeam.map(slot => {
     const card = getCardById(slot.cardId);
     const entry = getBattleVariantEntries(card.id).find(candidate => candidate.key === slot.variantKey);
-    const display = getBattleVariantDisplay(card, entry);
+    const display = getDisplayCard(card, entry.mutations);
     return {
       card,
       mutations: entry.mutations,
       variantKey: entry.key,
+      cardInstance:{cardId:card.id,variantKey:entry.key,copy:slot.copy||0},
       display,
       hp: display.hp,
       maxHp: display.hp,
@@ -4100,6 +4103,7 @@ function startBattle(useExistingSetup = true) {
     };
   });
 
+  window.RelicSystem.attachTeam(playerTeam);
   if (isTowerBattle() && window.TowerSystem?.completed(getTowerWeatherMode())) return;
   const towerFloor = isTowerBattle() ? window.TowerSystem.nextFloor(getTowerWeatherMode()) : null;
   const towerWeather = isTowerBattle() ? getTowerWeatherMode() : null;
@@ -4411,9 +4415,9 @@ function renderTimeTrialControls() {
   const mode = getBattleMode(), active = trial.isMode(mode), exp = trial.isExp(mode);
   const controls = document.getElementById('timeTrialControls');
   controls?.classList.toggle('hidden', !active);
-  setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`);
+  setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.currentRoom(mode)} • Best cleared ${trial.bestRoomFor(mode)}${mode==='material-time-trial'?' • Material Tickets: '+window.InventorySystem.quantity(trial.MATERIAL_TICKET_ID):''}`);
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
-  setViewText('timeTrialRules', exp
+  setViewText('timeTrialRules', mode==='material-time-trial'?'4v4 • Material Ticket per attempt • 2s / 180s; Speed Battle Potion: 1s / 90s • Independent materials per defeated enemy • No Shards, EXP or VNĐ. Defeat resets Material Room 1.':exp
     ? '1-second turns • 1 Ticket per attempt • 300s • Infinite EXP Training Dummy • Fixed 1 ATK • EXP = floor(total damage × 0.15) • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
     : '2-second turns / 180s per room; Speed Battle Potion: 1-second turns / 90s while active • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
   const timer = document.getElementById('timeTrialTimer');
@@ -4430,14 +4434,14 @@ function renderTimeTrialControls() {
 
 function renderTimeTrialShop() {
   const trial = window.TimeTrialSystem;
-  setViewText('timeTrialShopBalance', `${trial.shards.toLocaleString('en-US')} Shards • Potions / Ticket: 50 • Speed Battle Potion: 200`);
+  setViewText('timeTrialShopBalance', `${trial.shards.toLocaleString('en-US')} Shards • Potions / EXP Ticket: 50 • Speed Battle Potion: 200 • Material Ticket: 1,000`);
   trial.renderShop(document.getElementById('timeTrialShopGrid'), () => {
     renderTimeTrialShop(); renderTimeTrialControls(); renderPotionInventory();
     if (battleState && !battleState.isBattling) renderBattleSelection();
     if (battleState?.finished && isTimeTrialBattle()) {
       const replayable = canReplayBattleTeam();
       els.battleAutoAgainButton.disabled = !replayable;
-      els.battleAutoAgainButton.textContent = trial.isExp(getBattleMode()) ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : `Continue • Room ${trial.room}`;
+      els.battleAutoAgainButton.textContent = trial.isExp(getBattleMode()) ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : getBattleMode()==='material-time-trial'?(replayable?`Material Again • 1 Ticket • Room ${trial.currentRoom(getBattleMode())}`:'Need a Material Ticket'):`Continue • Room ${trial.room}`;
     }
   });
 }
@@ -4450,7 +4454,7 @@ function finishTimeTrialBattle(won, reason = '') {
   try { summary = trial.finish(battleState, won, reason); }
   catch (error) {
     const run = battleState.trial;
-    summary = { won: false, exp: trial.isExp(battleState.mode), room: run.room, nextRoom: trial.room,
+    summary = { won: false, exp: trial.isExp(battleState.mode),material:battleState.mode==='material-time-trial',materials:{...run.materials}, room: run.room, nextRoom: trial.currentRoom(battleState.mode),
       shards: run.shardsEarned, monsters: run.monsters, totalDamage:run.totalDamage,convertedExperience:run.convertedExperience,dps:run.dps,bestDps:trial.bestDps,newDpsRecord:false, experience: run.experience,
       progressPercent: run.progressPercent, levelUps: run.levelUps, reason: 'save-error' };
     appendBattleLog(error.message, 'defeat');
@@ -4463,7 +4467,7 @@ function finishTimeTrialBattle(won, reason = '') {
   battleState.outcome = summary.won ? 'victory' : 'defeat';
   refreshAchievements(); saveState(); updateStats(); renderCollection(); renderTimeTrialControls();
   const body = document.getElementById('timeTrialSummary');
-  body.textContent = summary.exp
+  body.textContent = summary.material?`Material Room ${summary.room} ${summary.won?'Cleared':'Failed'}\n${Object.entries(summary.materials||{}).map(([id,n])=>(window.InventorySystem.getItem(id)?.name||id)+' +'+n).join('\n')||'No materials dropped.'}\nNo Shards • No EXP • No VNĐ\n${summary.won?'Next Material Room: '+summary.nextRoom:'Material progress reset to Room 1'}`:summary.exp
     ? `Total Damage Dealt: ${(summary.totalDamage||0).toLocaleString('en-US')}\nConverted EXP Earned: +${(summary.convertedExperience||0).toLocaleString('en-US')} EXP\nApplied: +${summary.experience.toLocaleString('en-US')} EXP • ${summary.levelUps} level-ups • Level 1000 cap respected\nDPS: ${Math.floor(summary.dps||0).toLocaleString('en-US')} • Best: ${Math.floor(summary.bestDps||trial.bestDps).toLocaleString('en-US')}${summary.newDpsRecord?'\n★ NEW HIGHEST DPS RECORD!':''}\nNo global EXP multiplier • No VNĐ or Shards`
     : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • Victory: 1–3 Bread`;
   body.classList.remove('hidden');body.classList.toggle('is-new-dps-record',Boolean(summary.exp&&summary.newDpsRecord));
@@ -4471,16 +4475,16 @@ function finishTimeTrialBattle(won, reason = '') {
   els.battleResultTitle.textContent = summary.won ? '🏆 TIME TRIAL COMPLETE' : '⏱ TIME TRIAL ENDED';
   els.battleResultText.textContent = summary.reason === 'time-limit' ? 'Time limit reached.' : summary.won ? 'All room enemies defeated.' : 'Attempt ended. Your collection is preserved.';
   els.battleResultPower.textContent = `${getBattleModeLabel()} • ${Math.min(trial.LIMITS[battleState.mode] / 1000, (Date.now() - battleState.trial.startedAt) / 1000).toFixed(1)}s`;
-  for (const [id, text] of Object.entries({ battleResultBaseLabel: summary.exp ? 'Total Damage' : 'Shards earned',
+  for (const [id, text] of Object.entries({ battleResultBaseLabel: summary.material?'Materials earned':summary.exp ? 'Total Damage' : 'Shards earned',
     battleResultTimeLabel: 'Time limit', battleResultLevelLabel: 'Turn interval' })) setViewText(id, text);
-  els.battleResultBaseValue.textContent = summary.exp?(summary.totalDamage||0).toLocaleString('en-US'):String(summary.shards);
+  els.battleResultBaseValue.textContent = summary.material?String(Object.values(summary.materials||{}).reduce((a,b)=>a+b,0)):summary.exp?(summary.totalDamage||0).toLocaleString('en-US'):String(summary.shards);
   els.battleResultTimeBonus.textContent = `${trial.LIMITS[battleState.mode] / 1000}s`;
   els.battleResultLevelDiff.textContent = `${trial.turnMs(battleState.mode)/1000}s • fixed`; els.battleResultCash.textContent = '0 VNĐ';
   els.battleResultExp.textContent = summary.exp ? `+${summary.experience} EXP` : '0 EXP';
   els.battleResultDropRate.textContent = '+0.00%'; els.battleResultLossStatus.textContent = 'NONE — COLLECTION PRESERVED';
   const replayable = canReplayBattleTeam();
   els.battleAutoAgainButton.disabled = !replayable;
-  els.battleAutoAgainButton.textContent = summary.exp ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : `Continue • Room ${trial.room}`;
+  els.battleAutoAgainButton.textContent = summary.exp ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : getBattleMode()==='material-time-trial'?(replayable?`Material Again • 1 Ticket • Room ${trial.currentRoom(getBattleMode())}`:'Need a Material Ticket'):`Continue • Room ${trial.room}`;
   els.battleArena.classList.add('hidden'); setBattleModalLock(false);
   els.battleVictory.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
   els.battleVictory.classList.add(summary.won ? 'battle-result--victory' : 'battle-result--defeat');
@@ -4711,6 +4715,7 @@ function validateSaveRecord(key, value) {
         for (const field of ['id', 'name', 'description', 'type', 'icon', 'image', 'tier']) if (field in entry) ensure(typeof entry[field] === 'string', `${field} must be text.`);
       } else number(entry, 'item quantity');
     }
+    ensure(window.RelicSystem.validItems(value.items),'invalid or duplicate Relic binding');
     if ('buffs' in value) counts(value.buffs, 'potion expiry');
     if ('receipts' in value) { ensure(object(value.receipts),'invalid item receipts'); for(const [stream,receipt]of Object.entries(value.receipts))ensure(/^[a-z0-9_]{1,40}$/.test(stream)&&typeof receipt==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(receipt),'invalid item receipt'); }
     if ('paused' in value) counts(value.paused, 'paused potion duration');
@@ -4835,7 +4840,7 @@ function prepareEvolution(recipe, variantKey) {
 }
 function onEvolutionCommitted() {
   window.CloudSaveSystem?.markDirty();
-  state = loadState(); syncOwnershipRecords(); refreshAchievements(); updateStats(); renderCollection(); renderAvailableCards(); renderPotionInventory();
+  state = loadState(); window.RelicSystem?.reconcile(); syncOwnershipRecords(); refreshAchievements(); updateStats(); renderCollection(); renderAvailableCards(); renderPotionInventory();
 }
 document.getElementById('evolutionOpenButton')?.addEventListener('click',()=>{ window.EvolutionSystem.render(document.getElementById('evolutionGrid')); openModal('evolutionModal'); });
 document.getElementById('evolutionCloseButton')?.addEventListener('click',()=>closeModal('evolutionModal'));
@@ -4930,6 +4935,8 @@ function recordQuestBattleCompletion(battle) {
   window.QuestSystem.record('battle', { ...battle.questContext, won: battle.questResultWon ?? (battle.outcome === 'victory'), room: battle.trial?.room, teamElements: battle.questContext.teamElements });
 }
 function recordQuestEnemyDefeat(battle, victim, source) {
+  const materials=window.MaterialSystem.recordKill(battle,victim);
+  if(materials.length)appendBattleLog(materials.map(row=>window.InventorySystem.getItem(row.id).name+' +'+row.quantity).join(' • '),'victory');
   const spookyCoins=window.SpookySystem.recordKill(battle,victim);
   if(spookyCoins)appendBattleLog(`🎃 Enemy defeated: +${spookyCoins} Spooky Coins.`, 'victory');
   const keys=window.RaidSystem.rollFateKey(battle,victim,source);
@@ -5082,7 +5089,7 @@ function openModal(id) {
       button.classList.toggle('is-selected', selected);
       button.setAttribute('aria-pressed', String(selected));
     });
-    setViewText('timeTrialModeTickets', `${window.InventorySystem.quantity(window.TimeTrialSystem.TICKET_ID)} EXP Time Trial Tickets in Storage • Select a type, then choose your lineup in Arena.`);
+    setViewText('timeTrialModeTickets', `${window.InventorySystem.quantity(window.TimeTrialSystem.TICKET_ID)} EXP Tickets • ${window.InventorySystem.quantity(window.TimeTrialSystem.MATERIAL_TICKET_ID)} Material Tickets in Storage • Select a type, then choose your lineup in Arena.`);
     modal.querySelector('[data-time-trial-type]')?.focus();
   }
 
@@ -5213,7 +5220,7 @@ function resetGame() {
   try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
   renderAutoContinueBattleToggle();
   returnToLobby();
-  window.InfinitySystem?.reset(); window.PortalsSystem?.reset(); window.InventorySystem?.reset(); window.ExpFoodSystem?.reset(); window.SpookySystem?.reset(); window.EquipmentSystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.();
+  window.InfinitySystem?.reset(); window.PortalsSystem?.reset(); window.InventorySystem?.reset(); window.ExpFoodSystem?.reset(); window.SpookySystem?.reset(); window.EquipmentSystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.(); window.MaterialSystem.register();window.RelicSystem.register();
 
   clearCooldownExpiryTimer();
   clearBattleTurnTimer();
@@ -5324,7 +5331,7 @@ function addCombatWeather(durationSeconds = 180) {
 
 if (window.PassiveSystem?.configureHost) {
   window.PassiveSystem.configureHost({
-    getCardById:id=>{const card=getCardById(id);return ['tower','raid','boss-event','spooky-hunt','time-trial'].includes(getBattleMode())?window.EnemyStatsSystem.card(card):card;},
+    getCardById:id=>{const card=getCardById(id);return ['tower','raid','boss-event','spooky-hunt','time-trial','material-time-trial'].includes(getBattleMode())?window.EnemyStatsSystem.card(card):card;},
     onUnitDefeated: recordQuestEnemyDefeat,
     appendBattleLog,
     showBattleFloatingText,
@@ -5699,7 +5706,9 @@ window.ExpFoodSystem.configure({
   onCommit:()=>{window.CloudSaveSystem?.markDirty();state=loadState();window.RollPerformanceSystem?.invalidateOwnership();syncOwnershipRecords();updateStats();renderPreview();renderCollection();renderAvailableCards();renderPotionInventory();}
 });
 document.getElementById('previewFeedButton')?.addEventListener('click',()=>{if(previewSelection)window.ExpFoodSystem.open(previewSelection.cardId);});
-window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished){if(getBattleMode()==='time-trial')window.TimeTrialSystem.remaining(battleState);else if(!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}}});
+window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished){if(['time-trial','material-time-trial'].includes(getBattleMode()))window.TimeTrialSystem.remaining(battleState);else if(!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}}});
+window.RelicSystem.configure({canAct:canEvolveNow,cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),variants:getVariantEntries,onChange:()=>{renderPotionInventory();if(!isBattleMatchActive())populateBattleFighterSelect();}});
+window.StorageSales.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();}});
 window.CraftingSystem.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 window.QuestsSystem.mount(document.getElementById('questModal'));
 window.QuestsSystem.configure({clock:()=>state.weather.gameSeconds,snapshot:()=>({rolls:state.totalRolls,bestRoom:window.TimeTrialSystem.bestRoom}),canAct:canEvolveNow,isImporting:()=>isImportingSave,reward:applyQuestBoardReward,onChange:()=>{updateStats();renderClockAndWeather(true);refreshAchievements();}});
@@ -5865,8 +5874,8 @@ window.InfinitySystem.configure({
   canEnter:()=>!isBattleMatchActive()&&!isImportingSave&&!gameInputLocked()&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked,
   cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),
   variants:id=>getVariantEntries(id).filter(v=>v.count>0),
-  describe:(card,variant)=>({...getDisplayCard(card,variant.mutations),level:getCardLevelInfo(card.id).level}),
-  units:slots=>slots.map(slot=>{const card=getCardById(slot.cardId),variant=getVariantEntries(card.id).find(v=>v.key===slot.variantKey);if(!variant)throw Error('Owned card variant unavailable.');const display=getDisplayCard(card,variant.mutations);return{card:JSON.parse(JSON.stringify(card)),display:{...display},mutations:[...variant.mutations],variantKey:variant.key,level:getCardLevelInfo(card.id).level,hp:display.hp,maxHp:display.hp,atk:display.atk,defeated:false};}),
+  describe:(card,variant,copy=0)=>({...window.RelicSystem.preview(card,getDisplayCard(card,variant.mutations),variant.key,copy),level:getCardLevelInfo(card.id).level}),
+  units:slots=>slots.map(slot=>{const card=getCardById(slot.cardId),variant=getVariantEntries(card.id).find(v=>v.key===slot.variantKey);if(!variant)throw Error('Owned card variant unavailable.');const display=getDisplayCard(card,variant.mutations);return{card:JSON.parse(JSON.stringify(card)),display:{...display},mutations:[...variant.mutations],variantKey:variant.key,cardInstance:{cardId:card.id,variantKey:variant.key,copy:slot.copy||0},level:getCardLevelInfo(card.id).level,hp:display.hp,maxHp:display.hp,atk:display.atk,defeated:false};}),
   open:openModal,
   onEnter:()=>{clearAutoContinueBattleTimer();clearCooldownExpiryTimer();els.battleModal?.classList.add('hidden');},
   onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');window.BattleWeatherHud?.render();window.CloudSaveSystem.afterActivity();resumeGameRuntime();void window.CloudSaveSystem.flush();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();},
@@ -5895,7 +5904,7 @@ window.PortalCombatView.configure({render:renderBattleStats,log:appendBattleLog,
 window.PortalsSystem.configure({
  canEnter:()=>!isBattleMatchActive()&&!gameInputLocked()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked,
  cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),variants:id=>getVariantEntries(id).filter(v=>v.count>0),
- describe:(card,variant)=>({...getDisplayCard(card,variant.mutations),level:getCardLevelInfo(card.id).level}),
+ describe:(card,variant,copy=0)=>({...window.RelicSystem.preview(card,getDisplayCard(card,variant.mutations),variant.key,copy),level:getCardLevelInfo(card.id).level}),
  displayName:()=>window.CloudSaveSystem.publicName||'Player',weather:()=>getActiveWeatherDefinitions().map(w=>w.name),rollMutations,prepareCard:preparePortalCard,
  open:openModal,notify:message=>window.ShopBulkSystem.notify(message),
  selection:()=>getBattleSetupTeam(),selector:renderPortalStandardSelector,

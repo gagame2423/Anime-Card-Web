@@ -86,7 +86,7 @@
   const used=new Set(),eligible=new Set(cards().map(card=>String(card.id)));
   for(const slot of selections){
    const id=String(slot?.cardId||'');if(!id||used.has(id)||!eligible.has(id))return false;
-   if(!variants(id).some(v=>v.key===slot.variantKey&&v.count>0))return false;used.add(id);
+   if(!variants(id).some(v=>v.key===slot.variantKey&&v.count>(slot.copy||0)))return false;used.add(id);
   }
   return used.size===4;
  }
@@ -123,7 +123,7 @@
    }catch(error){loading=false;text('infinityStatus','Could not prepare card previews: '+error.message);scheduleSetup();return;}
    if(cursor<source.length){collectionFrame=host.requestAnimationFrame(collect);return;}
    loading=false;eligibleCount=rows.length;
-   const used=new Set();selections=Array.from({length:4},(_,i)=>{const slot=selections[i],id=String(slot?.cardId||''),row=rowById.get(id);if(!row||used.has(id)||!row.byVariant.has(slot.variantKey))return null;used.add(id);return{cardId:id,variantKey:slot.variantKey};});
+   const used=new Set();selections=Array.from({length:4},(_,i)=>{const slot=selections[i],id=String(slot?.cardId||''),row=rowById.get(id);if(!row||used.has(id)||!row.byVariant.has(slot.variantKey))return null;used.add(id);return{cardId:id,variantKey:slot.variantKey,copy:slot.copy||0};});
    activeSlot=Math.max(0,selections.findIndex(slot=>!slot));renderFilterMenus();slotRenderKey='';scheduleSetup();
   };
   collectionFrame=host.requestAnimationFrame(collect);
@@ -161,7 +161,7 @@
   const key=JSON.stringify([selections,activeSlot,busy,loading,rows.length]);if(key===slotRenderKey)return;slotRenderKey=key;
   const fragment=host.document.createDocumentFragment();
   for(let i=0;i<4;i++){
-   const slot=selections[i],row=slot&&rowById.get(slot.cardId),view=row?.byVariant.get(slot.variantKey),filled=Boolean(view);
+   const slot=selections[i],row=slot&&rowById.get(slot.cardId),rawView=row?.byVariant.get(slot.variantKey),view=rawView?{...rawView,stats:bridge.describe(row.card,rawView.variant,slot.copy||0)}:null,filled=Boolean(view);
    const frame=make('article','infinity-deck-slot'+(activeSlot===i?' is-active':'')+(filled?' is-filled':' is-empty')+(pickedSlot===i?' is-picked':''));frame.setAttribute('role','group');frame.setAttribute('aria-label','Infinity slot '+(i+1));
    const header=make('div','infinity-slot-top');header.append(make('span','','SLOT '+String(i+1).padStart(2,'0')),make('span','infinity-slot-state',activeSlot===i?'ACTIVE':filled?'READY':'EMPTY'));
    const pick=button('','infinity-slot-pick');pick.dataset.infinitySlot=String(i);pick.disabled=busy||loading;pick.setAttribute('aria-pressed',String(activeSlot===i));pick.setAttribute('aria-label','Slot '+(i+1)+(filled?': '+row.card.name+'. Click to swap.':': Empty. Choose card.'));
@@ -169,7 +169,7 @@
    if(filled){
     decorate(frame,row,view);pick.append(cardContents(row,view,true));frame.append(pick);
     const actions=make('div','infinity-slot-actions'),change=button('Mutation ···','infinity-quiet-button'),clear=button('Clear Slot','infinity-clear-slot');
-    change.dataset.infinityVariants=row.id;change.dataset.infinityEditSlot=String(i);change.disabled=clear.disabled=busy||loading;clear.dataset.infinityClear=String(i);actions.append(change,clear);frame.append(actions);
+    change.dataset.infinityVariants=row.id;change.dataset.infinityEditSlot=String(i);change.disabled=clear.disabled=busy||loading;clear.dataset.infinityClear=String(i);const copy=make('input');copy.type='number';copy.min='1';copy.max=String(view.variant.count);copy.value=String((slot.copy||0)+1);copy.className='infinity-copy-input';copy.setAttribute('aria-label','Owned copy number');copy.disabled=busy||loading;copy.addEventListener('change',()=>{slot.copy=Math.max(0,Math.min(view.variant.count-1,Math.floor(Number(copy.value)||1)-1));slotRenderKey='';scheduleSetup();});actions.append(change,clear,copy);frame.append(actions);
    }else{
     const empty=make('span','infinity-empty-slot');empty.append(make('b','','+'),make('strong','','EMPTY'),make('small','','Choose a card below'));pick.append(empty);frame.append(pick);
    }
@@ -226,7 +226,7 @@
   if(usedIds().has(id)){toast('This card is already in your lineup!');return false;}
   const row=rowById.get(id),view=key?row?.byVariant.get(key):row&&viewFor(row);if(!view||!host.CategorySystem.has(row.card,week().category))return false;
   if(!variants(id).some(v=>v.key===view.variant.key&&v.count>0)){toast('This card variant is no longer owned.');refreshCollection(true);return false;}
-  selections[activeSlot]={cardId:id,variantKey:view.variant.key};pickedSlot=activeSlot;activeSlot=nextEmpty(activeSlot);focusSlotAfterRender=true;scheduleSetup();return true;
+  selections[activeSlot]={cardId:id,variantKey:view.variant.key,copy:0};pickedSlot=activeSlot;activeSlot=nextEmpty(activeSlot);focusSlotAfterRender=true;scheduleSetup();return true;
  }
  function setVariantBackground(inert){for(const id of ['infinityMainHeader','infinityContent','infinityFooter']){const node=el(id);if(node)node.inert=inert;}}
  function openVariants(id,editSlot=null){
@@ -253,7 +253,7 @@
   if(target.slot!==null&&target.slot>=0){
    if(selections[target.slot]?.cardId!==row.id)return;
    if(!variants(row.id).some(v=>v.key===key&&v.count>0)){toast('This card variant is no longer owned.');return;}
-   selections[target.slot]={cardId:row.id,variantKey:key};activeSlot=nextEmpty(target.slot);pickedSlot=target.slot;focusSlotAfterRender=true;closeVariants(false);scheduleSetup();
+   selections[target.slot]={cardId:row.id,variantKey:key,copy:0};activeSlot=nextEmpty(target.slot);pickedSlot=target.slot;focusSlotAfterRender=true;closeVariants(false);scheduleSetup();
   }else{closeVariants(false);chooseCard(row.id,key);}
  }
  function setupClick(event){
@@ -294,9 +294,9 @@
   if(reporting){if(force)reportAgain=true;return reporting;}
   if(host.GameStartup?.failed||!force&&Date.now()-lastReport<REPORT_MS&&week().endMs-host.InfinityCloudSystem.now()>30000)return;
   const current=week(),score=data.reports[current.id];if(!score)return;
-  if(!host.CloudSaveSystem.cloudReady){lastReport=Date.now();text('infinityStatus','Local weekly best saved · '+score+' waves. Cloud publishing is optional.');return;}
+  if(!host.InfinityCloudSystem.available){lastReport=Date.now();text('infinityStatus','Local weekly best saved · '+score+' waves. Cloud publishing is optional.');return;}
   lastReport=Date.now();const uid=host.CloudSaveSystem.activeUser?.uid;
-  reporting=(async()=>{try{if(await host.CloudSaveSystem.flush(true)!==true)throw Error('Cloud Save is busy. Weekly best remains queued.');const response=await host.InfinityCloudSystem.submit({weekId:current.id,highestWave:score,category:current.category});if(host.CloudSaveSystem.activeUser?.uid!==uid)return;if(Number.isSafeInteger(response.highestWave))data.best[current.id]=Math.max(data.best[current.id]||0,response.highestWave);if(data.infinityMetadata?.lastClaimedWeek===current.id)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,data.best[current.id]||0);if((data.reports[current.id]||0)<=score)delete data.reports[current.id];persist();text('infinityStatus','Weekly best synced · Star Orbs are stored in EXP Food.');}catch(error){text('infinityStatus','Weekly score pending sync · '+error.message);}finally{reporting=null;if(reportAgain){reportAgain=false;queueMicrotask(()=>void report(true));}}})();return reporting;
+  reporting=(async()=>{try{const response=await host.InfinityCloudSystem.submit({weekId:current.id,highestWave:score,category:current.category});if(host.CloudSaveSystem.activeUser?.uid!==uid||response.localOnly)return;if(Number.isSafeInteger(response.highestWave))data.best[current.id]=Math.max(data.best[current.id]||0,response.highestWave);if(data.infinityMetadata?.lastClaimedWeek===current.id)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,data.best[current.id]||0);if((data.reports[current.id]||0)<=score)delete data.reports[current.id];persist();text('infinityStatus','Weekly best synced · Star Orbs are stored in EXP Food.');}catch(error){text('infinityStatus','Weekly score pending sync · '+error.message);}finally{reporting=null;if(reportAgain){reportAgain=false;queueMicrotask(()=>void report(true));}}})();return reporting;
  }
  async function start(){
   if(!editable()||blocked||!validTeam()||host.GameStartup?.failed)return false;
@@ -338,5 +338,6 @@
  }
  function presentReward(){const notice=data.rewardNotice;if(!notice||active||host.GameStartup?.failed||!el('infinityRewardModal'))return;text('infinityRewardMessage',`Weekly Reset! You received ${notice.orbs.toLocaleString('en-US')} Star Orbs for reaching Wave ${notice.highestWave.toLocaleString('en-US')} last week!`);text('infinityRewardWeek',notice.sourceWeek+' → '+notice.weekId+' · Saved to EXP Food');bridge.open?.('infinityRewardModal');}
  function dismissReward(){if(!data.rewardNotice)return;data.rewardNotice=null;if(!persist())blocked=true;else void host.CloudSaveSystem.flush(true);}
+ host.addEventListener('cloud-session-ready',()=>{lastReport=0;void report(true);});
  host.InfinitySystem=Object.freeze({KEY,WEEKLY_KEY,validSave,validWeeklySave,validMetadata,prepareSave,settleLocalWeek,presentReward,dismissReward,week,getISOWeek:R.getISOWeek,getISOWeekAndYear:R.getISOWeekAndYear,open,exit,start,suspend,report,get metadata(){return data.infinityMetadata?{...data.infinityMetadata}:null;},get active(){return active;},get blocked(){return blocked;},get battle(){return combat?.battle||null;},get lineup(){return selections.map(slot=>slot?{...slot}:null);},getBest:id=>data.best[id]||0,flush:()=>!blocked&&persist(),reset(){suspend();data=fresh();persist();},configure(options){bridge=options||{};mount();if(!persist())blocked=true;else settleLocalWeek();}});
 })(window);

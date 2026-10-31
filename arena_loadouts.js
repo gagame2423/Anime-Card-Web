@@ -6,7 +6,7 @@
   return Array.from({length:Math.min(6,Math.max(1,size))},(_,i)=>{
    const slot=team?.[i];
    return slot&&typeof slot.cardId==='string'&&slot.cardId.length<=100&&typeof slot.variantKey==='string'&&slot.variantKey.length<=250
-    ?{cardId:slot.cardId,variantKey:slot.variantKey}:null;
+    ?{cardId:slot.cardId,variantKey:slot.variantKey,copy:Number.isSafeInteger(slot.copy)&&slot.copy>=0?slot.copy:0}:null;
   });
  }
  function normalize(value){

@@ -19,7 +19,8 @@
   let hp=card.stats.hp,attack=card.stats.atk;
   for(const id of wire.mutationIds){hp*=host.MUTATION_BY_ID[id].hpMultiplier;attack*=host.MUTATION_BY_ID[id].atkMultiplier;}
   const scale=host.CardLevelSystem.statMultiplier(wire.level);hp=Math.max(1,Math.round(hp*scale));attack=Math.max(1,Math.round(attack*scale));
-  return {card:clone(card),display:{name:card.name,hp,atk:attack,image:card.image},level:wire.level,mutations:wire.mutationIds.map(id=>host.MUTATION_BY_ID[id]),hp,maxHp:hp,atk:attack,defeated:false,portalOwnerId:owner};
+  if(wire.relic!==undefined&&wire.relic!==null&&!host.RelicSystem.validRoll(wire.relic))throw Error('Invalid Portal Relic.');
+  return host.RelicSystem.applyToUnit({card:clone(card),display:{name:card.name,hp,atk:attack,image:card.image},level:wire.level,mutations:wire.mutationIds.map(id=>host.MUTATION_BY_ID[id]),hp,maxHp:hp,atk:attack,defeated:false,portalOwnerId:owner},wire.relic);
  }
  function enemies(portal){if(!validPortal(portal))throw Error('Invalid Portal modifiers.');return BASE.map(row=>{const original=host.ALL_CARDS.find(c=>c.id===row.id);if(!original)throw Error('Missing Namek opponent.');const hp=Math.round(row.hp*MULTIPLIERS[portal.tier]),atk=Math.round(row.atk*MULTIPLIERS[portal.tier]);const card={...clone(original),element:portal.element};return {card,display:{name:card.name,image:card.image,hp,atk},level:1,mutations:[],hp,maxHp:hp,atk,defeated:false,isPortalEnemy:true};});}
  function generator(seed){let value=seed>>>0;return ()=>{value=(value+0x6D2B79F5)>>>0;let t=Math.imul(value^value>>>15,1|value);t^=t+Math.imul(t^t>>>7,61|t);return ((t^t>>>14)>>>0)/4294967296;};}

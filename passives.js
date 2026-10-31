@@ -1244,6 +1244,7 @@
       if(!companions.admit(bs,owner,unit,kind))return null;
       const line=teamOf(bs,owner),indexKey=line===bs.playerTeam?'playerIndex':'enemyIndex';line.unshift(unit);bs[indexKey]=0;refreshUnitDisplay(unit);return unit;
     }});
+  const relic=window.createRelicSkills({runtime:ensureRuntime,addCopy:addPassiveCopy,log:safeLog,attackBonus:(unit,bonus)=>{const runtime=ensureRuntime(unit),before=computeWeakenedAtk(unit),previous=runtime.atkBonusPct;try{runtime.atkBonusPct=(Number(previous)||0)+bonus;return before>0?computeWeakenedAtk(unit)/before:1;}finally{runtime.atkBonusPct=previous;}}});
   const dragon=window.createDragonSkills({has:hasPassive,passiveRuntimeFor,runtime:ensureRuntime,alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,atk:computeWeakenedAtk,random:()=>Math.random(),
     front:(bs,line)=>firstLiving(line,line===bs.playerTeam?bs.playerIndex:bs.enemyIndex),
     setAtk:(u,key,pct)=>combatStats.set(u,'atk',key,pct),setHp:(u,key,pct)=>combatStats.set(u,'hp',key,pct,!isBleeding(u)),
@@ -1438,7 +1439,7 @@
     if (!unit || (source&&hasPassive(unit,'hanami')&&ensureRuntime(unit).shield>0) || shibuya.dot(activeCombat,unit,kind,turns,damagePerTurn,source,options)) return;
     const runtime = ensureRuntime(unit);
     const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
-    const safeTurns = Math.max(1, Math.floor(Number(turns) || 1));
+    const safeTurns = Math.max(1, Math.floor(kind==='burn'?relic.burnTurns(source,Number(turns)||1):Number(turns)||1));
     const safeDamage = Math.max(0, Math.floor(Number(damagePerTurn) || 0));
     list.push({ turns: safeTurns, damage: safeDamage, source: source || null });
     runtime[kind] = list;
@@ -1500,6 +1501,7 @@
     const runtime = ensureRuntime(attacker);
     let chance = (champions.id(attacker) === 'sunny' ? .33 : BASE_CRIT_CHANCE) + (Number(runtime.critChanceBonus) || 0);
     let multiplier = BASE_CRIT_MULTIPLIER + (Number(runtime.critDamageBonus) || 0);
+    const relicCrit=relic.crit(attacker);chance+=relicCrit.chance;multiplier+=relicCrit.damage;
     const fateCrit=fate.crit(activeCombat,attacker),shibuyaCrit=shibuya.crit(attacker);chance+=fateCrit.chance+shibuyaCrit.chance+dragon.crit(activeCombat,attacker);multiplier+=fateCrit.multiplier+shibuyaCrit.multiplier;
     if (runtime.nextAttackCritGuaranteed) chance = 1;
     if (runtime.kuugaForm === 'blue') chance += 0.20;
@@ -1530,6 +1532,7 @@
       default: break;
     }
     chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit), questSkills.isMadara(unit) ? .10 : 0, grimoire.dodgeChance(unit),yuno.dodgeChance(unit),fate.dodgeChance(unit),spooky.dodgeChance(unit));
+    chance += relic.dodge(unit,chance);
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0) + spooky.eventBonus(activeCombat,unit,'dodge');
     if (getEffectivePassiveCardId(unit) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0 || runtime.noDodgeAgainstUnit) chance = 0;
@@ -1550,6 +1553,8 @@
       const turns = list.reduce((max, effect) => Math.max(max, Math.floor(Number(effect?.turns) || 0)), 0);
       effects.push({ icon, tone, label: `${label} x${list.length}${turns ? ` (${turns}t)` : ''}`, category: 'status' });
     };
+    if(unit.relic)effects.push({icon:'◆',tone:'buff',label:(window.RelicSystem.DEFINITIONS.find(d=>d.kind===unit.relic.kind)?.name||'Relic')+(unit.relic.unique?' · Unique':''),category:'buff'});
+    if(unit.isVegito)effects.push({icon:'◆',tone:'buff',label:'POTARA FUSION',category:'buff'});
     if(runtime.hindredTurns>0)effects.push({icon:'⛓',tone:'debuff',label:`HINDRED (${runtime.hindredTurns}t)`,category:'status'});
     addDotEffect('burn', '🔥', 'burn', 'BURN');
     addDotEffect('bleed', '🩸', 'bleed', 'BLEED');
@@ -1607,6 +1612,7 @@
       default: break;
     }
     chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target), questSkills.isMadara(target) ? .10 : 0, grimoire.dodgeChance(target),yuno.dodgeChance(target),fate.dodgeChance(target),spooky.dodgeChance(target));
+    chance += relic.dodge(target,chance);
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0) + spooky.eventBonus(battleState,target,'dodge');
     if (getEffectivePassiveCardId(target) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0) chance = 0;
@@ -1824,7 +1830,7 @@
     if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
     if (!(gomen.isGojo(target)&&meta.passiveAttack) && !grimoire.dodgeChance(target) && !yuno.dodgeChance(target) && questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
     if (grimoire.reflect(battleState, attacker, target, amount, meta)) return {damage:0,killed:false,reflected:true};
-    if (meta.passiveAttack && !meta.dodgeChecked && (grimoire.dodgeChance(target)||yuno.dodgeChance(target)||fate.dodgeChance(target)||spooky.dodgeChance(target)||spooky.eventBonus(battleState,target,'dodge')) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
+    if (meta.passiveAttack && !meta.dodgeChecked && (grimoire.dodgeChance(target)||yuno.dodgeChance(target)||fate.dodgeChance(target)||spooky.dodgeChance(target)||spooky.eventBonus(battleState,target,'dodge')||relic.hasDodge(target)) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
     const targetRuntime = ensureRuntime(target);
     const fatalityDeferred = deferFatality(battleState, target) || yuno.offensive(attacker,target)!==1;
     const source = attacker || null;
@@ -2700,6 +2706,7 @@
   function onDodge(battleState, defender, attacker, outcome = {}) {
     if (!defender || !attacker) return;
     const id = getEffectivePassiveCardId(defender);
+    relic.onDodge(defender);
     champions.dodge(battleState, defender, attacker, outcome);
     expansion.dodge(battleState, defender, attacker);
     questSkills.dodge(battleState, defender, attacker);
@@ -3216,6 +3223,7 @@
       return { hit: false, skipped: true, killed: false, damage: 0 };
     }
 
+    options=relic.prepare(attacker,options);
     // Count the legal attack once on its owner, independent of target/passive state.
     const attackState = ensureRuntime(attacker);
     attackState.ownAttackCount = Math.max(0, Number(attackState.ownAttackCount) || 0) + 1;
@@ -4311,6 +4319,7 @@
     beginBattle(battleState) {
       if (!battleState) return;
       activeCombat = battleState;
+      relic.prepareBattle(battleState);
       battleState.turnCounter = 0;
       battleState.turnCount = 0;
       battleState.passiveCashBonus = 0;
@@ -4385,6 +4394,7 @@
         description.name += ' + Brother Soul';
         description.description += '\n\nBrother Soul\nEach successful attack has a separate 10% chance to apply Burn for 1 target turn, dealing 100% of this card\'s current ATK. Brother Soul lasts for the match; each Burn lasts 1 target turn and stacks with this card\'s other Burn effects.';
       }
+      if(unit.isVegito){description.name='Potara Fusion · '+description.name;description.description+='\n\nPotara Fusion\n20% dodge; successful dodge grants +25% ATK damage on the next attack.';}
       return shibuya.describe(unit,fate.describe(unit,reagan.describe(unit,description)));
     },
     getPassiveDefinition(cardId) {

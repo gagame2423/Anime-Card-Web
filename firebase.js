@@ -87,14 +87,15 @@
   const target=user?.uid||null;if(identityJob&&identityTarget===target)return identityJob;
   const ticket=++epoch;identityTarget=target;enabled=false;verified=false;clearTimer();stopWatch();account=hasGoogle(user)?user:null;
   if(!account){update('Local save active. Google sync is optional.');return;}
+  let tokenReady=false;
   const job=(async()=>{try{
-   if(host.navigator.onLine===false){update('Offline · local progress is active.');return;}await verifyToken(user);if(ticket!==epoch||auth.currentUser?.uid!==user.uid)return;verified=true;
+   if(host.navigator.onLine===false){update('Offline · local progress is active.');return;}await verifyToken(user);if(ticket!==epoch||auth.currentUser?.uid!==user.uid)return;verified=true;tokenReady=true;host.dispatchEvent(new host.CustomEvent('cloud-session-ready'));
    if(!configured)return;const remote=await readRemote(user.uid);if(!current(ticket,user.uid))return;
    if(!remote){meta={...meta,uid:user.uid,revision:0,digest:'',dirty:true,autoSync:true};saveMeta();enabled=true;update('Google connected · backing up this local profile');await flush(true);return;}
    if(!validRemote(remote))throw Error('Cloud save is invalid; local progress is unchanged.');
    if(meta.uid===user.uid&&meta.revision===remote.revision&&meta.digest===remote.digest){enabled=true;meta.autoSync=true;saveMeta();listen(user.uid);update('Google connected · local-first sync enabled');if(meta.dirty)schedule(1500);}
    else update('Google connected. A Cloud copy is available; local progress stays active. Choose Upload Local Save or Load Cloud Save.');
-  }catch(error){if(ticket===epoch){verified=false;pauseCloud(friendly(error));}}finally{if(ticket===epoch)update();}})();
+  }catch(error){if(ticket===epoch){if(!tokenReady)verified=false;pauseCloud(friendly(error));}}finally{if(ticket===epoch)update();}})();
   identityJob=job;try{await job;}finally{if(identityJob===job){identityJob=null;identityTarget=null;}}
  }
  async function initialize(){

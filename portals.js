@@ -63,13 +63,17 @@
   if(!transact(next,items,main))throw Error('Unable to save Portal result. The attempt remains pending.');
   bridge.onReward?.(summary);return summary;
  }
+ function discard(ids){
+  if(blocked||setup||data.active||host.PortalParty?.active||host.PortalCombatView?.active||!Array.isArray(ids)||!ids.length||ids.length>500||new Set(ids).size!==ids.length||ids.some(id=>!data.portals[id]))return false;
+  const next=clone(data),items=inventory();for(const id of ids){delete next.portals[id];removeItem(items,id);}return transact(next,items);
+ }
  function abort(){if(!data?.active)return;finish({id:data.active.id,portal:data.active.portal||data.portals[data.active.portalId],won:false});}
  const el=id=>host.document.getElementById(id),text=(id,value)=>U.text(el(id),value);
  function message(value){statusMessage=String(value||'');text('portalStatus',statusMessage);}
  function quota(){return host.PortalParty?.active?host.PortalParty.quota:4;}
  function owned(){return bridge.cards?.()||[];}
  function variants(id){return bridge.variants?.(id)||[];}
- function wire(slot){const card=owned().find(c=>c.id===slot.cardId),variant=variants(slot.cardId).find(v=>v.key===slot.variantKey);if(!card||!variant)throw Error('Selected card variant is no longer owned.');return{cardId:card.id,level:bridge.describe(card,variant).level,mutationIds:variant.mutations.map(m=>m.id)};}
+ function wire(slot){const card=owned().find(c=>c.id===slot.cardId),variant=variants(slot.cardId).find(v=>v.key===slot.variantKey);if(!card||!variant)throw Error('Selected card variant is no longer owned.');return{cardId:card.id,level:bridge.describe(card,variant).level,mutationIds:variant.mutations.map(m=>m.id),copy:slot.copy||0,relic:host.RelicSystem.snapshotFor(card.id,variant.key,slot.copy||0)};}
  function cardsReady(){try{return bridge.selection?.().length===quota()&&bridge.selection().every(Boolean);}catch(_){return false;}}
  function getWires(){const slots=bridge.selection?.()||[];if(slots.length!==quota()||!slots.every(Boolean))throw Error('Fill all team slots first.');return slots.map(wire);}
  function resetSelection(){bridge.selector?.(quota(),true);renderPicker();}
@@ -96,7 +100,7 @@
   ui.solo.addEventListener('click',solo);ui.party.addEventListener('click',()=>{ui.choices.hidden=true;ui.room.hidden=false;ui.builder.hidden=true;host.PortalParty.reset();message('Choose 2–4 players and create a Party room.');});
   ui.create.addEventListener('click',()=>host.PortalParty.create(selectedPortal,Number(ui.size.value)));ui.join.addEventListener('click',()=>host.PortalParty.join(ui.code.value));ui.ready.addEventListener('click',()=>{try{host.PortalParty.ready(getWires());}catch(error){message(error.message);}});ui.hostStart.addEventListener('click',()=>host.PortalParty.start());
   el('portalClose')?.addEventListener('click',exit);el('portalJoinStorage')?.addEventListener('click',join);return true;}
- host.PortalsSystem=Object.freeze({KEY,validSave,dropTimeTrial,begin,finish,abort,open,join,exit,startSolo,continueMatch,partyChanged,showSummary,getWires,message,
+ host.PortalsSystem=Object.freeze({KEY,validSave,dropTimeTrial,begin,finish,abort,discard,open,join,exit,startSolo,continueMatch,partyChanged,showSummary,getWires,message,
   configure:options=>{bridge=options||{};mount();},get(id){return data?.portals[id]?clone(data.portals[id]):null;},get playerId(){return data?.playerId;},get selected(){return selectedPortal?clone(selectedPortal):null;},get weather(){return bridge.weather?.()||[];},get active(){return setup;},get blocked(){return blocked;},get hostedToday(){return data?daily().hosted:0;},get attempt(){return data?.active?clone(data.active):null;},
   name:()=>bridge.displayName?.()||'Player',flush:()=>!blocked&&persist(),reset:()=>{data=fresh();blocked=false;persist();}});
 })(window);

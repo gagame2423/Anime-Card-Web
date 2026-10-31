@@ -18,7 +18,7 @@
     super_rich_potion: { name:'Super Rich Potion',icon:'💎',description:'+50% VNĐ for 5 minutes; pauses regular Rich Potion.',stat:'rich',bonus:.50,tier:'epic',source:'craft' },
     super_exp_potion: { name:'Super EXP Potion',icon:'🌟',description:'+50% EXP for 5 minutes; pauses regular EXP Potion.',stat:'exp',bonus:.50,tier:'epic',source:'craft' },
     super_speed_potion: { name:'Super Speed Potion',icon:'🌪',description:'+15% Roll Speed for 5 minutes; pauses regular Speed Potion.',stat:'speed',bonus:.15,tier:'epic',source:'craft' },
-    speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes. Normal Time Trial: 1s turns and a 90s limit while active. EXP Time Trial and Spooky Hunt keep their own speed rules. Tower / Time Trial / Raid shops only.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'shop' }
+    speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes. Normal / Material Time Trial: 1s turns and a 90s limit while active. EXP Time Trial and Spooky Hunt keep their own speed rules. Tower / Time Trial / Raid shops only.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'shop' }
   }).map(([id, item]) => [id, Object.freeze({ id, type: 'potion', tier: 'rare', ...item })])));
   // Preserve the original four-potion battle pool; exclusive items never enter it.
   const POTION_BY_STAT = new Map(Object.entries(POTIONS).filter(([id])=>!SUPER_BASE[id]).map(([id,potion])=>[potion.stat,id]));
@@ -151,6 +151,17 @@
     data.receipts[stream]=receipt;
     if(persist())return true;data=JSON.parse(before);return false;
   }
+  // Material costs, Relic metadata and unique instances commit together.
+  let revision=0;
+  function transactItems(change){
+    const before=data.items,draft=JSON.parse(JSON.stringify(before));
+    try{
+      if(change(draft)!==true)return false;
+      if(Object.entries(draft).some(([id,item])=>!safeId(id)||!item||item.id!==id||!Number.isSafeInteger(item.quantity)||item.quantity<0||host.RelicSystem?.validItem?.(item)===false))return false;
+      if(host.RelicSystem?.validItems(draft)===false)return false;
+      data.items=draft;if(persist()){revision++;return true;}data.items=before;return false;
+    }catch(error){data.items=before;console.warn('Item transaction aborted:',error.message);return false;}
+  }
   function remove(id, count = 1) {
     const amount = countOf(count);
     if (amount < 1 || quantity(id) < amount) return false;
@@ -245,6 +256,6 @@
       timer.classList.toggle('is-active', seconds > 0);
     }
   }
-  function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); persist(); }
-  host.InventorySystem = Object.freeze({ KEY, flush: persist, reload: () => { data = read(); settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, transactOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); revision++; persist(); }
+  host.InventorySystem = Object.freeze({ KEY, transactItems, get revision(){return revision;}, flush: persist, reload: () => { data = read(); revision++; settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, transactOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

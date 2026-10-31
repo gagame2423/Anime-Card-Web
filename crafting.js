@@ -13,7 +13,7 @@
     const potions = Object.entries(host.InventorySystem?.SUPER_BASE || {}).map(([id, baseId]) => ({
       id, cost: 0, ingredients: [{ id: baseId, quantity: 10 }]
     }));
-    return [...potions,...(host.EquipmentSystem?.RECIPES || [])];
+    return [...potions,...(host.EquipmentSystem?.RECIPES || []),...(host.RelicSystem?.RECIPES||[])];
   }
   function relatedCards(itemId) {
     return (host.EvolutionSystem?.RECIPES || []).filter(recipe => recipe.itemId === itemId).map(recipe => ({
@@ -68,7 +68,7 @@
     }
     const { item, recipe } = entry;
     ui.visual.append(visual(item, 'crafting-detail-icon'));
-    setText(ui.title, item.name); setText(ui.category, item.type==='equipment' ? 'Equipment · one active slot' : recipe ? 'Consumable · Super Potion' : 'Evolution Material');
+    setText(ui.title, item.name); setText(ui.category, item.type==='relic_recipe'?'Relic · one per card copy':item.type==='equipment' ? 'Equipment · one active slot' : recipe ? 'Consumable · Super Potion' : 'Evolution Material');
     setText(ui.description, item.description);
     // Consumables deliberately leave Related Card blank.
     for (const link of item.type === 'material' ? relatedCards(item.id) : []) {
@@ -99,16 +99,16 @@
       select.addEventListener('change',()=>{ui.choices[index]=select.value;refresh();});
     }
     setText(ui.cost, recipe ? `${count(recipe.cost)} VNĐ` : 'Shop item');
-    setText(ui.status, recipe?.cards ? 'Consumes the selected card variants and listed VNĐ. Equip the result from Storage → Equipment.' : recipe ? '10 regular potions → 1 Super Potion. No VNĐ fee.' : 'This material is obtained from its listed shop; no crafting recipe is currently available.');
+    setText(ui.status, item.type==='relic_recipe'?'Consumes listed materials. Rolls 70% Common / 25% Rare / 5% Legendary; Legendary: 10% Unique. Equip from Storage → Relic.':recipe?.cards ? 'Consumes the selected card variants and listed VNĐ. Equip the result from Storage → Equipment.' : recipe ? '10 regular potions → 1 Super Potion. No VNĐ fee.' : 'This material is obtained from its listed shop; no crafting recipe is currently available.');
     ui.craft.title = recipe ? 'Craft one item' : 'Obtain this material from its shop.';
   }
   function refresh() {
     if (!ui || ui.root.classList.contains('hidden')) return;
     const inventory = host.InventorySystem;
-    for (const [id, tile] of ui.tiles) setText(tile.owned, `Owned: ${count(inventory.quantity(id))}`);
+    for (const [id, tile] of ui.tiles) setText(tile.owned, `Owned: ${count(host.RelicSystem.isRecipe(id)?host.RelicSystem.count(host.RelicSystem.RECIPES.find(r=>r.id===id).kind):inventory.quantity(id))}`);
     const entry = catalog.find(entry => entry.item.id === selected);
     if (!entry) return;
-    setText(ui.owned, `Owned: ${count(inventory.quantity(selected))}`);
+    setText(ui.owned, `Owned: ${count(host.RelicSystem.isRecipe(selected)?host.RelicSystem.count(entry.recipe.kind):inventory.quantity(selected))}`);
     for (const [id, requirement] of ui.requirements) {
       const amount = inventory.quantity(id);
       setText(requirement.amount, `${count(amount)}/${requirement.needed}x`);
@@ -152,6 +152,7 @@
     ui.craft.addEventListener('click', () => {
       const entry = catalog.find(entry => entry.item.id === selected);
       if (!entry?.recipe || !allowed()) return;
+      if(host.RelicSystem.isRecipe(selected)){const result=host.RelicSystem.craft(selected);setText(ui.status,result.message);refresh();if(result.ok)bridge.onChange?.();return;}
       if(entry.recipe.cards){const result=host.EquipmentSystem.craft(selected,ui.choices);setText(ui.status,result.message);refresh();if(result.ok)bridge.onChange?.();return;}
       if (!host.InventorySystem.craft(selected)) { setText(ui.status, 'Unable to craft. Check ingredients and save storage.'); refresh(); return; }
       setText(ui.status, `Crafted 1 × ${entry.item.name}.`); refresh(); bridge.onChange?.();
