@@ -1431,7 +1431,7 @@ function startCooldown() {
 // ============================================================
 
 function isCardRollUnlocked(card) {
-  if (card.raidOnly || card.bossEventOnly || !(Number(card.chance) > 0)) return false;
+  if (card.capsuleOnly || card.raidOnly || card.bossEventOnly || !(Number(card.chance) > 0)) return false;
   if(card.spookyExclusive&&!window.SpookySystem.unlocked())return false;
   return !card.unlockRequirement || window.AchievementSystem?.isUnlocked(card.unlockRequirement) || state.achievementRewardReceipts?.[card.unlockRequirement] === true;
 }
@@ -4372,7 +4372,7 @@ function renderTimeTrialControls() {
   setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`);
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
   setViewText('timeTrialRules', exp
-    ? '1-second turns • 1 Ticket per attempt • 300s • Infinite EXP Training Dummy • Fixed 1 ATK • EXP = floor(total damage × 0.05) • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
+    ? '1-second turns • 1 Ticket per attempt • 300s • Infinite EXP Training Dummy • Fixed 1 ATK • EXP = floor(total damage × 0.25) • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
     : '2-second turns • 180s per room • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
   const timer = document.getElementById('timeTrialTimer');
   timer?.classList.toggle('hidden', !active || !battleState?.trial || battleState.finished);
@@ -5723,7 +5723,7 @@ function renderSpookyControls(){
   if(active)window.SettingsSystem.render();
   if(!active)return;if(open&&!battleState?.isBattling)system.syncSeason();const info=system.snapshot(),range=system.coinRange(info.wave),kills=system.coinRange(info.wave,true);
   setViewText('spookyAvailability',open?'OPEN • October event':'CLOSED • October 1–31 only');setViewText('spookyWaveDisplay',`Wave ${info.wave} / 50 • ${info.runs} full clears`);setViewText('spookyBalance',`${info.coins.toLocaleString('en-US')} Spooky Coins`);setViewText('spookyLiveCoins',`🎃 ${info.coins.toLocaleString('en-US')}`);
-  setViewText('spookyRewardPreview',`Base wave reward: ${range.min}–${range.max} Coins • Per kill: ${kills.min}–${kills.max} Coins • Current coin multiplier x${system.coinMultiplier().toFixed(3)} • Wave 50 victory only: 5% Headless Horseman, 1% Myers, 1% Machete (independent). Waves 1–49: Coins only.`);
+  setViewText('spookyRewardPreview',`Base wave reward: ${range.min}–${range.max} Coins • Per kill: ${kills.min}–${kills.max} Coins • Current coin multiplier x${(system.coinMultiplier()*system.seasonalMultiplier()).toFixed(3)}${system.isHalloween()?' • OCT 31: x2 Coins / x2 Wave 50 drops':''} • Wave 50 victory only: ${5*system.seasonalMultiplier()}% Headless Horseman, ${system.seasonalMultiplier()}% Myers, ${system.seasonalMultiplier()}% Machete (independent). Waves 1–49: Coins only.`);
   document.getElementById('spookyChooseButton')?.classList.toggle('hidden',!system.needsChoice()||battleState?.isBattling===true);
   if(!isBattleMatchActive()&&els.battleStartButton)els.battleStartButton.disabled=!isBattleSetupValid()||!system.canEnter();
   if(battleState?.finished){const can=canReplayBattleTeam();els.battleAutoAgainButton.disabled=!can;els.battleAutoAgainButton.textContent=can?`Continue manually · Wave ${info.wave}`:'Spooky Hunt unavailable';}

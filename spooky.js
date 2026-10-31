@@ -6,8 +6,8 @@
   const CAPSULE=Object.freeze({id:'spooky_capsule',name:'Spooky Capsule',type:'consumable',tier:'mythic',icon:'🎃',image:'assets/items/spookycapsule.png',description:'Open in Storage → Items for one card, using standard mutation rolls. Duplicates grant 10% level EXP. The Judgement requires Heavenly Tower Floor 100.'});
   const EQUIPMENT='equipment_headless_horseman';
   const POOL=Object.freeze(['the-trapper','madness-doctor','tower-champion-heavenly','boss-event-alucard','boss-event-lucius','asta-demon','the-clown','the-oni','freddy-krueger','myers']);
-  const COLLECTION=Object.freeze(['the-trapper','madness-doctor','the-legion','tower-champion-heavenly','the-clown','the-oni','freddy-krueger','jason-13th','myers']);
-  const CAPSULE_POOL=Object.freeze([['the-trapper',30],['madness-doctor',30],['the-legion',15],['tower-champion-heavenly',10],['the-clown',10],['the-oni',10],['freddy-krueger',1]].map(Object.freeze));
+  const COLLECTION=Object.freeze(['the-trapper','madness-doctor','the-legion','tower-champion-heavenly','the-clown','the-oni','freddy-krueger','jason-13th','myers','pennywise']);
+  const CAPSULE_POOL=Object.freeze([['the-trapper',30],['madness-doctor',30],['the-legion',15],['tower-champion-heavenly',10],['the-clown',10],['the-oni',10],['freddy-krueger',1],['pennywise',.0001]].map(Object.freeze));
   const SHOP=Object.freeze([
     ...['exp_potion','rich_potion','lucky_potion','speed_potion'].map(id=>Object.freeze({id,cost:10})),
     ...['super_exp_potion','super_rich_potion','super_luck_potion','super_speed_potion'].map(id=>Object.freeze({id,cost:100})),
@@ -30,9 +30,11 @@
   const unit=random=>Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0));
   const roll=(min,max,random=Math.random)=>min+Math.floor(unit(random)*(max-min+1));
   const waveOf=n=>Math.max(1,Math.min(50,Math.floor(Number(n)||1)));
-  const calendarFormatter=new Intl.DateTimeFormat('en-US',{timeZone:TIME_ZONE,year:'numeric',month:'numeric'});
+  const calendarFormatter=new Intl.DateTimeFormat('en-US',{timeZone:TIME_ZONE,year:'numeric',month:'numeric',day:'numeric'});
   let calendarDay=null,calendarValue=null;
-  const calendar=at=>{const d=new Date(at);if(!Number.isFinite(d.getTime()))return {year:0,month:0};const day=Math.floor((d.getTime()+7*60*60*1000)/86400000);if(calendarDay===day)return calendarValue;const parts=calendarFormatter.formatToParts(d);calendarDay=day;return calendarValue=Object.freeze({year:Number(parts.find(p=>p.type==='year').value),month:Number(parts.find(p=>p.type==='month').value)});};
+  const calendar=at=>{const d=new Date(at);if(!Number.isFinite(d.getTime()))return {year:0,month:0};const day=Math.floor((d.getTime()+7*60*60*1000)/86400000);if(calendarDay===day)return calendarValue;const parts=calendarFormatter.formatToParts(d);calendarDay=day;return calendarValue=Object.freeze({year:Number(parts.find(p=>p.type==='year').value),month:Number(parts.find(p=>p.type==='month').value),date:Number(parts.find(p=>p.type==='day').value)});};
+  const isHalloween=(at=Date.now())=>calendar(at).month===10&&calendar(at).date===31;
+  const seasonalMultiplier=(at=Date.now())=>isHalloween(at)?2:1;
   const isOpen=(at=Date.now())=>calendar(at).month===10;
   const freshRun=(season=0)=>({wave:1,season,choices:[],pendingChoice:null});
   const fresh=()=>({version:1,coins:0,runs:0,sequence:0,run:freshRun(),activeAttempt:null,pending:null});
@@ -63,9 +65,9 @@
     if(p.kind==='capsule'&&(p.costs.length!==1||p.cards.length!==1||p.items.length||p.coinsDelta!==0||p.nextRun!==null||p.completedRun))return false;
     if(['kill','wave','loss'].includes(p.kind)&&p.coinsDelta<0)return false;
     if(p.kind==='capsule'&&!CAPSULE_POOL.some(row=>row[0]===p.cards[0].cardId))return false;
-    if(p.kind==='kill'&&(p.items.length||p.cards.length||p.costs.length||p.nextRun!==null||p.completedRun||p.coinsDelta>Math.ceil(100*7*1.66*host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER)))return false;
+    if(p.kind==='kill'&&(p.items.length||p.cards.length||p.costs.length||p.nextRun!==null||p.completedRun||p.coinsDelta>Math.ceil(100*7*1.66*2*host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER)))return false;
     if(p.kind==='loss'&&(p.coinsDelta!==0||p.items.length||p.cards.length||p.costs.length||p.nextRun?.wave!==1||p.nextRun.choices.length||p.completedRun))return false;
-    if(p.kind==='wave'&&(p.costs.length||p.items.some(row=>![EQUIPMENT,'machete'].includes(row.id)||row.quantity!==1)||new Set(p.items.map(row=>row.id)).size!==p.items.length||p.cards.some(row=>row.cardId!=='myers')||p.completedRun!==(a.wave===50)||p.nextRun?.wave!==(a.wave===50?1:a.wave+1)||p.coinsDelta>Math.ceil(500*7*1.66*host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER)))return false;
+    if(p.kind==='wave'&&(p.costs.length||p.items.some(row=>![EQUIPMENT,'machete'].includes(row.id)||row.quantity!==1)||new Set(p.items.map(row=>row.id)).size!==p.items.length||p.cards.some(row=>row.cardId!=='myers')||p.completedRun!==(a.wave===50)||p.nextRun?.wave!==(a.wave===50?1:a.wave+1)||p.coinsDelta>Math.ceil(500*7*1.66*2*host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER)))return false;
     return v.coins+p.coinsDelta>=0;
   }
   let bridge={},data;
@@ -124,7 +126,7 @@
   function enemyStats(wave,slot){const t=(waveOf(wave)-1)/49,s=t*t*(3-2*t);return {hp:Math.round(BASE[slot][0]+(FINAL[slot][0]-BASE[slot][0])*s),atk:Math.round(BASE[slot][1]+(FINAL[slot][1]-BASE[slot][1])*s)};}
   function coinRange(wave,kill=false){const t=(waveOf(wave)-1)/49;return kill?{min:Math.round(1+19*t),max:Math.round(5+95*t)}:{min:Math.round(5+95*t),max:Math.round(20+480*t)};}
   function coinMultiplier(choices=data.run.choices){return (1+modifiers(choices).coins)*(1+(host.EquipmentSystem?.bonuses().spookyCoins||0))*host.InventorySystem.getDropMultiplier();}
-  function scaledCoins(base,choices,random){const exact=Math.min(MAX,base*coinMultiplier(choices)),whole=Math.floor(exact);return whole+(exact>whole&&unit(random)<exact-whole?1:0);}
+  function scaledCoins(base,choices,random){const exact=Math.min(MAX,base*coinMultiplier(choices)*seasonalMultiplier()),whole=Math.floor(exact);return whole+(exact>whole&&unit(random)<exact-whole?1:0);}
   function enemies(random=Math.random){
     const pool=[...POOL],bonus=1+modifiers().enemyStats;
     return Array.from({length:ENEMY_TEAM_SIZE},(_,slot)=>{const [id]=pool.splice(roll(0,pool.length-1,random),1),native=host.ALL_CARDS.find(c=>c.id===id);if(!native)throw Error('Thiếu thẻ Spooky: '+id);const stats=enemyStats(data.run.wave,slot);stats.hp=Math.round(stats.hp*bonus);stats.atk=Math.round(stats.atk*bonus);const card={...native,element:'Fire',stats:{...stats}};return {card,display:{name:card.name,image:card.image,...stats},hp:stats.hp,maxHp:stats.hp,atk:stats.atk,level:1,defeated:false,mutations:[],isSpookyEnemy:true};});
@@ -155,15 +157,15 @@
     const completedRun=won&&run.wave===50,range=coinRange(run.wave),coins=won?scaledCoins(roll(range.min,range.max,random),run.choices,random):0;
     const items=[],cards=[];
     // Special-drop rolls belong only to a successful final-wave clear.
-    if(completedRun){if(unit(random)<.05)items.push({id:EQUIPMENT,quantity:1});if(unit(random)<.01)cards.push({cardId:'myers',mutationIds:mutationIds()});if(unit(random)<.01)items.push({id:'machete',quantity:1});}
+    if(completedRun){const bonus=seasonalMultiplier();if(unit(random)<.05*bonus)items.push({id:EQUIPMENT,quantity:1});if(unit(random)<.01*bonus)cards.push({cardId:'myers',mutationIds:mutationIds()});if(unit(random)<.01*bonus)items.push({id:'machete',quantity:1});}
     const nextRun=!won||completedRun?freshRun(data.run.season):{...data.run,wave:run.wave+1};
     const result=queue(won?'wave':'loss',{attemptId:run.id,coinsDelta:coins,items,cards,completedRun,nextRun,summary:{won,wave:run.wave,killCoins:data.activeAttempt.killCoins,nextWave:nextRun.wave}});
     run.completed=true;notify();return result;
   }
   function abort(battle){if(battle?.spooky&&!battle.spooky.completed){try{finish(battle,false);}catch(e){console.warn(e.message);}}}
   function capsulePool(){
-    const eligible=CAPSULE_POOL.filter(([id])=>id!=='tower-champion-heavenly'||bridge.hasJudgement?.()===true),total=eligible.reduce((sum,row)=>sum+row[1],0);
-    return eligible.map(([cardId,weight])=>({cardId,weight,chance:weight/total}));
+    const eligible=CAPSULE_POOL.filter(([id])=>id!=='pennywise'&&(id!=='tower-champion-heavenly'||bridge.hasJudgement?.()===true)),total=eligible.reduce((sum,row)=>sum+row[1],0);
+    return [{cardId:'pennywise',weight:.0001,chance:.0001},...eligible.map(([cardId,weight])=>({cardId,weight,chance:weight/total*(1-.0001)}))];
   }
   function purchase(id,quantity=1){
     const offer=SHOP.find(offer=>offer.id===id);if(!offer||data.pending||busy||host.SandboxSystem?.active||bridge.canAct?.()!==true)return false;
@@ -196,8 +198,8 @@
     view.onChange=onChange;const allowed=bridge.canAct?.()===true&&!data.pending&&!busy;
     for(const {offer,button}of view.rows)button.disabled=!allowed||host.InventorySystem.quantity(offer.id)>=MAX;
   }
-  function sources(id){const result=[];for(const offer of SHOP)if(offer.id===id)result.push(`Spooky Shop: ${offer.cost.toLocaleString('en-US')} Spooky Coins.`);if(id===EQUIPMENT)result.push('Spooky Hunt: independent 5% chance only after winning Wave 50.');if(id==='machete')result.push('Spooky Hunt: independent 1% chance only after winning Wave 50; evolves Lv.100+ The Trapper.');return result;}
-  function snapshot(){return JSON.parse(JSON.stringify({coins:data.coins,runs:data.runs,wave:data.run.wave,choices:data.run.choices,pendingChoice:data.run.pendingChoice,available:isOpen(),blocked:Boolean(data.pending)}));}
+  function sources(id){const result=[];for(const offer of SHOP)if(offer.id===id)result.push(`Spooky Shop: ${offer.cost.toLocaleString('en-US')} Spooky Coins.`);if(id===EQUIPMENT)result.push(`Spooky Hunt: independent ${5*seasonalMultiplier()}% chance only after winning Wave 50 (October 31: x2).`);if(id==='machete')result.push(`Spooky Hunt: independent ${seasonalMultiplier()}% chance only after winning Wave 50; evolves Lv.100+ The Trapper (October 31: x2).`);return result;}
+  function snapshot(){return JSON.parse(JSON.stringify({halloween:isHalloween(),coins:data.coins,runs:data.runs,wave:data.run.wave,choices:data.run.choices,pendingChoice:data.run.pendingChoice,available:isOpen(),blocked:Boolean(data.pending)}));}
   function reset(){data=fresh();register();persist();}
-  host.SpookySystem=Object.freeze({KEY,MODE,PLAYER_TEAM_SIZE,ENEMY_TEAM_SIZE,TURN_MS,TIME_ZONE,CAPSULE,EQUIPMENT,POOL,COLLECTION,CAPSULE_POOL,SHOP,CHOICES,BASE,FINAL,isOpen,calendar,validSave,configure,syncSeason,needsChoice,ensureChoice,choose,modifiers,enemyStats,coinRange,coinMultiplier,enemies,canEnter,start,recordKill,finish,abort,purchase,openCapsule,capsulePool,choiceText,renderChoices,renderInfo,renderShop,sources,snapshot,reset,flush:persist,get interrupted(){return interrupted;},get blocked(){return Boolean(data.pending);},unlocked:()=>host.AchievementSystem?.areSpookyComplete()===true});
+  host.SpookySystem=Object.freeze({KEY,MODE,PLAYER_TEAM_SIZE,ENEMY_TEAM_SIZE,TURN_MS,TIME_ZONE,CAPSULE,EQUIPMENT,POOL,COLLECTION,CAPSULE_POOL,SHOP,CHOICES,BASE,FINAL,isOpen,isHalloween,seasonalMultiplier,calendar,validSave,configure,syncSeason,needsChoice,ensureChoice,choose,modifiers,enemyStats,coinRange,coinMultiplier,enemies,canEnter,start,recordKill,finish,abort,purchase,openCapsule,capsulePool,choiceText,renderChoices,renderInfo,renderShop,sources,snapshot,reset,flush:persist,get interrupted(){return interrupted;},get blocked(){return Boolean(data.pending);},unlocked:()=>host.AchievementSystem?.areSpookyComplete()===true});
 })(window);

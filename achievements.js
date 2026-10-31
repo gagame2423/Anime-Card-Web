@@ -70,7 +70,7 @@
     result.push(
       Object.freeze({id:'spooky_runs_666',category:'spooky',stat:'spookyRuns',target:666,title:'Clear all 50 Spooky Hunt waves 666 times',reward:Object.freeze({luckBonus:.6}),automatic:false}),
       Object.freeze({id:'spooky_jason_evolved',category:'spooky',stat:'spookyEvolution',target:1,title:'Evolve The Trapper into Jason 13th',reward:Object.freeze({dropBonus:.06}),automatic:false}),
-      Object.freeze({id:'spooky_collection',category:'spooky',stat:'spookyCollection',target:9,title:'Own all 9 Spooky collection cards',reward:Object.freeze({expBonus:.6}),automatic:false})
+      Object.freeze({id:'spooky_collection',category:'spooky',stat:'spookyCollection',target:10,title:'Own all 10 Spooky collection cards',reward:Object.freeze({expBonus:.6}),automatic:false})
     );
     return result;
   }
@@ -108,7 +108,7 @@
       data.stats.boss = Math.max(data.stats.boss, count(snapshot.knownBossWins));
       data.stats.spookyRuns=Math.max(data.stats.spookyRuns,count(snapshot.spookyRuns));
       data.stats.spookyEvolution=Math.max(data.stats.spookyEvolution,Math.min(1,count(snapshot.spookyEvolution)));
-      data.stats.spookyCollection=Math.max(data.stats.spookyCollection,Math.min(9,count(snapshot.spookyCollection)));
+      data.stats.spookyCollection=Math.max(data.stats.spookyCollection,Math.min(10,count(snapshot.spookyCollection)));
       data.stats.peakCurrency = Math.max(data.stats.peakCurrency, count(snapshot.currency));
       // Old saves have no lifetime-earnings history. The known balance is the
       // migration baseline; subsequent awards are recorded explicitly.

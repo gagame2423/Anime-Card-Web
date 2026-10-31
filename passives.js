@@ -337,6 +337,7 @@
     function hit(bs, source, target, damage, options = {}) {
       if((options.isFollowUp||options.fateSupport||options.requiemSupport||options.followOwner)&&(!spooky.canFollow(source)||!spooky.canFollow(options.followOwner)))return {damage:0,killed:false,hit:false,skipped:true,hindered:true};
       if (!isAlive(target) || !(damage > 0)) return { damage: 0, killed: false };
+      spooky.attackTarget(bs,source,target);if(spooky.misses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,fearChecked:true};
       const amount = window.ElementSystem.damage(source, target, Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1) * yuno.offensive(source,target))));
       if (raidSecrets.block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       if (options.passiveAttack!==false && !options.championCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) {
@@ -491,6 +492,7 @@
       if (grimoire.fatal(bs, unit)) return true;
       if (raidSecrets.rescue(bs, unit, {fatal:true})) return true;
       if (code === 'snowing' && c.iceTurns > 0) { unit.hp = Math.min(unit.hp, 1); unit.defeated = false; return true; }
+      if(spooky.revive(bs,unit))return true;
       if (isBleeding(unit)) return false;
       if(fate.fatal(bs,unit))return true;
       if (expansion.fatal(bs, unit)) return true;
@@ -501,6 +503,7 @@
     function death(bs, unit, attacker) {
       if(window.TrainingDummySystem?.isTarget(bs,unit)){window.TrainingDummySystem.restore(unit);return false;}
       if (isAlive(unit)) return false;
+      if(spooky.revive(bs,unit))return true;
       const borrowedReviveForbidden=noExternalRevive(unit);
       requiem.death(bs,unit);
       if (!state(unit).deathHandled && raidSecrets.rescue(bs, unit, {fatal:true})) return true;
@@ -1206,7 +1209,7 @@
       ensureRuntime(unit);teamOf(bs,owner).push(unit);refreshUnitDisplay(unit);runOnEntry(bs,unit);champions.entry(bs,unit);ensureCurrentIndices(bs);return unit;
     }});
 
-  const spooky=window.createSpookySkills({runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,id:getEffectivePassiveCardId,
+  const spooky=window.createSpookySkills({currentBattle:()=>activeCombat,setAtkBonus:(u,key,pct)=>combatStats.set(u,'atk',key,pct),runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,id:getEffectivePassiveCardId,
     alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,enemyTeam:enemyTeamOf,atk:computeWeakenedAtk,
     random:()=>Math.random(),hit:(...args)=>champions.hit(...args),status:setStatus,dot:addDot,heal,refresh:refreshUnitDisplay,log:safeLog,
     allowed:sourcePassiveAllowed,passiveIds,addCopy:addPassiveCopy,activateCopy,
@@ -1247,6 +1250,7 @@
     heal,stunned:isUnitStunned,canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n)=>fate.followChance(bs,u,n),
     hit:(...args)=>champions.hit(...args),primary:primarySkillHit,attack:(...args)=>performAttack(...args),indices:ensureCurrentIndices});
   function primarySkillHit(bs,source,target,amount,options={}){
+    spooky.attackTarget(bs,source,target);if(spooky.misses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,fearChecked:true};
     if(options.isFollowUp&&!spooky.canFollow(source))return {hit:false,damage:0,killed:false,skipped:true};
     if(Math.random()<getDodgeChance(target,source,bs,options)){onDodge(bs,target,source,{incomingDamage:amount});return {hit:false,damage:0,killed:false,dodged:true};}
     const stats=getCritStats(source),critical=Math.random()<stats.chance;
@@ -1775,7 +1779,7 @@
   }
 
   function deferFatality(battleState, target) {
-    return Boolean(shibuya.canProtect(battleState,target)||shibuya.immune(target,{passiveAttack:true})||spooky.reduction(battleState,target)||spooky.eventBonus(battleState,target,'dodge')||spooky.dodgeChance(target)||fate.guardian(battleState,target) || hasPassive(target,'medea') || fate.dodgeChance(target) || reagan.reduction(target) || yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+    return Boolean(hasPassive(target,'pennywise')||shibuya.canProtect(battleState,target)||shibuya.immune(target,{passiveAttack:true})||spooky.reduction(battleState,target)||spooky.eventBonus(battleState,target,'dodge')||spooky.dodgeChance(target)||fate.guardian(battleState,target) || hasPassive(target,'medea') || fate.dodgeChance(target) || reagan.reduction(target) || yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
   function borrowFirstHumanPassive(bs,unit,source,meta,amount) {
@@ -1813,6 +1817,7 @@
 
   function damageUnit(battleState, attacker, target, amount, meta = {}) {
     if (!target || !isAlive(target)) return { damage: 0, killed: false, reflected: false };
+    if(attacker&&!meta.dot&&!meta.fateAbsorb&&!meta.championRedirect&&spooky.misses(battleState,attacker,meta))return{damage:0,killed:false,missed:true};
     borrowFirstHumanPassive(battleState,target,attacker,meta,amount);
     if(shibuya.immune(target,meta))return {damage:0,killed:false,immune:true};
     if(!(gomen.isGojo(target)&&meta.passiveAttack)&&fate.passiveDodge(battleState,target,attacker,meta))return {damage:0,killed:false,dodged:true};
@@ -2975,6 +2980,7 @@
     if(cardIdOf(target)==='saber-knight'||hasPassive(target,'saber-knight'))return false;
     if (!target || !attacker) return false;
     if (target.championPermanentDeath || cardIdOf(target)==='tower-champion-shadow-200' || hasPassive(target,'tower-champion-shadow-200')) return false;
+    if(spooky.revive(battleState,target))return true;
     if (grimoire.fatal(battleState, target)) return true;
     if (raidSecrets.rescue(battleState, target, {fatal:true})) return true;
     const runtime = ensureRuntime(target);
@@ -3224,6 +3230,8 @@
     if (!isAlive(attacker)) return {hit:false,damage:0,killed:false};
     if (!isAlive(target)) { target=activeDefender(battleState,attacker); if(!isAlive(target))return {hit:false,damage:0,killed:true}; }
 
+    if(spooky.misses(battleState,attacker,options)){spooky.attackTarget(battleState,attacker,target);return {hit:false,damage:0,killed:false,missed:true};}
+    options={...options,fearChecked:true};
     options=dragon.prepare(battleState,attacker,options);
     const dragonAttack=dragon.replacement(battleState,attacker,target,options);if(dragonAttack)return dragonAttack;
     options=shibuya.prepare(battleState,attacker,target,options);
@@ -3255,6 +3263,7 @@
     ensureRuntime(attacker).overrideTarget = null;
     target = effectiveTarget;
 
+    spooky.attackTarget(battleState,attacker,target);
     champions.beforeAttack(battleState, attacker, target, options);
     expansion.beforeAttack(battleState, attacker, target, options);
     if (!isAlive(attacker)) return { hit: false, killed: false, damage: 0 };
@@ -3610,6 +3619,7 @@
     const previousPlayerIndex = Number(battleState.playerIndex) || 0;
     const previousEnemyIndex = Number(battleState.enemyIndex) || 0;
 
+    target = spooky.hypnosisTarget(battleState,attacker,target);
     target = shibuya.hypnosisTarget(battleState,attacker,expansion.hypnosisTarget(battleState, attacker, target));
     performAttack(battleState, attacker, target, { chainDepth: 0 });
 
@@ -4308,7 +4318,7 @@
       battleState.passiveDomain = null;
 
       if (battleState.mode === 'tower') (battleState.enemyTeam || []).forEach(unit => window.TowerSystem?.protectEnemyUnit?.(unit));
-      for (const team of [battleState.playerTeam || [], battleState.enemyTeam || []]) team.forEach((unit,index) => { ensureRuntime(unit).initialLineupIndex = index; });
+      for (const team of [battleState.playerTeam || [], battleState.enemyTeam || []]) team.forEach((unit,index) => { unit.hasBeenAttacked=false;ensureRuntime(unit).initialLineupIndex = index; });
       for (const unit of allUnits(battleState)) {
         combatStats.reset(unit);
         const runtime = ensureRuntime(unit);

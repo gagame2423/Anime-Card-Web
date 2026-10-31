@@ -2709,6 +2709,33 @@ CARDS.push(...[
     "name": "Supernova",
     "description": "First main attack targets the enemy with the lowest ATK. Each attack has a 30% chance to pierce up to 3 enemies for 50% ATK each. While not attacking, allies gain +10% HP/ATK and enemy healing is reduced by 20%; this aura does not compound."
   }
+},
+{
+  "id": "pennywise",
+  "name": "Pennywise",
+  "origin": "Tsuyokumi - Spooky Exclusive",
+  "element": "Dark",
+  "category": [
+    "Villian",
+    "Brutal",
+    "PureEvil",
+    "Unhuman",
+    "Alternative"
+  ],
+  "rarity": "Secret",
+  "chance": 27000000,
+  "requiredWeather": "Tsukuyomi",
+  "capsuleOnly": true,
+  "spookyExclusive": true,
+  "stats": {
+    "hp": 95000,
+    "atk": 9000
+  },
+  "image": "assets/cards/pennywise.png",
+  "passive": {
+    "name": "The Deadlights",
+    "description": "First entry: open a 10-turn Domain. Each turn, enemies gain Fear (15% miss; no stacking).\nFirst attack against an untouched enemy: 27% chance to Hypnotize for 3 target turns (80% friendly fire).\nFatal damage during Domain: revive at the back with 50% pre-hit HP and x0.8 ATK. Reopen Domain for floor(remaining turns / 2). Max 5 revives/match."
+  }
 }
 ]);
 Object.freeze(CARDS);
