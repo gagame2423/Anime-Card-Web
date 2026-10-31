@@ -18,7 +18,7 @@
     super_rich_potion: { name:'Super Rich Potion',icon:'💎',description:'+50% VNĐ for 5 minutes; pauses regular Rich Potion.',stat:'rich',bonus:.50,tier:'epic',source:'craft' },
     super_exp_potion: { name:'Super EXP Potion',icon:'🌟',description:'+50% EXP for 5 minutes; pauses regular EXP Potion.',stat:'exp',bonus:.50,tier:'epic',source:'craft' },
     super_speed_potion: { name:'Super Speed Potion',icon:'🌪',description:'+15% Roll Speed for 5 minutes; pauses regular Speed Potion.',stat:'speed',bonus:.15,tier:'epic',source:'craft' },
-    speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes outside Time Trial. Tower / Time Trial / Raid shops only.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'shop' }
+    speed_battle_potion: { name: 'Speed Battle Potion', icon: '⏱️', description: '1-second combat turns for 10 minutes. Normal Time Trial: 1s turns and a 90s limit while active. EXP Time Trial and Spooky Hunt keep their own speed rules. Tower / Time Trial / Raid shops only.', stat: 'battleSpeed', bonus: 0, tier: 'epic', source: 'shop' }
   }).map(([id, item]) => [id, Object.freeze({ id, type: 'potion', tier: 'rare', ...item })])));
   // Preserve the original four-potion battle pool; exclusive items never enter it.
   const POTION_BY_STAT = new Map(Object.entries(POTIONS).filter(([id])=>!SUPER_BASE[id]).map(([id,potion])=>[potion.stat,id]));

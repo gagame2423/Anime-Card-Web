@@ -4,7 +4,7 @@
   const KEY = 'anime_card_rng_raid_v1', MODE = 'raid';
   const KEY_ITEM = Object.freeze({ id: 'marine_fort_raid_key', name: 'Marine Ford Raid Key', type: 'ticket', icon: '🗝️', tier: 'epic', description: 'One Marine Ford Raid entry. 10% drop on regular 1v1 / 4v4 victories.' });
   const GRAIL_KEY=Object.freeze({id:'holy_grail_raid_key',name:'Holy Grail Raid Key',type:'ticket',icon:'🗝️',tier:'mythic',description:'One Holy Grail Raid entry. 50% drop per Fate enemy defeated in regular 1v1 / 4v4 battles.'});
-  const SHIBUYA_KEY=Object.freeze({id:'shibuya_raid_key',name:'Shibuya Raid Key',type:'ticket',icon:'🗝️',tier:'secret',description:'One Shibuya Raid entry. Gomen Event Shop: 10 Gomen Coins.'});
+  const SHIBUYA_KEY=Object.freeze({id:'shibuya_raid_key',name:'Shibuya Raid Key',type:'ticket',icon:'🗝️',tier:'secret',description:'One Shibuya Raid entry. Gomen Event Shop: 10 Gomen Coins; completed Normal 1v1 / 4v4 while Malevolent is active: 1 Key.'});
   const SHIBUYA_CARDS=Object.freeze(['jogo','haruta']);
   const SECRET_IDS = Object.freeze(['raid-secret-ace', 'raid-secret-marco', 'raid-secret-mihawk']);
   const TYPES = Object.freeze({ marine_fort: Object.freeze({ name: 'Marine Ford Raid', coinName:'Marine Ford Raid Coins', keyId: KEY_ITEM.id,
@@ -109,7 +109,7 @@
   }
   function enemies(type = 'marine_fort', d = data.types[type]?.difficulty, random = Math.random) {
     if (!validType(type)) return [];
-    const level = difficulty(d), scale = 1 + (level - 1) * LEVEL_GROWTH;
+    const level = difficulty(d), scale = (1 + (level - 1) * LEVEL_GROWTH) * (type === 'marine_fort' ? 1 : .5);
     return TYPES[type].enemies.map(([id, hpMin, hpMax, atkMin, atkMax]) => {
       const hp = hpMin + Math.floor(randomUnit(random) * (hpMax - hpMin + 1));
       const atk = atkMin + Math.floor(randomUnit(random) * (atkMax - atkMin + 1));
@@ -124,7 +124,7 @@
   }
   function preview(type = 'marine_fort', d = data.types[type]?.difficulty) {
     if (!validType(type)) return [];
-    const level = difficulty(d), scale = 1 + (level-1)*LEVEL_GROWTH;
+    const level = difficulty(d), scale = (1 + (level-1)*LEVEL_GROWTH) * (type === 'marine_fort' ? 1 : .5);
     return TYPES[type].enemies.map(([id,h0,h1,a0,a1]) => ({ card:host.ALL_CARDS.find(c=>c.id===id), level, hpMin:Math.round(h0*scale),hpMax:Math.round(h1*scale),atkMin:Math.round(a0*scale),atkMax:Math.round(a1*scale) }));
   }
   function start(battle, type = 'marine_fort') {
@@ -176,6 +176,15 @@
     if (!['1v1', '4v4'].includes(mode) || randomUnit(random) >= .10) return false;
     return host.InventorySystem.grant(KEY_ITEM.id, host.InventorySystem.scaleDrop(1, random));
   }
+  // Chỉ trận thường hoàn tất mới nhận Key; không cấp thưởng cho Online PvP.
+  function claimShibuyaKey(battle,malevolent){
+    if(host.PvPSystem?.active||host.SandboxSystem?.active||battle?.sandbox||battle?.pvp||!['1v1','4v4'].includes(battle?.mode)||!battle.finished||!['victory','defeat'].includes(battle.outcome)||battle.exitReason||malevolent!==true)return {quantity:0};
+    if(battle.shibuyaKeyReward)return battle.shibuyaKeyReward;
+    const receipt=battle.shibuyaKeyReceipt ||= host.OnlineUtils.token();
+    if(!host.InventorySystem.grantOnce('normal_shibuya',receipt,SHIBUYA_KEY.id,1))return {quantity:0,error:'Unable to save Shibuya Raid Key.'};
+    host.CloudSaveSystem?.markDirty();
+    return battle.shibuyaKeyReward={quantity:1};
+  }
   const fateReceipts=new WeakMap();
   function rollFateKey(battle,victim,source,random=Math.random){
     if(host.SandboxSystem?.active||!['1v1','4v4'].includes(battle?.mode)||!battle.enemyTeam?.includes(victim)||!battle.playerTeam?.includes(source)||victim?.isClone||victim?.isSummoned||victim?.isTemporaryAlly||!host.CategorySystem.has(victim,'Fate'))return 0;
@@ -221,5 +230,5 @@
     button.addEventListener('click', () => { if (upgrade(type)) onChange(); else host.alert('Không thể nâng cấp đội Raid.'); }); box.append(name, text, button); grid.append(box);
   }
   function reset() { data = fresh(); registerKey(); persist(); }
-  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, GRAIL_KEY, SHIBUYA_KEY, SHIBUYA_CARDS, shibuyaChances, SECRET_IDS, TYPES, SHOP, offers, rewardItemId, materialChance:excaliburChance, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, purchase, upgrade, upgradeCost, snapshot, totalWins, legacyGomenProgress, renderShop, reset, flush: persist });
+  host.RaidSystem = Object.freeze({ KEY, MODE, KEY_ITEM, GRAIL_KEY, SHIBUYA_KEY, SHIBUYA_CARDS, shibuyaChances, SECRET_IDS, TYPES, SHOP, offers, rewardItemId, materialChance:excaliburChance, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, claimShibuyaKey, purchase, upgrade, upgradeCost, snapshot, totalWins, legacyGomenProgress, renderShop, reset, flush: persist });
 })(window);

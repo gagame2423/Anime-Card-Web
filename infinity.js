@@ -91,7 +91,7 @@
   return used.size===4;
  }
  function toast(message){host.ShopBulkSystem.notify(message);}
- function scheduleSetup(){if(renderFrame!==null)return;renderFrame=host.requestAnimationFrame(()=>{renderFrame=null;renderSetup();});}
+ function scheduleSetup(){if(renderFrame!==null)return;renderFrame=host.requestAnimationFrame(()=>{renderFrame=null;renderSetup();if(active&&!loading&&!combat)bridge.saveTeam?.(week().category,selections);});}
  function cancelSetupWork(){
   collectionToken++;if(collectionFrame!==null)host.cancelAnimationFrame(collectionFrame);collectionFrame=null;
   if(renderFrame!==null)host.cancelAnimationFrame(renderFrame);renderFrame=null;
@@ -100,7 +100,7 @@
  function refreshCollection(keepTeam=false){
   cancelSetupWork();closeVariants(false);loading=true;collectionWeek=week().id;rows=[];rowById.clear();page=0;
   for(const menu of el('infinityLobby')?.querySelectorAll('.infinity-filter-menu')||[])menu.open=false;
-  if(!keepTeam)selections=Array(4).fill(null);
+  if(!keepTeam)selections=bridge.loadTeam?.(week().category)||Array(4).fill(null);
   activeSlot=Math.max(0,selections.findIndex(slot=>!slot));slotRenderKey='';gridRenderKey='';
   const source=[...new Map(cards().map(card=>[String(card.id),card])).values()];eligibleCount=source.length;
   const ticket=collectionToken;let cursor=0;

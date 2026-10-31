@@ -22,8 +22,8 @@
     Object.freeze({id:'enemy_bleed',title:'Blood Money',fields:Object.freeze({coins:[10,60],bleed:[3,9]})}),
     Object.freeze({id:'enemy_power',title:'Nightmare Bargain',fields:Object.freeze({coins:[15,60],enemyStats:[33,99]})})
   ]);
-  const BASE=Object.freeze([[300000,60000],[600000,60000],[666000,66000]].map(Object.freeze));
-  const FINAL=Object.freeze([[33300000,333000],[66600000,666000],[99900000,999000]].map(Object.freeze));
+  const BASE=Object.freeze([[30000,6000],[60000,6000],[66600,6600]].map(Object.freeze));
+  const FINAL=Object.freeze([[3330000,33300],[6660000,66600],[9990000,99900]].map(Object.freeze));
   const object=v=>Boolean(v&&typeof v==='object'&&!Array.isArray(v));
   const integer=(v,min=0,max=MAX)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
   const receipt=v=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(v);
@@ -123,7 +123,7 @@
     for(const choice of choices)for(const key of Object.keys(result))result[key]+=(choice[key]||0)/100;
     return result;
   }
-  function enemyStats(wave,slot){const t=(waveOf(wave)-1)/49,s=t*t*(3-2*t);return {hp:Math.round(BASE[slot][0]+(FINAL[slot][0]-BASE[slot][0])*s),atk:Math.round(BASE[slot][1]+(FINAL[slot][1]-BASE[slot][1])*s)};}
+  function enemyStats(wave,slot){const t=(waveOf(wave)-1)/49,s=t;return {hp:Math.round(BASE[slot][0]+(FINAL[slot][0]-BASE[slot][0])*s),atk:Math.round(BASE[slot][1]+(FINAL[slot][1]-BASE[slot][1])*s)};}
   function coinRange(wave,kill=false){const t=(waveOf(wave)-1)/49;return kill?{min:Math.round(1+19*t),max:Math.round(5+95*t)}:{min:Math.round(5+95*t),max:Math.round(20+480*t)};}
   function coinMultiplier(choices=data.run.choices){return (1+modifiers(choices).coins)*(1+(host.EquipmentSystem?.bonuses().spookyCoins||0))*host.InventorySystem.getDropMultiplier();}
   function scaledCoins(base,choices,random){const exact=Math.min(MAX,base*coinMultiplier(choices)*seasonalMultiplier()),whole=Math.floor(exact);return whole+(exact>whole&&unit(random)<exact-whole?1:0);}

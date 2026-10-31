@@ -4,7 +4,8 @@
   const KEY = 'anime_card_rng_timetrial_v1';
   const MODES = Object.freeze({ normal: 'time-trial', exp: 'exp-time-trial' });
   const TURN_MS = Object.freeze({ [MODES.normal]: 2000, [MODES.exp]: 1000 });
-  function turnMs(mode) { return TURN_MS[mode] || 2000; }
+  function speedUntil(){return Number(host.InventorySystem?.getItem('speed_battle_potion')?.until)||0;}
+  function turnMs(mode,now=Date.now()) { return mode===MODES.normal&&speedUntil()>now?1000:TURN_MS[mode]||2000; }
   const LIMITS = Object.freeze({ [MODES.normal]: 180000, [MODES.exp]: 300000 });
   const TICKET_ID = 'exp_time_trial_ticket';
   const TICKET = Object.freeze({ id: TICKET_ID, name: 'EXP Time Trial Ticket', type: 'ticket',
@@ -29,7 +30,7 @@
     const a = value.activeAttempt;
     return a === null || (record(a) && typeof a.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(a.id) && isMode(a.mode) &&
       Number.isSafeInteger(a.startedAt) && a.startedAt >= 0 && Number.isSafeInteger(a.deadline) &&
-      a.deadline - a.startedAt === LIMITS[a.mode] && a.room === (isExp(a.mode) ? 0 : value.room));
+      (isExp(a.mode)?a.deadline-a.startedAt===LIMITS[a.mode]:a.deadline-a.startedAt>=90000&&a.deadline-a.startedAt<=LIMITS[a.mode]) && a.room === (isExp(a.mode) ? 0 : value.room));
   }
   function load() {
     let saved; try { saved = JSON.parse(host.localStorage?.getItem(KEY) || 'null'); } catch (_) { saved = null; }
@@ -53,8 +54,23 @@
     if (deadlineTimer !== null) host.clearTimeout(deadlineTimer);
     deadlineTimer = null; activeBattle = null; host.TrainingDummySystem.hide();
   }
-  function expired(battle, now = Date.now()) { return Boolean(battle?.trial && now >= battle.trial.deadline); }
-  function remaining(battle, now = Date.now()) { return Math.max(0, (battle?.trial?.deadline || now) - now); }
+  // A boosted second consumes two seconds of the room's 180-second budget.
+  // Preserve elapsed time when the potion starts/expires; never restart a trial.
+  function syncTiming(battle,now=Date.now()){
+    const run=battle?.trial;if(battle?.mode!==MODES.normal||!run||run.completed)return;
+    const at=run.clockAt??run.startedAt,until=run.speedUntil||0,elapsed=Math.max(0,now-at);
+    const boosted=Math.max(0,Math.min(now,until)-at);
+    run.timeBudget=Math.max(0,(run.timeBudget??LIMITS[MODES.normal])-elapsed-boosted);run.clockAt=Math.max(at,now);
+    run.speedUntil=speedUntil();const boostedLeft=Math.max(0,run.speedUntil-now);
+    const duration=run.timeBudget<=boostedLeft*2?run.timeBudget/2:run.timeBudget-boostedLeft;
+    const deadline=run.timeBudget<=0?Math.min(run.deadline,now):now+Math.ceil(duration),oldTurn=run.turnMs;
+    run.turnMs=turnMs(battle.mode,now);
+    if(deadline!==run.deadline){run.deadline=deadline;if(data.activeAttempt?.id===run.id)data.activeAttempt.deadline=deadline;
+      if(activeBattle===battle){if(deadlineTimer!==null)host.clearTimeout(deadlineTimer);deadlineTimer=host.setTimeout(checkDeadline,Math.max(0,deadline-now));}}
+    if(oldTurn&&oldTurn!==run.turnMs)bridge.onTimingChange?.(battle,oldTurn,run.turnMs);
+  }
+  function expired(battle, now = Date.now()) { syncTiming(battle,now);return Boolean(battle?.trial && now >= battle.trial.deadline); }
+  function remaining(battle, now = Date.now()) { syncTiming(battle,now);return Math.max(0, (battle?.trial?.deadline || now) - now); }
   function checkDeadline() {
     if (activeBattle?.finished) { detach(); return; }
     if (!activeBattle || !expired(activeBattle)) return;
@@ -111,8 +127,13 @@
     } catch (error) { data = previous; persist(); throw error; }
     battle.trial = { ...attempt, cardId: battle.setup.team[0].cardId, shardsEarned: 0, monsters: 0,
       experience: 0, totalDamage: 0, convertedExperience: 0, progressPercent: 0, levelUps: 0, owner: battle.playerTeam[0] };
+    if(!isExp(battle.mode)){
+      Object.assign(battle.trial,{clockAt:now,timeBudget:LIMITS[battle.mode],speedUntil:speedUntil(),turnMs:turnMs(battle.mode)});
+      syncTiming(battle,now);data.activeAttempt.deadline=battle.trial.deadline;
+      requirePersist();
+    }
     activeBattle = battle;
-    deadlineTimer = host.setTimeout(checkDeadline, LIMITS[battle.mode]);
+    deadlineTimer = host.setTimeout(checkDeadline,remaining(battle,now));
     return battle.trial;
   }
   function settle(battle, random = Math.random) {

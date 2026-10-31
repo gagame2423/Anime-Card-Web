@@ -68,6 +68,7 @@ const defaultState = {
   dropChance: 0, // percent points; potion drop logic reads ONLY this stat and pity
   cardProgress: {},
   teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
+  arenaTeams: {},
   trainingDummyRewardReceipt: '',
   migrations: {},
   spookyRewardReceipt: '',
@@ -303,6 +304,7 @@ function cloneDefaultState() {
     battleDropRateBonus: 0,
     cardProgress: {},
     teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
+  arenaTeams: {},
     trainingDummyRewardReceipt: '',
     migrations: {},
     spookyRewardReceipt: '',
@@ -794,6 +796,7 @@ function normalizeState(parsed = {}) {
 
   normalized.schemaVersion = SAVE_SCHEMA_VERSION;
   normalized.teamLoadouts = window.StorageSystem.normalizeTeamLoadouts(parsed.teamLoadouts);
+  normalized.arenaTeams = window.ArenaLoadouts.normalize(parsed.arenaTeams);
   normalized.trainingDummyRewardReceipt = typeof parsed.trainingDummyRewardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(parsed.trainingDummyRewardReceipt)?parsed.trainingDummyRewardReceipt:'';
 
   normalized.totalRolls = Number.isFinite(Number(parsed.totalRolls))
@@ -2940,6 +2943,32 @@ function isBattleSetupValid(team = getBattleSetupTeam()) {
   return true;
 }
 
+var arenaDeckKey='';
+function arenaTeamKey(){
+  if(window.PortalsSystem?.active)return 'portal:'+getBattleTeamSize();
+  const mode=getBattleMode();
+  return mode+(mode==='tower'?':'+getTowerWeatherMode():mode==='raid'?':'+getRaidType():mode==='boss-event'?':'+getBossEventType():'');
+}
+function savedArenaTeam(key,size,resolve){return window.ArenaLoadouts.restore(state.arenaTeams,key,size,resolve);}
+function rememberArenaTeam(key,team,size){
+  if(isImportingSave||window.SandboxSystem?.active)return;
+  state.arenaTeams ||= {};
+  const before=state.arenaTeams[key];if(!window.ArenaLoadouts.save(state.arenaTeams,key,team,size))return;
+  try{
+    // PvP selection is isolated: persist only this configuration field, not combat.
+    if(window.PvPSystem?.active){const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');if(!saved)throw Error('No local profile.');saved.arenaTeams=state.arenaTeams;localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));window.CloudSaveSystem?.markDirty();}
+    else if(!saveState(true))throw Error('Unable to save selected team.');
+  }catch(error){if(before===undefined)delete state.arenaTeams[key];else state.arenaTeams[key]=before;console.warn(error.message);}
+}
+function restoreArenaSelection(){
+  if(isBattleMatchActive()||window.SandboxSystem?.active||!battleState?.setup)return;
+  const key=arenaTeamKey();if(arenaDeckKey===key)return;arenaDeckKey=key;
+  const team=savedArenaTeam(key,getBattleTeamSize(),(slot,used)=>{
+    const entry=getBattleVariantEntries(slot.cardId).find(entry=>entry.key===slot.variantKey&&entry.count>(used.get(entry.key)||0));
+    return entry?slot:null;
+  });
+  battleState.setup={team,activeIndex:Math.max(0,team.findIndex(slot=>!slot))};
+}
 let activeTeamPreset='preset1';
 function canManageTeamLoadout(){return getBattleTeamSize()===4&&!isBattleMatchActive()&&!isImportingSave&&!isSimulationActive()&&!window.InfinitySystem?.active;}
 function renderTeamLoadouts(){
@@ -3049,7 +3078,7 @@ function getFilteredSortedBattleCards() {
   const query = String(els.cardSearchInput?.value || '').trim().toLowerCase();
   const sortMode = String(els.cardSortSelect?.value || 'atk');
   const element = els.battleElementFilter?.value || 'all';
-  const cards = getUnlockedBattleCards().filter(card => (element === 'all' || card.element === element) && window.CategorySystem.matches(card,els.battleCategoryFilter?.value) && (!query || `${card.name} ${card.category.join(' ')}`.toLowerCase().includes(query)));
+  const cards = getUnlockedBattleCards().filter(card => (element === 'all' || card.element === element) && window.CategorySystem.matches(card,els.battleCategoryFilter?.value) && (!query || `${card.name} ${card.id} ${card.element} ${card.rarity} ${card.category.join(' ')}`.toLowerCase().includes(query)));
   // Compute once per card per render, never inside the sort comparator.
   const stat = sortMode === 'hp' ? 'hp' : 'atk';
   const values = new Map(cards.map(card => [card.id, getStrongestBattleVariant(card, stat)?.display[stat] || 0]));
@@ -3162,6 +3191,7 @@ function populateBattleFighterSelect() {
 }
 
 function renderBattleSelection() {
+  restoreArenaSelection();
   renderTeamLoadouts();
   renderBattleTeamSlots();
   renderBattleFighterVariants();
@@ -3173,6 +3203,7 @@ function renderBattleSelection() {
       button.classList.toggle('is-selected', selected);
     });
   }
+  if(!isBattleMatchActive()&&battleState?.setup&&!window.SandboxSystem?.active)rememberArenaTeam(arenaTeamKey(),getBattleSetupTeam(),getBattleTeamSize());
 }
 
 function openArenaMutations() {
@@ -3270,6 +3301,7 @@ function renderBattleModePicker() {
 }
 
 function setBattleMode(mode) {
+  arenaDeckKey='';
   window.TimeTrialSystem?.abort(battleState, 'mode-change');
   window.SpookySystem?.abort(battleState);
   window.RaidSystem?.abort(battleState);
@@ -3283,6 +3315,7 @@ function setBattleMode(mode) {
 }
 
 function resetBattleView(mode = '4v4') {
+  arenaDeckKey='';
   window.TimeTrialSystem?.abort(battleState, 'view-reset');
   window.SpookySystem?.abort(battleState);
   window.RaidSystem?.abort(battleState);
@@ -3838,7 +3871,7 @@ function scheduleNextBattleTurn(remainingMs) {
   if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${Math.ceil(delay / 1000)}s`;
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   const autoNote = document.getElementById('battleAutoNote');
-  if (autoNote) autoNote.textContent = isSpookyBattle() ? `Spooky Hunt • ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Manual Continue only` : isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : 'Normal'} Time Trial • Fixed ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
+  if (autoNote) autoNote.textContent = isSpookyBattle() ? `Spooky Hunt • ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Manual Continue only` : isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : 'Normal'} Time Trial • ${turnMs / 1000}-second turns • ${window.TimeTrialSystem.isExp(getBattleMode())?'Speed Battle Potion ignored':'Speed Battle Potion: 1s turns / 90s while active'} • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
   battleTurnTimer = window.setTimeout(() => {
     battleTurnTimer = null;
     executeBattleTurn();
@@ -3883,6 +3916,7 @@ function finishBattle(playerWon) {
   battleState.finished = true;
   battleState.isBattling = false;
   battleState.outcome = playerWon ? 'victory' : 'defeat';
+  const malevolentAtCompletion = isWeatherActive('malevolent');
   renderBattleRewardMetricLabels(battleState.mode === 'tower');
 
   const safePlayerPower = Number.isFinite(Number(battleState.playerPower)) ? Math.max(0, Number(battleState.playerPower)) : 0;
@@ -3988,6 +4022,15 @@ function finishBattle(playerWon) {
     if (els.battleResultPower) els.battleResultPower.textContent = `Player Power: ${safePlayerPower.toLocaleString('en-US')} vs Enemy Power: ${safeEnemyPower.toLocaleString('en-US')}`;
   }
 
+  try {
+    const keyDrop=window.RaidSystem.claimShibuyaKey(battleState,malevolentAtCompletion);
+    if(keyDrop.quantity){
+      const message=`Shibuya Raid Key +${keyDrop.quantity} • Malevolent • Normal battle completion.`;
+      appendBattleLog(message,'victory');
+      if(els.battleResultText)els.battleResultText.textContent+=' '+message;
+      renderPotionInventory();
+    }else if(keyDrop.error)appendBattleLog(keyDrop.error,'status');
+  }catch(error){console.warn('Normal battle Key reward failed safely:',error);}
   recordQuestBattleCompletion(battleState);
   let replayable = false;
   try { replayable = canReplayBattleTeam(); } catch (error) { console.warn('Replay check failed safely:', error); }
@@ -4133,7 +4176,7 @@ function startBattle(useExistingSetup = true) {
   if (els.battleLog) els.battleLog.innerHTML = '';
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
-  appendBattleLog(isSpookyBattle()?`${getBattleModeLabel()} • Spooky Coins only • Auto Continue disabled.`:isBossEventBattle() ? `${getBattleModeLabel()} • ${window.BossEventSystem.TYPES[getBossEventType()].weatherName} entry window • Type-specific coins and exclusive drops only.` : isRaidBattle() ? `${getBattleModeLabel()} • ${window.RaidSystem.TYPES[getRaidType()].enemies.length} preset opponent(s) • Type-specific Coins and exclusive drops only.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.LIMITS[mode] / 1000}s limit • Speed Battle Potion ignored.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
+  appendBattleLog(isSpookyBattle()?`${getBattleModeLabel()} • Spooky Coins only • Auto Continue disabled.`:isBossEventBattle() ? `${getBattleModeLabel()} • ${window.BossEventSystem.TYPES[getBossEventType()].weatherName} entry window • Type-specific coins and exclusive drops only.` : isRaidBattle() ? `${getBattleModeLabel()} • ${window.RaidSystem.TYPES[getRaidType()].enemies.length} preset opponent(s) • Type-specific Coins and exclusive drops only.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.remaining(battleState) / 1000}s limit • ${window.TimeTrialSystem.isExp(mode)?'Speed Battle Potion ignored':'Speed Battle Potion supported'}.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
   if (!isTimeTrialBattle() && !isRaidBattle() && !isBossEventBattle() && !isSpookyBattle()) appendBattleLog(isTowerBattle() ? `Tower enemy elements follow the selected type; player native-weather / mutation entry rules remain separate.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
   appendBattleLog(`First strike begins in ${getBattleTurnMs() / 1000} seconds. ${teamSize} player fighter${teamSize === 1 ? '' : 's'} vs ${enemyTeam.length} enemies.`, 'player');
   renderBattleStats();
@@ -4276,8 +4319,7 @@ document.getElementById('bossEventShopOpenButton')?.addEventListener('click',()=
 document.getElementById('bossEventResultShopButton')?.addEventListener('click',()=>openModal('bossEventShopModal'));
 document.getElementById('bossEventTypeSelect')?.addEventListener('change',()=>{
   if(isBattleMatchActive()){document.getElementById('bossEventTypeSelect').value=battleState.bossEvent.type;return;}
-  const team=getBattleSetupTeam().map(slot=>({...slot}));
-  resetBattleView('boss-event');battleState.setup.team=team;renderBattleSelection();renderBossEventControls();
+  resetBattleView('boss-event');renderBossEventControls();
 });
 document.getElementById('bossEventDifficulty')?.addEventListener('input',event=>{window.BossEventSystem.setDifficulty(getBossEventType(),event.target.value);renderBossEventControls();});
 
@@ -4372,8 +4414,8 @@ function renderTimeTrialControls() {
   setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.room} • Best cleared ${trial.bestRoom}`);
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
   setViewText('timeTrialRules', exp
-    ? '1-second turns • 1 Ticket per attempt • 300s • Infinite EXP Training Dummy • Fixed 1 ATK • EXP = floor(total damage × 0.25) • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
-    : '2-second turns • 180s per room • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
+    ? '1-second turns • 1 Ticket per attempt • 300s • Infinite EXP Training Dummy • Fixed 1 ATK • EXP = floor(total damage × 0.15) • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
+    : '2-second turns / 180s per room; Speed Battle Potion: 1-second turns / 90s while active • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
   const timer = document.getElementById('timeTrialTimer');
   timer?.classList.toggle('hidden', !active || !battleState?.trial || battleState.finished);
   if (timer && active && battleState?.trial) {
@@ -5445,7 +5487,7 @@ document.addEventListener('keydown', event => {
 }, true);
 els.collectionElementFilter?.addEventListener("change", () => renderCollection());
 els.battleElementFilter?.addEventListener("change", () => populateBattleFighterSelect());
-els.cardSearchInput?.addEventListener("input", () => window.UIPerformanceSystem.debounce("arena-search",()=>{if(!isBattleMatchActive()&&!els.battleModal?.classList.contains("hidden"))populateBattleFighterSelect();}));
+els.cardSearchInput?.addEventListener("input", () => window.UIPerformanceSystem.debounce("arena-search",()=>{if(!isBattleMatchActive()&&(!els.battleModal?.classList.contains("hidden")||window.PortalsSystem?.active))populateBattleFighterSelect();}));
 els.cardSortSelect?.addEventListener("change", () => populateBattleFighterSelect());
 els.battleAutoAgainButton?.addEventListener("click", () => {
   if (!canReplayBattleTeam()) return;
@@ -5657,7 +5699,7 @@ window.ExpFoodSystem.configure({
   onCommit:()=>{window.CloudSaveSystem?.markDirty();state=loadState();window.RollPerformanceSystem?.invalidateOwnership();syncOwnershipRecords();updateStats();renderPreview();renderCollection();renderAvailableCards();renderPotionInventory();}
 });
 document.getElementById('previewFeedButton')?.addEventListener('click',()=>{if(previewSelection)window.ExpFoodSystem.open(previewSelection.cardId);});
-window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished&&!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}});
+window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished){if(getBattleMode()==='time-trial')window.TimeTrialSystem.remaining(battleState);else if(!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}}});
 window.CraftingSystem.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 window.QuestsSystem.mount(document.getElementById('questModal'));
 window.QuestsSystem.configure({clock:()=>state.weather.gameSeconds,snapshot:()=>({rolls:state.totalRolls,bestRoom:window.TimeTrialSystem.bestRoom}),canAct:canEvolveNow,isImporting:()=>isImportingSave,reward:applyQuestBoardReward,onChange:()=>{updateStats();renderClockAndWeather(true);refreshAchievements();}});
@@ -5665,7 +5707,7 @@ window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreez
 window.BattleWeatherHud.configure({snapshot:()=>{const sandbox=window.SandboxSystem?.weatherSnapshot;if(sandbox)return sandbox;return {active:isBattleMatchActive()||Boolean(window.InfinitySystem?.battle&&!window.InfinitySystem.battle.finished),seconds:state.weather.gameSeconds,weathers:getActiveWeatherEntries().map(entry=>{const def=WEATHER_BY_ID[entry.weatherId];return {...entry,id:def.id,name:def.name,icon:def.icon,color:def.color,description:window.WeatherSystem.describe(def)};})};}});
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
-window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
+window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimingChange:(battle,oldMs,newMs)=>{if(battleState!==battle||!battle.isBattling||battle.finished)return;const fraction=Math.max(0,Math.min(1,((battle.nextTurnAt||Date.now()+oldMs)-Date.now())/oldMs));scheduleNextBattleTurn(fraction*newMs);}, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:queueSpookyUi,onCapsule:showSpookyCapsule});
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
@@ -5801,6 +5843,8 @@ window.LeaderboardSystem.configure({open:openModal});
 window.PvPSystem.configure({
   canEnter:()=>!isBattleMatchActive()&&!isImportingSave&&!gameInputLocked(),
   ownedCards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),
+  loadTeam:size=>savedArenaTeam('online-pvp:'+size,size,slot=>isCardOwned(slot.cardId)?slot:null).map(slot=>slot?.cardId||null),
+  saveTeam:(team,size)=>rememberArenaTeam('online-pvp:'+size,team.map(id=>id?{cardId:id,variantKey:id}:null),size),
   displayName:()=>window.CloudSaveSystem.publicName||'Player',
   open:openModal,close:id=>{document.getElementById(id)?.classList.add('hidden');},
   onEnter:()=>{clearAutoContinueBattleTimer();clearCooldownExpiryTimer();els.battleModal?.classList.add('hidden');},
@@ -5816,6 +5860,8 @@ window.InfinityViewSystem.configure({
 });
 window.InfinitySystem.configure({
   decorate:(node,mutations)=>applyMutationStyleTokens(node,mutations),
+  loadTeam:category=>window.ArenaLoadouts.slots(state.arenaTeams?.['infinity:'+category],4),
+  saveTeam:(category,team)=>rememberArenaTeam('infinity:'+category,team,4),
   canEnter:()=>!isBattleMatchActive()&&!isImportingSave&&!gameInputLocked()&&!window.EquipmentSystem.blocked&&!window.ExpFoodSystem.blocked,
   cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),
   variants:id=>getVariantEntries(id).filter(v=>v.count>0),
@@ -5861,7 +5907,7 @@ window.PortalsSystem.configure({
 let portalSelectorHome=null,portalSavedBattle=null,portalSelectorHidden=[];
 function renderPortalStandardSelector(size,reset,locked){
  const node=els.battleSetup,root=document.getElementById('portalStandardSelector');if(!node||!root||size<1)return;
- if(!portalSelectorHome){portalSelectorHome={parent:node.parentNode,next:node.nextSibling};portalSavedBattle=battleState;battleState={mode:'4v4',setup:{team:[],activeIndex:0},finished:true};root.append(node);
+ if(!portalSelectorHome){portalSelectorHome={parent:node.parentNode,next:node.nextSibling};portalSavedBattle=battleState;battleState={mode:'4v4',setup:{team:[],activeIndex:0},finished:true};arenaDeckKey='';root.append(node);
  for(const id of ['battleModePicker','teamLoadouts']){const n=document.getElementById(id);if(n){portalSelectorHidden.push([n,n.classList.contains('hidden')]);n.classList.add('hidden');}}}
  const old=battleState.setup?.team||[];if(reset||old.length!==size)battleState.setup={team:Array.from({length:size},(_,i)=>reset?null:old[i]||null),activeIndex:0};
  node.classList.remove('hidden');renderBattleSelection();populateBattleFighterSelect();
@@ -5869,4 +5915,4 @@ function renderPortalStandardSelector(size,reset,locked){
  els.battleStartButton.textContent=window.PortalParty?.active?'Lock In / Ready':'Start Portal · 2s turns';els.battleStartButton.disabled=Boolean(locked)||!isBattleSetupValid();
  document.getElementById('teamLoadouts')?.classList.add('hidden');
 }
-function releasePortalStandardSelector(){if(!portalSelectorHome)return;const n=els.battleSetup;portalSelectorHome.parent.insertBefore(n,portalSelectorHome.next);for(const [node,hidden]of portalSelectorHidden)node.classList.toggle('hidden',hidden);portalSelectorHidden=[];for(const id of ['battleTeamSlots','battleFighterGrid','battleVariantGrid']){const node=document.getElementById(id);if(node){node.style.pointerEvents='';node.inert=false;}}battleState=portalSavedBattle;portalSelectorHome=null;portalSavedBattle=null;}
+function releasePortalStandardSelector(){if(!portalSelectorHome)return;const n=els.battleSetup;portalSelectorHome.parent.insertBefore(n,portalSelectorHome.next);for(const [node,hidden]of portalSelectorHidden)node.classList.toggle('hidden',hidden);portalSelectorHidden=[];for(const id of ['battleTeamSlots','battleFighterGrid','battleVariantGrid']){const node=document.getElementById(id);if(node){node.style.pointerEvents='';node.inert=false;}}battleState=portalSavedBattle;arenaDeckKey='';portalSelectorHome=null;portalSavedBattle=null;}
