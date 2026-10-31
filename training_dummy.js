@@ -1,7 +1,7 @@
 /* EXP-only target and batched damage HUD. Other modes never enter these hooks. */
 (function(host){
  'use strict';
- const HP=999999999,ATK=1,EXP_PER_DAMAGE=.25,MAX=Number.MAX_SAFE_INTEGER;
+ const HP=999999999,ATK=1,EXP_PER_DAMAGE=.1,MAX=Number.MAX_SAFE_INTEGER;
  let active=null,root=null,counter=null,dpsNode=null,bestNode=null,frame=null,shown=0,target=0,from=0,started=0;
  const number=value=>Math.max(0,Math.floor(Number(value)||0)).toLocaleString('en-US');
  function isTarget(battle,unit){return battle?.mode==='exp-time-trial'&&unit?.isExpTrainingDummy===true;}
