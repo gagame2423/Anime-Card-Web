@@ -47,7 +47,7 @@
       for(const row of pool){const card=host.ALL_CARDS.find(card=>card.id===row.cardId);result.push(`${card?.name||row.cardId}: weight ${row.weight} → ${(row.chance*100).toFixed(4)}%.`);}
       if(!pool.some(row=>row.cardId==='tower-champion-heavenly'))result.push('The Judgement locked: complete Heavenly Tower Floor 100. Eligible weights are normalized.');
     }
-    if(host.PortalsSystem?.get(id))result.push('Normal Time Trial room clear: 40% Tier 1. Portal victory: 50% upgrade through Tier 5. Tier 5 clear: 1% Secret Portal. Five defeats destroy this item. Party: Tier 4, Tier 5 or Secret only.');
+    if(host.PortalsSystem?.get(id))result.push('Normal Time Trial room clear: 20% Tier 1. Portal victory: 50% upgrade through Tier 5. Tier 5 clear: 1% Secret Portal. Five defeats destroy this item. Party: Tier 4, Tier 5 or Secret only.');
     if(id==='senzu_bean')result.push('Namek Portal victory: 1–3 at Tier 1, 10–20 at Tier 5 / Secret. Feed for 2,500 base EXP or evolve Lv.100+ Gohan (8,500) / Frieza (7,690).');
     if(id==='star_orb')result.push('Infinity Mode: clear waves for 1–2 Orbs at Wave 1 up to 8–10 at Wave 100. Personal weekly reward: highest wave × 100 Star Orbs, claimed automatically on local startup; Google sync is optional.');
     if(id==='bread')result.push('Win any real battle mode: 1–3 Bread per victory. Sandbox excluded. Feed from an owned card’s details → Feed.');

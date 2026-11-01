@@ -2738,6 +2738,115 @@ CARDS.push(...[
   }
 }
 ]);
+CARDS.push(...[
+  {
+    "id": "tower-champion-raining-200",
+    "name": "Florentino",
+    "element": "Water",
+    "category": [
+      "VideoGame",
+      "Human",
+      "Brutal",
+      "Swordman",
+      "AntiVillian"
+    ],
+    "rarity": "Secret",
+    "chance": 12000000,
+    "requiredWeather": "Raining",
+    "stats": {
+      "hp": 45000,
+      "atk": 17400
+    },
+    "image": "assets/cards/florentino.png",
+    "passive": {
+      "name": "Flower Dance",
+      "description": "Every 3 attacks: 80% chance to follow up for 60% ATK. Up to 3 follow-ups; chance falls by 20 percentage points per hit (80%, 60%, 40%). A chain of 3 grants immunity to all status effects for 3 turns."
+    },
+    "towerType": "raining",
+    "towerFloor": 200,
+    "unlockRequirement": "tower_floor_200_raining"
+  },
+  {
+    "id": "tower-champion-sugar-200",
+    "name": "Kafka",
+    "element": "Fire",
+    "category": [
+      "VideoGame",
+      "Villian",
+      "Supporter",
+      "Swordman"
+    ],
+    "rarity": "Secret",
+    "chance": 11750000,
+    "requiredWeather": "Sugar",
+    "stats": {
+      "hp": 100000,
+      "atk": 6200
+    },
+    "image": "assets/cards/kafka.png",
+    "passive": {
+      "name": "Manipulator",
+      "description": "While supporting, a teammate applying any status effect triggers Spider Web on that enemy (2-turn cooldown). Deals all remaining Burn/Bleed/DoT damage immediately without consuming those effects."
+    },
+    "towerType": "sugar",
+    "towerFloor": 200,
+    "unlockRequirement": "tower_floor_200_sugar"
+  },
+  {
+    "id": "tower-champion-sunny-200",
+    "name": "Escanor The Indomitable",
+    "element": "Holy",
+    "category": [
+      "AntiVillian",
+      "Alternative",
+      "Sins",
+      "Brutal",
+      "VideoGame"
+    ],
+    "rarity": "Secret",
+    "chance": 15000000,
+    "requiredWeather": "Sunny",
+    "stats": {
+      "hp": 37500,
+      "atk": 14300
+    },
+    "image": "assets/cards/escanorindomitable.png",
+    "passive": {
+      "name": "Ultimate Divine Lance",
+      "description": "Every 3 attacks: 180% ATK strike; Burn 3 enemies for 2 turns at 20% ATK/turn. Every 10 attacks: x2 ATK to all enemies; Burn all for 5 turns at 100% ATK/turn. Attack 10 grants the team +50% ATK for the match. While alive, doubles teammates’ Burn damage."
+    },
+    "towerType": "sunny",
+    "towerFloor": 200,
+    "unlockRequirement": "tower_floor_200_sunny"
+  },
+  {
+    "id": "tower-champion-reaper-200",
+    "name": "Yhwach Omniscience",
+    "element": "Water",
+    "category": [
+      "Villian",
+      "Hero",
+      "Alternative",
+      "Unhuman",
+      "Swordman"
+    ],
+    "rarity": "Secret",
+    "chance": 16000000,
+    "requiredWeather": "Reaper",
+    "stats": {
+      "hp": 58000,
+      "atk": 14200
+    },
+    "image": "assets/cards/yhwachomniscience.png",
+    "passive": {
+      "name": "Auswahlen",
+      "description": "Attacks have 60% chance to Bleed for 2 turns at 30% ATK/turn. While alive, heals for all enemy Bleed damage; each enemy kill grants +10% ATK; absorbs 10% of a fallen teammate’s HP/ATK. Last ally standing: +35% damage against bleeding enemies and blocks status effects (3-turn cooldown)."
+    },
+    "towerType": "reaper",
+    "towerFloor": 200,
+    "unlockRequirement": "tower_floor_200_reaper"
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

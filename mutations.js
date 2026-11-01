@@ -246,9 +246,10 @@ const MUTATION_BY_ID = Object.freeze({ ...canonicalMutationMap, sweet: canonical
   }
   function successChance(weather,multiplier=1) { return Math.min(.25, Math.max(0,(MUTATION_SUCCESS_RATES[weather?.tier]||0)*Math.max(1,Number(multiplier)||1))); }
   function factors(mutations) {
-    const ids=(mutations||[]).map(m=>typeof m==='string'?m:m?.id),key=ids.join('+');
+    const ids=[...new Set((mutations||[]).map(m=>MUTATION_BY_ID[typeof m==='string'?m:m?.id]?.id).filter(Boolean))].slice(0,2).sort(),key=ids.join('+');
     if(factorCache.has(key))return factorCache.get(key);
-    const result={hp:1,atk:1};for(const id of ids){const def=MUTATION_BY_ID[id];if(def){result.hp*=def.hpMultiplier;result.atk*=def.atkMultiplier;}}
+    // Double mutations add their listed factors: Monarch x6 + Stardust x4 = x10 ATK.
+    const result={hp:ids.length?0:1,atk:ids.length?0:1};for(const id of ids){const def=MUTATION_BY_ID[id];result.hp+=def.hpMultiplier;result.atk+=def.atkMultiplier;}
     if(factorCache.size>=256)factorCache.delete(factorCache.keys().next().value);
     factorCache.set(key,Object.freeze(result));return result;
   }

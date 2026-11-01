@@ -8,7 +8,7 @@
   function turnMs(mode,now=Date.now()) { return [MODES.normal,MODES.material].includes(mode)&&speedUntil()>now?1000:TURN_MS[mode]||2000; }
   const LIMITS = Object.freeze({ [MODES.normal]: 180000, [MODES.exp]: 300000, [MODES.material]: 180000 });
   const MATERIAL_TICKET_ID='material_ticket';
-  const MATERIAL_TICKET=Object.freeze({id:MATERIAL_TICKET_ID,name:'Material Ticket',type:'ticket',icon:'🎫',tier:'rare',description:'One Material Time Trial attempt. Buy for 1,000 Time Trial Shards.'});
+  const MATERIAL_TICKET=Object.freeze({id:MATERIAL_TICKET_ID,name:'Material Ticket',type:'ticket',icon:'🎫',tier:'rare',description:'One Material Time Trial run (all consecutive rooms). Buy for 1,000 Time Trial Shards.'});
   const TICKET_ID = 'exp_time_trial_ticket';
   const TICKET = Object.freeze({ id: TICKET_ID, name: 'EXP Time Trial Ticket', type: 'ticket',
     icon: '🎟️', tier: 'epic', description: 'One entry to the 5-minute EXP Time Trial. Use from Arena.' });
@@ -21,7 +21,7 @@
   const record = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
   const isMode = mode => Object.values(MODES).includes(mode);
   const isExp = mode => mode === MODES.exp;
-  const fresh = () => ({ version: 1, shards: 0, room: 1, bestRoom: 0, materialRoom:1, materialBestRoom:0, bestDps: 0, xpCarry: {}, activeAttempt: null });
+  const fresh = () => ({ version: 1, shards: 0, room: 1, bestRoom: 0, materialRoom:1, materialBestRoom:0, materialRun:false, bestDps: 0, xpCarry: {}, activeAttempt: null });
   function validSave(value) {
     if (!record(value) || value.version !== 1 || !Number.isSafeInteger(value.shards) || value.shards < 0 ||
         !Number.isSafeInteger(value.room) || value.room < 1 || !Number.isSafeInteger(value.bestRoom) || value.bestRoom < 0 ||
@@ -30,6 +30,7 @@
       typeof fraction !== 'number' || !Number.isFinite(fraction) || fraction < 0 || fraction >= 1)) return false;
     if(value.bestDps!==undefined&&(typeof value.bestDps!=='number'||!Number.isFinite(value.bestDps)||value.bestDps<0))return false;
     if(value.materialRoom!==undefined&&(!Number.isSafeInteger(value.materialRoom)||value.materialRoom<1||!Number.isSafeInteger(value.materialBestRoom)||value.materialBestRoom<0||value.materialRoom>value.materialBestRoom+1))return false;
+    if(value.materialRun!==undefined&&typeof value.materialRun!=='boolean')return false;
     const a = value.activeAttempt;
     return a === null || (record(a) && typeof a.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(a.id) && isMode(a.mode) &&
       Number.isSafeInteger(a.startedAt) && a.startedAt >= 0 && Number.isSafeInteger(a.deadline) &&
@@ -44,7 +45,8 @@
   // Battles are never resumed with stale HP/passive state after reload/import.
   const interrupted = Boolean(data.activeAttempt);
   if (data.activeAttempt?.mode === MODES.normal) data.room = 1;
-  if(data.activeAttempt?.mode===MODES.material)data.materialRoom=1;
+  if(data.materialRun||data.activeAttempt?.mode===MODES.material)data.materialRoom=1;
+  data.materialRun=false;
   data.activeAttempt = null;
   function persist() {
     try { host.localStorage.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; }
@@ -83,7 +85,7 @@
   function ticketId(mode){return isExp(mode)?TICKET_ID:mode===MODES.material?MATERIAL_TICKET_ID:null;}
   function currentRoom(mode){return mode===MODES.material?data.materialRoom:data.room;}
   function bestRoomFor(mode){return mode===MODES.material?data.materialBestRoom:data.bestRoom;}
-  function canEnter(mode) { return isMode(mode) && (!ticketId(mode) || host.InventorySystem?.quantity(ticketId(mode)) >= 1); }
+  function canEnter(mode) { return isMode(mode) && (!ticketId(mode) || mode===MODES.material&&data.materialRun || host.InventorySystem?.quantity(ticketId(mode)) >= 1); }
   function roomStats(room, boss = false) {
     const r = Math.max(1, count(room)), role = boss ? 10 : 1;
     // Tower-style exponential opening and gentle linear continuation.
@@ -115,6 +117,7 @@
         : candidate;
       used.add(unit.card.id);
       const boss = index === 3, stats = roomStats(room, boss);
+      if(mode===MODES.material){stats.hp=Math.min(STAT_LIMIT,stats.hp*3);stats.atk=Math.min(STAT_LIMIT,stats.atk*3);}
       unit.maxHp = stats.hp; unit.hp = stats.hp; unit.atk = stats.atk;
       Object.assign(unit.display, stats);
       unit.isTrialRoomEnemy = true; unit.trialBoss = boss; unit.level = room;
@@ -127,10 +130,12 @@
     const previous = JSON.parse(JSON.stringify(data)), now = Date.now();
     const attempt = { id: `${now}_${++serial}`, mode: battle.mode, room: isExp(battle.mode) ? 0 : currentRoom(battle.mode),
       startedAt: now, deadline: now + LIMITS[battle.mode] };
+    const consumeTicket=Boolean(ticketId(battle.mode))&&!(battle.mode===MODES.material&&data.materialRun);
+    if(battle.mode===MODES.material)data.materialRun=true;
     data.activeAttempt = attempt;
     try {
       requirePersist();
-      if (ticketId(battle.mode) && !host.InventorySystem.remove(ticketId(battle.mode), 1)) throw new Error('Không thể tiêu vé. Lượt thử chưa bắt đầu.');
+      if (consumeTicket && !host.InventorySystem.remove(ticketId(battle.mode), 1)) throw new Error('Không thể tiêu vé. Lượt thử chưa bắt đầu.');
     } catch (error) { data = previous; persist(); throw error; }
     battle.trial = { ...attempt, cardId: battle.setup.team[0].cardId, shardsEarned: 0, monsters: 0,
       materials:{}, experience: 0, totalDamage: 0, convertedExperience: 0, progressPercent: 0, levelUps: 0, owner: battle.playerTeam[0] };
@@ -198,7 +203,7 @@
     if (!isExp(battle.mode)) {
       const roomKey=battle.mode===MODES.material?'materialRoom':'room',bestKey=battle.mode===MODES.material?'materialBestRoom':'bestRoom';
       if (won) { data[bestKey] = Math.max(data[bestKey], run.room); data[roomKey] = Math.min(Number.MAX_SAFE_INTEGER, run.room + 1); }
-      else data[roomKey] = 1;
+      else {data[roomKey] = 1;if(battle.mode===MODES.material)data.materialRun=false;}
     }
     run.completed = true; run.reason = reason || (expired(battle) ? 'time-limit' : won ? 'cleared' : 'defeat');
     data.activeAttempt = null; detach();
@@ -210,6 +215,7 @@
       monsters: run.monsters, totalDamage: run.totalDamage, convertedExperience: run.convertedExperience, dps: run.dps||0, bestDps: data.bestDps, newDpsRecord: Boolean(run.newDpsRecord), experience: run.experience, progressPercent: run.progressPercent, levelUps: run.levelUps, reason: run.reason };
   }
   function abort(battle, reason = 'surrender') {
+    if(battle?.mode===MODES.material&&data.materialRun&&battle.trial?.completed){data.materialRun=false;data.materialRoom=1;persist();return;}
     if (!battle?.trial || battle.trial.completed) return;
     try { finish(battle, false, reason); } catch (error) { console.warn(error.message); }
   }
@@ -239,5 +245,5 @@
     expired, remaining, checkDeadline, detach, purchase, renderShop, validSave, reset, flush: persist,
     getXpCarry: id => data.xpCarry[id] || 0,
     clearXpCarry: id => { if (!data.xpCarry[id]) return true; const before=data.xpCarry[id]; delete data.xpCarry[id]; if(persist())return true; data.xpCarry[id]=before;return false; },
-    get bestDps(){return data.bestDps;}, get room() { return data.room; }, get bestRoom() { return data.bestRoom; }, get shards() { return data.shards; }, interrupted });
+    get materialRun(){return data.materialRun;}, get bestDps(){return data.bestDps;}, get room() { return data.room; }, get bestRoom() { return data.bestRoom; }, get shards() { return data.shards; }, interrupted });
 })(window);

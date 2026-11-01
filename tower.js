@@ -162,10 +162,13 @@
   function floorStats(floor, boss = false) {
     const f = floorNumber(floor), role = boss ? 5 : 1;
     const depth = Math.max(0, f - SCALING.transitionFloor);
+    const anchorPower=SCALING.minionHpAt100*SCALING.earlyEliteFactor*8*(1+SCALING.attackHpRatio);
+    const gain200=6000000/anchorPower-1;
+    const exponent=Math.log((30000000/anchorPower-1)/gain200)/Math.log(2);
     const rawHp = f <= 100
       ? 100 * Math.pow(SCALING.minionHpAt100 / 100, (f - 1) / 99) * (isElite(f) ? SCALING.earlyEliteFactor : 1)
       : SCALING.minionHpAt100 * SCALING.earlyEliteFactor *
-        (1 + SCALING.lateGrowthPerFloor * depth + SCALING.lateMilestoneGrowth * Math.floor(depth / 10));
+        (1 + gain200 * Math.pow(depth / 100, exponent));
     const hp = Math.max(5, Math.round(Math.min(NUMERIC_STAT_LIMIT, rawHp * role)));
     // One HP curve drives both stats; ATK can never compound faster than HP.
     return { hp, atk: Math.max(1, Math.floor(hp * SCALING.attackHpRatio)) };

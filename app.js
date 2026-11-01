@@ -407,11 +407,11 @@ function ensureCardProgress(cardId) {
   return state.cardProgress[normalizedId];
 }
 
-function grantCardExperience(cardId, amount) {
+function grantCardExperience(cardId, amount, owner) {
   if (isSimulationActive()) return {gained:0,level:getCardLevelInfo(cardId).level,levelUps:0};
   const normalizedId = normalizeCardId(cardId);
   if (state.cardProgress?.[normalizedId]?.level >= CARD_LEVEL_MAX) return {gained:0,level:CARD_LEVEL_MAX,levelUps:0};
-  const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
+  const safeAmount = Math.min(Number.MAX_SAFE_INTEGER,Math.max(0, Math.floor((Number(amount) || 0)*(window.RelicSystem?.expMultiplier(normalizedId,owner)||1))));
   if (!normalizedId || safeAmount <= 0 || !getCardById(normalizedId)) return { gained: 0, level: getCardLevelInfo(normalizedId).level, levelUps: 0 };
 
   const progress = ensureCardProgress(normalizedId);
@@ -3292,13 +3292,13 @@ function renderBattleModePicker() {
   trialButton?.classList.toggle('is-selected', isTimeTrialBattle());
   trialButton?.setAttribute('aria-pressed', String(isTimeTrialBattle()));
   setViewText('timeTrialModeHint', isTimeTrialBattle()
-    ? window.TimeTrialSystem.isExp(activeMode) ? 'EXP • 1v1 • 5 minutes' : activeMode==='material-time-trial'?'Material • 4v4 • 1 Ticket':'Normal • 4v4 • 3 minutes'
+    ? window.TimeTrialSystem.isExp(activeMode) ? 'EXP • 1v1 • 5 minutes' : activeMode==='material-time-trial'?'Material • 4v4 • 1 Ticket/run':'Normal • 4v4 • 3 minutes'
     : 'Normal / EXP / Material');
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   renderTowerControls();
   renderTimeTrialControls(); renderRaidControls(); renderBossEventControls(); renderSpookyControls(); renderAutoContinueBattleToggle();
   if (els.battleStartButton) {
-    els.battleStartButton.textContent = isSpookyBattle()?`Start Spooky Wave ${window.SpookySystem.snapshot().wave}`:isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • ${window.RaidSystem.TYPES[getRaidType()].keyId?"1 Key":"Free entry"}` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start ${getBattleMode()==='material-time-trial'?'Material Trial • 1 Ticket •':'Time Trial'} Room ${window.TimeTrialSystem.currentRoom(getBattleMode())}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+    els.battleStartButton.textContent = isSpookyBattle()?`Start Spooky Wave ${window.SpookySystem.snapshot().wave}`:isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • ${window.RaidSystem.TYPES[getRaidType()].keyId?"1 Key":"Free entry"}` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start ${getBattleMode()==='material-time-trial'?'Material Trial •':'Time Trial'} Room ${window.TimeTrialSystem.currentRoom(getBattleMode())}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
   }
 }
 
@@ -3935,7 +3935,7 @@ function finishBattle(playerWon) {
       const cardExperienceRewards = battleState.mode === 'tower' ? [] : baseRewardProfile.cardExperienceRewards.map(entry => ({
         ...entry, experience: Math.max(0, Math.floor(entry.experience * (Number(rewardProfile.passiveMultiplier) || 1)))
       }));
-      const experience = cardExperienceRewards.reduce((sum, entry) => sum + entry.experience, 0);
+      let experience = cardExperienceRewards.reduce((sum, entry) => sum + entry.experience, 0);
       state.currency = Math.max(0, Number(state.currency) || 0) + reward;
       recordEarnedCurrency(reward,"combat");
       window.AchievementSystem?.recordBattleWin();
@@ -3962,7 +3962,11 @@ function finishBattle(playerWon) {
 
       const levelUps = [];
       for (const entry of cardExperienceRewards) {
-        const result = grantCardExperience(entry.cardId, entry.experience);
+        const owner=battleState.playerTeam.find(unit=>unit.card?.id===entry.cardId);
+        const result = grantCardExperience(entry.cardId, entry.experience,owner);
+        state.experience=Math.max(0,(Number(state.experience)||0)+result.gained-entry.experience);
+        experience+=result.gained-entry.experience;
+        entry.experience=result.gained;
         appendBattleLog(`EXP: ${getCardById(entry.cardId)?.name || entry.cardId} +${entry.experience.toLocaleString('en-US')} (base ${entry.baseExperience.toLocaleString('en-US')} at Lv.${entry.level}; progressive EXP before bonuses).`, 'victory');
         if (result.levelUps > 0) levelUps.push(`${getCardById(entry.cardId)?.name || entry.cardId} Lv.${result.level}`);
       }
@@ -4237,7 +4241,7 @@ function grantTimeTrialExperience(cardId, amount, owner, receipt) {
   const before = JSON.parse(JSON.stringify(state));
   if(receipt)state.trainingDummyRewardReceipt=receipt;
   const oldMultiplier = getCardLevelStatMultiplier(cardId);
-  const result = grantCardExperience(cardId, amount);
+  const result = grantCardExperience(cardId, amount, owner);
   state.experience += result.gained;
   if (!saveState()) { state = before; return null; }
   const ratio = getCardLevelStatMultiplier(cardId) / oldMultiplier;
@@ -4417,7 +4421,7 @@ function renderTimeTrialControls() {
   controls?.classList.toggle('hidden', !active);
   setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.currentRoom(mode)} • Best cleared ${trial.bestRoomFor(mode)}${mode==='material-time-trial'?' • Material Tickets: '+window.InventorySystem.quantity(trial.MATERIAL_TICKET_ID):''}`);
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
-  setViewText('timeTrialRules', mode==='material-time-trial'?'4v4 • Material Ticket per attempt • 2s / 180s; Speed Battle Potion: 1s / 90s • Independent materials per defeated enemy • No Shards, EXP or VNĐ. Defeat resets Material Room 1.':exp
+  setViewText('timeTrialRules', mode==='material-time-trial'?'4v4 • 1 Material Ticket per run • Enemies x3 • 2s / 180s; Speed Battle Potion: 1s / 90s • Independent materials per defeated enemy • No Shards, EXP or VNĐ. Defeat resets Material Room 1.':exp
     ? '1-second turns • 1 Ticket per attempt • 300s • Infinite EXP Training Dummy • Fixed 1 ATK • EXP = floor(total damage × 0.15) • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
     : '2-second turns / 180s per room; Speed Battle Potion: 1-second turns / 90s while active • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
   const timer = document.getElementById('timeTrialTimer');
@@ -4441,7 +4445,7 @@ function renderTimeTrialShop() {
     if (battleState?.finished && isTimeTrialBattle()) {
       const replayable = canReplayBattleTeam();
       els.battleAutoAgainButton.disabled = !replayable;
-      els.battleAutoAgainButton.textContent = trial.isExp(getBattleMode()) ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : getBattleMode()==='material-time-trial'?(replayable?`Material Again • 1 Ticket • Room ${trial.currentRoom(getBattleMode())}`:'Need a Material Ticket'):`Continue • Room ${trial.room}`;
+      els.battleAutoAgainButton.textContent = trial.isExp(getBattleMode()) ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : getBattleMode()==='material-time-trial'?(replayable?`Continue Material • Room ${trial.currentRoom(getBattleMode())}`:'Need a Material Ticket'):`Continue • Room ${trial.room}`;
     }
   });
 }
@@ -4484,7 +4488,7 @@ function finishTimeTrialBattle(won, reason = '') {
   els.battleResultDropRate.textContent = '+0.00%'; els.battleResultLossStatus.textContent = 'NONE — COLLECTION PRESERVED';
   const replayable = canReplayBattleTeam();
   els.battleAutoAgainButton.disabled = !replayable;
-  els.battleAutoAgainButton.textContent = summary.exp ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : getBattleMode()==='material-time-trial'?(replayable?`Material Again • 1 Ticket • Room ${trial.currentRoom(getBattleMode())}`:'Need a Material Ticket'):`Continue • Room ${trial.room}`;
+  els.battleAutoAgainButton.textContent = summary.exp ? replayable ? 'EXP Trial Again • 1 Ticket' : 'Need an EXP Ticket' : getBattleMode()==='material-time-trial'?(replayable?`Continue Material • Room ${trial.currentRoom(getBattleMode())}`:'Need a Material Ticket'):`Continue • Room ${trial.room}`;
   els.battleArena.classList.add('hidden'); setBattleModalLock(false);
   els.battleVictory.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
   els.battleVictory.classList.add(summary.won ? 'battle-result--victory' : 'battle-result--defeat');
@@ -5689,7 +5693,7 @@ window.SettingsSystem.configure({maxBaseLuck:getMaximumBaseLuck,totalLuck:getLuc
 window.InventorySystem.configure({ getDropMultiplier: () => (window.AchievementSystem?.getDropMultiplier(state.achievementRewardReceipts) || 1) + (window.QuestsSystem?.bonus('drop') || 0) + (window.EquipmentSystem?.bonuses().drop || 0) });
 window.EquipmentSystem.configure({canAct:canEvolveNow,money:()=>state.currency,variants:getVariantEntries,prepare:prepareEquipmentCraft,onCommit:onEvolutionCommitted,onChange:()=>{updateStats();renderUpgradeShop();renderClockAndWeather(true);renderPotionInventory();},onBlocked:()=>{isAutoRolling=false;clearCooldownExpiryTimer();window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover your pending equipment craft.');}});
 window.ExpFoodSystem.configure({
-  canAct:canEvolveNow, expMultiplier:()=>getExpMultiplier('all'),
+  canAct:canEvolveNow, expMultiplier:id=>getExpMultiplier('all')*(window.RelicSystem?.expMultiplier(id)||1),
   describe:id=>{const card=getCardById(id);return card&&isCardOwned(id)?{...getCardLevelInfo(id),name:card.name,image:card.image}:null;},
   open:()=>openModal('feedFoodModal'),
   prepare:(id,rows,amount)=>{

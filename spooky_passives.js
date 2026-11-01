@@ -46,7 +46,7 @@
       api.setHpBonus(unit,'myers-stalking',c.stalkHp);refresh(unit);
     }
     function startTurn(bs,actor,side){
-      for(const owner of all(bs))if(alive(owner)&&has(owner,'pennywise')&&state(owner,'pennywise').domain>0)for(const enemy of enemies(bs,owner))runtime(enemy).deadlightsFearTurn=bs.turnCount;
+      for(const owner of all(bs))if(alive(owner)&&has(owner,'pennywise')&&state(owner,'pennywise').domain>0)for(const enemy of enemies(bs,owner)){runtime(enemy).deadlightsFearTurn=bs.turnCount;if(runtime(enemy).deadlightsFearTurn===bs.turnCount)api.onStatus?.(bs,enemy,owner);}
 
       for(const owner of all(bs))if(alive(owner)&&has(owner,'myers')&&owner!==actor&&(bs.playerTeam.includes(owner)?'player':'enemy')===side){const c=state(owner,'myers');c.stalkAtk=Math.min(LIMIT,c.stalkAtk+.06);c.stalkHp=Math.min(LIMIT,c.stalkHp+.03);resizeMyers(owner,c);}
     }

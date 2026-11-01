@@ -31,7 +31,7 @@
   if(rows.some(row=>host.InventorySystem.quantity(row.id)<row.quantity))return{ok:false,message:'Food quantities have changed. Select again.'};
   busy=true;
   try{
-   const plan=bridge.prepare(id,rows,budget(rows,bridge.expMultiplier?.()));
+   const plan=bridge.prepare(id,rows,budget(rows,bridge.expMultiplier?.(id)));
    const pending={mainBefore:plan.mainBefore,itemsBefore:plan.itemsBefore};
    host.localStorage.setItem(KEY,JSON.stringify({version:1,pending}));
    host.localStorage.setItem(host.InventorySystem.KEY,plan.itemsAfter);host.localStorage.setItem(MAIN_KEY,plan.mainAfter);
@@ -69,7 +69,7 @@
   if(rebuild){const tiles=FOODS.filter(food=>host.InventorySystem.quantity(food.id)>0).map(food=>{const owned=host.InventorySystem.quantity(food.id),tile=make('label','feed-food-tile'),input=make('input');input.type='number';input.min='0';input.max=String(owned);input.step='1';input.value=String(Math.min(selected.get(food.id)||0,owned));input.dataset.foodQuantity=food.id;input.setAttribute('aria-label',food.name+' quantity');tile.append(foodArt(food),make('strong','',food.name),make('small','',`x${owned.toLocaleString('en-US')} · ${food.baseExp.toLocaleString('en-US')} EXP each`),input);return tile;});ui.grid.replaceChildren(...(tiles.length?tiles:[make('p','','No EXP Food owned. Win a battle for Bread or visit Spooky Shop.')]));}
   const rows=normalizeSelection(selected).map(row=>({...row,quantity:Math.min(row.quantity,host.InventorySystem.quantity(row.id))})).filter(row=>row.quantity>0);
   ui.preview.replaceChildren(...rows.map(row=>{const item=make('span','feed-selected-item');item.append(foodArt(byId.get(row.id)),make('span','',`${byId.get(row.id).name} x${row.quantity.toLocaleString('en-US')}`));return item;}));
-  const gain=budget(rows,bridge.expMultiplier?.());ui.expPreview.textContent=`+${gain.toLocaleString('en-US')} EXP · EXP x${Number(bridge.expMultiplier?.()||1).toFixed(2)}${info.maxed?' · MAX LEVEL':''}`;
+  const gain=budget(rows,bridge.expMultiplier?.(cardId));ui.expPreview.textContent=`+${gain.toLocaleString('en-US')} EXP · EXP x${Number(bridge.expMultiplier?.(cardId)||1).toFixed(2)}${info.maxed?' · MAX LEVEL':''}`;
   ui.confirm.disabled=busy||blocked||info.maxed||!gain||bridge.canAct?.()!==true;ui.add.disabled=info.maxed;
  }
  function open(id){if(!mount()||bridge.canAct?.()!==true||!bridge.describe?.(id))return false;cardId=id;selected.clear();ui.status.textContent='';paint();bridge.open?.();return true;}
