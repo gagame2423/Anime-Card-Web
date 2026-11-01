@@ -3,9 +3,10 @@
   'use strict';
   const KEY='anime_card_rng_boss_event_v1',MODE='boss-event',CARD_ID='boss-event-alucard';
   const TYPES=Object.freeze({
-    alucard:Object.freeze({name:'Alucard Event',coinName:'Alucard Event Coins',weatherId:'eclipse',weatherName:'Eclipse (Eclipsed)',bossHp:66666,bossAtk:6666,cardId:CARD_ID}),
-    lucius:Object.freeze({name:'Lucius Event',coinName:'Lucius Event Coins',weatherId:'lucky',weatherName:'Lucky',bossHp:100000,bossAtk:5000,cardId:'boss-event-lucius'}),
-    gomen:Object.freeze({name:'Gomen Event',coinName:'Gomen Coins',weatherId:'heavenly',weatherName:'Heavenly',bossHp:88888,bossAtk:8888,cardId:'gojo-revice',itemId:'gojo_eye'})
+    alucard:Object.freeze({name:'Alucard Event',coinName:'Alucard Event Coins',bossHp:66666,bossAtk:6666,cardId:CARD_ID}),
+    lucius:Object.freeze({name:'Lucius Event',coinName:'Lucius Event Coins',bossHp:100000,bossAtk:5000,cardId:'boss-event-lucius'}),
+    gomen:Object.freeze({name:'Gomen Event',coinName:'Gomen Coins',bossHp:88888,bossAtk:8888,cardId:'gojo-revice',itemId:'gojo_eye'}),
+    ragna:Object.freeze({name:'Ragna Event',coinName:'Ragna Event Coins',bossHp:150000,bossAtk:15000,cardId:'boss-event-ragna'})
   });
   const offers=type=>type==='gomen'?[...SHOP,{id:'gojo_eye',cost:888888},{id:'equipment_infinity_eye',cost:888888},{id:'shibuya_raid_key',cost:10}]:type==='lucius'?[...SHOP,{id:'sea_valkyrie',cost:4000},{id:'spirit_crown',cost:4400}]:TYPES[type]?SHOP:[];
   const SHOP=Object.freeze(['rich_potion','exp_potion','lucky_potion','speed_potion','speed_battle_potion'].map(id=>Object.freeze({id,cost:id==='speed_battle_potion'?25:10})));
@@ -16,7 +17,7 @@
   const randomUnit=random=>Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0));
   const fresh=()=>({version:1,sequence:0,events:Object.fromEntries(Object.keys(TYPES).map(type=>[type,{coins:0,difficulty:1,wins:0}])),activeAttempt:null,pendingReward:null});
   const coinRange=d=>host.RaidSystem.coinRange(d);
-  const cardChance=(d,type='alucard')=>type==='gomen'?0:(type==='lucius'?.005:.006)+(type==='lucius'?.045:.054)*(difficulty(d)-1)/999;
+  const cardChance=(d,type='alucard')=>type==='gomen'?0:type==='ragna'?.001+.009*(difficulty(d)-1)/999:(type==='lucius'?.005:.006)+(type==='lucius'?.045:.054)*(difficulty(d)-1)/999;
   const itemChance=d=>.008+.072*(difficulty(d)-1)/999;
   const dropChance=(d,type='alucard')=>TYPES[type]?.itemId?itemChance(d):cardChance(d,type);
   function validAttempt(a) {return object(a)&&typeof a.id==='string'&&/^\d+_\d+$/.test(a.id)&&Object.hasOwn(TYPES,a.type)&&integer(a.difficulty,1,1000)&&integer(a.startedAt);}
@@ -54,21 +55,23 @@
     data.gomenRaidMigrated=true;
     if(persist())return true;data=before;return false;
   }
-  function available(type='alucard'){return Boolean(TYPES[type]&&(type!=='gomen'||data.gomenRaidMigrated)&&!host.SandboxSystem?.active&&bridge.weatherActive?.(TYPES[type].weatherId));}
-  function canEnter(type='alucard'){return available(type)&&!data.pendingReward&&!data.activeAttempt&&data.sequence<Number.MAX_SAFE_INTEGER;}
+  const rotation=now=>host.BossEventRotation.current(TYPES,now);
+  const activeType=now=>rotation(now).type;
+  function available(type=activeType()){return Boolean(TYPES[type]&&type===activeType()&&(type!=='gomen'||data.gomenRaidMigrated)&&!host.SandboxSystem?.active);}
+  function canEnter(type=activeType()){return available(type)&&!data.pendingReward&&!data.activeAttempt&&data.sequence<Number.MAX_SAFE_INTEGER;}
   function setDifficulty(type,value){const e=data.events[type];if(!e||data.activeAttempt||data.pendingReward)return false;const before=e.difficulty;e.difficulty=difficulty(value);if(persist())return true;e.difficulty=before;return false;}
-  function snapshot(type='alucard'){return {...data.events[type],available:available(type)};}
-  function enemies(type='alucard',d=data.events[type]?.difficulty){
+  function snapshot(type=activeType()){return {...data.events[type],available:available(type)};}
+  function enemies(type=activeType(),d=data.events[type]?.difficulty){
     const definition=TYPES[type];if(!definition)return [];
     const native=host.ALL_CARDS.find(c=>c.id===definition.cardId);if(!native)throw Error('Thiếu thẻ Boss Event.');
     const level=difficulty(d),scale=1+(level-1)*LEVEL_GROWTH,stats={hp:Math.round(definition.bossHp*scale),atk:Math.round(definition.bossAtk*scale)};
     const card={...native,stats:{...stats}};
     return [{card,display:{name:`${native.name} • Event Boss`,image:native.image,...stats},mutations:[],hp:stats.hp,maxHp:stats.hp,atk:stats.atk,defeated:false,level,isBossEventEnemy:true}];
   }
-  function start(battle,type='alucard'){
-    if(battle?.mode!==MODE||battle.playerTeam?.length!==5||battle.enemyTeam?.length!==1||!canEnter(type))throw Error(`Cần 5 thẻ và thời tiết ${TYPES[type]?.weatherName || ''} đang hoạt động.`);
+  function start(battle,type=activeType()){
+    if(battle?.mode!==MODE||battle.playerTeam?.length!==5||battle.enemyTeam?.length!==1||!canEnter(type))throw Error('Cần 5 thẻ và Boss Event đang mở trong chu kỳ 12 giờ hiện tại.');
     const before=JSON.parse(JSON.stringify(data));data.sequence++;
-    const attempt={id:`${Date.now()}_${data.sequence}`,type,difficulty:data.events[type].difficulty,startedAt:Date.now()};
+    const attempt={id:`${Date.now()}_${data.sequence}`,type,difficulty:data.events[type].difficulty,startedAt:Date.now(),rotationKey:rotation().key};
     data.activeAttempt=attempt;if(!persist()){data=before;throw Error('Không thể lưu lượt Boss Event.');}
     battle.bossEvent={...attempt,completed:false};return battle.bossEvent;
   }
@@ -107,7 +110,7 @@
     return host.ShopBulkSystem.purchase({key:KEY,id,cost:offer.cost,balance:e.coins,count:quantity,
       setBalance:value=>{e.coins=value;return persist();}});
   }
-  function renderShop(grid,type='alucard',onChange=()=>{}){
+  function renderShop(grid,type=activeType(),onChange=()=>{}){
     if(!grid||!TYPES[type])return;grid.replaceChildren();const doc=grid.ownerDocument;
     for(const offer of offers(type)){
       const item=host.InventorySystem.getItem(offer.id),box=doc.createElement('article');box.className='module-item';
@@ -118,5 +121,5 @@
     }
   }
   function reset(){data={...fresh(),gomenRaidMigrated:true};persist();}
-  host.BossEventSystem=Object.freeze({KEY,MODE,CARD_ID,TYPES,SHOP,offers,LEVEL_GROWTH,validSave,coinRange,cardChance,itemChance,dropChance,available,canEnter,setDifficulty,snapshot,enemies,start,rollCard,finish,abort,configure,purchase,renderShop,totalWins:()=>Object.values(data.events).reduce((sum,e)=>Math.min(Number.MAX_SAFE_INTEGER,sum+e.wins),0),reset,flush:persist});
+  host.BossEventSystem=Object.freeze({KEY,MODE,CARD_ID,TYPES,SHOP,offers,LEVEL_GROWTH,validSave,coinRange,cardChance,itemChance,dropChance,rotation,activeType,available,canEnter,setDifficulty,snapshot,enemies,start,rollCard,finish,abort,configure,purchase,renderShop,totalWins:()=>Object.values(data.events).reduce((sum,e)=>Math.min(Number.MAX_SAFE_INTEGER,sum+e.wins),0),reset,flush:persist});
 })(window);

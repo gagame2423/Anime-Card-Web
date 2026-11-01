@@ -2231,7 +2231,9 @@ function renderCollection() {
         requirement.textContent = `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}`;
         meta.appendChild(requirement);
       }
-      if (card?.raidOnly) {
+      if(card?.bossEventOnly){
+        const requirement=document.createElement('span');requirement.className='weather-requirement active';requirement.textContent=getBossEventCardSource(card)+' exclusive • Never in normal RNG';meta.appendChild(requirement);
+      } else if (card?.raidOnly) {
         const requirement = document.createElement('span'); requirement.className = 'weather-requirement active';
         requirement.textContent = `${['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Never in normal RNG`; meta.appendChild(requirement);
       } else if (card?.unlockRequirement) {
@@ -2540,7 +2542,7 @@ function renderPreview() {
     ? previewMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")
     : "Normal Variant";
   els.previewCollectedCount.textContent = `x${getOwnedCardCount(card.id).toLocaleString("en-US")} total`;
-  els.previewRequirement.textContent = card.raidOnly ? `${['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Once per card • Never available in normal RNG` : card.unlockRequirement
+  els.previewRequirement.textContent = card.bossEventOnly ? `${getBossEventCardSource(card)} exclusive • Never available in normal RNG` : card.raidOnly ? `${['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Once per card • Never available in normal RNG` : card.unlockRequirement
     ? `${card.questOnly ? 'Complete Quest Cards in the utility menu' : window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement} • Permanently unlocked in the standard pool`
     : card.requiredWeather ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}` : 'Available in the standard pool';
 
@@ -2797,7 +2799,8 @@ function isTowerBattle() { return getBattleMode() === 'tower'; }
 function getTowerWeatherMode() { return String(els.towerWeatherSelect?.value || 'normal'); }
 
 function isBossEventBattle() { return getBattleMode() === 'boss-event'; }
-function getBossEventType() { return battleState?.bossEvent?.type || document.getElementById('bossEventTypeSelect')?.value || 'alucard'; }
+function getBossEventType() { return battleState?.bossEvent?.type || window.BossEventSystem.activeType(); }
+function getBossEventCardSource(card) { return Object.values(window.BossEventSystem.TYPES).find(type=>type.cardId===card.id&&!type.itemId)?.name || 'Boss Event'; }
 function isSpookyBattle() { return getBattleMode()==='spooky-hunt'; }
 function isRaidBattle() { return getBattleMode() === 'raid'; }
 function getRaidType() { return battleState?.raid?.type || document.getElementById('raidTypeSelect')?.value || 'marine_fort'; }
@@ -4184,7 +4187,7 @@ function startBattle(useExistingSetup = true) {
   if (els.battleLog) els.battleLog.innerHTML = '';
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
-  appendBattleLog(isSpookyBattle()?`${getBattleModeLabel()} • Spooky Coins only • Auto Continue disabled.`:isBossEventBattle() ? `${getBattleModeLabel()} • ${window.BossEventSystem.TYPES[getBossEventType()].weatherName} entry window • Type-specific coins and exclusive drops only.` : isRaidBattle() ? `${getBattleModeLabel()} • ${window.RaidSystem.TYPES[getRaidType()].enemies.length} preset opponent(s) • Type-specific Coins and exclusive drops only.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.remaining(battleState) / 1000}s limit • ${window.TimeTrialSystem.isExp(mode)?'Speed Battle Potion ignored':'Speed Battle Potion supported'}.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
+  appendBattleLog(isSpookyBattle()?`${getBattleModeLabel()} • Spooky Coins only • Auto Continue disabled.`:isBossEventBattle() ? `${getBattleModeLabel()} • 12-hour rotation window • Type-specific coins and exclusive drops only.` : isRaidBattle() ? `${getBattleModeLabel()} • ${window.RaidSystem.TYPES[getRaidType()].enemies.length} preset opponent(s) • Type-specific Coins and exclusive drops only.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.remaining(battleState) / 1000}s limit • ${window.TimeTrialSystem.isExp(mode)?'Speed Battle Potion ignored':'Speed Battle Potion supported'}.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
   if (!isTimeTrialBattle() && !isRaidBattle() && !isBossEventBattle() && !isSpookyBattle()) appendBattleLog(isTowerBattle() ? `Tower enemy elements follow the selected type; player native-weather / mutation entry rules remain separate.` : `Enemy mutations are active-weather boosted (70% roll chance).`);
   appendBattleLog(`First strike begins in ${getBattleTurnMs() / 1000} seconds. ${teamSize} player fighter${teamSize === 1 ? '' : 's'} vs ${enemyTeam.length} enemies.`, 'player');
   renderBattleStats();
@@ -4250,11 +4253,6 @@ function grantTimeTrialExperience(cardId, amount, owner, receipt) {
 }
 
 // Boss Event adapters: business rules and storage remain in boss_event.js.
-function isBossEventWeatherActive(weatherId) {
-  const elapsed=Math.max(0,(Date.now()-Number(state.weather.lastRealTimestamp||Date.now()))/1000);
-  const gameNow=state.weather.gameSeconds+elapsed;
-  return state.weather.active.some(entry=>window.WeatherSystem.canonicalId(entry.weatherId)===weatherId&&entry.expiresAt>gameNow);
-}
 function grantBossEventCard(drop,attemptId) {
   const card=getCardById(drop.cardId);
   if(!card?.bossEventOnly||!/^[0-9]+_[0-9]+$/.test(String(attemptId)))return false;
@@ -4277,18 +4275,18 @@ function renderBossEventControls() {
   if(!active)return;
   const progress=event.snapshot(type),range=event.coinRange(progress.difficulty),boss=event.enemies(type)[0];
   const def=event.TYPES[type],native=getCardById(def.cardId);
-  const typeSelect=document.getElementById('bossEventTypeSelect');if(typeSelect){typeSelect.value=type;typeSelect.disabled=isBattleMatchActive();}
-  const entry=getActiveWeatherEntries().find(w=>w.weatherId===def.weatherId);
-  setViewText('bossEventAvailability', progress.available?`OPEN • ${def.weatherName} • ${entry?formatWeatherCountdown(getWeatherRemainingSeconds(entry)):''}`:`CLOSED • Requires ${def.weatherName} weather`);
+  const rotation=event.rotation();
+  setViewText('bossEventActiveName',def.name);
+  setViewText('bossEventAvailability',progress.available?`OPEN • Rotates in ${formatWeatherCountdown(rotation.remainingMs/1000)} • 00:00 / 12:00 UTC+7`:`ROTATED OUT • Active: ${event.TYPES[rotation.type].name}`);
   const slider=document.getElementById('bossEventDifficulty');if (!slider) return;slider.value=progress.difficulty;slider.disabled=isBattleMatchActive();
   syncDifficultyNumber('bossEvent', progress.difficulty);
   setViewText('bossEventDifficultyValue', `${progress.difficulty} • Boss Lv.${progress.difficulty}`);
   setViewText('bossEventBalance', `${progress.coins.toLocaleString('en-US')} ${def.coinName}`);
   const dropName=def.itemId?window.InventorySystem.getItem(def.itemId).name:native.name;
   setViewText('bossEventRules', `5 player cards vs 1 ${native.name} • Victory: ${range.min}–${range.max} ${def.coinName} • ${(event.dropChance(progress.difficulty,type)*100).toFixed(2)}% ${dropName} drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`);
-  setViewText('bossEventStats', `Boss HP ${boss.maxHp.toLocaleString('en-US')} • ATK ${boss.atk.toLocaleString('en-US')} • Speed Battle Potion applies. Weather is checked again before every Continue.`);
-  if(!isBattleMatchActive())els.battleStartButton.disabled=!isBattleSetupValid()||!event.canEnter(type);
-  if(battleState?.finished){const can=canReplayBattleTeam();els.battleAutoAgainButton.disabled=!can;els.battleAutoAgainButton.textContent=can?`Continue ${def.name}`:`Requires ${def.weatherName} weather`;if(!can)clearAutoContinueBattleTimer();}
+  setViewText('bossEventStats', `Boss HP ${boss.maxHp.toLocaleString('en-US')} • ATK ${boss.atk.toLocaleString('en-US')} • Speed Battle Potion applies. The active 12-hour Event is checked before every Continue.`);
+  if(!isBattleMatchActive()){els.battleStartButton.disabled=!isBattleSetupValid()||!event.canEnter(type);els.battleStartButton.textContent=`Challenge ${def.name} • 5 cards`;}
+  if(battleState?.finished){const can=canReplayBattleTeam();els.battleAutoAgainButton.disabled=!can;els.battleAutoAgainButton.textContent=can?`Continue ${def.name}`:'Event rotated out — reopen Boss Event';if(!can)clearAutoContinueBattleTimer();}
 }
 function renderBossEventShop() {
   const event=window.BossEventSystem,type=getBossEventType();
@@ -4313,7 +4311,7 @@ function finishBossEventBattle(won) {
   body.textContent=`${def.name} • Difficulty ${summary.difficulty}\n${def.coinName}: +${summary.coins} • Drop x${(summary.dropMultiplier||1).toFixed(2)}\n${card?`Exclusive card: ${mutations?`[${mutations}] `:''}${card.name}\n`:''}${item?`${item.name} x${summary.item.quantity}\n`:''}No VNĐ • No EXP • No ordinary drops${summary.error?`\n${summary.error}`:''}`;
   body.classList.remove('hidden');document.getElementById('bossEventResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent=summary.won?'🩸 BOSS DEFEATED':'🩸 EVENT ATTEMPT ENDED';
-  els.battleResultText.textContent=summary.error||(summary.won?`${native.name} and all remaining enemies were defeated.`:`Your collection is preserved. ${def.weatherName} is required for the next attempt.`);
+  els.battleResultText.textContent=summary.error||(summary.won?`${native.name} and all remaining enemies were defeated.`:`Your collection is preserved. The active rotation is checked before the next attempt.`);
   els.battleResultPower.textContent=getBattleModeLabel();
   for(const [id,label]of Object.entries({battleResultBaseLabel:def.coinName,battleResultTimeLabel:'Boss level',battleResultLevelLabel:`${dropName} drop chance`}))setViewText(id, label);
   els.battleResultBaseValue.textContent=String(summary.coins);els.battleResultTimeBonus.textContent=`Lv.${summary.difficulty}`;els.battleResultLevelDiff.textContent=`${(window.BossEventSystem.dropChance(summary.difficulty,summary.type)*100).toFixed(2)}%`;
@@ -4325,10 +4323,6 @@ function finishBossEventBattle(won) {
 }
 document.getElementById('bossEventShopOpenButton')?.addEventListener('click',()=>openModal('bossEventShopModal'));
 document.getElementById('bossEventResultShopButton')?.addEventListener('click',()=>openModal('bossEventShopModal'));
-document.getElementById('bossEventTypeSelect')?.addEventListener('change',()=>{
-  if(isBattleMatchActive()){document.getElementById('bossEventTypeSelect').value=battleState.bossEvent.type;return;}
-  resetBattleView('boss-event');renderBossEventControls();
-});
 document.getElementById('bossEventDifficulty')?.addEventListener('input',event=>{window.BossEventSystem.setDifficulty(getBossEventType(),event.target.value);renderBossEventControls();});
 
 function hasRaidSecret(cardId) {
@@ -4936,7 +4930,7 @@ function recordQuestBattleCompletion(battle) {
   if(bread)appendBattleLog(`Bread +${bread} · EXP Food in Storage.`, 'victory');
   if (!battle?.questContext || battle.questCompletionRecorded || ['surrender', 'aborted'].includes(battle.outcome)) return;
   battle.questCompletionRecorded = true;
-  window.QuestSystem.record('battle', { ...battle.questContext, won: battle.questResultWon ?? (battle.outcome === 'victory'), room: battle.trial?.room, teamElements: battle.questContext.teamElements });
+  window.QuestSystem.record('battle', { ...battle.questContext, won: battle.questResultWon ?? (battle.outcome === 'victory'), room: battle.trial?.room, turns:Math.max(0,Math.floor(Number(battle.turnCount??battle.turnCounter)||0)), teamElements: battle.questContext.teamElements });
 }
 function recordQuestEnemyDefeat(battle, victim, source) {
   const materials=window.MaterialSystem.recordKill(battle,victim);
@@ -5001,6 +4995,8 @@ function globalTick() {
 
   if(window.InventorySystem?.tick(now))updateStats();
   window.TimeTrialSystem?.checkDeadline();
+  const bossRotation=window.BossEventSystem.rotation();
+  setViewText('bossEventRotationHint',`${window.BossEventSystem.TYPES[bossRotation.type].name} • ${formatWeatherCountdown(bossRotation.remainingMs/1000)} • 5 vs 1`);
   if (els.battleModal && !els.battleModal.classList.contains('hidden')) { renderTimeTrialControls(); if(isSpookyBattle())renderSpookyControls(); if (isBossEventBattle()) renderBossEventControls(); }
   renderPotionInventory();
   window.CraftingSystem?.refresh();
@@ -5719,7 +5715,7 @@ window.QuestsSystem.configure({clock:()=>state.weather.gameSeconds,snapshot:()=>
 window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreeze: () => { if (!isImportingSave && !gameInputLocked()) { syncGameClockToNow(); saveState(); } } });
 window.BattleWeatherHud.configure({snapshot:()=>{const sandbox=window.SandboxSystem?.weatherSnapshot;if(sandbox)return sandbox;return {active:isBattleMatchActive()||Boolean(window.InfinitySystem?.battle&&!window.InfinitySystem.battle.finished),seconds:state.weather.gameSeconds,weathers:getActiveWeatherEntries().map(entry=>{const def=WEATHER_BY_ID[entry.weatherId];return {...entry,id:def.id,name:def.name,icon:def.icon,color:def.color,description:window.WeatherSystem.describe(def)};})};}});
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
-window.BossEventSystem.configure({ weatherActive:isBossEventWeatherActive, rollMutations, grantCard:grantBossEventCard });
+window.BossEventSystem.configure({ rollMutations, grantCard:grantBossEventCard });
 window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimingChange:(battle,oldMs,newMs)=>{if(battleState!==battle||!battle.isBattling||battle.finished)return;const fraction=Math.max(0,Math.min(1,((battle.nextTurnAt||Date.now()+oldMs)-Date.now())/oldMs));scheduleNextBattleTurn(fraction*newMs);}, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:queueSpookyUi,onCapsule:showSpookyCapsule});

@@ -3,6 +3,13 @@
   'use strict';
   const KEY = 'anime_card_rng_quests_v1';
   const QUESTS = Object.freeze([
+    {id:'woltekamui',steps:[
+      {kind:'battle',target:1000,mode:'boss-event',event:'ragna',won:true,minDifficulty:101,text:'Win 1,000 Ragna Event battles at difficulty > 100.'},
+      {kind:'battle',target:1000,mode:'1v1',won:true,maxTurns:10,text:'Win 1,000 regular 1v1 battles in 10 combined turns or fewer.'},
+      {kind:'roll',target:100000,weather:'wind',text:'Roll 100,000 times during Wind weather.'},
+      {kind:'battle',target:1000,mode:'time-trial',room:100,won:true,text:'Clear Normal Time Trial Room 100 1,000 times.'},
+      {kind:'followup',target:10000,text:'Trigger 10,000 player follow-up attacks in real battles. Sandbox and Online PvP do not count.'}
+    ]},
     {id:'todo',steps:[
       {kind:'battle',target:1000,teammate:'yuji-itadori',text:'Complete 1,000 battles in any mode with Yuji Itadori in the starting team.'},
       {kind:'battle',target:1000,mode:'raid',raidType:'shibuya',won:true,minDifficulty:11,teammate:'yuji-itadori',text:'Win 1,000 Shibuya Raids at difficulty > 10 with Yuji Itadori.'},
@@ -59,6 +66,7 @@
       if (q.step === def.steps.length ? q.progress !== 0 : q.progress >= def.steps[q.step].target) return false;
       if (!object(q.last) || ('currency' in q.last && (typeof q.last.currency!=='string'||q.last.currency.length>120))) return false;
       if (q.rewarded && q.step !== def.steps.length) return false;
+      if(q.last.followup!==undefined&&(typeof q.last.followup!=='string'||q.last.followup.length>120))return false;
       return ['roll', 'battle', 'defeat'].every(k => typeof q.last[k] === 'string' && q.last[k].length <= 120);
     });
   }
@@ -81,7 +89,7 @@
   function configure(options = {}) { bridge = options; reconcile(); }
   function accept(id) {
     if (!QUESTS.some(q => q.id === id) || data.quests[id] || bridge.canAccept?.() === false) return false;
-    data.quests[id] = { acceptedAt: Date.now(), step: 0, progress: 0, rewarded: false, last: { roll: '', battle: '', defeat: '', currency:'' } };
+    data.quests[id] = { acceptedAt: Date.now(), step: 0, progress: 0, rewarded: false, last: { roll: '', battle: '', defeat: '', currency:'',followup:'' } };
     if (!persist()) { delete data.quests[id]; return false; }
     return true;
   }
@@ -89,12 +97,12 @@
     return (step.won === undefined || step.won === e.won) && (!step.room || step.room === e.room) && (!step.fullElement || (e.teamElements?.length === 4 && e.teamElements.every(element => element === step.fullElement))) && (!step.mode || step.mode === e.mode) && (!step.weather || e.weatherIds?.includes(step.weather)) &&
       (!step.teammate || e.teamIds?.includes(step.teammate)) && (!step.card || step.card === e.cardId) &&
       (!step.mutation || e.mutationIds?.includes(step.mutation)) && (!step.event || step.event === e.eventType) &&
-      (!step.minDifficulty || e.difficulty >= step.minDifficulty) && (!step.raidType||step.raidType===e.raidType) && (!step.category||e.cardCategories?.includes(step.category)) && (!step.teamCategory||e.teamCategories?.includes(step.teamCategory)) && (!step.source||step.source===e.source);
+      (!step.maxTurns || integer(e.turns)&&e.turns<=step.maxTurns) && (!step.minDifficulty || e.difficulty >= step.minDifficulty) && (!step.raidType||step.raidType===e.raidType) && (!step.category||e.cardCategories?.includes(step.category)) && (!step.teamCategory||e.teamCategories?.includes(step.teamCategory)) && (!step.source||step.source===e.source);
   }
   function record(kind, e) {
-    if (host.SandboxSystem?.active || e?.sandbox || e?.mode === 'sandbox') return false;
-    if (!['roll', 'battle', 'defeat','currency'].includes(kind) || !e || typeof e.id !== 'string' || !integer(e.startedAt)) return false;
-    host.QuestsSystem?.record(kind,e);
+    if (host.SandboxSystem?.active || e?.sandbox || ['sandbox','online-pvp'].includes(e?.mode)) return false;
+    if (!['roll', 'battle', 'defeat','currency','followup'].includes(kind) || !e || typeof e.id !== 'string' || !integer(e.startedAt)) return false;
+    if(kind!=='followup')host.QuestsSystem?.record(kind,e);
     const before = JSON.stringify(data);
     let changed = false;
     for (const def of QUESTS) {
@@ -105,7 +113,7 @@
       q.last[kind] = e.id; changed = true;
       const step = def.steps[q.step];
       if (step.kind !== kind || !matches(step, e)) continue;
-      q.progress=Math.min(step.target,q.progress+(kind==='currency'?Math.max(0,Math.floor(Number(e.amount)||0)):1));
+      q.progress=Math.min(step.target,q.progress+(['currency','followup'].includes(kind)?Math.max(0,Math.floor(Number(e.amount)||0)):1));
       if (q.progress >= step.target) { q.step++; q.progress = 0; }
     }
     if (changed && !persist()) { data = JSON.parse(before); return false; }
@@ -152,8 +160,34 @@
       grid.append(box);
     }
   }
-  function reset() { data = fresh(); persist(); }
-  host.QuestSystem = Object.freeze({ KEY, QUESTS, validSave, configure, accept, record, currencyEarned, battleContext, snapshot, render, reset, flush: () => { reconcile(); return persist(); } });
+  let followPending=0,followAt=0,followTimer=null;
+  function clearFollowTimer(){if(followTimer!==null)host.clearTimeout(followTimer);followTimer=null;}
+  function flushFollowUps(){
+    clearFollowTimer();if(!followPending)return true;
+    const q=data.quests.woltekamui;
+    if(!q||QUESTS.find(q=>q.id==='woltekamui').steps[q.step]?.kind!=='followup'){followPending=0;return true;}
+    if(data.sequence>=Number.MAX_SAFE_INTEGER)return false;
+    const amount=followPending,startedAt=followAt;data.sequence++;
+    const saved=record('followup',{id:'followup_'+data.sequence,startedAt,amount});
+    if(saved){followPending=0;followAt=0;}return saved;
+  }
+  function trackFollowUp(battle,source){
+    const q=data.quests.woltekamui;
+    if(!q||QUESTS.find(q=>q.id==='woltekamui').steps[q.step]?.kind!=='followup'||host.SandboxSystem?.active||battle?.sandbox||['sandbox','online-pvp'].includes(battle?.mode)||!battle?.playerTeam?.includes(source))return false;
+    if(battle.mode==='portal'){
+      let owner=source;const seen=new Set();while(owner&&!owner.portalOwnerId&&!seen.has(owner)){seen.add(owner);owner=owner.companionOwner||owner.championOwner||owner.expansionOwner||owner.hermesOwner||owner.questOwner||owner.reaganOwner||owner.shibuyaOwner||owner.iskandarOwner;}
+      if(owner?.portalOwnerId!==host.PortalsSystem?.playerId)return false;
+    }
+    if(!followPending)followAt=Date.now();
+    followPending=Math.min(10000-q.progress,followPending+1);
+    if(followPending>=10000-q.progress)return flushFollowUps();
+    if(followTimer===null)followTimer=host.setTimeout(flushFollowUps,250);
+    return true;
+  }
+  host.addEventListener?.('pagehide',flushFollowUps);
+  host.document?.addEventListener('visibilitychange',()=>{if(host.document.visibilityState==='hidden')flushFollowUps();});
+  function reset() { clearFollowTimer();followPending=0;followAt=0;data = fresh(); persist(); }
+  host.QuestSystem = Object.freeze({ KEY, QUESTS, validSave, configure, accept, record, currencyEarned, battleContext, snapshot, render, reset, trackFollowUp,flushFollowUps, flush: () => { if(!flushFollowUps())return false;reconcile(); return persist(); } });
 })(window);
 
 /* Rotating quest board, rewards and unified Quest UI. Card quest steps and rotating board share this module. */

@@ -2847,6 +2847,61 @@ CARDS.push(...[
     "unlockRequirement": "tower_floor_200_reaper"
   }
 ]);
+CARDS.push(...[
+  {
+    "id": "boss-event-ragna",
+    "name": "Ragna",
+    "rarity": "Secret",
+    "element": "Water",
+    "chance": 0,
+    "category": [
+      "Hero",
+      "AntiVillian",
+      "Brutal",
+      "DragonWarrior",
+      "Swordman",
+      "Unhuman"
+    ],
+    "stats": {
+      "hp": 13900,
+      "atk": 56800
+    },
+    "image": "assets/cards/ragna.png",
+    "bossEventOnly": true,
+    "eventType": "ragna",
+    "passive": {
+      "name": "Dragon Slayer",
+      "description": "Critical hits Freeze the target for 2 turns. Every attack gains 1–5 Rage (max 300). Fatal damage with at least 100 Rage consumes 100 to revive at the frontline with 50% max HP. Retains all stat buffs and gains another +20% ATK each revival."
+    }
+  },
+  {
+    "id": "woltekamui",
+    "name": "Woltekamui",
+    "rarity": "Secret",
+    "element": "Electric",
+    "chance": 22000000,
+    "category": [
+      "Villian",
+      "Unhuman",
+      "DragonWarrior",
+      "Magician",
+      "PureEvil",
+      "Brutal"
+    ],
+    "stats": {
+      "hp": 17700,
+      "atk": 72000
+    },
+    "image": "assets/cards/woltekamui.png",
+    "requiredWeather": null,
+    "questOnly": true,
+    "unlockRequirement": "quest_card_woltekamui",
+    "passive": {
+      "name": "Godlike Speed",
+      "description": "Immune to Freeze; takes 50% Burn damage. Attacks can chain follow-ups: 22% initial chance, +5 percentage points per successive follow-up (max 72%). Each deals 50% ATK and heals 1% max HP on hit. 22% dodge; a successful dodge makes the next attack inflict Bleed for 3 turns at 40% ATK/turn. More than 3 consecutive follow-ups stun a bleeding target for 1 turn."
+    }
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 
