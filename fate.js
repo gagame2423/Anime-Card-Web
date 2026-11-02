@@ -107,7 +107,7 @@
       const pool=[...enemies(bs,unit)];
       let pierce=has(unit,'gilgamesh')&&state(unit,'gilgamesh').attacks!==10||boon(bs,unit)==='lance';
       if(has(unit,'cu-chalinn')&&random()<.225)pierce=true;
-      if(pierce){const next=pool.find(enemy=>enemy!==target);if(next)primary(bs,unit,next,multiplier(unit));}
+      if(pierce){const next=pool.find(enemy=>enemy!==target);if(next)primary(bs,unit,next,multiplier(unit),{specialAttack:false});}
       if(has(unit,'cu-chalinn')&&random()<.45){const last=enemies(bs,unit).at(-1);if(last)hit(bs,unit,last,atk(unit)*.80,{fateSkill:true});}
       if(has(unit,'medea')){
         const c=state(unit,'medea');
@@ -139,7 +139,7 @@
     }
     const FOLLOW_IDS=new Set(['jotaro-kujo','denji','kamen-rider-kabuto','uchiha-itachi','uchiha-sasuke','weather-shadow-monarch','yuno','kiritsu','boss-event-alucard','alexander-anderson','madara-lubu','speed-wizard','tower-champion-bizare','tower-champion-shadow-200','tower-champion-heavenly-200','merlin','iskandar']);
     const hasFollowUp=unit=>api.hasExtraFollowUp(unit)||api.passiveIds(unit).some(key=>FOLLOW_IDS.has(key));
-    const followChance=(bs,unit,chance)=>!api.canFollow(unit)?0:Math.min(1,chance+(boon(bs,unit)==='dagger'?.10:0)+(api.followBonus?.(bs,unit,chance)||0));
+    const followChance=(bs,unit,chance)=>{if(!api.canFollow(unit))return 0;const base=chance+(boon(bs,unit)==='dagger'?.10:0)+(api.followBonus?.(bs,unit,chance)||0),extra=api.relicFollowBonus?.(unit)||0;/* A new relic bonus cannot create a guaranteed endless chain. */const cap=extra>0&&base<1?Math.max(base,.99):1;return Math.min(cap,base+extra);};
     function guardian(bs,target,meta={}){return !meta.fateAbsorb&&!meta.dot?allies(bs,target,false).find(owner=>has(owner,'mash')):null;}
     function redirect(bs,source,target,amount,meta){
       if(!(amount>0))return amount;const owner=guardian(bs,target,meta);if(!owner)return amount;

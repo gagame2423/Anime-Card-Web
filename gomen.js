@@ -10,9 +10,9 @@
     function counted(bs,u,options={}){if(!options.isCounter)for(const key of IDS)if(has(u,key))state(u,key).attacks++;}
     function prepare(bs,u,target,options){
       let multiplier=1,ignoreShield=false;
-      if(has(u,GOJO)&&!options.isFollowUp){const c=state(u,GOJO);if(c.ready){c.ready=false;multiplier*=8;}}
+      if(has(u,GOJO)&&!options.isFollowUp){const c=state(u,GOJO);if(c.ready){c.ready=false;multiplier*=8;options={...options,specialAttack:true};}}
       if(has(u,TOJI)){
-        const mode=state(u,TOJI).mode;
+        const mode=state(u,TOJI).mode;if(mode!=='spear')options={...options,specialAttack:true};
         if(mode==='katana'){multiplier*=.8;ignoreShield=true;}
         if(mode==='cloud'&&target.hp>=Math.max(...enemies(bs,u).map(e=>e.hp)))multiplier*=1.5;
       }

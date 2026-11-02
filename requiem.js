@@ -54,7 +54,7 @@
     if(supporters.length){next.requiemSupport=supporters;next.damageMultiplier=(next.damageMultiplier||1)*1.2;}
    }
    if(has(u,WIND)&&(runtime(u).ownAttackCount||0)%2===0){
-    next.requiemStrike=Math.floor(random()*4);
+    next.requiemStrike=Math.floor(random()*4);next.specialAttack=true;
     next.damageMultiplier=(next.damageMultiplier||1)*[.5,1,1.1,2][next.requiemStrike];
     log('[PASSIVE] The Fuuto Wind: '+['Heat','Cyclone','Lunar','Joker'][next.requiemStrike]+'.','passive');
    }

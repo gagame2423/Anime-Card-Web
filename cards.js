@@ -2863,8 +2863,8 @@ CARDS.push(...[
       "Unhuman"
     ],
     "stats": {
-      "hp": 13900,
-      "atk": 56800
+      "hp": 56800,
+      "atk": 13900
     },
     "image": "assets/cards/ragna.png",
     "bossEventOnly": true,
@@ -2889,8 +2889,8 @@ CARDS.push(...[
       "Brutal"
     ],
     "stats": {
-      "hp": 17700,
-      "atk": 72000
+      "hp": 72000,
+      "atk": 17700
     },
     "image": "assets/cards/woltekamui.png",
     "requiredWeather": null,
@@ -2902,6 +2902,30 @@ CARDS.push(...[
     }
   }
 ]);
+CARDS.push({
+  "id": "kagurabachi",
+  "name": "Kagurabachi",
+  "chance": 100000000,
+  "rarity": "Secret",
+  "element": "Water",
+  "category": [
+    "Protagonist",
+    "Hero",
+    "Swordman",
+    "Human",
+    "Brutal"
+  ],
+  "stats": {
+    "hp": 121000,
+    "atk": 29600
+  },
+  "image": "assets/cards/kagurabachi.png",
+  "requiredWeather": null,
+  "passive": {
+    "name": "Enten",
+    "description": "Each attack rotates Nishiki → Kuro → Aka → Sai.\nNishiki: 3 hits, 50% ATK each; +30% dodge until the next own turn.\nKuro: pierces 3 enemies for 130% / 90% / 50% ATK; halves their dodge chance.\nAka: shield for 50% max HP, lasting 2 turns; reflects 50% of the next incoming attack.\nSai: 90% ATK to all enemies; Bleed for 2 turns at 20% ATK/turn.\nFirst fatal hit: survive at 1 HP and reset to Nishiki, once per match."
+  }
+});
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 
