@@ -4415,6 +4415,13 @@ function renderTimeTrialControls() {
   controls?.classList.toggle('hidden', !active);
   setViewText('timeTrialProgress', exp ? `${window.InventorySystem.quantity(trial.TICKET_ID)} EXP Tickets` : `Room ${trial.currentRoom(mode)} • Best cleared ${trial.bestRoomFor(mode)}${mode==='material-time-trial'?' • Material Tickets: '+window.InventorySystem.quantity(trial.MATERIAL_TICKET_ID):''}`);
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
+  const skip=document.getElementById('timeTrialSkipControls'),skipInput=document.getElementById('timeTrialSkipRoom'),skipButton=document.getElementById('timeTrialSkipButton');
+  if(skip)skip.hidden=mode!==trial.MODES.normal;
+  const cap=trial.skipCap(),canSkip=mode===trial.MODES.normal&&canEvolveNow()&&cap>trial.room;
+  if(skipInput){skipInput.min=trial.room+1;skipInput.max=cap;skipInput.disabled=!canSkip;if(document.activeElement!==skipInput&&(!skipInput.value||Number(skipInput.value)<=trial.room||Number(skipInput.value)>cap))skipInput.value=cap>trial.room?cap:'';}
+  if(skipButton)skipButton.disabled=!canSkip;
+  setViewText('timeTrialSkipHint',`Skip cap: Room ${cap} (40% of Best ${trial.bestRoom}). Destination room still needs a win. No skipped-room loot.`);
+
   setViewText('timeTrialRules', mode==='material-time-trial'?'4v4 • 1 Material Ticket per run • Enemies x3 • 2s / 180s; Speed Battle Potion: 1s / 90s • Independent materials per defeated enemy • No Shards, EXP or VNĐ. Defeat resets Material Room 1.':exp
     ? '1-second turns • 1 Ticket per attempt • 300s • Infinite EXP Training Dummy • Fixed 1 ATK • EXP = floor(total damage × 0.15) • Global EXP bonuses do not apply • No VNĐ, Shards or items. Auto Continue uses another Ticket.'
     : '2-second turns / 180s per room; Speed Battle Potion: 1-second turns / 90s while active • 3 minions + 1 boss • Shards per defeated enemy • No EXP or VNĐ. Defeat, timeout or exit resets to Room 1. EXP and Drop bonuses apply to their respective rewards.');
@@ -5623,6 +5630,12 @@ els.towerWeatherSelect?.addEventListener('change', () => {
   renderBattleModePicker(); populateBattleFighterSelect();
 });
 
+document.getElementById('timeTrialSkipButton')?.addEventListener('click',()=>{
+  const input=document.getElementById('timeTrialSkipRoom');
+  const result=window.TimeTrialSystem.skipRoom(input?.value.trim()?Number(input.value):NaN);
+  setViewText('timeTrialSkipStatus',result.message);
+  if(result.ok){clearAutoContinueBattleTimer();renderBattleSelection();renderTimeTrialControls();}
+});
 document.getElementById('timeTrialShopOpenButton')?.addEventListener('click', () => openModal('timeTrialShopModal'));
 document.getElementById('timeTrialResultShopButton')?.addEventListener('click', () => openModal('timeTrialShopModal'));
 document.getElementById('raidShopOpenButton')?.addEventListener('click', () => openModal('raidShopModal'));
@@ -5716,7 +5729,7 @@ window.BackgroundActivitySystem.configure({ onResume: resumeGameRuntime, onFreez
 window.BattleWeatherHud.configure({snapshot:()=>{const sandbox=window.SandboxSystem?.weatherSnapshot;if(sandbox)return sandbox;return {active:isBattleMatchActive()||Boolean(window.InfinitySystem?.battle&&!window.InfinitySystem.battle.finished),seconds:state.weather.gameSeconds,weathers:getActiveWeatherEntries().map(entry=>{const def=WEATHER_BY_ID[entry.weatherId];return {...entry,id:def.id,name:def.name,icon:def.icon,color:def.color,description:window.WeatherSystem.describe(def)};})};}});
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ rollMutations, grantCard:grantBossEventCard });
-window.TimeTrialSystem?.configure({ resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimingChange:(battle,oldMs,newMs)=>{if(battleState!==battle||!battle.isBattling||battle.finished)return;const fraction=Math.max(0,Math.min(1,((battle.nextTurnAt||Date.now()+oldMs)-Date.now())/oldMs));scheduleNextBattleTurn(fraction*newMs);}, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
+window.TimeTrialSystem?.configure({clock:()=>state.weather.gameSeconds,canSkip:()=>getBattleMode()==='time-trial'&&canEvolveNow(),onSkip:event=>window.QuestsSystem.recordTrialSkip(event), resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimingChange:(battle,oldMs,newMs)=>{if(battleState!==battle||!battle.isBattling||battle.finished)return;const fraction=Math.max(0,Math.min(1,((battle.nextTurnAt||Date.now()+oldMs)-Date.now())/oldMs));scheduleNextBattleTurn(fraction*newMs);}, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:queueSpookyUi,onCapsule:showSpookyCapsule});
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });

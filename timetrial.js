@@ -21,7 +21,7 @@
   const record = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
   const isMode = mode => Object.values(MODES).includes(mode);
   const isExp = mode => mode === MODES.exp;
-  const fresh = () => ({ version: 1, shards: 0, room: 1, bestRoom: 0, materialRoom:1, materialBestRoom:0, materialRun:false, bestDps: 0, xpCarry: {}, activeAttempt: null });
+  const fresh = () => ({ version: 1, shards: 0, room: 1, bestRoom: 0, normalRunId:'', pendingSkip:null, materialRoom:1, materialBestRoom:0, materialRun:false, bestDps: 0, xpCarry: {}, activeAttempt: null });
   function validSave(value) {
     if (!record(value) || value.version !== 1 || !Number.isSafeInteger(value.shards) || value.shards < 0 ||
         !Number.isSafeInteger(value.room) || value.room < 1 || !Number.isSafeInteger(value.bestRoom) || value.bestRoom < 0 ||
@@ -31,6 +31,8 @@
     if(value.bestDps!==undefined&&(typeof value.bestDps!=='number'||!Number.isFinite(value.bestDps)||value.bestDps<0))return false;
     if(value.materialRoom!==undefined&&(!Number.isSafeInteger(value.materialRoom)||value.materialRoom<1||!Number.isSafeInteger(value.materialBestRoom)||value.materialBestRoom<0||value.materialRoom>value.materialBestRoom+1))return false;
     if(value.materialRun!==undefined&&typeof value.materialRun!=='boolean')return false;
+    if(value.normalRunId!==undefined&&(typeof value.normalRunId!=='string'||!/^$|^[a-zA-Z0-9_-]{1,100}$/.test(value.normalRunId)))return false;
+    const skip=value.pendingSkip;if(skip!==undefined&&skip!==null&&(!record(skip)||skip.runId!==value.normalRunId||typeof skip.id!=='string'||!/^tt_skip_[a-zA-Z0-9_-]{1,120}$/.test(skip.id)||!Number.isSafeInteger(skip.gameSecond)||skip.gameSecond<0||!Number.isSafeInteger(skip.from)||!Number.isSafeInteger(skip.to)||skip.from<1||skip.to<=skip.from||skip.to!==value.room||skip.to>Math.floor(value.bestRoom*.40)))return false;
     const a = value.activeAttempt;
     return a === null || (record(a) && typeof a.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(a.id) && isMode(a.mode) &&
       Number.isSafeInteger(a.startedAt) && a.startedAt >= 0 && Number.isSafeInteger(a.deadline) &&
@@ -41,10 +43,11 @@
     return validSave(saved) ? saved : fresh();
   }
   let data = load(), bridge = {}, activeBattle = null, deadlineTimer = null, serial = 0;
+  data.normalRunId ||= '';data.pendingSkip ??= null;
   data.bestDps ||= 0;data.materialRoom ||= 1;data.materialBestRoom ||= 0;
   // Battles are never resumed with stale HP/passive state after reload/import.
   const interrupted = Boolean(data.activeAttempt);
-  if (data.activeAttempt?.mode === MODES.normal) data.room = 1;
+  if (data.activeAttempt?.mode === MODES.normal) {data.room = 1;data.normalRunId='';data.pendingSkip=null;}
   if(data.materialRun||data.activeAttempt?.mode===MODES.material)data.materialRoom=1;
   data.materialRun=false;
   data.activeAttempt = null;
@@ -55,7 +58,24 @@
   function requirePersist() { if (!persist()) throw new Error('Không thể lưu Time Trial. Chưa thể tiếp tục thao tác.'); }
   function registerTicket() { host.InventorySystem?.registerItem(TICKET);host.InventorySystem?.registerItem(MATERIAL_TICKET); }
   registerTicket(); persist();
-  function configure(options = {}) { bridge = options; let changed = false; for (const id of Object.keys(data.xpCarry)) if (bridge.getLevelInfo?.(id)?.level >= host.CardLevelSystem.MAX_LEVEL && data.xpCarry[id]) { data.xpCarry[id] = 0; changed = true; } if (changed) persist(); }
+  function configure(options = {}) { bridge = options; let changed = false; for (const id of Object.keys(data.xpCarry)) if (bridge.getLevelInfo?.(id)?.level >= host.CardLevelSystem.MAX_LEVEL && data.xpCarry[id]) { data.xpCarry[id] = 0; changed = true; } if (changed) persist(); drainSkip(); }
+  function skipCap(){return Math.floor(data.bestRoom*.40);}
+  function drainSkip(){
+    const event=data.pendingSkip;if(!event)return true;
+    if(bridge.onSkip?.({...event})!==true)return false;
+    data.pendingSkip=null;if(persist())return true;data.pendingSkip=event;return false;
+  }
+  function skipRoom(target){
+    if(bridge.canSkip?.()!==true||host.SandboxSystem?.active||host.PvPSystem?.active||data.activeAttempt||activeBattle&&!activeBattle.finished)return {ok:false,message:'Finish the current activity before skipping.'};
+    if(!Number.isSafeInteger(target)||target<=data.room||target>skipCap())return {ok:false,message:`Choose a room above ${data.room} and at most ${skipCap()} (40% of your best).`};
+    if(!drainSkip())return {ok:false,message:'Quest progress could not be saved. Retry before skipping again.'};
+    const previous=JSON.parse(JSON.stringify(data));data.normalRunId ||= 'tt_'+host.OnlineUtils.token(10);
+    const event={id:'tt_skip_'+data.normalRunId+'_'+target,runId:data.normalRunId,gameSecond:Math.max(0,Math.floor(Number(bridge.clock?.())||0)),from:data.room,to:target};
+    data.room=target;data.pendingSkip=event;
+    if(!persist()){data=previous;return {ok:false,message:'Unable to save the room change.'};}
+    const saved=drainSkip();
+    return {ok:true,room:target,message:`Skipped to Room ${target}. No battle rewards granted.`+(saved?'':' Quest progress is pending a save retry.')};
+  }
   function detach() {
     if (deadlineTimer !== null) host.clearTimeout(deadlineTimer);
     deadlineTimer = null; activeBattle = null; host.TrainingDummySystem.hide();
@@ -126,12 +146,14 @@
   }
   function start(battle) {
     if (!isMode(battle?.mode) || !canEnter(battle.mode)) throw new Error('Cần 1 '+(battle?.mode===MODES.material?'Material Ticket':'EXP Time Trial Ticket')+' để vào lượt thử.');
+    if(battle.mode===MODES.normal&&!drainSkip())throw Error('Unable to save skipped-room quest progress.');
     detach();
     const previous = JSON.parse(JSON.stringify(data)), now = Date.now();
     const attempt = { id: `${now}_${++serial}`, mode: battle.mode, room: isExp(battle.mode) ? 0 : currentRoom(battle.mode),
       startedAt: now, deadline: now + LIMITS[battle.mode] };
     const consumeTicket=Boolean(ticketId(battle.mode))&&!(battle.mode===MODES.material&&data.materialRun);
     if(battle.mode===MODES.material)data.materialRun=true;
+    if(battle.mode===MODES.normal)data.normalRunId ||= 'tt_'+host.OnlineUtils.token(10);
     data.activeAttempt = attempt;
     try {
       requirePersist();
@@ -203,7 +225,7 @@
     if (!isExp(battle.mode)) {
       const roomKey=battle.mode===MODES.material?'materialRoom':'room',bestKey=battle.mode===MODES.material?'materialBestRoom':'bestRoom';
       if (won) { data[bestKey] = Math.max(data[bestKey], run.room); data[roomKey] = Math.min(Number.MAX_SAFE_INTEGER, run.room + 1); }
-      else {data[roomKey] = 1;if(battle.mode===MODES.material)data.materialRun=false;}
+      else {data[roomKey] = 1;if(battle.mode===MODES.material)data.materialRun=false;else data.normalRunId='';}
     }
     run.completed = true; run.reason = reason || (expired(battle) ? 'time-limit' : won ? 'cleared' : 'defeat');
     data.activeAttempt = null; detach();
@@ -241,7 +263,7 @@
   }
   function reset() { detach(); data = fresh(); registerTicket(); persist(); }
   host.TimeTrialSystem = Object.freeze({ KEY, MODES, TURN_MS, turnMs, LIMITS, currentRoom, bestRoomFor, ticketId, MATERIAL_TICKET_ID, MATERIAL_TICKET, TICKET_ID, TICKET, SHOP_ITEMS,
-    configure, isMode, isExp, canEnter, roomStats, shardRange, enemies, start, prepareAfterEntry, afterTurn, finish, abort,
+    configure, skipCap, skipRoom, drainSkip, get normalRunId(){return data.normalRunId;},get pendingSkip(){return data.pendingSkip?{...data.pendingSkip}:null;}, isMode, isExp, canEnter, roomStats, shardRange, enemies, start, prepareAfterEntry, afterTurn, finish, abort,
     expired, remaining, checkDeadline, detach, purchase, renderShop, validSave, reset, flush: persist,
     getXpCarry: id => data.xpCarry[id] || 0,
     clearXpCarry: id => { if (!data.xpCarry[id]) return true; const before=data.xpCarry[id]; delete data.xpCarry[id]; if(persist())return true; data.xpCarry[id]=before;return false; },

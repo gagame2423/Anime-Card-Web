@@ -20,7 +20,7 @@
   function hasDodge(u){return Boolean(u?.isVegito||trait(u)?.kind==='god_leaf');}
   function crit(u){const r=trait(u);return {chance:r?.kind==='nail'?r.critChance:0,damage:r?.kind==='nail'?r.critDamage:0};}
   function onDodge(u){if(u?.isVegito)state(u).next=.25;}
-  function prepare(u,options){const r=trait(u),s=state(u);let bonus=s.next;s.next=0;if(s.first){s.first=false;if(r?.kind==='bomb')bonus+=.30;}return bonus?{...options,damageMultiplier:(Number(options.damageMultiplier)||1)*(api.attackBonus?api.attackBonus(u,bonus):1+bonus)}:options;}
+  function prepare(u,options){const r=trait(u),s=state(u);let bonus=s.next;s.next=0;if(s.first&&!options.isFollowUp&&!options.followOwner){s.first=false;if(r?.kind==='bomb'&&u.card?.element===r.element){const action=actions.get(u);if(action)action.bombBonus=r.firstAttackBonus??.30;}}return bonus?{...options,damageMultiplier:(Number(options.damageMultiplier)||1)*(api.attackBonus?api.attackBonus(u,bonus):1+bonus)}:options;}
   function followBonus(unit){
    if(!unit||unit.isClone||unit.isSummoned||unit.isTemporaryAlly)return 0;
    const r=unit.relic,card=unit.card;
@@ -33,12 +33,18 @@
    const special=meta.specialAttack===true||meta.championSkill||meta.raidSkill||meta.fateSkill||meta.fateDeath||meta.shibuyaSkill||meta.shibuyaDomain||meta.shibuyaMeteor||meta.requiemStrike!==undefined;
    return special?1+Math.max(0,Math.min(.50,Number(r.specialBonus)||0)):1;
   }
+  function attackMultiplier(unit,meta={}){
+   const bonus=unit&&actions.get(unit)?.bombBonus||0,factor=bonus?(api.attackBonus?api.attackBonus(unit,bonus):1+bonus):1;
+   const excluded=meta.entenBonusApplied||meta.dot||meta.isFollowUp||meta.followOwner||meta.chainDepth>0||meta.fateSupport||meta.requiemSupport===true||meta.isCounter||meta.championCounter||meta.raidCounter||meta.championRedirect||meta.fateAbsorb||meta.entenReflect||meta.grimoireReflection;
+   return specialMultiplier(unit,meta)*(excluded?1:factor);
+  }
   function withAction(unit,options,callback){
-   if(trait(unit)?.kind!=='enten_blade')return callback();
+   if(!['enten_blade','bomb'].includes(trait(unit)?.kind))return callback();
+   options={...options};
    const previous=actions.get(unit);actions.set(unit,options);
    try{return callback();}finally{if(previous)actions.set(unit,previous);else actions.delete(unit);}
   }
   function burnTurns(source,turns){return trait(source)?.kind==='eternal_eye'?turns*2:turns;}
-  return {prepareBattle,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,specialMultiplier,withAction};
+  return {prepareBattle,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,specialMultiplier,attackMultiplier,withAction};
  };
 })(window);

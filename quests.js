@@ -203,11 +203,11 @@
     {id:'duels',kind:'battle',target:50,mode:'1v1',title:'Win 50 regular 1v1 battles',reward:{money:.5}},
     {id:'weather',kind:'weather',target:3,tiers:['rare'],unique:true,title:'Encounter 3 different rare weathers',reward:{weather:['uncommon','rare'],hours:3}}
   ],weekly:[
-    {id:'kills',kind:'defeat',target:10000,title:'Defeat 10,000 enemies',reward:{stat:'luck',bonus:1,hours:48}},
-    {id:'trial',kind:'battle',target:5,mode:'time-trial',roomFactor:1.15,title:'Clear your Time Trial target 5 times',reward:{weather:['uncommon','rare'],hours:48}},
+    {id:'kills',kind:'defeat',target:10000,title:'Defeat 10,000 enemies',reward:{stat:'luck',bonus:1,hours:96}},
+    {id:'trial',kind:'battle',target:5,mode:'time-trial',roomFactor:1.15,title:'Clear your Time Trial target 5 times',reward:{weather:['uncommon','rare'],hours:96}},
     {id:'raid',kind:'battle',target:500,mode:'raid',minDifficulty:251,title:'Win 500 Raids at difficulty > 250',reward:{money:5}},
-    {id:'boss',kind:'battle',target:500,mode:'boss-event',minDifficulty:51,title:'Win 500 Boss Events at difficulty > 50',reward:{stat:'drop',bonus:.25,hours:48}},
-    {id:'rolls',kind:'roll',rollFactor:1,title:'Complete your weekly roll target',reward:{stat:'luck',bonus:1,hours:48}},
+    {id:'boss',kind:'battle',target:500,mode:'boss-event',minDifficulty:51,title:'Win 500 Boss Events at difficulty > 50',reward:{stat:'drop',bonus:.25,hours:96}},
+    {id:'rolls',kind:'roll',rollFactor:1,title:'Complete your weekly roll target',reward:{stat:'luck',bonus:1,hours:96}},
     {id:'duels',kind:'battle',target:500,mode:'1v1',title:'Win 500 regular 1v1 battles',reward:{money:5}},
     {id:'weather',kind:'weather',target:36,tiers:['uncommon','rare'],title:'Encounter 36 uncommon / rare weathers',reward:{weather:['rare'],hours:36}}
   ]};
@@ -263,6 +263,19 @@
     }
     return updated;
   }
+  // A skipped range can cross the frozen target once; it is never a battle win.
+  function recordTrialSkip(event){
+    const trial=host.TimeTrialSystem,pending=trial?.pendingSkip;
+    if(blocked()||host.PvPSystem?.active||!event||!pending||event.id!==pending.id||event.runId!==pending.runId||event.from!==pending.from||event.to!==pending.to||event.gameSecond!==pending.gameSecond||event.runId!==trial.normalRunId||event.to!==trial.room||event.to>trial.skipCap())return false;
+    tick(nowClock(),false);const before=JSON.stringify(data);let updated=false;
+    for(const [type,cycle]of Object.entries(data.cycles))for(const q of cycle.quests){
+      if(event.gameSecond<cycle.index*PERIODS[type]||event.gameSecond>=(cycle.index+1)*PERIODS[type])continue;
+      if(q.id!=='trial'||q.claimed||q.progress>=q.target||q.last.trialSkipRun===event.runId||q.room<event.from||q.room>=event.to)continue;
+      q.progress=Math.min(q.target,q.progress+1);q.last.trialSkipRun=event.runId;updated=true;
+    }
+    if(updated)changed();
+    if(flush())return true;data=JSON.parse(before);revision++;return false;
+  }
   function bonus(stat,at=Date.now()){return data.effects.reduce((sum,e)=>sum+(e.stat===stat&&e.until>at?e.bonus:0),0);}
   function rewardText(r){return r.money?`+${r.money*100}% current VNĐ`:r.weather?`Random ${r.weather.join(' / ')} weather • ${r.hours}h`:`+${r.stat==='luck'?r.bonus+' Luck':Math.round(r.bonus*100)+'% Drops'} • ${r.hours}h`;}
   function claim(type,id){
@@ -279,7 +292,7 @@
   }
   const fmt=n=>Number(n).toLocaleString('en-US');
   function entries(){
-    if(PERIODS[tab])return (data.cycles[tab]?.quests||[]).map(q=>{const d=pools[tab].find(d=>d.id===q.id);return {id:`${tab}:${q.id}`,title:d.title,description:q.room?`Clear Normal Time Trial Room ${fmt(q.room)} ${q.target} times. Target frozen at reset.`:d.title,progress:q.progress,target:q.target,reward:rewardText(d.reward),claimed:q.claimed,quest:q};});
+    if(PERIODS[tab])return (data.cycles[tab]?.quests||[]).map(q=>{const d=pools[tab].find(d=>d.id===q.id);return {id:`${tab}:${q.id}`,title:d.title,description:q.room?`Clear Normal Time Trial Room ${fmt(q.room)} ${q.target} times. Target frozen at reset. Skipping past the target counts once per run; landing on it still requires a win.`:d.title,progress:q.progress,target:q.target,reward:rewardText(d.reward),claimed:q.claimed,quest:q};});
     if(tab==='story')return host.QuestSystem.QUESTS.map(d=>{
       const q=host.QuestSystem.snapshot(d.id),card=host.ALL_CARDS.find(c=>c.id===d.id),step=q&&d.steps[q.step];
       return {id:`card:${d.id}`,title:card.name,description:step?.text||(!q?'Accept to start this sequential Card Quest. No retroactive progress.':'All steps completed. Normal card and future rolls unlocked.'),progress:q?Math.min(d.steps.length,q.step)+(step?q.progress/step.target:0):0,target:d.steps.length,reward:'Normal card • Standard pool unlock',claimed:q?.rewarded,card,definition:d,snapshot:q};
@@ -339,5 +352,5 @@
   function reset(){data=fresh();revision++;tick();flush();}
   host.document?.addEventListener('visibilitychange',()=>{if(host.document.visibilityState==='hidden'&&dirty)flush();});
   host.addEventListener('pagehide',()=>{if(dirty)flush();});
-  host.QuestsSystem=Object.freeze({KEY,PERIODS,pools,validSave,configure,tick,record,bonus,claim,mount,open,render,reset,flush,notify:()=>{revision++;},snapshot:()=>JSON.parse(JSON.stringify(data))});
+  host.QuestsSystem=Object.freeze({KEY,PERIODS,pools,validSave,configure,tick,record,recordTrialSkip,bonus,claim,mount,open,render,reset,flush,notify:()=>{revision++;},snapshot:()=>JSON.parse(JSON.stringify(data))});
 })(window);
