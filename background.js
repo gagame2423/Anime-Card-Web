@@ -2,6 +2,7 @@
    Silent audio cannot override browser/OS freezing or tab-discard policies. */
 (function (host) {
   'use strict';
+  const safeVolume=value=>{const n=Number(value);return Number.isFinite(n)?Math.max(0,Math.min(1,n)):0;};
   const doc = host.document;
   const MUSIC_KEY = 'anime_card_rng_music_muted';
   const VOLUME_KEY = 'anime_card_rng_music_volume';
@@ -19,7 +20,7 @@
     if (musicPending) return musicPending;
     try {
       if (!music) {
-        music = new host.Audio('musictheme.mp4'); music.loop = true; music.preload = 'none'; music.volume = volume;
+        music = new host.Audio('musictheme.mp4'); music.loop = true; music.preload = 'none'; music.volume = safeVolume(volume);
         music.addEventListener('error',()=>{ musicUnavailable = true; renderMusicControl(); });
       }
       if (!music.paused) return Promise.resolve(true);
@@ -77,16 +78,16 @@
   });
   host.BackgroundActivitySystem = Object.freeze({
     MUSIC_KEY, VOLUME_KEY,
-    setVolume:value=>{const next=Number(value);if(!Number.isFinite(next))return;volume=Math.max(0,Math.min(1,next));if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;if(music)music.volume=volume;try{host.localStorage.setItem(VOLUME_KEY,JSON.stringify(volume));host.CloudSaveSystem?.markDirty();}catch(_){}},
+    setVolume:value=>{const next=Number(value);if(!Number.isFinite(next))return;volume=Math.max(0,Math.min(1,next));if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;if(music)music.volume=safeVolume(volume);try{host.localStorage.setItem(VOLUME_KEY,JSON.stringify(volume));host.CloudSaveSystem?.markDirty();}catch(_){}},
     get volume(){return volume;}, holdSpecial:()=>{specialHold=true;if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);fadeFrame=null;music?.pause();},
     releaseSpecial:()=>{
       specialHold=false;
       const resume=()=>{
-        if(music)music.volume=0;
+        if(music)music.volume=safeVolume(0);
         void resumeMusic().then(ok=>{
           if(!ok||specialHold)return;
           const start=host.performance.now();
-          const fade=now=>{if(specialHold||muted){fadeFrame=null;return;}music.volume=volume*Math.min(1,(now-start)/400);if(now-start<400)fadeFrame=host.requestAnimationFrame(fade);else fadeFrame=null;};
+          const fade=now=>{if(specialHold||muted){fadeFrame=null;return;}music.volume=safeVolume(volume*Math.max(0,Math.min(1,(now-start)/400)));if(now-start<400)fadeFrame=host.requestAnimationFrame(fade);else fadeFrame=null;};
           if(fadeFrame!==null)host.cancelAnimationFrame(fadeFrame);
           fadeFrame=host.requestAnimationFrame(fade);
         });

@@ -3624,6 +3624,7 @@ function renderBattleCombatant(side, unit) {
   const prefix = side === 'player' ? 'battlePlayer' : 'battleEnemy';
   const cardEl = side === 'player' ? els.battlePlayerCard : els.battleEnemyCard;
   window.ElementSystem.renderBadge(cardEl?.querySelector('.battle-side-label'), unit);
+  window.RelicBattleUI.render(cardEl?.querySelector('.battle-art-frame'),unit,getArenaRuntime(),getArenaBattleState());
   const image = side === 'player' ? els.battlePlayerImage : els.battleEnemyImage;
   const fallback = side === 'player' ? els.battlePlayerFallback : els.battleEnemyFallback;
   const backdrop = side === 'player' ? els.battlePlayerBackdrop : els.battleEnemyBackdrop;
@@ -3810,6 +3811,7 @@ function renderBattleLineup(side,team,activeIndex){
       applyMutationStyleTokens(slot,unit.mutations);window.ElementSystem.renderBadge(slot,unit);
       row={slot,img,fallback,name,hp};view.rows.set(unit,row);
     }
+    window.RelicBattleUI.render(row.slot,unit,getArenaRuntime(),getArenaBattleState(),true);
     row.slot.classList.toggle('is-active',index===activeIndex);row.slot.classList.toggle('is-defeated',Boolean(unit.defeated));row.slot.dataset.slotIndex=String(index+1);
     row.slot.setAttribute('aria-label',`${side==='player'?'Player':'Enemy'} Slot ${index+1}${index===activeIndex?' active':''}`);
     setCachedText(row.name,side==='enemy'?`[Lv. ${getUnitBattleLevel(unit)}] ${unit.display.name}`:unit.display.name);

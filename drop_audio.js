@@ -1,6 +1,7 @@
 /* Only this allowlist can play custom card-drop sounds. No preload during rolling. */
 (function(host){
  'use strict';
+  const safeVolume=value=>{const n=Number(value);return Number.isFinite(n)?Math.max(0,Math.min(1,n)):0;};
  const KEY='anime_card_rng_sfx_enabled';
  const VOLUME_KEY='anime_card_rng_sfx_volume';
  let volume=.8;
@@ -18,7 +19,7 @@
   host.BackgroundActivitySystem?.holdSpecial?.();
   let audio=cache.get(cardId);
   if(!audio){audio=new host.Audio(`assets/audio/${FILES[cardId]}.mp3`);audio.preload='none';cache.set(cardId,audio);}
-  active=audio;audio.volume=volume;
+  active=audio;audio.volume=safeVolume(volume);
   const finish=()=>{if(current!==token)return;token++;active=null;host.BackgroundActivitySystem?.releaseSpecial?.();};
   audio.onended=finish;audio.onerror=finish;
   try{Promise.resolve(audio.play()).catch(finish);}catch(_){finish();}
@@ -28,5 +29,5 @@
  for(const event of ['pointerdown','keydown'])host.document?.addEventListener(event,gesture,{capture:true,passive:true});
  host.document?.getElementById('sfxToggleButton')?.addEventListener('click',()=>{enabled=!enabled;try{host.localStorage.setItem(KEY,JSON.stringify(enabled));host.CloudSaveSystem?.markDirty();}catch(_){}if(!enabled){pending=null;stop();}render();});
  host.addEventListener('pagehide',()=>{pending=null;stop(false);});render();
- host.DropAudioSystem=Object.freeze({KEY,VOLUME_KEY,FILES,play,stop,setVolume:value=>{const next=Number(value);if(!Number.isFinite(next))return;volume=Math.max(0,Math.min(1,next));if(active)active.volume=volume;try{host.localStorage.setItem(VOLUME_KEY,JSON.stringify(volume));host.CloudSaveSystem?.markDirty();}catch(_){}},get volume(){return volume;},get enabled(){return enabled;}});
+ host.DropAudioSystem=Object.freeze({KEY,VOLUME_KEY,FILES,play,stop,setVolume:value=>{const next=Number(value);if(!Number.isFinite(next))return;volume=Math.max(0,Math.min(1,next));if(active)active.volume=safeVolume(volume);try{host.localStorage.setItem(VOLUME_KEY,JSON.stringify(volume));host.CloudSaveSystem?.markDirty();}catch(_){}},get volume(){return volume;},get enabled(){return enabled;}});
 })(window);

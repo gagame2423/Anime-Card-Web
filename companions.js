@@ -40,8 +40,9 @@
       if(activeCount(bs,owner,kind,rule.scope)>=rule.active)return false;
       return rule.lifetime===undefined||(ledger(bs,owner)[kind]||0)<rule.lifetime;
     }
-    function admit(bs,owner,unit,kind){
+    function admit(bs,owner,unit,kind,sources){
       if(!unit||unit===owner||(api.team(bs,owner)||[]).includes(unit)||!canSpawn(bs,owner,kind))return false;
+      api.inherit?.(owner,unit,sources);
       unit.companionOwner=owner;unit.companionKind=kind;
       if(RULES[kind].lifetime!==undefined){const saved=ledger(bs,owner);saved[kind]=(saved[kind]||0)+1;}
       return true;

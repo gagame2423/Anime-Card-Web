@@ -4768,3 +4768,16 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 #portalStandardSelector .battle-card-picker-tools{grid-template-columns:minmax(0,1fr);}
 #portalStandardSelector .battle-fighter-grid{max-height:34dvh;min-height:120px;touch-action:pan-y;}
 #portalModal button{min-height:44px;}}
+
+/* Relic slot sits inside artwork, below the header's element badge. */
+.battle-art-frame,.battle-lineup-card{position:relative;}
+.battle-relic-icon{position:absolute;top:8px;right:8px;z-index:6;display:grid;place-items:center;width:44px;height:44px;padding:5px;border:1px solid #9eead2;border-radius:10px;background:#071621ec;box-shadow:0 0 14px #65e8c144;color:#adffe0;cursor:pointer;touch-action:manipulation;}
+.battle-relic-icon img{width:100%;height:100%;object-fit:contain;pointer-events:none;}
+.battle-relic-icon--small{width:25px;height:25px;top:3px;right:3px;padding:2px;border-radius:6px;}
+.battle-relic-icon:focus-visible{outline:2px solid #c6fff2;outline-offset:3px;}
+.battle-relic-icon[hidden],.battle-relic-tooltip[hidden]{display:none!important;}
+.battle-relic-tooltip{position:fixed;z-index:15000;box-sizing:border-box;width:min(370px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;padding:16px;border:1px solid #76ddc5;border-radius:12px;background:#0c1928f5;box-shadow:0 10px 40px #000b;color:#d8fff3;overscroll-behavior:contain;}
+.battle-relic-tooltip>strong{display:block;padding-right:28px;font-size:13px;line-height:1.6;}
+.battle-relic-tooltip>p{font-size:12px;line-height:1.7;white-space:pre-line;margin-bottom:0;}
+.battle-relic-close{position:absolute;right:7px;top:7px;min-width:30px;min-height:30px;border:1px solid #5d948d;border-radius:6px;background:#132e3b;color:#e4fff8;cursor:pointer;}
+@media(max-width:600px){.battle-relic-icon:not(.battle-relic-icon--small){width:42px;height:42px;}.battle-relic-close{min-width:40px;min-height:40px;}.battle-relic-tooltip{padding-top:18px;}}

@@ -291,7 +291,7 @@
   }
 
 
-  const companions=window.createCompanionRules({team:teamOf,alive:isAlive,has:hasPassive});
+  const companions=window.createCompanionRules({team:teamOf,alive:isAlive,has:hasPassive,inherit(owner,unit,sources){window.RelicSystem.inherit(owner,unit,sources);combatStats.reset(unit);ensureRuntime(unit).baseAtkAtBattleStart=unit.atk;}});
 
   // Champion hooks are keyed independently from legacy card/passive switches.
   const champions = (() => {
@@ -333,7 +333,7 @@
       const unit = { card, mutations: [...(owner.mutations || [])], display: { name: victim ? `${victim.display?.name || card.name} • Dark Aurora` : card.name, hp, atk: attack }, hp: Math.max(1, Math.floor(hp)), maxHp: Math.max(1, Math.floor(hp)), atk: Math.max(1, Math.floor(attack)), defeated: false, isClone: kind !== 'converted', isSummoned: true, isTemporaryAlly: true, championSummonType: kind, championOwner: owner, level: owner.level || 1 };
       if (bs.mode === 'tower' && bs.enemyTeam.includes(owner)) window.TowerSystem?.protectEnemyUnit(unit);
       ensureRuntime(unit).effectivePassiveId = victim ? getEffectivePassiveCardId(victim) : null;
-      if(!companions.admit(bs,owner,unit,summonKind))return null;
+      if(!companions.admit(bs,owner,unit,summonKind,kind==='ghost'?{hpSource:null,atkSource:owner}:undefined))return null;
       teamOf(bs, owner).push(unit); refreshUnitDisplay(unit); return unit;
     }
     function hit(bs, source, target, damage, options = {}) {
@@ -527,7 +527,7 @@
         const team = teamOf(bs, unit), key = team === bs.playerTeam ? 'playerIndex' : 'enemyIndex';
         // Capture the next living fighter before reviving/moving the victim.
         const active = firstLiving(team, Number(bs[key]) || 0);
-        c.darkRevives = (c.darkRevives || 0) + 1; unit.maxHp = reviver.maxHp; unit.hp = unit.maxHp; unit.atk = reviver.atk; combatStats.reset(unit); unit.defeated = false; c.deathHandled = false;
+        c.darkRevives = (c.darkRevives || 0) + 1; unit.maxHp = reviver.maxHp; unit.hp = unit.maxHp; unit.atk = reviver.atk; window.RelicSystem.rebase(unit,reviver); combatStats.reset(unit); unit.defeated = false; c.deathHandled = false;
         const at = team.indexOf(unit); if (at >= 0) team.splice(at, 1); team.push(unit);
         bs[key] = Math.max(0, team.indexOf(active || unit));
         ensureRuntime(unit).passiveSuppressedUntilDeath = false;
@@ -791,7 +791,7 @@
       if (!c.revived && canCreateCompanion(unit)) {
         const dead = teamOf(bs, unit).find(ally => ally !== unit && !isAlive(ally) && !isGeneratedUnit(ally) && !champions.noExternalRevive(ally) && !isBleeding(ally));
         if (dead && companions.admitRevive(bs,unit,dead,'josuke_revive')) {
-          c.revived = true; dead.maxHp = unit.maxHp; dead.hp = dead.maxHp; dead.atk = atk(unit); combatStats.reset(dead); dead.defeated = false;
+          c.revived = true; dead.maxHp = unit.maxHp; dead.hp = dead.maxHp; dead.atk = atk(unit); window.RelicSystem.rebase(dead,unit); combatStats.reset(dead); dead.defeated = false;
           ensureRuntime(dead).passiveSuppressedUntilDeath = false;
           champions.state(dead).deathHandled = false; state(dead).deathNotified = false; cleanse(dead); refreshUnitDisplay(dead);
           safeLog('[PASSIVE] Crazy Diamond revived ' + dead.card.name, 'passive');
@@ -991,7 +991,7 @@
       refreshUnitDisplay(unit);
     }
     function entry(bs,unit) { if(id(unit)==='sung-jin-woo'&&!state(unit).bonus)rerollBonus(bs,unit); }
-    function summon(bs,owner,hp,attack,name,passiveId=null,shield=0) {
+    function summon(bs,owner,hp,attack,name,passiveId=null,shield=0,statsSource=owner) {
       const summonKind=name==='Divine Steed Clone'?'divine_steed':'shadow';
       if(!canCreateCompanion(owner)||!companions.canSpawn(bs,owner,summonKind))return null;
       hp=Math.max(1,Math.round(hp));attack=Math.max(1,Math.round(attack));
@@ -1000,7 +1000,7 @@
       ensureRuntime(unit).effectivePassiveId=passiveId;
       if(shield>0)addShield(unit,shield,'divine-steed');
       if(bs.mode==='tower'&&bs.enemyTeam.includes(owner))window.TowerSystem.protectEnemyUnit(unit);
-      if(!companions.admit(bs,owner,unit,summonKind))return null;
+      if(!companions.admit(bs,owner,unit,summonKind,{hpSource:statsSource,atkSource:statsSource}))return null;
       teamOf(bs,owner).push(unit);state(owner).clones.push(unit);
       if(passiveId){runOnEntry(bs,unit);champions.entry(bs,unit);}
       refreshUnitDisplay(unit);return unit;
@@ -1017,7 +1017,7 @@
     function turn(bs) { for(const unit of [...phaseUnits(bs)].filter(isAlive))lastStanding(bs,unit); }
     function kill(bs,unit,victim) {
       if(id(unit)!=='sung-jin-woo'||isAlive(victim))return;
-      if(!isGeneratedUnit(victim)&&!champions.uncloneable(victim))summon(bs,unit,victim.maxHp*.5,computeWeakenedAtk(victim)*.5,'Shadow');
+      if(!isGeneratedUnit(victim)&&!champions.uncloneable(victim))summon(bs,unit,victim.maxHp*.5,computeWeakenedAtk(victim)*.5,'Shadow',null,0,victim);
       rerollBonus(bs,unit);
     }
     function multiplier(unit,target) {
@@ -1175,7 +1175,7 @@
     log:safeLog,random:()=>Math.random(),hasPassive,passiveIds,skillState,canFutureRevive:(bs,target)=>!champions.noExternalRevive(target)&&alliesOf(bs,target,false).some(unit=>!unit.passiveState?.passiveSuppressedUntilDeath&&((passiveIds(unit,true).includes('dante-limbus')&&(passiveRuntimeFor(unit,'dante-limbus').reviveCount||0)<1)||(passiveIds(unit,true).includes('josuke')&&!passiveRuntimeFor(unit,'josuke').expansion?.revived))),addCopy:addPassiveCopy,replaceCopies:(unit,ids)=>{unit.passiveState.grimoire.copies=[];for(const key of ids)addPassiveCopy(unit,key);},card:key=>host.getCardById?.(key)||SOURCE_CARDS.find(card=>card.id===key),
     frontline:(bs,unit)=>firstLiving(teamOf(bs,unit),bs.playerTeam.includes(unit)?bs.playerIndex:bs.enemyIndex),
     enemyFront:activeDefender,attack:(...args)=>performAttack(...args),hpBonus:applyMaxHpBonus,atkBonus:applyPermanentAtkBonus,
-    resetStats:unit=>combatStats.reset(unit),
+    relicFactors:unit=>window.RelicSystem.factors(unit),resetStats:(unit,factors)=>{window.RelicSystem.rebase(unit,factors);combatStats.reset(unit);},
     copyEntry:activateCopy,
     reflectHit(bs,source,target,amount,meta) { const result=damageUnit(bs,source,target,amount,meta); if(result.killed){onKill(bs,source,target);onTeammateDeath(bs,target);} return result; }
   });
@@ -1213,7 +1213,7 @@
       if(!companions.canSpawn(bs,owner,'iskandar'))return null;
       const card={...victim.card,stats:{hp,atk:attack}},unit={card,display:{name:card.name+' • Hetairoi',hp,atk:attack},hp,maxHp:hp,atk:attack,
         level:victim.level||1,mutations:[...(victim.mutations||[])],defeated:false,isSummoned:true,isTemporaryAlly:true,iskandarOwner:owner};
-      if(!companions.admit(bs,owner,unit,'iskandar'))return null;
+      if(!companions.admit(bs,owner,unit,'iskandar',{hpSource:victim,atkSource:victim}))return null;
       ensureRuntime(unit);teamOf(bs,owner).push(unit);refreshUnitDisplay(unit);runOnEntry(bs,unit);champions.entry(bs,unit);ensureCurrentIndices(bs);return unit;
     }});
 
@@ -1249,7 +1249,7 @@
         isClone:true,isSummoned:true,isTemporaryAlly:true,shibuyaOwner:owner,shibuyaKind:kind};
       const r=ensureRuntime(unit);if(victim){r.effectivePassiveId=getEffectivePassiveCardId(victim)||null;for(const key of passiveIds(victim))if(key!==r.effectivePassiveId)addPassiveCopy(unit,key);}
       if(bs.mode==='tower'&&bs.enemyTeam.includes(owner))window.TowerSystem?.protectEnemyUnit(unit);
-      if(!companions.admit(bs,owner,unit,kind))return null;
+      if(!companions.admit(bs,owner,unit,kind,kind==='puppet'?{hpSource:victim,atkSource:victim}:undefined))return null;
       const line=teamOf(bs,owner),indexKey=line===bs.playerTeam?'playerIndex':'enemyIndex';line.unshift(unit);bs[indexKey]=0;refreshUnitDisplay(unit);return unit;
     }});
   const relic=window.createRelicSkills({hasFollowUp:u=>window.RelicSystem.hasFollowUp(u),runtime:ensureRuntime,addCopy:addPassiveCopy,log:safeLog,attackBonus:(unit,bonus)=>{const runtime=ensureRuntime(unit),before=computeWeakenedAtk(unit),previous=runtime.atkBonusPct;try{runtime.atkBonusPct=(Number(previous)||0)+bonus;return before>0?computeWeakenedAtk(unit)/before:1;}finally{runtime.atkBonusPct=previous;}}});
@@ -3854,7 +3854,7 @@
     if (battleState?.mode === 'tower' && battleState.enemyTeam?.includes(source)) window.TowerSystem?.protectEnemyUnit?.(clone);
     ensureRuntime(clone);
     clone.passiveState.effectivePassiveId = cardIdOf(victim);
-    if(!companions.admit(battleState,source,clone,kind))return null;
+    if(!companions.admit(battleState,source,clone,kind,{hpSource:victim,atkSource:victim}))return null;
     return clone;
   }
 
@@ -3875,7 +3875,7 @@
     dead.maxHp = Math.max(1, Number(unit?.maxHp) || Number(danteCard?.stats?.hp) || 1);
     dead.hp = dead.maxHp;
     dead.atk = Math.max(1, Number(unit?.atk) || Number(danteCard?.stats?.atk) || 1);
-    combatStats.reset(dead);
+    window.RelicSystem.rebase(dead,unit);combatStats.reset(dead);
     champions.state(dead).deathHandled=false;
     if(ensureRuntime(dead).expansion)ensureRuntime(dead).expansion.deathNotified=false;
     ensureRuntime(dead).effectivePassiveId = originalCardId;
@@ -4436,6 +4436,24 @@
     },
     getPassiveStatusBadges,
     getCombatStatusSummary,
+    getRelicDetails(battle,unit){
+      const r=unit?.relic,R=window.RelicSystem;if(!r||!R.validRoll(r))return null;
+      const def=R.DEFINITIONS.find(d=>d.kind===r.kind),pct=n=>+(n*100).toFixed(2)+'%',crit=getCritStats(unit),follow=[];
+      const bases={'jotaro-kujo':[.50,.25],denji:[.33],'kamen-rider-kabuto':[.10],'uchiha-itachi':[.30],'uchiha-sasuke':[.15],'weather-shadow-monarch':[.30],kiritsu:[.60],'boss-event-alucard':[.66],'alexander-anderson':[.77],'madara-lubu':[.50],'tower-champion-bizare':[.33],'tower-champion-shadow-200':[.12],'tower-champion-heavenly-200':[.20],merlin:[.17],iskandar:[1],'the-legion':[.44],'the-clown':[.33],toji:[.80],'true-mahito':[.24],todo:[.53],'goku-ssj3':[.30],'ultimate-gohan':[1],'tower-champion-raining-200':[.80,.60,.40],woltekamui:[.22]};
+      for(const id of passiveIds(unit)){
+        let values=bases[id];if(id==='speed-wizard')values=[Math.min(1,skillState(unit,id).followChance??.05)];
+        if(id==='yuno'){follow.push('Yuno next-target rolls: '+[.45,.15].map(n=>pct(Math.min(1,n+relic.followBonus(unit)))).join(' / '));continue;}
+        if(!values)continue;
+        if(id==='alexander-anderson'&&questSkills.state(unit).lowHpUsed){follow.push('Pray to God follow-ups: disabled after low-HP transformation.');continue;}
+        const chances=values.map(n=>id==='ultimate-gohan'||id==='iskandar'?n:Math.min(id==='woltekamui'?.72:1,fate.followChance(battle,unit,n)));
+        follow.push((host.getCardById?.(id)||SOURCE_CARDS.find(c=>c.id===id))?.passive?.name+': '+chances.map(pct).join(' / ')+' initial follow-up chance (skill conditions apply).');
+      }
+      const active=r.kind==='enten_blade'?relic.followBonus(unit)>0:R.matchingUnit(unit,r);
+      const lines=[R.describe(r).replace(/ Unbound\.$/,''),'Base roll: '+(active?'ACTIVE':'INACTIVE — element/category/follow-up requirement not met.'),...follow,'Current total Crit Chance: '+pct(crit.chance)+'; Crit Damage: x'+crit.multiplier.toFixed(3),'Current total Dodge: '+getDisplayDodgeChance(unit)+'%.'];
+      if(r.unique&&r.kind==='bomb')lines.push('First-attack bonus: '+(relic.firstReady(unit)?'ready':'used this battle')+'.');
+      if(unit.relicInherited)lines.push('Inherited battle copy from '+unit.relicOrigin+'. No inventory item created.');
+      return {name:def.name,rarity:r.rarity,unique:r.unique,image:def.image,description:lines.join('\n'),baseActive:active,followBonus:relic.followBonus(unit)};
+    },
     getHitCounts(unit){const r=ensureRuntime(unit);return {hits:r.successfulHits||0,followUps:r.followUpHits||0};},
     getDisplayDodgeChance,
     getPassiveTooltipData,

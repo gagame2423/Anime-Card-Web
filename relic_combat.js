@@ -4,7 +4,7 @@
  host.createRelicSkills=function(api){
   const states=new WeakMap(),actions=new WeakMap();
   const state=u=>{let s=states.get(u);if(!s){s={first:true,next:0};states.set(u,s);}return s;};
-  const trait=u=>!u?.isClone&&!u?.isSummoned&&!u?.isTemporaryAlly&&u?.relic?.unique?u.relic:null;
+  const trait=u=>u?.relic?.unique?u.relic:null;
   function prepareBattle(bs){
    if(bs.mode==='online-pvp'||bs.sandbox)return;
    host.RelicSystem.attachTeam(bs.playerTeam);
@@ -22,9 +22,9 @@
   function onDodge(u){if(u?.isVegito)state(u).next=.25;}
   function prepare(u,options){const r=trait(u),s=state(u);let bonus=s.next;s.next=0;if(s.first&&!options.isFollowUp&&!options.followOwner){s.first=false;if(r?.kind==='bomb'&&u.card?.element===r.element){const action=actions.get(u);if(action)action.bombBonus=r.firstAttackBonus??.30;}}return bonus?{...options,damageMultiplier:(Number(options.damageMultiplier)||1)*(api.attackBonus?api.attackBonus(u,bonus):1+bonus)}:options;}
   function followBonus(unit){
-   if(!unit||unit.isClone||unit.isSummoned||unit.isTemporaryAlly)return 0;
+   if(!unit)return 0;
    const r=unit.relic,card=unit.card;
-   return r?.kind==='enten_blade'&&(card?.category||[]).some(c=>c==='Swordman'||c==='Swordsman')&&api.hasFollowUp(unit)?Math.max(0,Math.min(.09,Number(r.followChance)||0)):0;
+   return r?.kind==='enten_blade'&&(card?.category||unit.relicCategory||[]).some(c=>c==='Swordman'||c==='Swordsman')&&api.hasFollowUp(unit)?Math.max(0,Math.min(.09,Number(r.followChance)||0)):0;
   }
   function specialMultiplier(unit,meta={}){
    const action=unit&&actions.get(unit);if(action?.isFollowUp||action?.followOwner||action?.chainDepth>0)return 1;
@@ -45,6 +45,6 @@
    try{return callback();}finally{if(previous)actions.set(unit,previous);else actions.delete(unit);}
   }
   function burnTurns(source,turns){return trait(source)?.kind==='eternal_eye'?turns*2:turns;}
-  return {prepareBattle,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,specialMultiplier,attackMultiplier,withAction};
+  return {prepareBattle,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,firstReady:u=>state(u).first,specialMultiplier,attackMultiplier,withAction};
  };
 })(window);

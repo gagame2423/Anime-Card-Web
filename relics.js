@@ -48,7 +48,19 @@
   if(!host.InventorySystem.list().some(item=>item.type==='relic'&&item.metadata?.relic?.kind==='bomb'&&item.metadata.relic.bombVersion===undefined&&validItem(item)))return true;
   return host.InventorySystem.transactItems(items=>{for(const item of Object.values(items))if(item.type==='relic'&&item.metadata?.relic?.kind==='bomb'&&item.metadata.relic.bombVersion===undefined&&validItem(item)){item.metadata.relic=normalizeBomb(item.metadata.relic);item.description=describe(item.metadata.relic,item.metadata.binding);}return true;});
  }
- function describe(r,binding=null){r=normalizeBomb(r);const d=byKind.get(r?.kind);if(!d)return 'Invalid Relic';const stats=[r.followChance?`+${+(r.followChance*100).toFixed(1)} percentage points follow-up chance (requires a follow-up passive)`:'',r.hp?`+${+(r.hp*100).toFixed(1)}% HP`:'',r.atk?`+${+(r.atk*100).toFixed(1)}% ATK`:''].filter(Boolean).join(' / ');return `${r.rarity.toUpperCase()}${r.unique?' · UNIQUE':''} · ${stats} · ${d.category==='Swordman'?'Swordman / Swordsman':d.category||r.element} cards.${r.unique?' '+(r.kind==='bomb'?`First attack +${+(r.firstAttackBonus*100).toFixed(1)}% base ATK (matching element only). `:r.kind==='enten_blade'?`Special attacks +${+(r.specialBonus*100).toFixed(1)}%. `:r.kind==='god_leaf'?`Dodge +${+(r.dodge*100).toFixed(1)}%. `:r.kind==='millennium_puzzle'?`EXP +${+(r.expBonus*100).toFixed(1)}%. `:r.kind==='nail'?`Crit Chance +${+(r.critChance*100).toFixed(1)}%; Crit Damage +${+(r.critDamage*100).toFixed(1)}%. `:'')+d.unique:''}${binding?' Bound to '+(host.ALL_CARDS.find(c=>c.id===binding.cardId)?.name||binding.cardId)+' · copy '+(binding.copy+1):' Unbound.'}`;}
+ function uniqueText(r){
+  const p=n=>+(Number(n||0)*100).toFixed(1)+'%';if(!r.unique)return '';
+  return ({eternal_eye:'Burn duration x2.',potara_earring:'Unique Potara pair: Goku SSJ3 + Vegeta SSJ2 fuse. Vegito: 20% dodge; dodge grants +25% ATK on the next attack.',god_leaf:`Dodge +${p(r.dodge)} (excluded above 80% base dodge or when dodge bonuses are forbidden).`,nail:`Crit Chance +${p(r.critChance)}; Crit Damage +${p(r.critDamage)}.`,millennium_puzzle:`EXP +${p(r.expBonus)} from all modes, including EXP Time Trial.`,enten_blade:`Special attack damage +${p(r.specialBonus)}; excludes basics, follow-ups/chains, DoT and reflected damage.`,bomb:`First main attack +${p(r.firstAttackBonus??.30)} base ATK; matching element only.`})[r.kind]||'';
+ }
+ function describe(r,binding=null){
+  r=normalizeBomb(r);const d=byKind.get(r?.kind);if(!d)return 'Invalid Relic';const p=n=>+(n*100).toFixed(1)+'%';
+  const stats=[r.hp?`+${p(r.hp)} HP`:'',r.atk?`+${p(r.atk)} ATK`:'',r.followChance?`+${p(r.followChance)} points follow-up chance (requires a follow-up passive)`:''].filter(Boolean).join(' / ');
+  return `${r.rarity.toUpperCase()}${r.unique?' · UNIQUE':''} · ${stats} · ${d.category==='Swordman'?'Swordman / Swordsman':d.category||r.element} cards. ${uniqueText(r)}${binding?' Bound to '+(host.ALL_CARDS.find(c=>c.id===binding.cardId)?.name||binding.cardId)+' · copy '+(binding.copy+1):' Unbound.'}`;
+ }
+ function refreshDescriptions(){
+  const rows=list();if(!rows.some(i=>i.description!==describe(i.metadata.relic,i.metadata.binding)))return true;
+  return host.InventorySystem.transactItems(items=>{for(const row of rows)items[row.id].description=describe(row.metadata.relic,row.metadata.binding);return true;});
+ }
  function itemFor(id,r){const d=byKind.get(r.kind);return {id,name:d.name,image:d.image,type:'relic',tier:r.rarity,icon:'◆',quantity:1,description:describe(r),metadata:{relic:clone(r),binding:null,source:'Crafting → '+d.name}};}
  function canAct(){return bridge.canAct?.()!==false&&!host.SandboxSystem?.active&&!host.PvPSystem?.active;}
  function craft(id,random=Math.random){const recipe=RECIPES.find(r=>r.id===id);if(!recipe||!canAct())return {ok:false,message:'Finish the current activity first.'};const r=roll(recipe.kind,random),newId='relic_'+host.OnlineUtils.token(),item=itemFor(newId,r);
@@ -76,12 +88,33 @@
   return 1;
  }
  function preview(card,stats,variantKey,copy=0){const r=snapshotFor(card.id,variantKey,copy);return r&&matching(card,r)?{...stats,hp:Math.round(stats.hp*(1+r.hp)),atk:Math.round(stats.atk*(1+r.atk))}:stats;}
- function applyToUnit(unit,r){if(unit.relicPrepared)return unit;unit.relicPrepared=true;if(!validRoll(r))return unit;r=normalizeBomb(r);unit.relic=clone(r);if(matching(unit.card,r)){unit.hp=Math.round(unit.hp*(1+r.hp));unit.maxHp=Math.round(unit.maxHp*(1+r.hp));unit.atk=Math.round(unit.atk*(1+r.atk));Object.assign(unit.display,{hp:unit.maxHp,atk:unit.atk});}return unit;}
+ function matchingUnit(unit,r=unit?.relic){return matching(unit?.relicCategory?{...unit.card,category:unit.relicCategory}:unit?.card,r);}
+ function factors(unit){
+  if(unit?.relicFactors)return {...unit.relicFactors};
+  const r=unit?.relic;return r&&matchingUnit(unit,r)?{hp:1+r.hp,atk:1+r.atk}:{hp:1,atk:1};
+ }
+ function rebase(unit,source){
+  const before=source?.card?factors(source):source||{hp:1,atk:1},after=unit.relic&&matchingUnit(unit,unit.relic)?{hp:1+unit.relic.hp,atk:1+unit.relic.atk}:{hp:1,atk:1};
+  const hp=after.hp/(before.hp||1),atk=after.atk/(before.atk||1);
+  if(hp!==1){unit.maxHp=Math.max(1,Math.round(unit.maxHp*hp));unit.hp=Math.min(unit.maxHp,Math.max(0,Math.round(unit.hp*hp)));}
+  if(atk!==1)unit.atk=Math.max(unit.sandboxAllowZeroAttack?0:1,Math.round(unit.atk*atk));
+  unit.relicFactors=after;if(unit.display)Object.assign(unit.display,{hp:unit.maxHp,atk:unit.atk});return unit;
+ }
+ function inherit(owner,unit,sources={}){
+  if(unit.relicInherited)return unit;
+  if(!Array.isArray(unit.card.category))unit.relicCategory=[...(owner.card?.category||owner.relicCategory||[])];
+  const hpSource=Object.hasOwn(sources,'hpSource')?sources.hpSource:owner,atkSource=Object.hasOwn(sources,'atkSource')?sources.atkSource:owner;
+  const old={hp:factors(hpSource).hp,atk:factors(atkSource).atk};
+  unit.relic=validRoll(owner.relic)?clone(normalizeBomb(owner.relic)):null;
+  unit.relicPrepared=true;unit.relicInherited=true;unit.relicOrigin=owner.display?.name||owner.card?.name||'Summoner';
+  return rebase(unit,old);
+ }
+ function applyToUnit(unit,r){if(unit.relicPrepared)return unit;unit.relicPrepared=true;if(!validRoll(r))return unit;r=normalizeBomb(r);unit.relic=clone(r);return rebase(unit,{hp:1,atk:1});}
  function attachTeam(team){const used=new Map();for(const unit of team||[]){if(unit.relicPrepared||unit.isClone||unit.isSummoned)continue;const id=unit.card?.id,variantKey=unit.variantKey||host.canonicalVariantKey(id,(unit.mutations||[]).map(m=>m.id)),copy=Number.isSafeInteger(unit.cardInstance?.copy)?unit.cardInstance.copy:used.get(variantKey)||0;used.set(variantKey,copy+1);unit.cardInstance={cardId:id,variantKey,copy};applyToUnit(unit,snapshotFor(id,variantKey,copy));}return team;}
  function open(id){if(!canAct()||!get(id)||!mount())return false;editing=id;ui.search.value='';renderCards();const b=get(id).metadata.binding;if(b){ui.card.value=b.cardId;renderVariants();ui.variant.value=b.variantKey;ui.copy.value=b.copy+1;}ui.title.textContent=get(id).name+' · Equip Relic';ui.root.classList.remove('hidden');return true;}
  function renderCards(){if(!ui)return;const query=ui.search.value.trim().toLowerCase(),old=ui.card.value;ui.card.replaceChildren();for(const c of bridge.cards?.()||[]){if(!`${c.name} ${c.element}`.toLowerCase().includes(query))continue;const o=host.document.createElement('option');o.value=c.id;o.textContent=c.name+' · '+c.element;ui.card.append(o);}if([...ui.card.options].some(o=>o.value===old))ui.card.value=old;renderVariants();}
  function renderVariants(){ui.variant.replaceChildren();for(const v of bridge.variants?.(ui.card.value)||[]){const o=host.document.createElement('option');o.value=v.key;o.textContent=(v.mutations.map(m=>m.name).join(' + ')||'Normal')+' · owned '+v.count;ui.variant.append(o);}renderCopy();}
  function renderCopy(){const v=(bridge.variants?.(ui.card.value)||[]).find(v=>v.key===ui.variant.value);ui.copy.max=v?.count||1;ui.copy.value=Math.min(Math.max(1,Number(ui.copy.value)||1),v?.count||1);ui.equip.disabled=!v;}
  function mount(){if(ui)return true;const el=id=>host.document.getElementById(id),next={root:el('relicEquipModal'),title:el('relicEquipTitle'),search:el('relicCardSearch'),card:el('relicCardSelect'),variant:el('relicVariantSelect'),copy:el('relicCopyNumber'),equip:el('relicEquipConfirm'),unequip:el('relicUnequip'),status:el('relicEquipStatus')};if(Object.values(next).some(v=>!v))return false;ui=next;ui.search.addEventListener('input',()=>host.UIPerformanceSystem.debounce('relic-search',renderCards));ui.card.addEventListener('change',renderVariants);ui.variant.addEventListener('change',renderCopy);ui.copy.addEventListener('input',renderCopy);ui.equip.addEventListener('click',()=>{const ok=bind(editing,{cardId:ui.card.value,variantKey:ui.variant.value,copy:Number(ui.copy.value)-1});ui.status.textContent=ok?'Relic equipped to this copy only.':'Unable to equip. Check ownership or current activity.';if(ok)ui.root.classList.add('hidden');});ui.unequip.addEventListener('click',()=>{if(bind(editing,null))ui.root.classList.add('hidden');});el('relicEquipClose')?.addEventListener('click',()=>ui.root.classList.add('hidden'));return true;}
- host.RelicSystem=Object.freeze({DEFINITIONS,RECIPES,FOLLOW_UP_IDS,hasFollowUp,register,roll,validRoll,validItem,validItems,validBinding,normalizeBomb,migrateBombs,describe,craft,list,get,bind,key,matching,snapshotFor,ownershipChanged,reconcile,applyToUnit,attachTeam,preview,expMultiplier,open,count:kind=>list().filter(i=>i.metadata.relic.kind===kind).length,isRecipe:id=>RECIPES.some(r=>r.id===id),configure(options){bridge=options||{};migrateBombs();indexRevision=-1;mount();reconcile();}});
+ host.RelicSystem=Object.freeze({DEFINITIONS,RECIPES,FOLLOW_UP_IDS,hasFollowUp,register,roll,validRoll,validItem,validItems,validBinding,normalizeBomb,migrateBombs,uniqueText,refreshDescriptions,matchingUnit,factors,rebase,inherit,describe,craft,list,get,bind,key,matching,snapshotFor,ownershipChanged,reconcile,applyToUnit,attachTeam,preview,expMultiplier,open,count:kind=>list().filter(i=>i.metadata.relic.kind===kind).length,isRecipe:id=>RECIPES.some(r=>r.id===id),configure(options){bridge=options||{};migrateBombs();refreshDescriptions();indexRevision=-1;mount();reconcile();}});
 })(window);
