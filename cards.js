@@ -2926,6 +2926,32 @@ CARDS.push({
     "description": "Each attack rotates Nishiki → Kuro → Aka → Sai.\nNishiki: 3 hits, 50% ATK each; +30% dodge until the next own turn.\nKuro: pierces 3 enemies for 130% / 90% / 50% ATK; halves their dodge chance.\nAka: shield for 50% max HP, lasting 2 turns; reflects 50% of the next incoming attack.\nSai: 90% ATK to all enemies; Bleed for 2 turns at 20% ATK/turn.\nFirst fatal hit: survive at 1 HP and reset to Nishiki, once per match."
   }
 });
+CARDS.push({
+  "id": "the-mourner",
+  "name": "The Mourner",
+  "element": "Dark",
+  "rarity": "Secret",
+  "chance": 168000000,
+  "requiredWeather": "Eclipse",
+  "questOnly": true,
+  "unlockRequirement": "quest_card_the-mourner",
+  "category": [
+    "Villian",
+    "Unhuman",
+    "VideoGame",
+    "Brutal",
+    "Supporter"
+  ],
+  "stats": {
+    "hp": 149000,
+    "atk": 36500
+  },
+  "image": "assets/cards/themourner.png",
+  "passive": {
+    "name": "The Solemn Lament",
+    "description": "Start: 10 Living + 10 Departed Ammo; 0 Lament. Attacks: 70% one random bullet, 30% both.\nLiving: 90% ATK; heals 2% max HP (4% below half HP). Departed: 80% ATK; adds 1 Butterfly (max 10), +5% damage taken per mark; Bleed 1 turn at 5% ATK.\nMarked enemy dies: +2 Lament and heal 2.5% max HP per Butterfly. Any hit taken: +1 Lament. Reload: +3. Each Lament: +3% ATK (max 15 / +45%).\nEvery 10th attack: Final Requiem, 220% ATK to all enemies; consumes ordinary / Crystal Butterflies for 5% / 10% of each target’s current HP per mark, ignoring damage reduction (shields / immunity still work). Revives one dead teammate at full HP at the front for 3 battle turns, retaining stats and Relic. Loses 10 Lament and 15% max HP (nonfatal).\nEither chamber empty: skip next attack to refill both to 10, heal 30% max HP and gain 3 Lament. Stun / Freeze interrupts the pending Reload: lose all ammo, no Lament, Burn for 2 turns at 10% ATK.\nWith 2+ unique debuffs: +25% damage, apply 2 Butterflies per hit, Living healing becomes +20% ATK damage ignoring reduction, external healing -90%, immune to Stun / Freeze.\nOnce per match, first reaching 15 Lament replaces the next attack (including Requiem) with 3 Crystal Butterflies per enemy, outside the ordinary cap: +10% damage taken each; Bleed 3 turns at 15% ATK. After the following 10th-attack Requiem, fully heal and restore 5 Ammo of each type. Reloads never reset the cumulative attack counter."
+  }
+});
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

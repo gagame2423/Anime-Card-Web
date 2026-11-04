@@ -69,6 +69,7 @@ const defaultState = {
   cardProgress: {},
   teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
   arenaTeams: {},
+  cardLocks: {},
   trainingDummyRewardReceipt: '',
   migrations: {},
   spookyRewardReceipt: '',
@@ -305,6 +306,7 @@ function cloneDefaultState() {
     cardProgress: {},
     teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
   arenaTeams: {},
+  cardLocks: {},
     trainingDummyRewardReceipt: '',
     migrations: {},
     spookyRewardReceipt: '',
@@ -796,6 +798,7 @@ function normalizeState(parsed = {}) {
 
   normalized.schemaVersion = SAVE_SCHEMA_VERSION;
   normalized.teamLoadouts = window.StorageSystem.normalizeTeamLoadouts(parsed.teamLoadouts);
+  normalized.cardLocks = Object.fromEntries(Object.entries(parsed.cardLocks||{}).filter(([id,locked])=>locked===true&&getCardById(id)).map(([id])=>[id,true]));
   normalized.arenaTeams = window.ArenaLoadouts.normalize(parsed.arenaTeams);
   normalized.trainingDummyRewardReceipt = typeof parsed.trainingDummyRewardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(parsed.trainingDummyRewardReceipt)?parsed.trainingDummyRewardReceipt:'';
 
@@ -2375,7 +2378,10 @@ function decrementOwnershipVariant(cardId, variantKey, copies = 1) {
   return removed;
 }
 
+function isCardLocked(id) { return state.cardLocks?.[normalizeCardId(id)] === true; }
+
 function salvageVariantCopies(cardId, variantKey, copies = 1) {
+  if (isCardLocked(cardId)) return { removed: 0, cash: 0 };
   const card = getCardById(cardId);
   if (!card) return { removed: 0, cash: 0 };
   const parsed = parseVariantKey(variantKey);
@@ -2385,7 +2391,7 @@ function salvageVariantCopies(cardId, variantKey, copies = 1) {
   if (!entry) return { removed: 0, cash: 0 };
 
   const requested = Math.max(1, Math.floor(Number(copies) || 1));
-  const removed = Math.min(requested, entry.count);
+  const removed = Math.min(requested, Math.max(0, entry.count - 1));
   const cashPerCopy = getSalvageValue(card, entry.mutations);
   const actualRemoved = decrementOwnershipVariant(card.id, entry.key, removed);
   window.RelicSystem?.ownershipChanged(entry.key,Math.max(0,entry.count-actualRemoved));
@@ -2520,19 +2526,19 @@ function renderPreview() {
   if (!variant) return;
   previewSelection.variantKey = variant.key;
 
-  const display = getDisplayCard(card, variant.mutations);
+  const display = window.RelicSystem.preview(card,getDisplayCard(card, variant.mutations),variant.key);
   const levelInfo = getCardLevelInfo(card);
   if (els.previewLevel) els.previewLevel.textContent = `Lv. ${levelInfo.level}`;
   if (els.previewExpText) els.previewExpText.textContent = levelInfo.maxed ? "MAX LEVEL" : `${Number(levelInfo.exp.toFixed(2))}/${levelInfo.required} EXP`;
   if (els.previewExpBar) els.previewExpBar.style.width = `${Math.round(levelInfo.progress * 100)}%`;
   const feedButton=document.getElementById('previewFeedButton');
   if(feedButton)feedButton.disabled=levelInfo.maxed||!canEvolveNow();
-  if (els.previewSalvageButton) els.previewSalvageButton.disabled = variant.count <= 0;
-  if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = !getPreviewVariants(card.id).some(entry => entry.count > 1);
-  els.previewName.textContent = display.name;
-  window.ElementSystem.renderBadge(els.previewCard?.querySelector(".tcg-card__header"), card);
+  if (els.previewSalvageButton) els.previewSalvageButton.disabled = isCardLocked(card.id) || variant.count <= 1;
+  if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = isCardLocked(card.id) || !getPreviewVariants(card.id).some(entry => entry.count > 1);
+  els.previewName.textContent = card.name;
+  window.ElementSystem.renderBadge(els.previewCard?.querySelector(".details-art"), card);
   els.previewRarity.textContent = card.rarity;
-  els.previewVariantCount.textContent = `x${variant.count}`;
+  els.previewVariantCount.textContent = `x${getOwnedCardCount(card.id).toLocaleString("en-US")}`;
   els.previewHp.textContent = display.hp.toLocaleString("en-US");
   els.previewAtk.textContent = display.atk.toLocaleString("en-US");
   els.previewPassiveName.textContent = getCardPassiveCopy(card).name || "No passive";
@@ -2550,6 +2556,7 @@ function renderPreview() {
   applyCardMutationVisual(els.previewCard, variant.mutations);
   setArtwork(els.previewImage, els.previewFallback, els.previewBackdrop, card.image, `${display.name} preview artwork`);
   renderVariantMenu(variants);
+  window.CardDetailsSystem?.render(card, variants, variant, isCardLocked(card.id));
 }
 
 function renderVariantMenu(variants) {
@@ -5722,7 +5729,7 @@ window.ExpFoodSystem.configure({
 });
 document.getElementById('previewFeedButton')?.addEventListener('click',()=>{if(previewSelection)window.ExpFoodSystem.open(previewSelection.cardId);});
 window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished){if(['time-trial','material-time-trial'].includes(getBattleMode()))window.TimeTrialSystem.remaining(battleState);else if(!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}}});
-window.RelicSystem.configure({canAct:canEvolveNow,cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),variants:getVariantEntries,onChange:()=>{renderPotionInventory();if(!isBattleMatchActive())populateBattleFighterSelect();}});
+window.RelicSystem.configure({count:getOwnedCardCount,canAct:canEvolveNow,cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),variants:getVariantEntries,onChange:()=>{renderPotionInventory();if(previewSelection)renderPreview();if(!isBattleMatchActive())populateBattleFighterSelect();}});
 window.StorageSales.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();}});
 window.CraftingSystem.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 window.QuestsSystem.mount(document.getElementById('questModal'));
@@ -5732,7 +5739,7 @@ window.BattleWeatherHud.configure({snapshot:()=>{const sandbox=window.SandboxSys
 window.RaidSystem?.configure({ grantSecret: grantRaidSecret, hasSecret: hasRaidSecret, rollMutations });
 window.BossEventSystem.configure({ rollMutations, grantCard:grantBossEventCard });
 window.TimeTrialSystem?.configure({clock:()=>state.weather.gameSeconds,canSkip:()=>getBattleMode()==='time-trial'&&canEvolveNow(),onSkip:event=>window.QuestsSystem.recordTrialSkip(event), resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimingChange:(battle,oldMs,newMs)=>{if(battleState!==battle||!battle.isBattling||battle.finished)return;const fraction=Math.max(0,Math.min(1,((battle.nextTurnAt||Date.now()+oldMs)-Date.now())/oldMs));scheduleNextBattleTurn(fraction*newMs);}, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
-window.QuestSystem.configure({ canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
+window.QuestSystem.configure({ weatherIds:()=>getActiveWeatherDefinitions().map(w=>w.id), canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:queueSpookyUi,onCapsule:showSpookyCapsule});
 window.AchievementSystem?.configure({ cards: ALL_CARDS, towerTypes: window.TowerSystem?.weatherList(WEATHERS) || [], getSnapshot: getAchievementSnapshot, applyReward: applyAchievementReward });
 refreshAchievements();
@@ -5940,3 +5947,10 @@ function renderPortalStandardSelector(size,reset,locked){
  document.getElementById('teamLoadouts')?.classList.add('hidden');
 }
 function releasePortalStandardSelector(){if(!portalSelectorHome)return;const n=els.battleSetup;portalSelectorHome.parent.insertBefore(n,portalSelectorHome.next);for(const [node,hidden]of portalSelectorHidden)node.classList.toggle('hidden',hidden);portalSelectorHidden=[];for(const id of ['battleTeamSlots','battleFighterGrid','battleVariantGrid']){const node=document.getElementById(id);if(node){node.style.pointerEvents='';node.inert=false;}}battleState=portalSavedBattle;arenaDeckKey='';portalSelectorHome=null;portalSavedBattle=null;}
+
+window.CardDetailsSystem.configure({
+ canAct:canEvolveNow,
+ selectVariant:key=>{if(previewSelection){previewSelection.variantKey=key;renderPreview();}},
+ toggleLock:id=>{state.cardLocks ||= {};if(isCardLocked(id))delete state.cardLocks[id];else state.cardLocks[id]=true;saveState();renderPreview();},
+ notify:message=>window.ShopBulkSystem.notify(message)
+});

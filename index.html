@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261103-relic-inherit-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261103-relic-inherit-1" />
-  <link rel="stylesheet" href="./pvp.css?v=20261103-relic-inherit-1" />
-  <link rel="stylesheet" href="./infinity.css?v=20261103-relic-inherit-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261104-mourner-index-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261104-mourner-index-1" />
+  <link rel="stylesheet" href="./pvp.css?v=20261104-mourner-index-1" />
+  <link rel="stylesheet" href="./infinity.css?v=20261104-mourner-index-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -270,101 +270,27 @@
     </section>
   </div>
 
-  <!-- DEDICATED CARD PREVIEW -->
+  <!-- Index card details: one shared card, selectable mutation previews. -->
   <div id="cardPreviewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cardPreviewTitle">
-    <section class="modal-panel card-preview-modal">
-      <header class="modal-header">
-        <div>
-          <p class="eyebrow">CARD PREVIEW</p>
-          <h2 id="cardPreviewTitle">Variant Preview</h2>
+    <section class="modal-panel card-preview-modal index-details-modal">
+      <header class="modal-header"><div><p class="eyebrow">CARD INDEX</p><h2 id="cardPreviewTitle">Card Details</h2></div><button class="modal-close" data-close-modal="cardPreviewModal" type="button" aria-label="Close card details">×</button></header>
+      <article id="previewCard" class="index-details-card">
+        <header class="tcg-card__header details-heading"><div><h2 id="previewName">—</h2><span id="previewLevel">Lv. 1</span> · <span id="previewRarity">—</span></div><strong id="previewVariantCount" class="details-quantity">x0</strong><button id="previewEquipButton" type="button" class="battle-primary-button">EQUIP</button></header>
+        <div class="details-hero">
+          <div class="tcg-art-frame details-art"><div class="art-backdrop" aria-hidden="true"></div><img id="previewImage" class="tcg-art" alt="Card artwork"><div class="image-fallback"><span>✦</span><small>ARTWORK</small></div><button id="previewRelicSlot" class="details-relic-slot" type="button" aria-label="Equipped Relic">◆</button></div>
+          <div class="details-tools"><button id="previewLockButton" type="button" aria-pressed="false" class="details-lock">Unlock</button><button id="previewFeedButton" class="preview-action-button preview-action-button--feed" type="button">Feed</button><label class="details-mutation">Mutation<select id="previewMutationSelect" aria-label="Preview owned mutation"></select></label><strong id="previewVariantLabel">Normal</strong><div id="previewMutationBadges" class="result-mutation-badges"></div><span id="previewCollectedCount"></span></div>
         </div>
-        <button class="modal-close" data-close-modal="cardPreviewModal" type="button" aria-label="Close card preview">×</button>
-      </header>
-
-      <div class="preview-layout">
-        <div id="previewCardFrame" class="preview-card-frame">
-          <article id="previewCard" class="tcg-card preview-tcg-card" aria-live="polite">
-            <div class="tcg-card__foil" aria-hidden="true"></div>
-            <div class="tcg-card__mutation-border" aria-hidden="true"></div>
-            <header class="tcg-card__header">
-              <div class="tcg-card__title-wrap">
-                <h2 id="previewName">—</h2>
-                <span id="previewRarity" class="rarity-badge">—</span>
-              </div>
-              <div class="drop-rate">
-                <span>VARIANT</span>
-                <strong id="previewVariantCount">1×</strong>
-              </div>
-            </header>
-            <div id="previewMutationBadges" class="result-mutation-badges" aria-label="Preview mutations"></div>
-            <div class="tcg-art-frame">
-              <div class="art-backdrop" aria-hidden="true"></div>
-              <img id="previewImage" class="tcg-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Preview artwork" />
-              <div class="image-fallback" aria-hidden="true">
-                <span>✦</span>
-                <small>IMAGE PLACEHOLDER</small>
-              </div>
-            </div>
-            <section class="tcg-card__bottom">
-              <div class="stat-row">
-                <div class="stat-box hp-stat">
-                  <span class="stat-icon">♥</span>
-                  <div><small>HP</small><strong id="previewHp">0</strong></div>
-                </div>
-                <div class="stat-box atk-stat">
-                  <span class="stat-icon">⚔</span>
-                  <div><small>ATK</small><strong id="previewAtk">0</strong></div>
-                </div>
-              </div>
-              <div class="passive-box">
-                <div class="passive-heading">
-                  <span class="passive-kicker">PASSIVE SKILL</span>
-                  <strong id="previewPassiveName">—</strong>
-                </div>
-                <p id="previewPassiveDescription">—</p>
-              </div>
-            </section>
-          </article>
-        </div>
-
-        <aside class="preview-details">
-          <div class="preview-picker-head">
-            <div>
-              <span class="eyebrow">UNLOCKED VARIANTS</span>
-              <strong id="previewVariantLabel">Normal Variant</strong>
-            </div>
-            <div class="variant-menu-wrap">
-              <button id="variantMenuButton" class="variant-menu-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Choose card variant">⋮</button>
-              <div id="variantMenu" class="variant-menu hidden" role="menu" aria-label="Unlocked card variants"></div>
-            </div>
-          </div>
-
-          <div class="preview-info-card">
-            <div class="preview-level-row">
-              <span class="preview-info-label">CARD LEVEL</span>
-              <strong id="previewLevel">Lv. 1</strong>
-              <span id="previewExpText" class="preview-exp-text">0/100 EXP</span>
-            </div>
-            <div class="preview-exp-track"><div id="previewExpBar" class="preview-exp-fill"></div></div>
-            <span class="preview-info-label">COLLECTED</span>
-            <strong id="previewCollectedCount">0×</strong>
-            <span id="previewRequirement" class="preview-requirement"></span>
-          </div>
-
-          <div class="preview-actions" aria-label="Card salvage actions">
-            <button id="previewSalvageButton" class="preview-action-button preview-action-button--salvage" type="button">♻ Salvage 1 Copy</button>
-            <button id="previewSalvageExtrasButton" class="preview-action-button preview-action-button--extra" type="button">♻ Salvage Extra Duplicates</button>
-          </div>
-
-          <button id="previewFeedButton" class="preview-action-button preview-action-button--feed" type="button">Feed</button>
-
-          <div class="preview-note">
-            The preview is isolated from the roll slot. Switching variants never changes the main game screen.
-          </div>
-        </aside>
-      </div>
+        <div class="preview-level-row"><span id="previewExpText"></span></div><div class="preview-exp-track"><div id="previewExpBar" class="preview-exp-fill"></div></div>
+        <div class="details-stats"><div><small>ATK</small><strong id="previewAtk">0</strong></div><div><small>HP</small><strong id="previewHp">0</strong></div></div>
+        <div id="previewAbilityTags" class="details-ability-tags" aria-label="Passive mechanics"></div>
+        <div id="previewCategories" class="details-categories" aria-label="Card categories"></div>
+        <section class="passive-box"><div class="passive-heading"><span class="passive-kicker">PASSIVE SKILL</span><strong id="previewPassiveName">—</strong></div><p id="previewPassiveDescription">—</p></section>
+        <p id="previewRequirement" class="preview-requirement"></p>
+        <footer class="preview-actions details-salvage"><button id="previewSalvageButton" class="preview-action-button preview-action-button--salvage" type="button">Salvage 1 Copy</button><button id="previewSalvageExtrasButton" class="preview-action-button preview-action-button--extra" type="button">Salvage Extra Duplicate</button></footer>
+      </article>
     </section>
   </div>
+  <div id="cardRelicPicker" class="modal-backdrop hidden card-relic-picker" role="dialog" aria-modal="true" aria-labelledby="cardRelicPickerTitle"><section class="modal-panel"><header class="modal-header"><h2 id="cardRelicPickerTitle">Equip Relic</h2><button id="cardRelicPickerClose" class="modal-close" type="button" aria-label="Close Relic selection">×</button></header><p>One Relic per card, shared across every mutation.</p><div id="cardRelicList" class="card-relic-list"></div><button id="cardRelicUnequip" class="ghost-button" type="button">Unequip</button><p id="cardRelicStatus" role="status"></p></section></div>
 
   <div id="feedFoodModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="feedFoodTitle">
     <section class="modal-panel feed-food-modal">
@@ -984,9 +910,9 @@
   <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="./online_utils.js?v=20261103-relic-inherit-1"></script>
-  <script defer src="./firebase.js?v=20261103-relic-inherit-1"></script>
-  <script defer src="./startup.js?v=20261103-relic-inherit-1"></script>
+  <script defer src="./online_utils.js?v=20261104-mourner-index-1"></script>
+  <script defer src="./firebase.js?v=20261104-mourner-index-1"></script>
+  <script defer src="./startup.js?v=20261104-mourner-index-1"></script>
 
   <!-- PORTALS: entry lives exclusively in Storage. Combat reuses battleArena. -->
   <div id="portalModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="portalTitle">
@@ -1009,79 +935,81 @@
   </div>
   <div id="relicEquipModal" class="modal-backdrop hidden relic-equip-modal" role="dialog" aria-modal="true" aria-labelledby="relicEquipTitle">
     <section class="modal-panel"><header class="modal-header"><h2 id="relicEquipTitle">Equip Relic</h2><button id="relicEquipClose" class="modal-close" type="button" aria-label="Close Relic equip">×</button></header>
-      <p>One Relic per owned card copy. Equipping replaces that copy's current Relic. Other copies stay unchanged.</p>
-      <div class="relic-equip-fields"><label>Search owned cards<input id="relicCardSearch" type="search" placeholder="Name / element..."></label><label>Card<select id="relicCardSelect"></select></label><label>Mutation variant<select id="relicVariantSelect"></select></label><label>Owned copy number<input id="relicCopyNumber" type="number" min="1" step="1" value="1"></label></div>
-      <p id="relicEquipStatus" role="status"></p><div class="portal-actions"><button id="relicEquipConfirm" type="button" class="battle-primary-button">Equip this copy</button><button id="relicUnequip" type="button" class="ghost-button">Unequip Relic</button></div>
+      <p>One Relic per card ID, shared across all mutations and copies. Equipping replaces the card's current Relic.</p>
+      <div class="relic-equip-fields"><label>Search owned cards<input id="relicCardSearch" type="search" placeholder="Name / element..."></label><label>Card<select id="relicCardSelect"></select></label></div>
+      <p id="relicEquipStatus" role="status"></p><div class="portal-actions"><button id="relicEquipConfirm" type="button" class="battle-primary-button">Equip this card</button><button id="relicUnequip" type="button" class="ghost-button">Unequip Relic</button></div>
     </section>
   </div>
-  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./category.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./background.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./enten.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./boss_rotation.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261103-relic-inherit-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./category.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./background.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enten.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_rotation.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261104-mourner-index-1"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261103-relic-inherit-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261104-mourner-index-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261103-relic-inherit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261103-relic-inherit-1"></script>
+  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261104-mourner-index-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261104-mourner-index-1"></script>
 </body>
 </html>

@@ -45,6 +45,7 @@
       api.inherit?.(owner,unit,sources);
       unit.companionOwner=owner;unit.companionKind=kind;
       if(RULES[kind].lifetime!==undefined){const saved=ledger(bs,owner);saved[kind]=(saved[kind]||0)+1;}
+      api.created?.(bs,owner,unit);
       return true;
     }
     function canRevive(bs,owner,target,kind){
@@ -55,7 +56,7 @@
     }
     function admitRevive(bs,owner,target,kind){
       if(!canRevive(bs,owner,target,kind))return false;
-      const saved=ledger(bs,REVIVALS[kind].scope==='target'?target:owner);saved[kind]=(saved[kind]||0)+1;return true;
+      const saved=ledger(bs,REVIVALS[kind].scope==='target'?target:owner);saved[kind]=(saved[kind]||0)+1;api.revived?.(bs,target);return true;
     }
     return Object.freeze({RULES,REVIVALS,activeCount,canSpawn,admit,canRevive,admitRevive,ownerOf,kindOf});
   };

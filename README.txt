@@ -1,62 +1,66 @@
-BẢN CẬP NHẬT 03/11/2026 — AUDIO AN TOÀN, UNIQUE RELIC VÀ KẾ THỪA RELIC
+NHẬT KÝ CẬP NHẬT 04/11/2026
+CARD INDEX, RELIC DÙNG CHUNG, KHÓA THẺ VÀ THE MOURNER
 
-1. SỬA LỖI AUDIO VOLUME
-- Chặn mọi giá trị gán cho HTMLMediaElement.volume trong background.js và drop_audio.js về khoảng 0–1; giá trị không hữu hạn được xử lý an toàn.
-- Fade nhạc xử lý cả trường hợp timestamp requestAnimationFrame nhỏ hơn thời điểm bắt đầu, không còn sinh số âm rất nhỏ gây IndexSizeError.
-- Kiểm tra volume slider, phát SFX, tạm dừng theme trước special drop và tiếp tục theme sau SFX. Giữ nguyên file âm thanh, allowlist, cài đặt và chính sách autoplay hiện có.
+1. Giao diện chi tiết thẻ trong Index
+- Bố cục mới cho máy tính và điện thoại: tên thẻ, cấp, tổng số bản sao xN, nút EQUIP và Feed.
+- Ô Relic ở góc trên trái ảnh thẻ mở danh sách trang bị; hiển thị tên, độ hiếm và đúng các chỉ số đã roll của từng Relic.
+- Bộ chọn Mutation chỉ liệt kê các biến thể đang sở hữu, gồm cả đột biến kép. Đổi biến thể chỉ đổi phần xem trước.
+- Hiển thị ATK, HP, thanh EXP và toàn bộ Category dưới dạng nhãn. Không thêm SPA, Cost hoặc phần Leader.
+- Nhãn kỹ năng Bleed, Heal, Stun, Freeze, Follow Up và Shield được tạo theo mô tả nội tại của thẻ.
+- Hai nút dưới cùng: Salvage 1 Copy và Salvage Extra Duplicate; bố cục không tràn ngang trên điện thoại.
 
-2. UNIQUE RELIC: CHỈ HIỂN THỊ GIÁ TRỊ ĐÃ ROLL
-- Rà soát toàn bộ 7 Relic. Những Unique có khoảng chỉ số đã lưu số roll cụ thể; lỗi giao diện cũ là nối thêm mô tả khoảng min–max sau số thật.
-- Nail chỉ hiện đúng Crit Chance và Crit Damage của bản vật phẩm, ví dụ +14,2% và +21,5%; không nối thêm chuỗi +10–20% / +15–30%.
-- God Leaf hiển thị số Dodge đã roll; Millennium Puzzle hiển thị số EXP đã roll; Enten Blade hiển thị số special damage đã roll; Bomb hiển thị số bonus đòn đầu đã roll.
-- Eternal Eye (Burn x2) và Potara (điều kiện fusion cùng các bonus cố định) giữ nguyên cơ chế cố định, không tạo roll ngẫu nhiên không có trong thiết kế.
-- Mô tả Relic đã sở hữu được cập nhật từ metadata. Giữ nguyên ID, rarity, element, binding và toàn bộ số roll cũ; không reroll khi mở Storage, xem tooltip, vào trận, hồi sinh hoặc triệu hồi.
-- Khoảng min–max vẫn có thể xuất hiện trong phần giới thiệu recipe trước khi craft. Vật phẩm đã sở hữu chỉ hiện số cụ thể.
-- Tiếp tục dùng hệ thống lưu inventory hiện có; không đổi schema inventory hoặc thêm bản vật phẩm cho đơn vị triệu hồi.
+2. Relic gắn theo ID thẻ
+- Mỗi ID thẻ có tối đa một Relic được trang bị, dùng chung cho mọi bản sao, Mutation và Double Mutation của thẻ đó.
+- Chỉ số đã roll và Unique của Relic được giữ nguyên; không roll lại khi chuyển đổi dữ liệu hoặc đổi Mutation.
+- Dữ liệu gắn theo bản sao cũ được chuyển tự động. Nếu nhiều Relic từng gắn vào các biến thể của cùng thẻ, ưu tiên bản có số thứ tự bản sao thấp hơn, rồi ID Relic; các Relic còn lại được tháo và giữ nguyên trong Kho đồ.
+- Xóa hết một biến thể không tháo Relic nếu vẫn còn sở hữu biến thể khác của cùng thẻ. Mất toàn bộ bản sao mới tháo Relic về Kho đồ.
+- Giữ cơ chế bảo toàn Relic khi hồi sinh và sao chép Relic của chủ thể triệu hồi cho đơn vị được tạo.
 
-3. ICON RELIC TRONG ARENA
-- Thêm relic_ui.js dùng chung với renderer Arena. Icon nằm trong góc trên bên phải khung artwork, tách khỏi element badge ở header.
-- Hiển thị đúng ảnh của Relic trang bị; không có Relic thì ẩn slot. Có icon nhỏ cho hàng đội hình dự bị.
-- Hover / focus / click trên PC hoặc tap trên điện thoại để xem tên, rarity, Unique, toàn bộ số roll và điều kiện bonus HP / ATK đang hoạt động hay không.
-- Tooltip lấy thông tin động từ engine: xác suất follow-up ban đầu sau các modifier đang áp dụng, tổng Crit Chance / Crit Damage, Dodge hiện tại và trạng thái bonus đòn đầu của Bomb.
-- Các xác suất follow-up vẫn tuân thủ mốc kích hoạt, form, mục tiêu, điều kiện nội tại và giới hạn chuỗi của từng thẻ; không tạo thêm follow-up cho chiêu tự động hoặc thẻ không có cơ chế đó.
-- Tooltip cập nhật khi trận cập nhật; không tạo timer riêng. Một tooltip dùng chung, cache node và listener, hỗ trợ nút đóng, Escape, tap bên ngoài và cuộn trên màn hình hẹp.
-- Tooltip chọn vùng trống trên hoặc dưới icon để không che chính nút vừa tap. Thiếu asset thì dùng biểu tượng dự phòng, nút vẫn thao tác được.
+3. Khóa thẻ và bảo vệ bản sao
+- Nút khóa trong chi tiết Index được lưu vào hồ sơ người chơi theo ID thẻ.
+- Thẻ đã khóa được bảo vệ khi Salvage All Extra Duplicates và khi salvage riêng trong cửa sổ chi tiết.
+- Salvage chỉ xử lý số lượng dư: luôn giữ một bản của mỗi tổ hợp Mutation chính xác. Hai đột biến có cùng thành phần nhưng khác thứ tự vẫn dùng khóa biến thể chuẩn của game.
+- Salvage 1 Copy không xóa bản cuối của biến thể đang xem. Mở khóa để tiếp tục salvage các bản dư.
 
-4. HỒI SINH VÀ SUMMON / CLONE
-- Hồi sinh giữ nguyên Relic ban đầu của thẻ, bao gồm đúng số roll và Unique. Không thay bằng Relic của người hồi sinh.
-- Các kiểu hồi sinh cấp một bộ HP / ATK mới (Dante, Josuke, Dark Decade, backup Julius) được áp lại phần bonus Relic của thẻ được hồi sinh đúng một lần trên bộ chỉ số mới.
-- Trạng thái một lần của Relic không reset khi hồi sinh: Bomb đã dùng đòn đầu thì không nhận lại bonus đòn đầu.
-- Mọi summon / clone / puppet / robot / đơn vị chuyển hóa đi qua cơ chế admission chung và nhận một bản sao Relic của NGƯỜI THI TRIỂN, không lấy Relic của nạn nhân bị sao chép.
-- Sao chép đúng toàn bộ số roll, không dùng RNG mới. Bản sao độc lập trong trận, không thay đổi hoặc nhân bản vật phẩm trong Storage và không chiếm binding thứ hai.
-- Nếu HP / ATK của summon đã lấy theo tỷ lệ chỉ số caster có Relic, không nhân bonus thêm lần nữa. Với bản sao lấy chỉ số từ nạn nhân, chuẩn hóa phần Relic nguồn rồi áp điều kiện Relic caster.
-- Giữ điều kiện element / category và các ngoại lệ của từng Unique. Relic có thể được sao chép nhưng bonus cơ bản không hoạt động nếu đơn vị không đáp ứng điều kiện; các Unique độc lập điều kiện vẫn theo quy tắc cũ.
-- Clone có Relic được dùng hiệu ứng Unique hợp lệ như Crit, Dodge, Burn duration, special damage và bonus follow-up. Mỗi đơn vị mới có trạng thái đòn đầu riêng; hồi sinh cùng một đơn vị giữ trạng thái cũ.
-- Chỉ số phần trăm theo category của clone vô danh được xét bằng affinity Relic, không thêm category mới vào dữ liệu thẻ hoặc kích hoạt aura category ngoài phạm vi sửa đổi.
-- Không thay giới hạn summon, luật cấm clone tạo thêm clone, giới hạn Dark Decade, điều kiện cấm revive / clone riêng của thẻ hoặc cơ chế thưởng.
+4. Thẻ Secret mới: The Mourner
+- Dark; 1 in 168,000,000; HP 149,000; ATK 36,500.
+- Category: Villian, Unhuman, VideoGame, Brutal, Supporter.
+- Mở khóa qua chuỗi nhiệm vụ mới; sau khi hoàn thành có thể roll trong Eclipse Weather.
+- The Solemn Lament được tách vào mourner.js: hai buồng đạn, Butterfly thường và Crystal, Lament cộng dồn theo chỉ số gốc, Prayer/Reload, Lament Condition và Final Requiem.
+- Mỗi Butterfly trên kẻ địch bị hạ cho +2 Lament và hồi 2.5% HP tối đa. Lament tối đa 15, tương ứng +45% ATK; không cộng nhân chồng chỉ số.
+- Đếm đòn độc lập với mục tiêu; Reload không đặt lại bộ đếm. Hai viên đạn được xử lý tuần tự qua khiên và HP.
+- Final Requiem tiêu thụ Butterfly để gây phần sát thương theo HP hiện tại, bỏ qua giảm sát thương nhưng vẫn chịu khiên và miễn nhiễm.
+- Đồng đội được Requiem hồi sinh trở lại tuyến đầu với đầy HP, giữ chỉ số hiện có và Relic; bị loại sau đúng 3 lượt chiến đấu của cả hai phe. Tôn trọng các nội tại cấm hồi sinh của thẻ.
+- Crystal Butterflies kích hoạt một lần mỗi trận. Lần Final Requiem ở mốc 10 đòn kế tiếp hồi đầy HP và khôi phục thêm 5 viên mỗi loại, tối đa 10 viên mỗi buồng.
+- Chỉ tham chiếu ảnh assets/cards/themourner.png. Người chơi tự bổ sung ảnh; gói mã nguồn không chứa ảnh, âm thanh hoặc tệp Excel.
 
-5. KIỂM TRA VÀ TRIỂN KHAI
-- Kiểm tra toàn bộ 70 file JavaScript, thứ tự script, cache tag và startup 180 thẻ.
-- Audio: kiểm tra timestamp fade âm nhẹ, slider ngoài khoảng / không hữu hạn, phát SFX và tiếp tục nhạc; mọi volume được gán đều hữu hạn trong 0–1.
-- Relic: kiểm tra concrete roll cho 7 loại, mô tả cố định không reroll, cập nhật mô tả cũ và save / reload.
-- Summon: kiểm tra các nhánh Funny Valentine, Naruto x Sasuke, Dagon, Awakened Doflamingo, Reagan Ridley, True Mahito, Mechamaru, Sung Jin Woo, Iskandar và Jin Mori; xác nhận cùng số roll caster và không nhân chỉ số lần hai.
-- Revive: kiểm tra Ragna, Aizen, Dante, Josuke, Dark Decade và Julius; giữ đúng Relic, bonus và trạng thái Bomb đã dùng.
-- Giao diện: kiểm tra icon, hover / tap, đóng tooltip, số roll và xác suất follow-up thay đổi theo trạng thái trên PC và điện thoại 390x844.
-- So sánh combat có seed cho cả 180 thẻ khi không có Relic với bản trước: không có khác biệt trong các kịch bản kiểm tra.
-- Không thay chỉ số thẻ, EXP, drop rates, quest, mode scaling, Firebase, TURN / STUN hoặc luật PvP. Không kèm ảnh, audio hay Excel; dùng assets hiện có.
-- Upload đủ source và hard-refresh Ctrl+F5. Cache tag mới: 20261103-relic-inherit-1.
+5. Chuỗi nhiệm vụ The Mourner
+- Bước 1: Hồi sinh hoặc tạo bản sao tổng cộng 1,000 đồng đội.
+- Bước 2: Kích hoạt 10,000 đòn follow-up.
+- Bước 3: Roll 168,000 lần trong Eclipse Weather.
+- Bước 4: Thắng 1,680 trận 1v1 thường trong Eclipse Weather.
+- Bước 5: Sống sót qua 168 đòn chí tử trong Eclipse Weather.
+- Chỉ bước hiện tại được tính sau khi nhận nhiệm vụ; không cộng ngược dữ liệu cũ. Sandbox và Online PvP không được tính. Hoàn thành nhận đúng một thẻ Normal và mở khóa roll.
+- Trong Portal Party chỉ tính sự kiện của người chơi sở hữu đơn vị, không cộng sự kiện của thành viên khác.
+
+6. Kiểm tra bản cập nhật
+- Kiểm tra cú pháp toàn bộ JavaScript và đường dẫn script, tên tệp phân biệt hoa/thường.
+- Kiểm tra trình duyệt cho chuyển dữ liệu Relic, trang bị trên mọi Mutation, lưu khóa thẻ, salvage an toàn, chọn biến thể và EQUIP trên điện thoại.
+- Kiểm tra đạn kép, khiên, Reload bị gián đoạn, điều kiện miễn Stun/Freeze, Butterfly/Lament, Requiem và hồi sinh tạm thời 3 lượt.
+- Kiểm tra nhiệm vụ tuần tự, loại trừ mô phỏng/PvP và chỉ trao thưởng một lần.
+- So sánh mô phỏng có cùng seed cho 180 thẻ cũ với bản trước: không thay đổi kết quả chiến đấu trong bộ kiểm tra hồi quy.
+- Cập nhật nhãn cache thành 20261104-mourner-index-1. Sau khi thay đủ mã nguồn trên GitHub Pages, tải lại bằng Ctrl+F5.
 
 Modified Files Note
-- background.js: clamp volume nhạc và fade an toàn.
-- drop_audio.js: clamp mọi gán volume SFX.
-- relics.js: mô tả số Unique thật, làm mới mô tả cũ, snapshot / affinity / chuẩn hóa và kế thừa Relic trong trận.
-- relic_combat.js: cho phép hiệu ứng Relic đã kế thừa trên summon và clone; cung cấp trạng thái đòn đầu.
-- companions.js: kết nối kế thừa tại admission chung, giữ nguyên cap và anti-recursion.
-- passives.js: nguồn chỉ số summon, giữ bonus Relic khi cấp life mới và dữ liệu tooltip động.
-- grimoire.js: ghi nguồn Relic của backup để hồi sinh Julius không làm mất hoặc nhân bonus.
-- relic_ui.js (mới): icon và tooltip Relic dùng chung Arena, hover / tap và cập nhật thông tin động.
-- app.js: nối icon vào thẻ chiến đấu và hàng đội hình chuẩn.
-- styles.css: slot góc phải, tooltip nổi và bố cục mobile.
-- index.html: nạp module UI mới và đổi cache tag.
-- startup.js: kiểm tra RelicBattleUI khi khởi động.
-- README.txt: changelog phiên bản này và danh sách file sửa.
+- cards.js: thêm định nghĩa, chỉ số, nguồn roll và mô tả The Mourner.
+- mourner.js (mới): toàn bộ cơ chế The Solemn Lament và hồi sinh tạm thời.
+- passives.js: nối kỹ năng mới vào engine, sát thương/khiên/DoT/trạng thái và ghi nhận các lần sống sót, hồi sinh.
+- companions.js: ghi nhận các lần tạo bản sao hoặc hồi sinh được chấp thuận.
+- quests.js: chuỗi nhiệm vụ The Mourner, dùng chung bộ đếm follow-up và chặn sự kiện mô phỏng/PvP.
+- relics.js: gắn Relic theo ID thẻ, chuyển dữ liệu cũ và kiểm tra quyền sở hữu chung.
+- card_details.js (mới): giao diện chọn Mutation, Category, nhãn kỹ năng, khóa thẻ và chọn Relic.
+- app.js: lưu khóa thẻ, bảo vệ salvage, cập nhật phần xem trước và nối các mô-đun.
+- index.html: bố cục chi tiết Index, danh sách Relic và thứ tự tải script/nhãn cache mới.
+- styles.css: giao diện Index, EQUIP, nút salvage, các nhãn và bố cục tương thích điện thoại.
+- startup.js: kiểm tra tải đủ hai mô-đun mới.
+- README.txt: chỉ giữ nhật ký của bản cập nhật này.
