@@ -39,7 +39,7 @@
   const SHOP = Object.freeze([{id:'web_string',cost:6220},{id:'cannon_ball',cost:3899}, ...['exp_potion', 'rich_potion', 'speed_potion', 'speed_battle_potion'].map(id => Object.freeze({ id, cost: id === 'speed_battle_potion' ? 50 : 25 }))]);
   const GRAIL_SHOP=Object.freeze([...SHOP.filter(offer=>!['web_string','cannon_ball'].includes(offer.id)),Object.freeze({id:'excalibur_sword',cost:80000})]);
   const SHIBUYA_SHOP=Object.freeze([...GRAIL_SHOP.filter(offer=>offer.id!=='excalibur_sword'),Object.freeze({id:'mahito_puppet',cost:10500})]);
-  const AKATSUKI_SHOP=Object.freeze([Object.freeze({id:'lucky_potion',cost:25}),...GRAIL_SHOP.filter(offer=>offer.id!=='excalibur_sword')]);
+  const AKATSUKI_SHOP=Object.freeze([Object.freeze({id:'ramen_bowl',cost:10}),Object.freeze({id:'lucky_potion',cost:25}),...GRAIL_SHOP.filter(offer=>offer.id!=='excalibur_sword')]);
   const offers=type=>type==='akatsuki'?AKATSUKI_SHOP:type==='shibuya'?SHIBUYA_SHOP:type==='holy_grail'?GRAIL_SHOP:validType(type)?SHOP:[];
   // Archived Gomen rewards remain readable for migration, never playable as a Raid.
   const rewardItemId=type=>({akatsuki:'mangekyo_eye',holy_grail:'excalibur_sword',gomen:'gojo_eye',shibuya:'equipment_cursed_finger'})[type]||null;
@@ -236,6 +236,7 @@
     for (const offer of offers(type)) {
       const item = host.InventorySystem.getItem(offer.id), box = doc.createElement('article'); box.className = 'module-item';
       const name = doc.createElement('strong'); name.textContent = `${item.icon} ${item.name}`;
+      if(offer.id==='ramen_bowl'){const image=doc.createElement('img');image.className='raid-food-icon';image.src=item.image;image.alt=item.name;image.loading='lazy';image.addEventListener('error',()=>image.remove(),{once:true});box.append(image);}
       const text = doc.createElement('p'); text.textContent = item.description;
       const button = doc.createElement('button'); button.type = 'button'; button.textContent = `${offer.cost} ${TYPES[type].coinName}`; button.disabled = host.ShopBulkSystem.blocked || Boolean(data.pendingReward);
       button.addEventListener('click', () => { if (purchase(type, offer.id, host.ShopBulkSystem.requested(grid))) onChange(); else host.alert('Không thể mua vật phẩm Raid.'); }); box.append(name, text, button); grid.append(box);

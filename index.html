@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261105-akatsuki-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261105-akatsuki-1" />
-  <link rel="stylesheet" href="./pvp.css?v=20261105-akatsuki-1" />
-  <link rel="stylesheet" href="./infinity.css?v=20261105-akatsuki-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261105-evolution-ui-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261105-evolution-ui-1" />
+  <link rel="stylesheet" href="./pvp.css?v=20261105-evolution-ui-1" />
+  <link rel="stylesheet" href="./infinity.css?v=20261105-evolution-ui-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -69,7 +69,6 @@
             <button id="leaderboardOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">♛</span><span><small>GLOBAL</small><strong>Leaderboard</strong></span></button>
             <button id="craftingOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚗</span><span><small>UPGRADE</small><strong>Crafting</strong></span></button>
             <button id="questOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">?</span><span><small>DISCOVER</small><strong>Quests</strong></span></button>
-            <button id="evolutionOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">✧</span><span><small>TRANSFORM</small><strong>Evolution</strong></span></button>
             <button id="settingsOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚙</span><span><small>PREFERENCES</small><strong>Game Settings</strong></span></button>
             <button id="resetButton" class="ghost-button" type="button">Reset</button>
           </div>
@@ -287,7 +286,7 @@
         <header class="tcg-card__header details-heading"><div><h2 id="previewName">—</h2><span id="previewLevel">Lv. 1</span> · <span id="previewRarity">—</span></div><strong id="previewVariantCount" class="details-quantity">x0</strong><button id="previewEquipButton" type="button" class="battle-primary-button">EQUIP</button></header>
         <div class="details-hero">
           <div class="tcg-art-frame details-art"><div class="art-backdrop" aria-hidden="true"></div><img id="previewImage" class="tcg-art" alt="Card artwork"><div class="image-fallback"><span>✦</span><small>ARTWORK</small></div><button id="previewRelicSlot" class="details-relic-slot" type="button" aria-label="Equipped Relic">◆</button></div>
-          <div class="details-tools"><button id="previewLockButton" type="button" aria-pressed="false" class="details-lock">Unlock</button><button id="previewFeedButton" class="preview-action-button preview-action-button--feed" type="button">Feed</button><label class="details-mutation">Mutation<select id="previewMutationSelect" aria-label="Preview owned mutation"></select></label><strong id="previewVariantLabel">Normal</strong><div id="previewMutationBadges" class="result-mutation-badges"></div><span id="previewCollectedCount"></span></div>
+          <div class="details-tools"><button id="previewLockButton" type="button" aria-pressed="false" class="details-lock">Unlock</button><button id="previewFeedButton" class="preview-action-button preview-action-button--feed" type="button">Feed</button><label class="details-mutation">Mutation<select id="previewMutationSelect" aria-label="Preview owned mutation"></select></label><div class="details-variant-actions"><div class="details-variant-info"><strong id="previewVariantLabel">Normal</strong><div id="previewMutationBadges" class="result-mutation-badges"></div><span id="previewCollectedCount"></span></div><button id="previewEvolveButton" class="details-evolve-button" type="button" aria-haspopup="dialog" aria-controls="evolutionModal" hidden>Evolve</button></div></div>
         </div>
         <div class="preview-level-row"><span id="previewExpText"></span></div><div class="preview-exp-track"><div id="previewExpBar" class="preview-exp-fill"></div></div>
         <div class="details-stats"><div><small>ATK</small><strong id="previewAtk">0</strong></div><div><small>HP</small><strong id="previewHp">0</strong></div></div>
@@ -814,7 +813,21 @@
     <div class="settings-volume-row"><label for="sfxVolumeRange">SFX Volume</label><input id="sfxVolumeRange" type="range" min="0" max="100" step="1" value="80"><label class="sr-only" for="sfxVolumeNumber">SFX volume percent</label><input id="sfxVolumeNumber" type="number" min="0" max="100" step="1" value="80"><span>%</span></div>
   </div><section class="settings-luck-section" aria-labelledby="luckConfigTitle"><h3 id="luckConfigTitle">Luck Config</h3><p>Adjust permanent Base Luck only. Weather, potion, equipment and temporary quest bonuses still apply.</p><label class="sr-only" for="luckConfigRange">Base Luck</label><input id="luckConfigRange" type="range" min="1" max="1" step="0.01" value="1"><div class="luck-config-input"><label for="luckConfigNumber">Base Luck</label><input id="luckConfigNumber" type="number" min="1" max="1" step="0.01" value="1"><button id="luckConfigReset" type="button" class="ghost-button">Reset to Max</button></div><p id="luckConfigStatus" role="status"></p></section><label class="settings-switch-row" for="showActivePotionsHudToggle"><span><strong>Show Active Potions HUD</strong><small>Show active potion icons and remaining time at the bottom-right.</small></span><input id="showActivePotionsHudToggle" type="checkbox" role="switch" checked></label></section></div>
   <div id="arenaMutationModal" class="modal-backdrop hidden"><section class="modal-panel module-modal arena-mutation-modal" role="dialog" aria-modal="true" aria-labelledby="arenaMutationTitle"><header class="modal-header"><h2 id="arenaMutationTitle">Card Mutations</h2><button type="button" class="modal-close" data-close-modal="arenaMutationModal" aria-label="Close mutations">×</button></header><p>Choose one owned variant for the active team slot. Each card has at most 2 active mutations.</p><div data-arena-mutations class="arena-mutation-list"></div><button data-arena-more type="button" class="ghost-button" hidden>Show more</button></section></div>
-  <div id="evolutionModal" class="modal-backdrop hidden"><section class="modal-panel module-modal evolution-modal" role="dialog" aria-modal="true" aria-labelledby="evolutionTitle"><header class="modal-header"><h2 id="evolutionTitle">✧ Evolution</h2><button type="button" id="evolutionCloseButton" class="modal-close" aria-label="Close evolution">×</button></header><p id="evolutionStatus" role="status">Choose the exact mutation variant to sacrifice.</p><div id="evolutionGrid" class="module-shop-grid"></div></section></div>
+  <div id="evolutionModal" class="modal-backdrop hidden evolution-unit-backdrop" role="dialog" aria-modal="true" aria-labelledby="evolutionTitle">
+    <section class="modal-panel evolve-unit-modal">
+      <header class="modal-header evolve-unit-header"><div><p class="eyebrow">UNIT EVOLUTION</p><h2 id="evolutionTitle">Evolve Unit</h2></div><button type="button" id="evolutionCloseButton" class="modal-close" aria-label="Close evolution">×</button></header>
+      <div class="evolve-unit-content">
+        <section class="evolution-preview" aria-label="Evolution preview">
+          <div class="evolution-comparison"><article id="evolutionBaseCard" data-side="base" class="evolve-card evolve-card--base"></article><span class="evolution-arrow" role="img" aria-label="Evolves into">›››</span><article id="evolutionTargetCard" data-side="target" class="evolve-card evolve-card--target"></article></div>
+          <p id="evolutionMutation" class="evolution-mutation"></p>
+          <div id="evolutionStatChanges" class="evolution-stat-changes" aria-label="Stat changes"></div>
+          <section class="evolution-passive"><p class="eyebrow">EVOLVED PASSIVE</p><h3 id="evolutionPassiveName"></h3><p id="evolutionPassiveDescription"></p></section>
+        </section>
+        <aside class="evolution-requirements"><h3>Requirements:</h3><p id="evolutionBaseRequirement" class="evolution-base-requirement"></p><div id="evolutionRequiredItems" class="evolution-required-items"></div><p id="evolutionStatus" class="evolution-status" role="status" aria-live="polite"></p></aside>
+      </div>
+      <footer class="evolution-actions"><button id="evolutionConfirmButton" class="evolution-confirm" type="button">Evolve</button><button id="evolutionCancelButton" class="evolution-cancel" type="button">Cancel</button></footer>
+    </section>
+  </div>
 
   <div id="bossEventShopModal" class="modal-backdrop hidden">
     <section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="bossEventShopTitle"><header class="modal-header"><h2 id="bossEventShopTitle">🩸 Boss Event Shop</h2><button class="modal-close" data-close-modal="bossEventShopModal" type="button" aria-label="Close Boss Event shop">×</button></header><p id="bossEventShopBalance" class="module-description"></p><div id="bossEventShopGrid" class="module-grid"></div></section>
@@ -919,9 +932,9 @@
   <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="./online_utils.js?v=20261105-akatsuki-1"></script>
-  <script defer src="./firebase.js?v=20261105-akatsuki-1"></script>
-  <script defer src="./startup.js?v=20261105-akatsuki-1"></script>
+  <script defer src="./online_utils.js?v=20261105-evolution-ui-1"></script>
+  <script defer src="./firebase.js?v=20261105-evolution-ui-1"></script>
+  <script defer src="./startup.js?v=20261105-evolution-ui-1"></script>
 
   <!-- PORTALS: entry lives exclusively in Storage. Combat reuses battleArena. -->
   <div id="portalModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="portalTitle">
@@ -949,78 +962,78 @@
       <p id="relicEquipStatus" role="status"></p><div class="portal-actions"><button id="relicEquipConfirm" type="button" class="battle-primary-button">Equip this card</button><button id="relicUnequip" type="button" class="ghost-button">Unequip Relic</button></div>
     </section>
   </div>
-  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./category.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./background.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./enten.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./boss_rotation.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261105-akatsuki-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./category.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./background.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enten.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_rotation.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261105-evolution-ui-1"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261105-akatsuki-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261105-evolution-ui-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./index_filters.js?v=20261105-akatsuki-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261105-akatsuki-1"></script>
+  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./index_filters.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261105-evolution-ui-1"></script>
 </body>
 </html>

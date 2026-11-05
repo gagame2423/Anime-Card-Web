@@ -1517,12 +1517,12 @@ function getMutationMultiplier(mutations) {
     .reduce((multiplier, mutation) => multiplier * (Number(mutation?.multiplier) || 1), 1);
 }
 
-function getDisplayCard(card, mutations = []) {
+function getDisplayCard(card, mutations = [], previewLevel = null) {
   const safeMutations = normalizeMutationObjects(mutations);
   const mutationMultiplier = getMutationMultiplier(safeMutations);
   const mutationStats = window.MutationSystem.factors(safeMutations);
   const levelInfo = getCardLevelInfo(card);
-  const levelMultiplier = getCardLevelStatMultiplier(card);
+  const levelMultiplier = previewLevel === null ? getCardLevelStatMultiplier(card) : window.CardLevelSystem.statMultiplier(previewLevel);
   const prefix = safeMutations
     .map(mutation => String(mutation?.name || ""))
     .filter(Boolean)
@@ -1533,7 +1533,7 @@ function getDisplayCard(card, mutations = []) {
     hp: Math.max(0, Math.round((Number(card?.stats?.hp) || 0) * mutationStats.hp * levelMultiplier)),
     atk: Math.max(0, Math.round((Number(card?.stats?.atk) || 0) * mutationStats.atk * levelMultiplier)),
     reward: Math.max(0, Math.floor(calculateCardReward(Number(card?.chance) || 0) * mutationMultiplier)),
-    level: levelInfo.level,
+    level: previewLevel === null ? levelInfo.level : window.CardLevelSystem.normalizeLevel(previewLevel),
     exp: levelInfo.exp,
     expRequired: levelInfo.required,
     expProgress: levelInfo.progress
@@ -4857,7 +4857,7 @@ function prepareEvolution(recipe, variantKey) {
     const ids = normalizeCardMutations(variant.mutations), key = canonicalVariantKey(recipe.id,ids);
     state.mutations[key] = 1; state.unlocked[recipe.id] = 1;
     state.inventory[key] = {id:recipe.id,cardId:recipe.id,mutationIds:ids,mutation:ids.join('+'),count:1};
-    state.cardProgress[recipe.id] = {level:recipe.resultLevel||1,exp:0};
+    state.cardProgress[recipe.id] = {level:window.EvolutionSystem.resultLevel(recipe,getCardLevelInfo(recipe.baseId).level),exp:0};
     state.achievementRewardReceipts['evolution_' + recipe.id] = true;
     // Equipment may only refer to copies that still exist after the sacrifice.
     syncOwnershipRecords(); mainAfter = JSON.stringify(state);
@@ -4869,8 +4869,6 @@ function onEvolutionCommitted() {
   window.CloudSaveSystem?.markDirty();
   state = loadState(); window.RelicSystem?.reconcile(); syncOwnershipRecords(); refreshAchievements(); updateStats(); renderCollection(); renderAvailableCards(); renderPotionInventory();
 }
-document.getElementById('evolutionOpenButton')?.addEventListener('click',()=>{ window.EvolutionSystem.render(document.getElementById('evolutionGrid')); openModal('evolutionModal'); });
-document.getElementById('evolutionCloseButton')?.addEventListener('click',()=>closeModal('evolutionModal'));
 
 // ============================================================
 // ACHIEVEMENT COORDINATION (tracking/storage/rendering in achievements.js)
@@ -5200,6 +5198,7 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if(id==='evolutionModal'&&window.EvolutionSystem?.active){window.EvolutionSystem.close();return;}
   if(id==='portalModal'){window.PortalsSystem.exit();return;}
   if(id==='battleModal'&&window.PortalCombatView?.active)return;
   if(id==='battleModal' && window.InfinityViewSystem?.active)return;
@@ -5709,7 +5708,13 @@ function initializeGameViews() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeGameViews, {once:true});
 else initializeGameViews();
 if(window.EquipmentSystem?.blocked)window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover the pending equipment craft before playing.');
-window.EvolutionSystem.configure({ canAct: canEvolveNow, prepare: prepareEvolution, onCommit: onEvolutionCommitted, describe: recipe => ({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(" + ") || "Normal"}))}) });
+window.EvolutionSystem.configure({
+  canAct:canEvolveNow,prepare:prepareEvolution,onCommit:onEvolutionCommitted,
+  describe:recipe=>({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(' + ')||'Normal'}))}),
+  display:(card,variant,level,isBase)=>isBase?window.RelicSystem.preview(card,getDisplayCard(card,variant.mutations,level),variant.key):getDisplayCard(card,variant.mutations,level),
+  passive:getCardPassiveCopy,open:()=>openModal('evolutionModal'),
+  onEvolved:(recipe,mutations)=>{openCardPreview(recipe.id,canonicalVariantKey(recipe.id,mutations));window.ShopBulkSystem.notify(`Evolved into ${recipe.name} · Lv.100 · mutations preserved.`);}
+});
 let lastSpookyTurnMs=window.SettingsSystem.spookySpeedUp?1000:2000;
 window.SettingsSystem.configure({maxBaseLuck:getMaximumBaseLuck,totalLuck:getLuckMultiplier,canAct:()=>!isImportingSave&&!saveTransferBusy&&!isSimulationActive(),onChange:()=>{
   const next=window.SettingsSystem.spookySpeedUp?1000:2000;
