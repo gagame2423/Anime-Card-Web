@@ -1,0 +1,271 @@
+/* Time Trial rules, persistent progression, timed attempts, rewards and shop. */
+(function (host) {
+  'use strict';
+  const KEY = 'anime_card_rng_timetrial_v1';
+  const MODES = Object.freeze({ normal: 'time-trial', exp: 'exp-time-trial', material: 'material-time-trial' });
+  const TURN_MS = Object.freeze({ [MODES.normal]: 2000, [MODES.exp]: 1000, [MODES.material]: 2000 });
+  function speedUntil(){return Number(host.InventorySystem?.getItem('speed_battle_potion')?.until)||0;}
+  function turnMs(mode,now=Date.now()) { return [MODES.normal,MODES.material].includes(mode)&&speedUntil()>now?1000:TURN_MS[mode]||2000; }
+  const LIMITS = Object.freeze({ [MODES.normal]: 180000, [MODES.exp]: 300000, [MODES.material]: 180000 });
+  const MATERIAL_TICKET_ID='material_ticket';
+  const MATERIAL_TICKET=Object.freeze({id:MATERIAL_TICKET_ID,name:'Material Ticket',type:'ticket',icon:'🎫',tier:'rare',description:'One Material Time Trial run (all consecutive rooms). Buy for 1,000 Time Trial Shards.'});
+  const TICKET_ID = 'exp_time_trial_ticket';
+  const TICKET = Object.freeze({ id: TICKET_ID, name: 'EXP Time Trial Ticket', type: 'ticket',
+    icon: '🎟️', tier: 'epic', description: 'One entry to the 5-minute EXP Time Trial. Use from Arena.' });
+  const SHOP_ITEMS = Object.freeze([
+    ...['exp_potion', 'speed_potion', 'lucky_potion', 'rich_potion'].map(id => Object.freeze({ id, cost: 50 })),
+    Object.freeze({ id: 'speed_battle_potion', cost: 200 }), Object.freeze({ id: TICKET_ID, cost: 50 }), Object.freeze({id:MATERIAL_TICKET_ID,cost:1000})
+  ]);
+  const STAT_LIMIT = Number.MAX_VALUE / 1024;
+  const count = n => Number.isSafeInteger(n) && n >= 0 ? n : 0;
+  const record = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
+  const isMode = mode => Object.values(MODES).includes(mode);
+  const isExp = mode => mode === MODES.exp;
+  const fresh = () => ({ version: 1, shards: 0, room: 1, bestRoom: 0, normalRunId:'', pendingSkip:null, materialRoom:1, materialBestRoom:0, materialRun:false, bestDps: 0, xpCarry: {}, activeAttempt: null });
+  function validSave(value) {
+    if (!record(value) || value.version !== 1 || !Number.isSafeInteger(value.shards) || value.shards < 0 ||
+        !Number.isSafeInteger(value.room) || value.room < 1 || !Number.isSafeInteger(value.bestRoom) || value.bestRoom < 0 ||
+        value.room > Math.min(Number.MAX_SAFE_INTEGER, value.bestRoom + 1) || !record(value.xpCarry)) return false;
+    if (Object.entries(value.xpCarry).some(([id, fraction]) => !host.ALL_CARDS?.some(card => card.id === id) ||
+      typeof fraction !== 'number' || !Number.isFinite(fraction) || fraction < 0 || fraction >= 1)) return false;
+    if(value.bestDps!==undefined&&(typeof value.bestDps!=='number'||!Number.isFinite(value.bestDps)||value.bestDps<0))return false;
+    if(value.materialRoom!==undefined&&(!Number.isSafeInteger(value.materialRoom)||value.materialRoom<1||!Number.isSafeInteger(value.materialBestRoom)||value.materialBestRoom<0||value.materialRoom>value.materialBestRoom+1))return false;
+    if(value.materialRun!==undefined&&typeof value.materialRun!=='boolean')return false;
+    if(value.normalRunId!==undefined&&(typeof value.normalRunId!=='string'||!/^$|^[a-zA-Z0-9_-]{1,100}$/.test(value.normalRunId)))return false;
+    const skip=value.pendingSkip;if(skip!==undefined&&skip!==null&&(!record(skip)||skip.runId!==value.normalRunId||typeof skip.id!=='string'||!/^tt_skip_[a-zA-Z0-9_-]{1,120}$/.test(skip.id)||!Number.isSafeInteger(skip.gameSecond)||skip.gameSecond<0||!Number.isSafeInteger(skip.from)||!Number.isSafeInteger(skip.to)||skip.from<1||skip.to<=skip.from||skip.to!==value.room||skip.to>Math.floor(value.bestRoom*.40)))return false;
+    const a = value.activeAttempt;
+    return a === null || (record(a) && typeof a.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(a.id) && isMode(a.mode) &&
+      Number.isSafeInteger(a.startedAt) && a.startedAt >= 0 && Number.isSafeInteger(a.deadline) &&
+      (isExp(a.mode)?a.deadline-a.startedAt===LIMITS[a.mode]:a.deadline-a.startedAt>=90000&&a.deadline-a.startedAt<=LIMITS[a.mode]) && a.room === (isExp(a.mode) ? 0 : a.mode===MODES.material?(value.materialRoom||1):value.room));
+  }
+  function load() {
+    let saved; try { saved = JSON.parse(host.localStorage?.getItem(KEY) || 'null'); } catch (_) { saved = null; }
+    return validSave(saved) ? saved : fresh();
+  }
+  let data = load(), bridge = {}, activeBattle = null, deadlineTimer = null, serial = 0;
+  data.normalRunId ||= '';data.pendingSkip ??= null;
+  data.bestDps ||= 0;data.materialRoom ||= 1;data.materialBestRoom ||= 0;
+  // Battles are never resumed with stale HP/passive state after reload/import.
+  const interrupted = Boolean(data.activeAttempt);
+  if (data.activeAttempt?.mode === MODES.normal) {data.room = 1;data.normalRunId='';data.pendingSkip=null;}
+  if(data.materialRun||data.activeAttempt?.mode===MODES.material)data.materialRoom=1;
+  data.materialRun=false;
+  data.activeAttempt = null;
+  function persist() {
+    try { host.localStorage.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; }
+    catch (error) { console.warn('Time Trial save unavailable', error); return false; }
+  }
+  function requirePersist() { if (!persist()) throw new Error('Không thể lưu Time Trial. Chưa thể tiếp tục thao tác.'); }
+  function registerTicket() { host.InventorySystem?.registerItem(TICKET);host.InventorySystem?.registerItem(MATERIAL_TICKET); }
+  registerTicket(); persist();
+  function configure(options = {}) { bridge = options; let changed = false; for (const id of Object.keys(data.xpCarry)) if (bridge.getLevelInfo?.(id)?.level >= host.CardLevelSystem.MAX_LEVEL && data.xpCarry[id]) { data.xpCarry[id] = 0; changed = true; } if (changed) persist(); drainSkip(); }
+  function skipCap(){return Math.floor(data.bestRoom*.40);}
+  function drainSkip(){
+    const event=data.pendingSkip;if(!event)return true;
+    if(bridge.onSkip?.({...event})!==true)return false;
+    data.pendingSkip=null;if(persist())return true;data.pendingSkip=event;return false;
+  }
+  function skipRoom(target){
+    if(bridge.canSkip?.()!==true||host.SandboxSystem?.active||host.PvPSystem?.active||data.activeAttempt||activeBattle&&!activeBattle.finished)return {ok:false,message:'Finish the current activity before skipping.'};
+    if(!Number.isSafeInteger(target)||target<=data.room||target>skipCap())return {ok:false,message:`Choose a room above ${data.room} and at most ${skipCap()} (40% of your best).`};
+    if(!drainSkip())return {ok:false,message:'Quest progress could not be saved. Retry before skipping again.'};
+    const previous=JSON.parse(JSON.stringify(data));data.normalRunId ||= 'tt_'+host.OnlineUtils.token(10);
+    const event={id:'tt_skip_'+data.normalRunId+'_'+target,runId:data.normalRunId,gameSecond:Math.max(0,Math.floor(Number(bridge.clock?.())||0)),from:data.room,to:target};
+    data.room=target;data.pendingSkip=event;
+    if(!persist()){data=previous;return {ok:false,message:'Unable to save the room change.'};}
+    const saved=drainSkip();
+    return {ok:true,room:target,message:`Skipped to Room ${target}. No battle rewards granted.`+(saved?'':' Quest progress is pending a save retry.')};
+  }
+  function detach() {
+    if (deadlineTimer !== null) host.clearTimeout(deadlineTimer);
+    deadlineTimer = null; activeBattle = null; host.TrainingDummySystem.hide();
+  }
+  // A boosted second consumes two seconds of the room's 180-second budget.
+  // Preserve elapsed time when the potion starts/expires; never restart a trial.
+  function syncTiming(battle,now=Date.now()){
+    const run=battle?.trial;if(![MODES.normal,MODES.material].includes(battle?.mode)||!run||run.completed)return;
+    const at=run.clockAt??run.startedAt,until=run.speedUntil||0,elapsed=Math.max(0,now-at);
+    const boosted=Math.max(0,Math.min(now,until)-at);
+    run.timeBudget=Math.max(0,(run.timeBudget??LIMITS[MODES.normal])-elapsed-boosted);run.clockAt=Math.max(at,now);
+    run.speedUntil=speedUntil();const boostedLeft=Math.max(0,run.speedUntil-now);
+    const duration=run.timeBudget<=boostedLeft*2?run.timeBudget/2:run.timeBudget-boostedLeft;
+    const deadline=run.timeBudget<=0?Math.min(run.deadline,now):now+Math.ceil(duration),oldTurn=run.turnMs;
+    run.turnMs=turnMs(battle.mode,now);
+    if(deadline!==run.deadline){run.deadline=deadline;if(data.activeAttempt?.id===run.id)data.activeAttempt.deadline=deadline;
+      if(activeBattle===battle){if(deadlineTimer!==null)host.clearTimeout(deadlineTimer);deadlineTimer=host.setTimeout(checkDeadline,Math.max(0,deadline-now));}}
+    if(oldTurn&&oldTurn!==run.turnMs)bridge.onTimingChange?.(battle,oldTurn,run.turnMs);
+  }
+  function expired(battle, now = Date.now()) { syncTiming(battle,now);return Boolean(battle?.trial && now >= battle.trial.deadline); }
+  function remaining(battle, now = Date.now()) { syncTiming(battle,now);return Math.max(0, (battle?.trial?.deadline || now) - now); }
+  function checkDeadline() {
+    if (activeBattle?.finished) { detach(); return; }
+    if (!activeBattle || !expired(activeBattle)) return;
+    const battle = activeBattle; detach(); bridge.onTimeout?.(battle, isExp(battle.mode)&&battle.playerTeam.some(unit=>unit.hp>0&&!unit.defeated));
+  }
+  function ticketId(mode){return isExp(mode)?TICKET_ID:mode===MODES.material?MATERIAL_TICKET_ID:null;}
+  function currentRoom(mode){return mode===MODES.material?data.materialRoom:data.room;}
+  function bestRoomFor(mode){return mode===MODES.material?data.materialBestRoom:data.bestRoom;}
+  function canEnter(mode) { return isMode(mode) && (!ticketId(mode) || mode===MODES.material&&data.materialRun || host.InventorySystem?.quantity(ticketId(mode)) >= 1); }
+  function roomStats(room, boss = false) {
+    const r = Math.max(1, count(room)), role = boss ? 10 : 1;
+    // Tower-style exponential opening and gentle linear continuation.
+    // 3 minions + a 10x boss: (13000 HP + 2*1300 ATK)*scale.
+    const anchor = 650000 / 15600;
+    const depth = Math.max(0, r - 50);
+    const scale = r <= 50 ? Math.pow(anchor, (r - 1) / 49)
+      : anchor * (1 + .015 * depth + .05 * Math.floor(depth / 10));
+    const hp = Math.max(10, Math.round(Math.min(STAT_LIMIT, 1000 * role * scale)));
+    return { hp, atk: Math.floor(hp * .10) };
+  }
+  function shardRange(room, boss = false) {
+    const multiplier = 1 + Math.floor((Math.max(1, count(room)) - 1) / 10);
+    return { min: (boss ? 2 : 1) * multiplier, max: (boss ? 5 : 2) * multiplier };
+  }
+  function monster() { return host.TrainingDummySystem.create(); }
+  function enemies(mode, player, random = Math.random) {
+    if (isExp(mode)) return [monster(player)];
+    const room=currentRoom(mode),cards = host.ALL_CARDS || [], tower = host.TowerSystem;
+    // Use Tower's pure generator, never its persisted floor encounter.
+    // This preserves rarity pools, elite rooms, exclusions, artwork and passives.
+    const lineup = tower.buildTrialOpponents(cards, room, 'normal', [], random);
+    const used = new Set();
+    return lineup.map((candidate, index) => {
+      // A single draw from a reduced pool resolves duplicates without a retry loop.
+      // The same role/elite rules still apply, including Tower's small-pool fallback.
+      const unit = used.has(candidate.card.id)
+        ? tower.buildTrialOpponents(cards.filter(card => !used.has(card.id)), room, 'normal', [], random)[index] || candidate
+        : candidate;
+      used.add(unit.card.id);
+      const boss = index === 3, stats = roomStats(room, boss);
+      if(mode===MODES.material){stats.hp=Math.min(STAT_LIMIT,stats.hp*3);stats.atk=Math.min(STAT_LIMIT,stats.atk*3);}
+      unit.maxHp = stats.hp; unit.hp = stats.hp; unit.atk = stats.atk;
+      Object.assign(unit.display, stats);
+      unit.isTrialRoomEnemy = true; unit.trialBoss = boss; unit.level = room;
+      return unit;
+    });
+  }
+  function start(battle) {
+    if (!isMode(battle?.mode) || !canEnter(battle.mode)) throw new Error('Cần 1 '+(battle?.mode===MODES.material?'Material Ticket':'EXP Time Trial Ticket')+' để vào lượt thử.');
+    if(battle.mode===MODES.normal&&!drainSkip())throw Error('Unable to save skipped-room quest progress.');
+    detach();
+    const previous = JSON.parse(JSON.stringify(data)), now = Date.now();
+    const attempt = { id: `${now}_${++serial}`, mode: battle.mode, room: isExp(battle.mode) ? 0 : currentRoom(battle.mode),
+      startedAt: now, deadline: now + LIMITS[battle.mode] };
+    const consumeTicket=Boolean(ticketId(battle.mode))&&!(battle.mode===MODES.material&&data.materialRun);
+    if(battle.mode===MODES.material)data.materialRun=true;
+    if(battle.mode===MODES.normal)data.normalRunId ||= 'tt_'+host.OnlineUtils.token(10);
+    data.activeAttempt = attempt;
+    try {
+      requirePersist();
+      if (consumeTicket && !host.InventorySystem.remove(ticketId(battle.mode), 1)) throw new Error('Không thể tiêu vé. Lượt thử chưa bắt đầu.');
+    } catch (error) { data = previous; persist(); throw error; }
+    battle.trial = { ninjaLineup: battle.playerTeam.some(u=>!u.isClone&&!u.isSummoned&&(u.card.category||[]).includes('Ninja')), ...attempt, cardId: battle.setup.team[0].cardId, shardsEarned: 0, monsters: 0,
+      materials:{}, experience: 0, totalDamage: 0, convertedExperience: 0, progressPercent: 0, levelUps: 0, owner: battle.playerTeam[0] };
+    if(!isExp(battle.mode)){
+      Object.assign(battle.trial,{clockAt:now,timeBudget:LIMITS[battle.mode],speedUntil:speedUntil(),turnMs:turnMs(battle.mode)});
+      syncTiming(battle,now);data.activeAttempt.deadline=battle.trial.deadline;
+      requirePersist();
+    }
+    activeBattle = battle;
+    deadlineTimer = host.setTimeout(checkDeadline,remaining(battle,now));
+    return battle.trial;
+  }
+  function settle(battle, random = Math.random) {
+    const run = battle?.trial;
+    if (!run || battle.finished || expired(battle)) return;
+    if(battle.mode===MODES.material){host.MaterialSystem.settle(battle);return;}
+    for (const unit of battle.enemyTeam || []) {
+      if ((!unit.defeated && unit.hp > 0) || unit.trialRewarded) continue;
+      if (!isExp(battle.mode) && unit.isTrialRoomEnemy) {
+        const range = shardRange(run.room, unit.trialBoss);
+        const baseValue = range.min + Math.min(range.max - range.min, Math.floor(random() * (range.max - range.min + 1)));
+        const value = host.InventorySystem.scaleDrop(baseValue, random);
+        const granted = Math.min(value, Number.MAX_SAFE_INTEGER - data.shards);
+        data.shards += granted; run.shardsEarned += granted;
+      } else continue;
+      unit.trialRewarded = true;
+      requirePersist();
+    }
+  }
+  function afterTurn(battle, resolution, side) {
+    if (expired(battle)) return { ended: true, winner: isExp(battle.mode) && battle.playerTeam.some(unit => unit.hp > 0 && !unit.defeated) ? 'player' : 'enemy' };
+    settle(battle);
+    if (!isExp(battle.mode)) return resolution;
+    if (resolution.winner === 'enemy') return resolution;
+    const advanceEnemy = () => {
+      if(expired(battle)||battle.finished)return false;
+      for(const unit of battle.enemyTeam)if(host.TrainingDummySystem.isTarget(battle,unit))host.TrainingDummySystem.restore(unit);
+      return true;
+    };
+    advanceEnemy();
+    bridge.resolveCompanions?.(battle, advanceEnemy);
+    return { ended: false, winner: null };
+  }
+  function prepareAfterEntry(battle) {
+    if(isExp(battle.mode)){host.TrainingDummySystem.restore(battle.enemyTeam[0]);afterTurn(battle,{ended:false,winner:null},'enemy');}
+    else settle(battle);
+  }
+  function finish(battle, won, reason = '') {
+    if (!battle?.trial || battle.trial.completed) return null;
+    if (!isExp(battle.mode) && expired(battle)) won = false;
+    if (won && isExp(battle.mode) && !expired(battle)) return null;
+    if (won && !isExp(battle.mode) && battle.enemyTeam.some(unit => !unit.defeated && unit.hp > 0)) return null;
+    if (reason !== 'save-error') settle(battle);
+    const run = battle.trial;
+    if(isExp(battle.mode)&&won&&expired(battle)&&reason!=='save-error'){
+      run.convertedExperience=host.TrainingDummySystem.expForDamage(run.totalDamage);
+      const info=bridge.getLevelInfo?.(run.cardId);
+      const result=bridge.grantExperience?.(run.cardId,run.convertedExperience,run.owner,run.id);
+      if(!result)throw Error('Không thể lưu EXP luyện tập. Tiến trình cũ được giữ nguyên.');
+      run.experience=result.gained;run.levelUps=result.levelUps;run.progressPercent=info?.required?result.gained/info.required*100:0;
+      run.dps=run.totalDamage/(LIMITS[battle.mode]/1000);run.newDpsRecord=run.dps>data.bestDps;
+      data.bestDps=Math.max(data.bestDps,run.dps);
+    }
+    const previousBest = bestRoomFor(battle.mode);
+    if (!isExp(battle.mode)) {
+      const roomKey=battle.mode===MODES.material?'materialRoom':'room',bestKey=battle.mode===MODES.material?'materialBestRoom':'bestRoom';
+      if (won) { data[bestKey] = Math.max(data[bestKey], run.room); data[roomKey] = Math.min(Number.MAX_SAFE_INTEGER, run.room + 1); }
+      else {data[roomKey] = 1;if(battle.mode===MODES.material)data.materialRun=false;else data.normalRunId='';}
+    }
+    run.completed = true; run.reason = reason || (expired(battle) ? 'time-limit' : won ? 'cleared' : 'defeat');
+    data.activeAttempt = null; detach();
+    if (!persist()) {
+      if (!isExp(battle.mode)) { const mat=battle.mode===MODES.material;data[mat?'materialBestRoom':'bestRoom']=previousBest;data[mat?'materialRoom':'room']=1; }
+      throw new Error('Không thể lưu kết quả Time Trial. Lượt thử đã dừng.');
+    }
+    return { won, exp: isExp(battle.mode), material:battle.mode===MODES.material,materials:{...run.materials},room: run.room, nextRoom: currentRoom(battle.mode), shards: run.shardsEarned,
+      monsters: run.monsters, totalDamage: run.totalDamage, convertedExperience: run.convertedExperience, dps: run.dps||0, bestDps: data.bestDps, newDpsRecord: Boolean(run.newDpsRecord), experience: run.experience, progressPercent: run.progressPercent, levelUps: run.levelUps, reason: run.reason };
+  }
+  function abort(battle, reason = 'surrender') {
+    if(battle?.mode===MODES.material&&data.materialRun&&battle.trial?.completed){data.materialRun=false;data.materialRoom=1;persist();return;}
+    if (!battle?.trial || battle.trial.completed) return;
+    try { finish(battle, false, reason); } catch (error) { console.warn(error.message); }
+  }
+  function purchase(id, quantity = 1) {
+    const offer = SHOP_ITEMS.find(item => item.id === id);
+    if (!offer) return false;
+    return host.ShopBulkSystem.purchase({key:KEY,id,cost:offer.cost,balance:data.shards,count:quantity,
+      setBalance:value=>{data.shards=value;return persist();}});
+  }
+  function renderShop(grid, onPurchase = () => {}) {
+    if (!grid) return;
+    const doc = grid.ownerDocument; grid.replaceChildren();
+    for (const offer of SHOP_ITEMS) {
+      const item = host.InventorySystem.getItem(offer.id) || TICKET;
+      const card = doc.createElement('article'); card.className = 'module-item';
+      const name = doc.createElement('strong'); name.textContent = `${item.icon} ${item.name}`;
+      const description = doc.createElement('p'); description.textContent = item.description;
+      const button = doc.createElement('button'); button.type = 'button'; button.textContent = `Exchange • ${offer.cost} Shards`;
+      button.disabled = host.ShopBulkSystem.blocked;
+      button.addEventListener('click', () => { if (purchase(offer.id,host.ShopBulkSystem.requested(grid))) onPurchase(offer.id); else host.alert('Không thể đổi vật phẩm. Kiểm tra Shards hoặc bộ nhớ lưu game.'); });
+      card.append(name, description, button); grid.append(card);
+    }
+  }
+  function reset() { detach(); data = fresh(); registerTicket(); persist(); }
+  host.TimeTrialSystem = Object.freeze({ KEY, MODES, TURN_MS, turnMs, LIMITS, currentRoom, bestRoomFor, ticketId, MATERIAL_TICKET_ID, MATERIAL_TICKET, TICKET_ID, TICKET, SHOP_ITEMS,
+    configure, skipCap, skipRoom, drainSkip, get normalRunId(){return data.normalRunId;},get pendingSkip(){return data.pendingSkip?{...data.pendingSkip}:null;}, isMode, isExp, canEnter, roomStats, shardRange, enemies, start, prepareAfterEntry, afterTurn, finish, abort,
+    expired, remaining, checkDeadline, detach, purchase, renderShop, validSave, reset, flush: persist,
+    getXpCarry: id => data.xpCarry[id] || 0,
+    clearXpCarry: id => { if (!data.xpCarry[id]) return true; const before=data.xpCarry[id]; delete data.xpCarry[id]; if(persist())return true; data.xpCarry[id]=before;return false; },
+    get materialRun(){return data.materialRun;}, get bestDps(){return data.bestDps;}, get room() { return data.room; }, get bestRoom() { return data.bestRoom; }, get shards() { return data.shards; }, interrupted });
+})(window);

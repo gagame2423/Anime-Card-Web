@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#070811" />
+  <title>Anime Card RNG</title>
+  <link rel="stylesheet" href="./styles.css?v=20261105-evolution-ui-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261105-evolution-ui-1" />
+  <link rel="stylesheet" href="./pvp.css?v=20261105-evolution-ui-1" />
+  <link rel="stylesheet" href="./infinity.css?v=20261105-evolution-ui-1" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <p class="eyebrow">LOCAL SAVE • PLAY INSTANTLY</p>
+        <h1>ANIME CARD <span>RNG</span></h1>
+      </div>
+
+      <nav class="top-actions" aria-label="Game navigation">
+        <div class="currency-box" aria-live="polite">
+          <span class="currency-icon" aria-hidden="true">💵</span>
+          <div>
+            <small>💵 BALANCE</small>
+            <strong id="currencyValue">💵 0</strong>
+          </div>
+        </div>
+
+        <div class="game-clock-box" aria-live="polite">
+          <span class="game-clock-icon" aria-hidden="true">◷</span>
+          <div class="game-clock-copy">
+            <small>GAME TIME</small>
+            <strong id="gameClock">00:00:00</strong>
+            <span id="gameClockStatus">1:1 REAL TIME</span>
+          </div>
+        </div>
+
+        <button id="collectionButton" class="nav-button" type="button" aria-label="Open collection">
+          <span class="nav-icon">▦</span>
+          <span>
+            <small>COLLECTION</small>
+            <strong id="collectionSummary">Cards: 0/0</strong>
+          </span>
+        </button>
+
+        <button id="upgradesButton" class="nav-button accent-button" type="button" aria-label="Open upgrade shop">
+          <span class="nav-icon">↑</span>
+          <span>
+            <small>UPGRADES</small>
+            <strong>Shop</strong>
+          </span>
+        </button>
+
+        <button id="battleButton" class="nav-button battle-button" type="button" aria-haspopup="dialog">
+          <span class="nav-icon">⚔</span>
+          <span>
+            <small>BATTLE</small>
+            <strong>Arena</strong>
+          </span>
+        </button>
+
+        <details id="utilityMenu" class="utility-menu">
+          <summary class="ghost-button utility-menu__trigger" aria-label="More game actions" title="More game actions">⋯</summary>
+          <div class="utility-menu__panel" aria-label="Game utilities">
+            <button id="inventoryOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🧪</span><span><small>STORAGE</small><strong>Items</strong></span></button>
+            <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
+            <button id="cloudLoginOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">☁</span><span><small id="cloudSyncIndicator">Local saved</small><strong>Login</strong></span></button>
+            <button id="leaderboardOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">♛</span><span><small>GLOBAL</small><strong>Leaderboard</strong></span></button>
+            <button id="craftingOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚗</span><span><small>UPGRADE</small><strong>Crafting</strong></span></button>
+            <button id="questOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">?</span><span><small>DISCOVER</small><strong>Quests</strong></span></button>
+            <button id="settingsOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚙</span><span><small>PREFERENCES</small><strong>Game Settings</strong></span></button>
+            <button id="resetButton" class="ghost-button" type="button">Reset</button>
+          </div>
+        </details>
+      </nav>
+    </header>
+
+    <main class="main-stage">
+      <section class="game-layout">
+        <aside id="available-cards-panel" class="available-panel" aria-label="Available rolls">
+          <div class="available-panel__header">
+            <div>
+              <p class="eyebrow">ROLL POOL</p>
+              <h2>Available Cards <span id="availableCardsCount">0</span></h2>
+            </div>
+            <span id="availableCardsMode" class="available-panel__mode">NORMAL</span>
+          </div>
+          <div id="availableCardsList" class="available-cards-list"></div>
+        </aside>
+
+        <div class="game-panel">
+          <section class="weather-hud" aria-label="Active weather">
+            <div class="active-weather">
+              <div class="active-weather__heading">
+                <span class="weather-label">ACTIVE WEATHER</span>
+                <span id="weatherHudEmpty" class="weather-empty">Normal</span>
+              </div>
+              <div id="activeWeatherList" class="active-weather__list"></div>
+            </div>
+          </section>
+
+          <div class="stats-bar">
+            <div class="stat">
+              <span class="stat-label">TOTAL ROLLS</span>
+              <strong id="totalRolls">0</strong>
+            </div>
+            <div class="stat">
+              <span class="stat-label">LUCK</span>
+              <strong id="luckValue">1.00x</strong>
+            </div>
+            <div class="stat">
+              <span class="stat-label">COOLDOWN</span>
+              <strong id="cooldownValue">1.50s</strong>
+              <label class="hide-roll-toggle" for="hideRollingCardToggle"><span>Hide Rolling Card</span><input id="hideRollingCardToggle" type="checkbox" role="switch" aria-describedby="hideRollingCardHint"><span class="hide-roll-track" aria-hidden="true"></span><b id="hideRollingCardState" aria-hidden="true">OFF</b></label>
+              <span id="hideRollingCardHint" class="sr-only">Hide duplicate card visuals. New cards and new mutation variants remain visible until the next roll.</span>
+            </div>
+          </div>
+
+          <!-- Reserved flex area: the roll slot absorbs all remaining height. -->
+          <div id="resultStage" class="result-stage">
+            <div id="resultSlot" class="result-slot">
+              <div id="rollHiddenState" class="empty-state hidden"><div class="empty-icon">◇</div><h2>Card visuals hidden</h2><p>Rolling continues in the background.<br>New cards and new mutations appear here.<br>Counters refresh on a new result or when paused.</p></div>
+              <div id="emptyState" class="empty-state">
+                <div class="empty-icon">✦</div>
+                <h2>Ready to Roll</h2>
+                <p>Hit the button below and test your luck.</p>
+              </div>
+
+              <article id="resultCard" class="tcg-card hidden" aria-live="polite">
+                <div class="tcg-card__foil" aria-hidden="true"></div>
+                <div id="resultCardBorder" class="tcg-card__mutation-border" aria-hidden="true"></div>
+
+                <header class="tcg-card__header">
+                  <div class="tcg-card__title-wrap">
+                    <h2 id="resultName">—</h2>
+                    <span id="resultRarity" class="rarity-badge">—</span>
+                  </div>
+                  <div class="drop-rate">
+                    <span>DROP CHANCE</span>
+                    <strong>1 in <em id="resultChance">—</em></strong>
+                  </div>
+                </header>
+
+                <div id="resultMutationBadges" class="result-mutation-badges" aria-label="Acquired mutations"></div>
+
+                <div class="tcg-art-frame">
+                  <div class="art-backdrop" aria-hidden="true"></div>
+                  <img id="resultImage" class="tcg-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Card artwork" />
+                  <div class="image-fallback" aria-hidden="true">
+                    <span>✦</span>
+                    <small>IMAGE PLACEHOLDER</small>
+                  </div>
+                </div>
+
+                <section class="tcg-card__bottom">
+                  <div class="stat-row">
+                    <div class="stat-box hp-stat">
+                      <span class="stat-icon">♥</span>
+                      <div>
+                        <small>HP</small>
+                        <strong id="resultHp">0</strong>
+                      </div>
+                    </div>
+                    <div class="stat-box atk-stat">
+                      <span class="stat-icon">⚔</span>
+                      <div>
+                        <small>ATK</small>
+                        <strong id="resultAtk">0</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="passive-box">
+                    <div class="passive-heading">
+                      <span class="passive-kicker">PASSIVE SKILL</span>
+                      <strong id="resultPassiveName">—</strong>
+                    </div>
+                    <p id="resultPassiveDescription">—</p>
+                  </div>
+                </section>
+              </article>
+
+              <div id="missState" class="empty-state miss-state hidden">
+                <div class="empty-icon">◇</div>
+                <h2>No Drop</h2>
+                <p>The roll did not hit a card threshold. Try again.</p>
+                <div class="roll-score">Roll score: <strong id="missScore">0</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button id="rollButton" class="roll-button" type="button" aria-disabled="false">
+              <span class="roll-main">ROLL</span>
+              <span id="cooldownLabel" aria-live="polite">READY</span>
+            </button>
+
+            <label class="auto-toggle">
+              <input id="autoRollToggle" type="checkbox" />
+              <span class="switch"></span>
+              <span>AUTO ROLL</span>
+            </label>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress-track">
+              <div id="cooldownProgress" class="progress-fill"></div>
+            </div>
+            <span id="cooldownHint">Cooldown: 1.50 seconds</span>
+          </div>
+
+          <div id="rewardToast" class="reward-toast" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Pure HTML5 • CSS3 • Vanilla JS</span>
+      <span>Game Time runs 1:1 with real elapsed time.</span>
+    </footer>
+  </div>
+
+  <!-- COLLECTION -->
+  <div id="collectionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="collectionModalTitle">
+    <section class="modal-panel collection-modal">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">YOUR CARDS</p>
+          <h2 id="collectionModalTitle">Card Index <span id="collectionModalCount">0/0</span></h2>
+        </div>
+        <div class="collection-header-actions">
+          <button id="indexFiltersButton" class="index-filter-trigger" type="button" aria-label="Sort and filter Card Index" aria-haspopup="dialog" aria-controls="indexFiltersModal" aria-expanded="false" title="Sort and filter">
+            <svg viewBox="0 0 32 32" width="27" height="27" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 25V7m-6 6 6-6 6 6M23 7v18m-6-6 6 6 6-6"/></svg><span id="indexFilterCount" class="index-filter-count" hidden>0</span>
+          </button>
+          <button id="salvageAllExtraDuplicatesButton" class="bulk-salvage-button" type="button">♻ Salvage All Extra Duplicates</button>
+          <button class="modal-close" data-close-modal="collectionModal" type="button" aria-label="Close collection">×</button>
+        </div>
+      </header>
+
+      <div class="collection-toolbar">
+        <input id="searchInput" class="search-input" type="search" placeholder="Search card, passive, or mutation..." />
+        <select id="mutationFilter" class="select-input" aria-label="Filter by mutation tier">
+          <option value="all">All Mutation Tiers</option>
+          <option value="normal">Normal</option>
+          <option value="wet">Wet</option>
+          <option value="solar">Solar</option>
+          <option value="frost">Frost</option>
+          <option value="eclipsed">Eclipsed</option>
+          <option value="sweat">Sweet (Sweat)</option>
+          <option value="monarch">Monarch</option>
+          <option value="angelic">Angelic</option>
+          <option value="mangekyo">Mangekyo</option>
+          <option value="hollow">Hollow</option>
+          <option value="cursed">Cursed</option>
+          <option value="clove">Clove</option><option value="storm">Storm</option><option value="stardust">Stardust</option>
+          <option value="multi">Multi-Mutations</option>
+          <option value="active">Active Mutation</option>
+        </select>
+      </div>
+
+      <p id="indexFilterSummary" class="index-filter-summary" role="status">RARITY ↓</p>
+      <div id="collectionGrid" class="collection-grid"></div>
+    </section>
+  </div>
+
+  <!-- Index-only sort/filter dialog; choices are drafts until APPLY. -->
+  <div id="indexFiltersModal" class="modal-backdrop hidden index-filters-backdrop" role="dialog" aria-modal="true" aria-labelledby="indexFiltersTitle">
+    <section class="modal-panel index-filters-panel">
+      <header class="modal-header"><div><p class="eyebrow">CARD INDEX</p><h2 id="indexFiltersTitle">Sort &amp; Filter</h2></div><button id="indexFiltersClose" class="modal-close" type="button" aria-label="Cancel filter changes">×</button></header>
+      <div class="index-filters-body">
+        <section class="index-filter-section" aria-labelledby="indexSortHeading"><h3 id="indexSortHeading">SORT BY:</h3><div id="indexSortOptions" class="index-sort-options" role="group" aria-label="Sort cards"></div></section>
+        <section class="index-filter-section" aria-labelledby="indexElementHeading"><h3 id="indexElementHeading">ELEMENT:</h3><div id="indexElementOptions" class="index-element-options" role="group" aria-label="Select elements"></div></section>
+        <section class="index-filter-section" aria-labelledby="indexRarityHeading"><h3 id="indexRarityHeading">RARITIES:</h3><div id="indexRarityOptions" class="index-rarity-options" role="group" aria-label="Select rarities"></div></section>
+        <section class="index-filter-section" aria-labelledby="indexCategoryHeading"><div class="index-category-heading"><h3 id="indexCategoryHeading">CATEGORIES:</h3><input id="indexCategorySearch" type="search" placeholder="Search categories..." aria-label="Search category tags" autocomplete="off"></div><p id="indexFilterDraftStatus" class="index-filter-hint" role="status"></p><div id="indexCategoryOptions" class="index-category-options" role="group" aria-label="Select categories"></div><p id="indexCategoryEmpty" class="index-filter-hint" hidden>No categories match your search.</p></section>
+      </div>
+      <footer class="index-filter-actions"><button id="indexFiltersReset" class="ghost-button" type="button">Reset</button><button id="indexFiltersCancel" class="ghost-button" type="button">Cancel</button><button id="indexFiltersApply" class="index-filter-apply" type="button">APPLY</button></footer>
+    </section>
+  </div>
+
+  <!-- Index card details: one shared card, selectable mutation previews. -->
+  <div id="cardPreviewModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cardPreviewTitle">
+    <section class="modal-panel card-preview-modal index-details-modal">
+      <header class="modal-header"><div><p class="eyebrow">CARD INDEX</p><h2 id="cardPreviewTitle">Card Details</h2></div><button class="modal-close" data-close-modal="cardPreviewModal" type="button" aria-label="Close card details">×</button></header>
+      <article id="previewCard" class="index-details-card">
+        <header class="tcg-card__header details-heading"><div><h2 id="previewName">—</h2><span id="previewLevel">Lv. 1</span> · <span id="previewRarity">—</span></div><strong id="previewVariantCount" class="details-quantity">x0</strong><button id="previewEquipButton" type="button" class="battle-primary-button">EQUIP</button></header>
+        <div class="details-hero">
+          <div class="tcg-art-frame details-art"><div class="art-backdrop" aria-hidden="true"></div><img id="previewImage" class="tcg-art" alt="Card artwork"><div class="image-fallback"><span>✦</span><small>ARTWORK</small></div><button id="previewRelicSlot" class="details-relic-slot" type="button" aria-label="Equipped Relic">◆</button></div>
+          <div class="details-tools"><button id="previewLockButton" type="button" aria-pressed="false" class="details-lock">Unlock</button><button id="previewFeedButton" class="preview-action-button preview-action-button--feed" type="button">Feed</button><label class="details-mutation">Mutation<select id="previewMutationSelect" aria-label="Preview owned mutation"></select></label><div class="details-variant-actions"><div class="details-variant-info"><strong id="previewVariantLabel">Normal</strong><div id="previewMutationBadges" class="result-mutation-badges"></div><span id="previewCollectedCount"></span></div><button id="previewEvolveButton" class="details-evolve-button" type="button" aria-haspopup="dialog" aria-controls="evolutionModal" hidden>Evolve</button></div></div>
+        </div>
+        <div class="preview-level-row"><span id="previewExpText"></span></div><div class="preview-exp-track"><div id="previewExpBar" class="preview-exp-fill"></div></div>
+        <div class="details-stats"><div><small>ATK</small><strong id="previewAtk">0</strong></div><div><small>HP</small><strong id="previewHp">0</strong></div></div>
+        <div id="previewAbilityTags" class="details-ability-tags" aria-label="Passive mechanics"></div>
+        <div id="previewCategories" class="details-categories" aria-label="Card categories"></div>
+        <section class="passive-box"><div class="passive-heading"><span class="passive-kicker">PASSIVE SKILL</span><strong id="previewPassiveName">—</strong></div><p id="previewPassiveDescription">—</p></section>
+        <p id="previewRequirement" class="preview-requirement"></p>
+        <footer class="preview-actions details-salvage"><button id="previewSalvageButton" class="preview-action-button preview-action-button--salvage" type="button">Salvage 1 Copy</button><button id="previewSalvageExtrasButton" class="preview-action-button preview-action-button--extra" type="button">Salvage Extra Duplicate</button></footer>
+      </article>
+    </section>
+  </div>
+  <div id="cardRelicPicker" class="modal-backdrop hidden card-relic-picker" role="dialog" aria-modal="true" aria-labelledby="cardRelicPickerTitle"><section class="modal-panel"><header class="modal-header"><h2 id="cardRelicPickerTitle">Equip Relic</h2><button id="cardRelicPickerClose" class="modal-close" type="button" aria-label="Close Relic selection">×</button></header><p>One Relic per card, shared across every mutation.</p><div id="cardRelicList" class="card-relic-list"></div><button id="cardRelicUnequip" class="ghost-button" type="button">Unequip</button><p id="cardRelicStatus" role="status"></p></section></div>
+
+  <div id="feedFoodModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="feedFoodTitle">
+    <section class="modal-panel feed-food-modal">
+      <header class="modal-header"><h2 id="feedFoodTitle">Feed XP Food</h2><button type="button" class="modal-close" data-close-modal="feedFoodModal" aria-label="Close Feed XP Food">×</button></header>
+      <div class="feed-food-layout">
+        <aside class="feed-unit"><div class="feed-art"><img id="feedCardImage" alt="Selected card"><span id="feedCardFallback">Card</span></div><h3 id="feedCardName"></h3><strong id="feedCardLevel">Lvl 1/100</strong><p id="feedCardExp"></p><progress id="feedCardProgress" max="1" value="0" aria-label="Card level progress"></progress></aside>
+        <section class="feed-food-selector"><div class="feed-preview"><h3>These items will be used!</h3><div id="feedSelectedItems" class="feed-selected-items"></div><p id="feedExpPreview"></p></div><div class="feed-quick-actions"><button type="button" id="feedAddAll">Add All</button><button type="button" id="feedRemoveAll">Remove All</button></div><div id="feedFoodGrid" class="feed-food-grid"></div></section>
+      </div>
+      <p id="feedFoodStatus" class="feed-food-status" role="status" aria-live="polite"></p><footer class="feed-food-actions"><button type="button" id="feedConfirm">Feed</button><button type="button" data-close-modal="feedFoodModal">Cancel</button></footer>
+    </section>
+  </div>
+
+  <!-- ACHIEVEMENTS: independent tracking, permanent milestone rewards -->
+  <div id="achievementModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="achievementModalTitle">
+    <section class="modal-panel module-modal achievement-modal">
+      <header class="modal-header"><div><p class="eyebrow">YOUR JOURNEY</p><h2 id="achievementModalTitle">🏆 Achievements</h2></div><button data-close-modal="achievementModal" class="modal-close" type="button" aria-label="Close achievements">×</button></header>
+      <p class="module-description">Milestones keep your best progress after spending or salvage. Floor 100 Champion cards are awarded automatically and unlock permanently for future rolls.</p>
+      <div class="achievement-toolbar"><span id="achievementSummary" aria-live="polite"></span><label><span class="sr-only">Achievement category</span><select id="achievementCategory"><option value="all">All milestones</option><option value="collection">Collection</option><option value="battles">Battle wins</option><option value="currency">VNĐ milestones</option><option value="rolls">Total rolls</option><option value="tower">Tower progress</option><option value="timetrial">Time Trial rooms</option><option value="raid">Total Raid wins</option><option value="boss">Total Boss Event clears</option><option value="spooky">Spooky Event</option></select></label></div>
+      <div id="achievementList" class="achievement-grid" aria-label="Achievements and rewards"></div>
+    </section>
+  </div>
+  <div id="cloudAccountModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cloudAccountTitle">
+    <section class="modal-panel online-modal">
+      <header class="modal-header"><div><p class="eyebrow">OPTIONAL GOOGLE SYNC</p><h2 id="cloudAccountTitle">Cloud Account</h2></div><button class="modal-close" type="button" data-close-modal="cloudAccountModal" aria-label="Close Cloud Account">×</button></header>
+      <div class="online-content"><h3 id="cloudAccountName">Local player</h3><p id="cloudUid" class="online-muted"></p><p id="cloudStatus" class="online-status" role="status" aria-live="polite">Progress is saved on this device.</p>
+        <div class="online-actions"><button id="cloudGoogleButton" type="button" class="online-primary">Sign in with Google</button><button id="cloudSyncButton" type="button">Upload Local Save</button><button id="cloudLogoutButton" type="button" hidden>Disconnect Google</button><button id="cloudReloadButton" type="button" hidden>Load Cloud Save</button></div>
+        <label class="online-field">Leaderboard display name<input id="cloudDisplayName" maxlength="40" placeholder="Your public player name" autocomplete="nickname"></label>
+        <p class="online-muted">Play immediately with this device’s local save. Google sync is optional. Sign-in, sign-out and connection changes never replace local progress. Upload Local Save backs up this copy; Load Cloud Save replaces it only when you choose that action. Pause auto-roll and finish battles before loading.</p>
+      </div>
+    </section>
+  </div>
+  <div id="leaderboardModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle"><section class="modal-panel online-modal"><header class="modal-header"><h2 id="leaderboardTitle">Global Leaderboard</h2><button class="modal-close" type="button" data-close-modal="leaderboardModal" aria-label="Close leaderboard">×</button></header><div class="online-content"><div class="online-actions"><label class="online-field">Top 50 by<select id="leaderboardMetric"><option value="totalRolls">Total Rolls</option><option value="strongestPower">Strongest Card</option><option value="timeTrialRoom">Normal Time Trial Room</option><option value="infinity">Infinity • This Week</option></select></label><button id="leaderboardRefresh" type="button">Refresh</button></div><p id="leaderboardStatus" role="status"></p><div id="leaderboardList" class="leaderboard-list"></div></div></section></div>
+  <!-- ITEMS: separate persistence from card ownership -->
+  <div id="inventoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="inventoryModalTitle">
+    <section class="modal-panel module-modal storage-modal">
+      <header class="modal-header storage-header"><div><p class="eyebrow">PERSISTENT STORAGE</p><h2 id="inventoryModalTitle">Item Storage</h2></div><button data-close-modal="inventoryModal" class="modal-close" type="button" aria-label="Close inventory">×</button></header>
+      <div class="storage-body">
+        <nav class="storage-sidebar" aria-label="Storage categories" role="tablist">
+          <button type="button" role="tab" class="is-active" aria-selected="true" data-storage-tab="items">Items</button>
+          <button type="button" role="tab" aria-selected="false" data-storage-tab="portals">Portals</button>
+          <button type="button" role="tab" aria-selected="false" data-storage-tab="exp_food">EXP Food</button>
+          <button type="button" role="tab" aria-selected="false" data-storage-tab="equipment">Equipment</button>
+          <button type="button" role="tab" aria-selected="false" data-storage-tab="material">Material</button>
+          <button type="button" role="tab" aria-selected="false" data-storage-tab="relic">Relic</button>
+          <p data-storage-equipped class="storage-current-slot">Equipment slot: empty · 0 / 1</p>
+        </nav>
+        <div class="storage-center"><label class="storage-search" for="inventorySearch"><span class="sr-only">Search items</span><input id="inventorySearch" type="search" placeholder="Search..." autocomplete="off"></label><button id="portalJoinStorage" type="button" class="ghost-button" hidden>Join Portal Party</button><div id="storageSalesControls" class="storage-sales" hidden><span id="storageMarkedCount">0 selected · Sale reward: 0</span><button id="storageSelectPage" type="button" class="ghost-button">Select page</button><button id="storageClearMarked" type="button" class="ghost-button">Clear selection</button><button id="storageSellMarked" type="button" disabled>Sell selected</button></div><div id="potionInventoryList" class="storage-grid" aria-label="Stored items"></div><div id="storagePortalPagination" class="portal-pagination" hidden><button id="storagePortalPrev" class="ghost-button" type="button">Previous</button><span id="storagePortalPage"></span><button id="storagePortalNext" class="ghost-button" type="button">Next</button></div><p id="dropChanceDisplay" class="storage-status"></p></div>
+        <aside class="storage-detail"><div><h3 data-storage-title>Select an item</h3><p data-storage-type class="storage-type"></p><p data-storage-owned></p></div><div data-storage-art class="storage-detail-art"></div><p data-storage-description class="storage-description"></p><p data-storage-timer class="storage-timer"></p><p data-storage-result class="storage-result" role="status" hidden></p><div class="storage-detail-actions"><button type="button" data-storage-action hidden>Use Potion</button><button id="storageSellSingle" type="button" class="ghost-button" hidden>Sell item · No reward</button><button type="button" data-storage-info class="storage-source-button" disabled aria-label="View selected item sources">◉ Source Info</button></div></aside>
+      </div>
+    </section>
+  </div>
+  <div id="itemSourceModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="itemSourceTitle"><section class="modal-panel module-modal item-source-modal"><header class="modal-header"><h2 id="itemSourceTitle">Item Sources</h2><button type="button" class="modal-close" data-close-modal="itemSourceModal" aria-label="Close item sources">×</button></header><ul id="itemSourceList" class="item-source-list"></ul></section></div>
+  <!-- TOWER SHOP -->
+  <div id="towerShopModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="towerShopTitle">
+    <section class="modal-panel module-modal"><header class="modal-header"><div><p class="eyebrow">FLOOR REWARDS</p><h2 id="towerShopTitle">🏰 Tower Shop</h2></div><button data-close-modal="towerShopModal" class="modal-close" type="button" aria-label="Close tower shop">×</button></header>
+      <p class="module-description" id="towerCoinBalance">🪙 0 Tower Coins</p>
+      <div id="towerShopItems" class="module-grid"></div>
+    </section>
+  </div>
+  <!-- ELEMENT RELATIONSHIPS -->
+  <div id="elementChartModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="elementChartTitle">
+    <section class="modal-panel element-chart-modal"><header class="modal-header"><div><p class="eyebrow">COMBAT GUIDE</p><h2 id="elementChartTitle">Element Damage</h2></div><button class="modal-close" data-close-modal="elementChartModal" type="button" aria-label="Close element chart">×</button></header>
+      <img class="element-chart-full" src="assets/elemental.png" width="500" height="500" alt="Fire → Nature → Electric → Water → Fire; Holy ↔ Dark">
+      <p>Advantage <strong>x3</strong> • Disadvantage <strong>1/3</strong> • Neutral / Same <strong>100%</strong></p>
+      <p>Holy → Dark <strong>x3</strong> and Dark → Holy <strong>x3</strong>. Elements do not grant passives.</p>
+    </section>
+  </div>
+  <!-- SOLO BATTLE -->
+  <div id="battleModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="battleModalTitle">
+    <section class="modal-panel battle-modal">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">SOLO COMBAT</p>
+          <div class="arena-title-row"><h2 id="battleModalTitle">⚔ Battle Arena</h2><button id="sandboxOpenButton" type="button" class="ghost-button sandbox-entry" aria-haspopup="dialog" aria-controls="sandboxModal">SANDBOX MODE</button></div>
+        </div>
+        <div class="battle-header-controls">
+          <label class="battle-auto-continue" for="autoContinueBattleToggle">
+            <span>Auto Continue Battle</span>
+            <input id="autoContinueBattleToggle" type="checkbox" role="switch" aria-describedby="autoContinueBattleHint" />
+            <span class="battle-auto-continue__track" aria-hidden="true"></span>
+            <b id="autoContinueBattleState" aria-hidden="true">OFF</b>
+          </label>
+          <span id="autoContinueBattleHint" class="sr-only">After victory or defeat, continue with this lineup after 1.5 seconds. Stops on exit, missing cards, or insufficient entry keys/tickets.</span>
+          <button id="elementChartOpenButton" class="arena-element-chart" type="button" aria-label="Open element damage chart" aria-haspopup="dialog" aria-controls="elementChartModal"><img src="assets/elemental.png" width="100" height="100" alt="Fire counters Nature; Nature counters Electric; Electric counters Water; Water counters Fire; Holy and Dark counter each other"><span>ELEMENTS ⤢</span></button>
+          <button id="battleCloseButton" class="modal-close" type="button" aria-label="Exit battle and forfeit">×</button>
+        </div>
+      </header>
+
+      <div class="battle-setup" id="battleSetup">
+        <div class="battle-setup-card">
+          <div class="battle-setup-head">
+            <div>
+              <span class="battle-field-label">CHOOSE BATTLE MODE</span>
+              <p>Pick 1v1 for adaptive solo combat or 4v4 for the full team battle.</p>
+            </div>
+            <span class="battle-setup-hint">TEAM <b id="battleTeamCount">0/4</b></span>
+          </div>
+
+          <div id="battleModePicker" class="battle-mode-picker" role="group" aria-label="Battle mode">
+            <button type="button" class="battle-mode-option is-selected" data-battle-mode="4v4" aria-pressed="true">
+              <strong>4v4</strong>
+              <span>Full team combat • boosted rewards</span>
+            </button>
+            <button type="button" class="battle-mode-option" data-battle-mode="1v1" aria-pressed="false">
+              <strong>1v1</strong>
+              <span>Adaptive enemy • anti-inflation scaling</span>
+            </button>
+            <button type="button" class="battle-mode-option" data-battle-mode="tower" aria-pressed="false"><strong>🏰 TOWER</strong><span>Infinite floors • 4v4 • Tower Coins</span></button>
+            <button id="timeTrialOpenButton" type="button" class="battle-mode-option" aria-pressed="false" aria-haspopup="dialog" aria-controls="timeTrialModeModal"><strong>⏱ TIME TRIAL</strong><span id="timeTrialModeHint">Choose Normal or EXP</span></button>
+            <button type="button" class="battle-mode-option" data-battle-mode="raid" aria-pressed="false"><strong>⚓ RAID</strong><span>Marine Ford / Holy Grail</span></button>
+            <button type="button" class="battle-mode-option" data-battle-mode="boss-event" aria-pressed="false"><strong>🩸 BOSS EVENT</strong><span id="bossEventRotationHint">12-hour rotation • 5 vs 1</span></button>
+            <button id="pvpOpenButton" type="button" class="battle-mode-option" aria-haspopup="dialog" aria-controls="pvpModal"><strong>🌐 ONLINE PVP</strong><span>1v1 / 4v4 • Blind Pick • Level 1 • No rewards</span></button>
+            <button id="infinityOpenButton" type="button" class="battle-mode-option" aria-haspopup="dialog" aria-controls="infinityModal"><strong>∞ INFINITY</strong><span>Weekly Category • Continuous 4v4 • Star Orbs</span></button>
+            <button id="spookyModeButton" type="button" class="battle-mode-option spooky-mode" data-battle-mode="spooky-hunt" aria-pressed="false"><strong>🎃 SPOOKY HUNT</strong><span id="spookyModeHint">October • 6vs3 • 50 waves</span></button>
+          </div>
+          <div id="spookyControls" class="spooky-controls hidden">
+            <strong id="spookyAvailability" role="status"></strong><strong id="spookyWaveDisplay">Wave 1 / 50</strong><strong id="spookyBalance">0 Spooky Coins</strong>
+            <div class="spooky-control-actions"><button id="spookyChooseButton" type="button" class="tower-shop-button hidden">Choose run modifier</button><button id="spookyInfoSetupButton" type="button" class="ghost-button">... Run Modifiers</button><button id="spookyShopOpenButton" type="button" class="tower-shop-button">🎃 Spooky Shop</button></div>
+            <p>6vs3 • October 1–31 (Asia/Bangkok) • 50 waves • No VNĐ / EXP • Manual Continue only. Select a permanent run modifier before Waves 5, 10, ... 50.</p><p id="spookyRewardPreview"></p>
+          </div>
+          <div id="bossEventControls" class="boss-event-controls hidden">
+            <strong id="bossEventActiveName" class="boss-event-active-name">Active Boss Event</strong>
+            <strong id="bossEventAvailability" role="status"></strong>
+            <label class="raid-difficulty" for="bossEventDifficulty">Difficulty <output id="bossEventDifficultyValue">1 • Boss Lv.1</output><input id="bossEventDifficultyNumber" class="difficulty-number" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" aria-label="Exact difficulty (1 to 1000)">
+              <input id="bossEventDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
+            <strong id="bossEventBalance"></strong><button id="bossEventShopOpenButton" class="tower-shop-button" type="button">🩸 Event Shop</button>
+            <p id="bossEventRules"></p><p id="bossEventStats"></p>
+          </div>
+          <div id="timeTrialControls" class="time-trial-controls hidden">
+            <strong id="timeTrialProgress">Room 1</strong><span id="timeTrialBalance">0 Shards</span>
+            <button id="timeTrialShopOpenButton" class="tower-shop-button" type="button">◆ Time Trial Shop</button>
+            <div id="timeTrialSkipControls" class="time-trial-skip" hidden><label for="timeTrialSkipRoom">Skip to Room</label><input id="timeTrialSkipRoom" type="number" min="2" step="1" inputmode="numeric" aria-describedby="timeTrialSkipHint"><button id="timeTrialSkipButton" class="tower-shop-button" type="button">Skip Room</button><small id="timeTrialSkipHint"></small><span id="timeTrialSkipStatus" role="status" aria-live="polite"></span></div>
+            <p id="timeTrialRules"></p>
+          </div>
+          <div id="raidControls" class="raid-controls hidden">
+            <label for="raidTypeSelect">Raid type</label><select id="raidTypeSelect" class="select-input"><option value="marine_fort">Marine Ford Raid</option><option value="holy_grail">Holy Grail Raid</option><option value="shibuya">Shibuya Raid</option><option value="akatsuki">Akatsuki Raid</option></select>
+            <label class="raid-difficulty" for="raidDifficulty">Difficulty <output id="raidDifficultyValue">1 • Enemy Lv.1</output><input id="raidDifficultyNumber" class="difficulty-number" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" aria-label="Exact difficulty (1 to 1000)">
+              <input id="raidDifficulty" type="range" min="1" max="1000" step="1" value="1"></label>
+            <strong id="raidBalances"></strong><button id="raidShopOpenButton" class="tower-shop-button" type="button">⚓ Raid Shop</button>
+            <p id="raidRules"></p>
+            <details class="raid-enemy-preview"><summary id="raidEnemyPreviewTitle">Preset boss lineup • 10 opponents</summary><ol id="raidEnemyPreview"></ol></details>
+          </div>
+          <div id="towerBattleControls" class="tower-controls hidden">
+            <label for="towerWeatherSelect">Tower type</label>
+            <select id="towerWeatherSelect" class="select-input" aria-label="Tower weather" aria-describedby="towerWeatherRules towerEnemyRules towerRewardHint"></select>
+            <strong id="towerFloorDisplay">Floor 1 • ∞</strong>
+            <div class="tower-rule-hints" aria-live="polite"><p id="towerWeatherRules">Your team: any owned card or mutation.</p><p id="towerEnemyRules">Enemy team: any element.</p><p id="towerRewardHint"></p></div>
+            <button id="towerShopOpenButton" class="tower-shop-button" type="button">🪙 Tower Shop</button>
+          </div>
+
+          <fieldset id="aquaBattleChoice" class="aqua-battle-choice hidden"><legend>Aqua • Useless</legend>
+            <label><input type="radio" name="aquaBattleMode" value="hp" checked /> +50% team HP</label>
+            <label><input type="radio" name="aquaBattleMode" value="rewards" /> +50% drop reward bonus</label>
+          </fieldset>
+          <div class="battle-team-builder">
+            <div class="battle-team-builder__head">
+              <span class="battle-field-label">TEAM LINEUP</span>
+              <span class="battle-variant-section__note">Click a slot to edit it.</span>
+            </div>
+            <div id="teamLoadouts" class="team-loadouts" aria-label="Saved team presets">
+              <div class="team-loadouts__presets" role="group" aria-label="Choose preset"><button type="button" data-team-preset="preset1" aria-pressed="true">Preset 1</button><button type="button" data-team-preset="preset2" aria-pressed="false">Preset 2</button><button type="button" data-team-preset="preset3" aria-pressed="false">Preset 3</button></div>
+              <div class="team-loadouts__actions"><button id="saveTeamLoadout" type="button">Save Current Team</button><button id="loadTeamLoadout" type="button">Load</button><small id="teamLoadoutStatus" role="status"></small></div>
+            </div>
+            <div id="battleTeamSlots" class="battle-team-slots" aria-label="Battle team slots"></div>
+          </div>
+
+          <div class="battle-card-picker-head">
+            <div>
+              <span class="battle-field-label">YOUR UNLOCKED CARDS</span>
+              <span class="battle-setup-hint">SELECT / REPLACE</span>
+            </div>
+            <div class="battle-card-picker-tools" aria-label="Search and sort battle cards">
+              <label class="battle-card-search">
+                <span class="sr-only">Search unlocked cards</span>
+                <input id="cardSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="Search cards..." aria-label="Search unlocked cards" />
+              </label>
+              <select id="battleElementFilter" class="select-input" aria-label="Filter lineup cards by element"><option value="all">All Elements</option><option value="Fire">Fire</option><option value="Water">Water</option><option value="Nature">Nature</option><option value="Electric">Electric</option><option value="Dark">Dark</option><option value="Holy">Holy</option></select>
+              <select id="battleCategoryFilter" class="select-input" aria-label="Filter cards by category"><option value="all">All Categories</option></select>
+              <label class="battle-card-sort">
+                <span class="sr-only">Sort unlocked cards</span>
+                <select id="cardSortSelect" aria-label="Sort unlocked cards">
+                  <option value="atk">Attack: High → Low</option>
+                  <option value="hp">HP: High → Low</option>
+                  <option value="name">Name: A → Z</option>
+                  <option value="rarity">Rarity / Value: High → Low</option>
+                  <option value="element">Element: Fire → Holy</option>
+                <option value="category">Category</option></select>
+              </label>
+            </div>
+          </div>
+          <div id="battleFighterGrid" class="battle-fighter-grid" aria-label="Unlocked battle fighters"></div>
+
+          <div class="battle-variant-section">
+            <div class="battle-variant-section__head">
+              <span class="battle-field-label">MUTATION VARIANT FOR ACTIVE SLOT</span>
+              <span class="battle-variant-section__note">Mutation multipliers apply to battle stats.</span>
+            </div>
+            <div id="battleVariantGrid" class="battle-variant-grid" aria-label="Owned mutation variants"></div>
+          </div>
+
+          <div id="battleFighterPreview" class="battle-selection-preview">
+            <span>Select a team slot to begin.</span>
+          </div>
+
+          <button id="battleStartButton" class="battle-primary-button" type="button">Start 4v4 Battle</button>
+        </div>
+      </div>
+
+      <div class="battle-arena hidden" id="battleArena">
+        <section id="portalArenaHud" class="arena-run-hud portal-arena-hud" hidden aria-label="Portal battle">
+          <div class="arena-run-hud__heading"><strong id="portalCombatWave">NAMEK PORTAL</strong><span id="portalCombatAttempts"></span></div>
+          <p id="portalCombatModifiers"></p><p id="portalCombatResult" role="status"></p>
+          <div class="arena-run-hud__actions"><span>Shared Arena · Solo / Online Co-op</span><button id="portalRetrySave" class="ghost-button" type="button" hidden>Retry Save</button><button id="portalBattleExit" class="ghost-button" type="button">Exit Portal</button></div>
+        </section>
+        <section id="infinityArenaHud" class="arena-run-hud" aria-label="Infinity run" hidden>
+          <div class="arena-run-hud__heading"><strong id="infinityWave">Wave 1 - Continuous</strong><span id="infinityRunState">INFINITY</span></div>
+          <div class="arena-run-hud__badges"><span id="infinityWeekBadge"></span><span id="infinityCategoryBadge"></span><span id="infinityElementBadge"></span></div>
+          <div class="arena-run-hud__progress"><span id="infinityRunProgress"></span><strong id="infinityOrbTracker">Star Orbs +0</strong></div>
+          <progress id="infinityBestBar" max="1" value="0" aria-label="Current run versus weekly best"></progress>
+          <div class="arena-run-hud__actions"><span id="infinityArenaMessage" role="status"></span><button id="infinityRestart" class="ghost-button" type="button" hidden>New Run • Wave 1</button><button id="infinityArenaLeaderboard" class="ghost-button" type="button" hidden>Weekly Top 50</button><button id="infinityArenaExit" class="ghost-button" type="button">Exit Infinity</button></div>
+        </section>
+        <section id="trainingDamageHud" class="training-damage-hud" aria-label="EXP training damage meter" hidden>
+          <div><span class="eyebrow">EXP TRAINING</span><strong>Total Damage: <b id="trainingDamageTotal" data-total="0">0</b></strong></div><div class="training-damage-hud__records"><span id="trainingDamageDps">DPS 0</span><span id="trainingDamageBest">Best DPS 0</span></div>
+        </section>
+        <div class="battle-arena__header">
+          <div>
+            <span class="eyebrow">ANIME CARD CLASH</span>
+            <h3>Standoff</h3>
+          </div>
+          <button id="spookyInfoBattleButton" class="ghost-button spooky-info-button hidden" type="button" aria-label="View active Spooky run modifiers" aria-haspopup="dialog" aria-controls="spookyInfoModal">...</button><strong id="spookyLiveCoins" class="hidden"></strong>
+          <strong id="timeTrialTimer" class="trial-timer hidden" aria-live="off"></strong>
+          <div class="battle-timing-controls"><div id="battleStatus" class="battle-status" aria-live="polite">PLAYER STRIKE IN 3s</div><label id="spookySpeedUpControl" class="spooky-speed-switch hidden" for="spookySpeedUpToggle"><span>Speed Up <small id="spookySpeedUpState">OFF • 2s / turn</small></span><input id="spookySpeedUpToggle" type="checkbox" role="switch"></label></div>
+        </div>
+
+        <div class="battle-combatants">
+          <article id="battlePlayerCard" class="battle-visual-card battle-player" aria-label="Player fighter">
+            <div class="battle-visual-card__glow"></div>
+            <div class="battle-side-label">PLAYER</div>
+            <div class="battle-art-frame">
+              <div id="battlePlayerBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
+              <img id="battlePlayerImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Player fighter artwork" />
+              <div id="battlePlayerFallback" class="battle-fallback" aria-hidden="true">✦</div>
+              <div id="battlePlayerFloatingText" class="battle-floating-text" aria-live="polite" aria-label="Player combat feedback"></div>
+            </div>
+            <div class="battle-card-info">
+              <h3 id="battlePlayerName">—</h3>
+              <div class="battle-level-row"><strong id="battlePlayerLevel">Lv. 1</strong><span id="battlePlayerExpText">0/100 EXP</span></div>
+              <div class="battle-exp-track"><div id="battlePlayerExpBar" class="battle-exp-fill"></div></div>
+              <div id="battlePlayerMutationBadges" class="battle-mutation-badges"></div>
+              <div id="battlePlayerPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Player passive status"></div>
+              <div class="battle-hp-meta"><span>HP</span><strong id="battlePlayerHp">0 / 0</strong></div>
+              <div class="battle-hp-track"><div id="battlePlayerHpBar" class="battle-hp-fill"></div></div>
+              <div class="battle-stats-row"><span>ATK</span><strong id="battlePlayerAtk">0</strong></div>
+              <div id="battlePlayerCombatStatus" class="battle-combat-status" aria-label="Player combat modifiers"></div>
+              <div id="battlePlayerStatusEffects" class="battle-status-effects" aria-label="Player status effects"></div>
+            </div>
+          </article>
+
+          <div class="battle-vs" aria-hidden="true">
+            <span>VS</span>
+            <i></i>
+          </div>
+
+          <article id="battleEnemyCard" class="battle-visual-card battle-enemy" aria-label="Enemy fighter">
+            <div class="battle-visual-card__glow"></div>
+            <div class="battle-side-label">ENEMY</div>
+            <div class="battle-art-frame">
+              <div id="battleEnemyBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
+              <img id="battleEnemyImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Enemy fighter artwork" />
+              <div id="battleEnemyFallback" class="battle-fallback" aria-hidden="true">✦</div>
+              <div id="battleEnemyFloatingText" class="battle-floating-text" aria-live="polite" aria-label="Enemy combat feedback"></div>
+            </div>
+            <div class="battle-card-info">
+              <h3 id="battleEnemyName">—</h3>
+              <div class="battle-level-row"><strong id="battleEnemyLevel">Lv. 1</strong><span id="battleEnemyExpText">0/100 EXP</span></div>
+              <div class="battle-exp-track"><div id="battleEnemyExpBar" class="battle-exp-fill"></div></div>
+              <div id="battleEnemyMutationBadges" class="battle-mutation-badges"></div>
+              <div id="battleEnemyPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Enemy passive status"></div>
+              <div class="battle-hp-meta"><span>HP</span><strong id="battleEnemyHp">0 / 0</strong></div>
+              <div class="battle-hp-track"><div id="battleEnemyHpBar" class="battle-hp-fill"></div></div>
+              <div class="battle-stats-row"><span>ATK</span><strong id="battleEnemyAtk">0</strong></div>
+              <div id="battleEnemyCombatStatus" class="battle-combat-status" aria-label="Enemy combat modifiers"></div>
+              <div id="battleEnemyStatusEffects" class="battle-status-effects" aria-label="Enemy status effects"></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="battle-team-power-strip">
+          <span id="battlePlayerTeamPower">PLAYER POWER 0</span>
+          <span id="battleModeLabel">4V4 • 3s TURNS</span>
+          <span id="battleEnemyTeamPower">ENEMY POWER 0</span>
+        </div>
+
+        <div class="battle-lineups">
+          <div>
+            <span class="battle-side-label">PLAYER LINEUP</span>
+            <div id="battlePlayerLineup" class="battle-lineup" aria-label="Player team lineup"></div>
+          </div>
+          <div>
+            <span class="battle-side-label battle-side-label--enemy">ENEMY LINEUP</span>
+            <div id="battleEnemyLineup" class="battle-lineup" aria-label="Enemy team lineup"></div>
+          </div>
+        </div>
+
+        <div id="battleAutoNote" class="battle-auto-note">Auto combat • Every 3 seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible</div>
+        <div id="battleLog" class="battle-log" aria-live="polite"></div>
+      </div>
+
+      <div id="battleVictory" class="battle-result battle-result--neutral hidden" aria-live="polite" role="status">
+        <div class="battle-result__icon">✦</div>
+        <span class="eyebrow">MATCH COMPLETE</span>
+        <h3 id="battleResultTitle">🏆 VICTORY!</h3>
+        <p id="battleResultText">You defeated the enemy.</p>
+        <div id="battleResultPower" class="battle-result__power">Player Power: 0 vs Enemy Power: 0</div>
+        <div class="battle-result__metrics" aria-label="Battle rewards and loss status">
+          <div class="battle-result__metric">
+            <span id="battleResultBaseLabel">Base Value</span>
+            <strong id="battleResultBaseValue" class="currency-display">💵 0</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span id="battleResultTimeLabel">Time Bonus</span>
+            <strong id="battleResultTimeBonus">+0%</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span id="battleResultLevelLabel">Level Multiplier</span>
+            <strong id="battleResultLevelDiff">×1.00</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Total Earned</span>
+            <strong id="battleResultCash" class="currency-display">💵 +0</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Battle EXP</span>
+            <strong id="battleResultExp">+0 EXP</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Drop Rate Bonus</span>
+            <strong id="battleResultDropRate">+0.00%</strong>
+          </div>
+          <div class="battle-result__metric">
+            <span>Card Collection Penalty</span>
+            <strong id="battleResultLossStatus">None</strong>
+          </div>
+        </div>
+        <div id="timeTrialSummary" class="time-trial-summary hidden" aria-live="polite"></div>
+        <div id="spookySummary" class="time-trial-summary hidden" aria-live="polite"></div>
+        <div id="raidSummary" class="time-trial-summary hidden" aria-live="polite"></div>
+        <div id="bossEventSummary" class="time-trial-summary hidden" aria-live="polite"></div>
+        <div id="portalResultActions" class="battle-result__actions" hidden><label class="battle-auto-continue" for="portalResultAuto"><span>Auto Continue</span><input id="portalResultAuto" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label><button id="portalContinue" class="battle-primary-button" type="button">Continue / Next Match</button></div>
+        <div class="battle-result__actions">
+          <button id="timeTrialResultShopButton" class="ghost-button hidden" type="button">◆ Time Trial Shop</button>
+          <button id="bossEventResultShopButton" class="ghost-button hidden" type="button">🩸 Event Shop</button>
+          <button id="raidResultShopButton" class="ghost-button hidden" type="button">⚓ Raid Shop</button>
+          <button id="battle-again-btn" class="battle-primary-button" type="button">⚔️ Battle Again</button>
+          <button id="battleChangeFighterButton" class="ghost-button" type="button">Change Fighter</button>
+          <button id="close-battle-result-btn" class="ghost-button" type="button">↩ Return to Lobby</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- UPGRADES -->
+  <div id="upgradesModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="upgradesModalTitle">
+    <section class="modal-panel upgrades-modal">
+      <header class="modal-header">
+        <div>
+          <p class="eyebrow">UPGRADE SHOP</p>
+          <h2 id="upgradesModalTitle">Power Up</h2>
+        </div>
+        <button class="modal-close" data-close-modal="upgradesModal" type="button" aria-label="Close upgrades">×</button>
+      </header>
+
+      <div class="shop-balance">
+        <span>Available balance</span>
+        <strong id="shopCurrency" class="currency-display">💵 0</strong>
+      </div>
+
+      <div class="upgrade-list">
+        <article class="upgrade-card" data-upgrade-card="rollSpeed">
+          <div class="upgrade-icon speed-icon">⚡</div>
+          <div class="upgrade-content">
+            <div class="upgrade-topline">
+              <div>
+                <h3>Roll Speed</h3>
+                <p>Reduce manual and Auto-Roll cooldown.</p>
+              </div>
+              <span id="speedLevel" class="level-badge">Lv. 0/20</span>
+            </div>
+            <div class="upgrade-stat-line">
+              <span>Current cooldown</span>
+              <strong id="speedCurrent">1.50s</strong>
+            </div>
+            <button id="buySpeedButton" class="buy-button" type="button"></button>
+          </div>
+        </article>
+
+        <article class="upgrade-card" data-upgrade-card="luck">
+          <div class="upgrade-icon luck-icon">✦</div>
+          <div class="upgrade-content">
+            <div class="upgrade-topline">
+              <div>
+                <h3>Luck Multiplier</h3>
+                <p>Improves rare-drop thresholds.</p>
+              </div>
+              <span id="luckLevel" class="level-badge">Lv. 0/500</span>
+            </div>
+            <div class="upgrade-stat-line">
+              <span>Total luck</span>
+              <strong id="luckCurrent">1.00x</strong>
+            </div>
+            <button id="buyLuckButton" class="buy-button" type="button"></button>
+          </div>
+        </article>
+
+        <article class="upgrade-card upgrade-card--progression" data-upgrade-card="expMulti">
+          <div class="upgrade-icon exp-icon">✦</div>
+          <div class="upgrade-content">
+            <div class="upgrade-topline">
+              <div>
+                <h3>EXP Multiplier</h3>
+                <p>Boosts roll and Battle EXP with compounding returns.</p>
+              </div>
+              <span id="expMultiLevel" class="level-badge">Lv. 0/100</span>
+            </div>
+            <div class="upgrade-stat-line">
+              <span>Current bonus</span>
+              <strong id="expMultiCurrent">1.00x EXP</strong>
+            </div>
+            <button id="buyExpMultiButton" class="buy-button upgrade-btn" data-upgrade="EXP_MULTI" type="button" aria-label="Upgrade EXP Multiplier"></button>
+          </div>
+        </article>
+
+        <article class="upgrade-card upgrade-card--progression" data-upgrade-card="coinMulti">
+          <div class="upgrade-icon coin-icon" aria-hidden="true">💵</div>
+          <div class="upgrade-content">
+            <div class="upgrade-topline">
+              <div>
+                <h3>💵 Multiplier</h3>
+                <p>Boosts Battle and card salvage income.</p>
+              </div>
+              <span id="coinMultiLevel" class="level-badge">Lv. 0/100</span>
+            </div>
+            <div class="upgrade-stat-line">
+              <span>Current bonus</span>
+              <strong id="coinMultiCurrent">1.00x 💵</strong>
+            </div>
+            <button id="buyCoinMultiButton" class="buy-button upgrade-btn" data-upgrade="COIN_MULTI" type="button" aria-label="Upgrade 💵 Multiplier"></button>
+          </div>
+        </article>
+      </div>
+
+      <p class="shop-note">
+        Roll Speed / Luck use their existing curves. EXP uses <code>1 + Lv×0.12 + Lv^1.15×0.03</code> with <code>Base × 1.40^Lv</code> costs. 💵 uses <code>1 + Lv×0.15 + Lv^1.2×0.02</code> with <code>Base × 1.45^Lv</code> costs. All upgrade progress is saved locally.
+      </p>
+    </section>
+  </div>
+
+  <div id="raidShopModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="raidShopTitle">
+    <section class="modal-panel module-modal"><header class="modal-header"><h2 id="raidShopTitle">⚓ Marine Ford Raid Shop</h2><button class="modal-close" data-close-modal="raidShopModal" type="button" aria-label="Close Raid shop">×</button></header><p id="raidShopBalance" class="module-description"></p><div id="raidShopGrid" class="module-grid"></div></section>
+  </div>
+  <div id="timeTrialModeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="timeTrialModeTitle">
+    <section class="modal-panel module-modal">
+      <header class="modal-header"><div><p class="eyebrow">CHOOSE YOUR CHALLENGE</p><h2 id="timeTrialModeTitle">⏱ Time Trial</h2></div><button class="modal-close" data-close-modal="timeTrialModeModal" type="button" aria-label="Close Time Trial selector">×</button></header>
+      <p class="module-description">Normal: 2-second turns • EXP: 1-second turns • Speed Battle Potion does not apply</p>
+      <div class="time-trial-mode-options" role="group" aria-label="Time Trial type">
+        <button class="battle-mode-option" type="button" data-time-trial-type="time-trial" aria-pressed="false"><strong>⏱ Normal Time Trial</strong><span>4v4 • 2-second turns • 3 minutes per room<br>3 random Minions + 1 Boss • Time Trial Shards<br>Defeat or timeout resets to Room 1</span></button>
+        <button class="battle-mode-option" type="button" data-time-trial-type="material-time-trial" aria-pressed="false"><strong>◈ Material Time Trial</strong><span>4v4 • x3 Normal Trial stats; standard timers<br>1 Material Ticket/run • Independent materials per kill • No Shards<br>Ticket: 1,000 Shards in Time Trial Shop</span></button>
+        <button class="battle-mode-option" type="button" data-time-trial-type="exp-time-trial" aria-pressed="false"><strong>✨ EXP Time Trial</strong><span>1v1 • 1-second turns • 5 minutes<br>Infinite HP / 1 ATK Dummy • Damage converts to EXP • Costs 1 Ticket<br>Ticket is consumed when the battle starts</span></button>
+      </div>
+      <p id="timeTrialModeTickets" class="module-description"></p>
+    </section>
+  </div>
+  <div id="timeTrialShopModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="timeTrialShopTitle">
+    <section class="modal-panel module-modal"><header class="modal-header"><h2 id="timeTrialShopTitle">◆ Time Trial Shop</h2><button class="modal-close" data-close-modal="timeTrialShopModal" type="button" aria-label="Close Time Trial shop">×</button></header><p id="timeTrialShopBalance" class="module-description"></p><div id="timeTrialShopGrid" class="module-grid"></div></section>
+  </div>
+  <div id="passiveDetailModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="passiveDetailTitle">
+    <section class="modal-panel passive-detail-modal"><header class="modal-header"><h2 id="passiveDetailTitle">Passive</h2><button class="modal-close" data-close-modal="passiveDetailModal" type="button" aria-label="Close passive details">×</button></header><div id="passiveDetailText" class="passive-detail-text"></div></section>
+  </div>
+  <div id="questModal" class="modal-backdrop hidden">
+    <section class="modal-panel quest-board" role="dialog" aria-modal="true" aria-labelledby="questTitle">
+      <header class="modal-header"><h2 id="questTitle">✦ Quests</h2><button type="button" id="questCloseButton" class="modal-close" aria-label="Close quests">×</button></header>
+      <nav class="quest-tabs" data-quest-tabs role="tablist" aria-label="Quest category">
+        <button type="button" role="tab" data-quest-tab="daily">Daily</button><button type="button" role="tab" data-quest-tab="weekly">Weekly</button><button type="button" role="tab" data-quest-tab="story">Story · Card Quests</button>
+      </nav>
+      <p class="quest-reset" data-quest-reset role="status"></p><p class="quest-buffs" data-quest-buffs></p>
+      <div class="quest-board-columns"><div class="quest-board-list" data-quest-list aria-label="Quest list"></div><aside class="quest-board-detail" data-quest-detail aria-label="Quest information"></aside></div>
+    </section>
+  </div>
+  <div id="craftingModal" class="modal-backdrop hidden">
+    <section class="modal-panel crafting-modal" role="dialog" aria-modal="true" aria-labelledby="craftingTitle">
+      <header class="modal-header"><h2 id="craftingTitle">✦ Crafting</h2><button type="button" class="modal-close" data-close-modal="craftingModal" aria-label="Close crafting">×</button></header>
+      <div class="crafting-layout">
+        <section class="crafting-selector" aria-label="Item selector">
+          <label class="crafting-search"><span class="sr-only">Search crafting items</span><input data-crafting-search id="craftingSearch" type="search" placeholder="Search..." autocomplete="off"></label>
+          <div id="craftingGrid" class="crafting-grid" data-crafting-grid></div>
+        </section>
+        <section class="crafting-details" aria-label="Item details and requirements">
+          <div class="crafting-detail-scroll">
+            <div class="crafting-item-header"><div data-crafting-visual></div><div class="crafting-item-copy"><h3 data-crafting-title>Select an item</h3><small data-crafting-category></small><p data-crafting-description></p><strong data-crafting-owned></strong></div></div>
+            <section class="crafting-section"><h3>Related Card</h3><div class="crafting-related" data-crafting-related aria-label="Related Card"></div></section>
+            <section class="crafting-section"><h3>Required Items</h3><div class="crafting-ingredients" data-crafting-ingredients aria-label="Required Items"></div></section>
+          </div>
+          <footer class="crafting-footer"><p data-crafting-status role="status"></p><button type="button" class="crafting-craft-button" data-crafting-craft><span>Craft 1x</span><span class="crafting-cost"><i aria-hidden="true">₫</i><span data-crafting-cost>0 VNĐ</span></span></button></footer>
+        </section>
+      </div>
+    </section>
+  </div>
+  <div id="settingsModal" class="modal-backdrop hidden"><section class="modal-panel module-modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><header class="modal-header"><h2 id="settingsTitle">⚙ Game Settings</h2><button type="button" class="modal-close" data-close-modal="settingsModal" aria-label="Close Game Settings">×</button></header><div class="settings-audio-section"><h3>Audio</h3>
+    <div class="settings-audio-toggle"><span>Background Music</span><button id="musicToggleButton" class="ghost-button" type="button" aria-pressed="false">♫ Music ON</button></div>
+    <div class="settings-volume-row"><label for="musicVolumeRange">Music Volume</label><input id="musicVolumeRange" type="range" min="0" max="100" step="1" value="35"><label class="sr-only" for="musicVolumeNumber">Music volume percent</label><input id="musicVolumeNumber" type="number" min="0" max="100" step="1" value="35"><span>%</span></div>
+    <div class="settings-audio-toggle"><span>Special Card SFX</span><button id="sfxToggleButton" class="ghost-button" type="button" aria-pressed="true">SFX ON</button></div>
+    <div class="settings-volume-row"><label for="sfxVolumeRange">SFX Volume</label><input id="sfxVolumeRange" type="range" min="0" max="100" step="1" value="80"><label class="sr-only" for="sfxVolumeNumber">SFX volume percent</label><input id="sfxVolumeNumber" type="number" min="0" max="100" step="1" value="80"><span>%</span></div>
+  </div><section class="settings-luck-section" aria-labelledby="luckConfigTitle"><h3 id="luckConfigTitle">Luck Config</h3><p>Adjust permanent Base Luck only. Weather, potion, equipment and temporary quest bonuses still apply.</p><label class="sr-only" for="luckConfigRange">Base Luck</label><input id="luckConfigRange" type="range" min="1" max="1" step="0.01" value="1"><div class="luck-config-input"><label for="luckConfigNumber">Base Luck</label><input id="luckConfigNumber" type="number" min="1" max="1" step="0.01" value="1"><button id="luckConfigReset" type="button" class="ghost-button">Reset to Max</button></div><p id="luckConfigStatus" role="status"></p></section><label class="settings-switch-row" for="showActivePotionsHudToggle"><span><strong>Show Active Potions HUD</strong><small>Show active potion icons and remaining time at the bottom-right.</small></span><input id="showActivePotionsHudToggle" type="checkbox" role="switch" checked></label></section></div>
+  <div id="arenaMutationModal" class="modal-backdrop hidden"><section class="modal-panel module-modal arena-mutation-modal" role="dialog" aria-modal="true" aria-labelledby="arenaMutationTitle"><header class="modal-header"><h2 id="arenaMutationTitle">Card Mutations</h2><button type="button" class="modal-close" data-close-modal="arenaMutationModal" aria-label="Close mutations">×</button></header><p>Choose one owned variant for the active team slot. Each card has at most 2 active mutations.</p><div data-arena-mutations class="arena-mutation-list"></div><button data-arena-more type="button" class="ghost-button" hidden>Show more</button></section></div>
+  <div id="evolutionModal" class="modal-backdrop hidden evolution-unit-backdrop" role="dialog" aria-modal="true" aria-labelledby="evolutionTitle">
+    <section class="modal-panel evolve-unit-modal">
+      <header class="modal-header evolve-unit-header"><div><p class="eyebrow">UNIT EVOLUTION</p><h2 id="evolutionTitle">Evolve Unit</h2></div><button type="button" id="evolutionCloseButton" class="modal-close" aria-label="Close evolution">×</button></header>
+      <div class="evolve-unit-content">
+        <section class="evolution-preview" aria-label="Evolution preview">
+          <div class="evolution-comparison"><article id="evolutionBaseCard" data-side="base" class="evolve-card evolve-card--base"></article><span class="evolution-arrow" role="img" aria-label="Evolves into">›››</span><article id="evolutionTargetCard" data-side="target" class="evolve-card evolve-card--target"></article></div>
+          <p id="evolutionMutation" class="evolution-mutation"></p>
+          <div id="evolutionStatChanges" class="evolution-stat-changes" aria-label="Stat changes"></div>
+          <section class="evolution-passive"><p class="eyebrow">EVOLVED PASSIVE</p><h3 id="evolutionPassiveName"></h3><p id="evolutionPassiveDescription"></p></section>
+        </section>
+        <aside class="evolution-requirements"><h3>Requirements:</h3><p id="evolutionBaseRequirement" class="evolution-base-requirement"></p><div id="evolutionRequiredItems" class="evolution-required-items"></div><p id="evolutionStatus" class="evolution-status" role="status" aria-live="polite"></p></aside>
+      </div>
+      <footer class="evolution-actions"><button id="evolutionConfirmButton" class="evolution-confirm" type="button">Evolve</button><button id="evolutionCancelButton" class="evolution-cancel" type="button">Cancel</button></footer>
+    </section>
+  </div>
+
+  <div id="bossEventShopModal" class="modal-backdrop hidden">
+    <section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="bossEventShopTitle"><header class="modal-header"><h2 id="bossEventShopTitle">🩸 Boss Event Shop</h2><button class="modal-close" data-close-modal="bossEventShopModal" type="button" aria-label="Close Boss Event shop">×</button></header><p id="bossEventShopBalance" class="module-description"></p><div id="bossEventShopGrid" class="module-grid"></div></section>
+  </div>
+  <div id="pvpModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pvpTitle">
+    <section class="modal-panel pvp-modal" id="pvpMainPanel">
+      <header class="pvp-header"><div><p class="pvp-kicker">DUEL LINK <span>LIVE MATCH</span></p><h2 id="pvpTitle">Online <em>PvP</em></h2></div><div class="pvp-header-actions"><span id="pvpConnectionBadge" class="pvp-connection">Not connected</span><button id="pvpExit" type="button" class="pvp-button pvp-button-quiet">Exit PvP ↗</button></div></header>
+      <nav class="pvp-phase-track" aria-label="Match phase"><span data-pvp-phase="connect" aria-current="step"><b>01</b> Connect</span><span data-pvp-phase="pick"><b>02</b> Blind Pick</span><span data-pvp-phase="battle"><b>03</b> Battle</span></nav>
+      <div class="pvp-content">
+        <p id="pvpStatus" class="pvp-status" role="status" aria-live="polite"></p>
+        <section id="pvpLobbyView">
+          <div class="pvp-room-controls"><div><span class="pvp-field-label">Match format</span><div class="pvp-format-switch" role="group" aria-label="PvP format"><input id="pvpMode" type="hidden" value="1"><button data-pvp-mode="1" class="is-active" aria-pressed="true" type="button">1v1</button><button data-pvp-mode="4" aria-pressed="false" type="button">4v4</button></div></div><button id="pvpCreate" class="pvp-button" type="button">+ Create Room</button><label class="pvp-room-input">Room ID<input id="pvpJoinCode" maxlength="10" placeholder="PVP-A1B2C3" autocomplete="off" spellcheck="false"></label><button id="pvpJoin" class="pvp-button pvp-button-quiet" type="button">Join Room →</button></div>
+          <div class="pvp-room-strip"><span class="pvp-field-label">ROOM <strong id="pvpRoomCode">No room</strong></span><div><button id="pvpCopyRoom" type="button" class="pvp-text-button" disabled>Copy ID</button><button id="pvpLeaveRoom" type="button" class="pvp-text-button" hidden>Leave Room</button></div></div>
+          <div class="pvp-pick-heading"><div><p class="pvp-kicker">BUILD YOUR FORMATION</p><h3>Your side. <em>Your strategy.</em></h3></div><span id="pvpFormatLabel" class="pvp-rules-chip">1v1 · Level 1 · Normal cards</span></div>
+          <div class="pvp-draft-board"><section class="pvp-your-draft"><div class="pvp-section-label"><span>YOUR FORMATION</span><span id="pvpSelectionCount">0 / 1 selected</span></div><div id="pvpPickGrid" class="pvp-pick-grid"></div></section><aside class="pvp-blind-panel"><span class="pvp-blind-symbol" aria-hidden="true">◇</span><p class="pvp-kicker">BLIND PICK</p><h4>Keep them guessing.</h4><div id="pvpHiddenSlots" class="pvp-hidden-slots" aria-hidden="true"></div><p id="pvpOpponentPick">Opponent picks remain hidden until both players are Ready.</p><span class="pvp-lock-note">SEALED UNTIL BOTH PLAYERS ARE READY</span></aside></div>
+
+        </section>
+        <section id="pvpBattleView" hidden aria-label="PvP battle arena">
+          <div class="pvp-arena-heading"><span class="pvp-kicker">LIVE ARENA</span><span id="pvpBattleFormat" class="pvp-rules-chip">LEVEL 1 / NORMAL</span></div>
+          <div class="pvp-strike-bar"><div><span id="pvpTurnLabel">15-second turn timer</span><small id="pvpTurnHint">Both clients verify every turn.</small></div><button id="pvpStrike" type="button" class="pvp-button" disabled>Strike <span aria-hidden="true">⚡</span></button></div>
+          <div id="pvpCombatTeams" class="pvp-combat-teams"></div>
+          <details class="pvp-log"><summary>Combat Log <span>⌄</span></summary><div id="pvpLog"></div></details>
+        </section>
+      </div>
+      <div id="pvpReadyPanel" class="pvp-ready-bar"><div><strong id="pvpReadyHint">Choose a card for every slot.</strong><small>Level 1 · Normal · Native passives · No rewards</small></div><button id="pvpReady" type="button" class="pvp-button pvp-ready" disabled>Lock In / Ready <span aria-hidden="true">↗</span></button></div>
+      <footer class="pvp-footer"><span>◈ CASUAL PLAY</span><span>No EXP, currency, drops or quest progress.</span><button id="pvpBattleLeave" type="button" class="pvp-text-button" hidden>Leave Room</button></footer>
+    </section>
+    <div id="pvpCardPicker" class="pvp-picker-overlay" role="dialog" aria-modal="true" aria-labelledby="pvpPickerTitle" hidden>
+      <section class="pvp-picker-panel"><header class="pvp-picker-header"><div><p class="pvp-kicker">YOUR COLLECTION / LEVEL 1 NORMALIZED</p><h2 id="pvpPickerTitle">Select Card <span id="pvpPickerSlot">/ Slot 01</span></h2></div><button id="pvpPickerClose" type="button" class="pvp-icon-button" aria-label="Close Select Card">×</button></header>
+        <div class="pvp-picker-tools"><label class="pvp-search"><span aria-hidden="true">⌕</span><input id="pvpCardSearch" type="search" placeholder="Search your cards..." autocomplete="off" aria-label="Search PvP cards by name"></label><div id="pvpElementFilters" class="pvp-element-filters" role="group" aria-label="Filter by element"></div></div>
+        <div class="pvp-picker-caption"><span id="pvpPickerCount" role="status"></span><span>Owned cards only · Each card once</span></div>
+        <div id="pvpCardGrid" class="pvp-card-grid" aria-label="Owned cards"></div><button id="pvpPickerMore" class="pvp-text-button pvp-picker-more" type="button" hidden>Load more cards</button>
+        <footer class="pvp-picker-footer"><div><strong id="pvpPickerChoice">Choose a card</strong><small>HP / ATK use Level 1 base stats.</small></div><div><button id="pvpPickerCancel" type="button" class="pvp-button pvp-button-quiet">Cancel</button><button id="pvpPickerConfirm" type="button" class="pvp-button" disabled>Confirm Card ✓</button></div></footer>
+      </section>
+    </div>
+  </div>
+  <div id="sandboxModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="sandboxTitle">
+    <section class="modal-panel sandbox-modal">
+      <header class="modal-header"><div><p class="eyebrow">COMBAT LAB</p><h2 id="sandboxTitle">Sandbox Mode</h2></div><button id="sandboxExitButton" type="button" class="ghost-button">Exit Sandbox</button></header>
+      <p class="sandbox-notice">Temporary testing only. No rewards, EXP, VNĐ, quests, achievements, item use or saved progression. Real auto-roll pauses until you exit.</p>
+      <div class="sandbox-match-settings">
+        <label>Turn duration (seconds)<input id="sandboxTurnSeconds" type="number" min="0.1" max="60" step="0.1" value="2"></label>
+        <label>RNG seed<input id="sandboxSeed" type="number" min="0" max="4294967295" step="1"></label>
+        <label>Test weather (optional, multiple)<select id="sandboxWeather" multiple size="3" aria-label="Sandbox weather"></select></label>
+        <label>Aqua choice<select id="sandboxAquaMode"><option value="hp">+50% team HP</option><option value="rewards">Reward bonus (no rewards in Sandbox)</option></select></label>
+      </div>
+      <div class="sandbox-teams">
+        <section><h3>Your test team</h3><div class="sandbox-presets"><button type="button" data-sandbox-side="player" data-sandbox-action="add">Add Slot</button><button type="button" data-sandbox-side="player" data-sandbox-action="level">Lv.100 Preset</button><button type="button" data-sandbox-side="player" data-sandbox-action="reset">Reset Default Stats</button><button type="button" data-sandbox-side="player" data-sandbox-action="clear">Clear Team</button></div><div id="sandboxPlayerSetup" class="sandbox-setup-grid"></div></section>
+        <section><h3>Opponent test team</h3><div class="sandbox-presets"><button type="button" data-sandbox-side="enemy" data-sandbox-action="add">Add Slot</button><button type="button" data-sandbox-side="enemy" data-sandbox-action="level">Lv.100 Preset</button><button type="button" data-sandbox-side="enemy" data-sandbox-action="reset">Reset Default Stats</button><button type="button" data-sandbox-side="enemy" data-sandbox-action="clear">Clear Team</button></div><div id="sandboxEnemySetup" class="sandbox-setup-grid"></div></section>
+      </div>
+      <div class="sandbox-action-bar"><button id="sandboxStartButton" type="button">Start Sandbox</button><button id="sandboxPauseButton" type="button" disabled>Pause</button><button id="sandboxStepButton" type="button" disabled>Step Turn</button><button id="sandboxStopButton" type="button" disabled>Stop Battle</button></div>
+      <p id="sandboxSummary" class="sandbox-summary" role="status" aria-live="polite"></p>
+      <div class="sandbox-teams sandbox-combat"><section><h3>Player arena</h3><div id="sandboxPlayerCombat" class="sandbox-combat-grid"></div></section><section><h3>Opponent arena</h3><div id="sandboxEnemyCombat" class="sandbox-combat-grid"></div></section></div>
+      <details class="sandbox-log"><summary>Combat log (last 150 events)</summary><div id="sandboxLog" role="log"></div></details>
+    </section>
+  </div>
+
+  <div id="spookyChoiceModal" class="modal-backdrop hidden"><section class="modal-panel spooky-choice-modal" role="dialog" aria-modal="true" aria-labelledby="spookyChoiceTitle"><header class="modal-header"><h2 id="spookyChoiceTitle">Choose a Run Modifier</h2><button type="button" class="modal-close" data-close-modal="spookyChoiceModal" aria-label="Return to setup">×</button></header><p class="module-description">Choose 1 of 3. This wave cannot start until you choose. All choices last until the run ends; reset to Wave 1 clears them.</p><div id="spookyChoiceGrid" class="spooky-choice-grid"></div></section></div>
+  <div id="spookyInfoModal" class="modal-backdrop hidden"><section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="spookyInfoTitle"><header class="modal-header"><h2 id="spookyInfoTitle">Spooky Run Modifiers</h2><button type="button" class="modal-close" data-close-modal="spookyInfoModal" aria-label="Close run modifiers">×</button></header><div id="spookyInfoList" class="spooky-info-list"></div></section></div>
+  <div id="spookyShopModal" class="modal-backdrop hidden"><section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="spookyShopTitle"><header class="modal-header"><h2 id="spookyShopTitle">🎃 Spooky Shop</h2><button type="button" class="modal-close" data-close-modal="spookyShopModal" aria-label="Close Spooky Shop">×</button></header><p id="spookyShopBalance" class="module-description"></p><div id="spookyShopGrid" class="module-grid"></div></section></div>
+
+  <div id="infinityModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="infinityTitle">
+    <section class="modal-panel infinity-modal">
+      <header id="infinityMainHeader" class="modal-header infinity-header"><div><p class="eyebrow">WEEKLY ROTATION / ENDLESS WAVES</p><h2 id="infinityTitle">Infinity Mode <span class="infinity-title-mark" aria-hidden="true">∞</span></h2></div><button id="infinityExit" type="button" class="modal-close" aria-label="Exit Infinity">×</button></header>
+      <div id="infinityContent" class="infinity-content">
+        <div id="infinityRotation" class="infinity-banner"></div><p id="infinityStatus" class="infinity-status" role="status" aria-live="polite"></p>
+        <div id="infinityLobby">
+          <div class="infinity-section-heading"><div><p class="eyebrow">BUILD YOUR FORMATION</p><h3>Your Lineup <span class="infinity-format">4v4</span></h3></div><button id="infinityClearTeam" type="button" class="infinity-quiet-button">Clear Team</button></div>
+          <p class="infinity-lineup-description">Four different cards. Choose a slot, then pick from your collection. Your level and selected mutation stats carry into combat.</p>
+          <div id="infinityTeam" class="infinity-deck-grid" aria-label="Infinity team slots"></div>
+          <section class="infinity-picker-panel" aria-labelledby="infinityPickerTitle">
+            <div class="infinity-weekly-lock"><span class="infinity-lock-symbol" aria-hidden="true"></span><div><strong id="infinityWeeklyCategory">Active Weekly Category</strong><small>Weekly restriction is always applied. Filters can only narrow this pool.</small></div><span id="infinityEligibleCount" role="status" aria-live="polite"></span></div>
+            <div class="infinity-picker-heading"><h3 id="infinityPickerTitle">Unlocked Cards</h3><span>Choose once. Fight together.</span></div>
+            <div class="infinity-picker-tools">
+              <label class="infinity-search"><span class="sr-only">Search eligible cards</span><input id="infinitySearch" type="search" placeholder="Search card..." autocomplete="off" spellcheck="false" maxlength="100" aria-controls="infinityCardGrid"></label>
+              <details class="infinity-filter-menu"><summary><small>ELEMENT</small><span id="infinityElementLabel">All Elements</span></summary><div id="infinityElementOptions" class="infinity-menu-options"></div></details>
+              <details class="infinity-filter-menu"><summary><small>ADDITIONAL CATEGORY</small><span id="infinityCategoryLabel">Weekly Cards</span></summary><div id="infinityCategoryOptions" class="infinity-menu-options"></div></details>
+              <details class="infinity-filter-menu"><summary><small>SORT BY</small><span id="infinitySortLabel">Attack: High → Low</span></summary><div id="infinitySortOptions" class="infinity-menu-options"></div></details>
+            </div>
+            <div id="infinityCardGrid" class="infinity-card-grid" role="region" aria-label="Eligible unlocked cards" aria-busy="false"></div>
+            <nav class="infinity-pagination" aria-label="Infinity card pages"><button id="infinityPagePrevious" type="button">Previous</button><span id="infinityPageLabel">Page 1 / 1</span><button id="infinityPageNext" type="button">Next</button></nav>
+          </section>
+        </div>
+
+        <p class="infinity-reward-note">Your previous-week best grants highest wave × 100 Star Orbs on local startup. Google sync is optional. Reset: Monday 00:00 UTC. No VNĐ or direct EXP rewards. Cleared-wave rewards are kept when you exit.</p>
+      </div>
+      <footer id="infinityFooter" class="infinity-footer"><div class="infinity-team-summary"><strong id="infinityTeamCount">0 / 4 selected</strong><span id="infinityTeamHint">Choose four different cards.</span></div><div class="infinity-footer-actions"><button id="infinityRetrySync" type="button" class="infinity-quiet-button">Sync Best</button><button id="infinityLeaderboard" type="button" class="infinity-secondary-button">Weekly Top 50</button><button id="infinityStart" type="button" class="infinity-primary-button" disabled>Start Infinity Run <span aria-hidden="true">↗</span></button></div></footer>
+      <div id="infinityVariantPicker" class="infinity-variant-overlay" hidden>
+        <section class="infinity-variant-dialog" role="dialog" aria-modal="true" aria-labelledby="infinityVariantTitle"><header><div><p class="eyebrow">OWNED MUTATIONS</p><h3 id="infinityVariantTitle">Choose Mutation</h3><p id="infinityVariantHint"></p></div><button id="infinityVariantClose" type="button" aria-label="Close mutation picker">×</button></header><div id="infinityVariantGrid" class="infinity-variant-grid"></div><nav class="infinity-pagination" aria-label="Mutation pages"><button id="infinityVariantPrevious" type="button">Previous</button><span id="infinityVariantPage">Page 1 / 1</span><button id="infinityVariantNext" type="button">Next</button></nav></section>
+      </div>
+    </section>
+  </div>
+
+  <div id="infinityRewardModal" class="modal-backdrop hidden">
+    <section class="modal infinity-reward-modal" role="dialog" aria-modal="true" aria-labelledby="infinityRewardTitle">
+      <div class="modal-header"><h2 id="infinityRewardTitle">Weekly Reset!</h2><button class="modal-close" type="button" data-close-modal="infinityRewardModal" aria-label="Close weekly reward">×</button></div>
+      <div class="infinity-reward-content"><span class="infinity-reward-icon" aria-hidden="true"></span><p id="infinityRewardMessage"></p><small id="infinityRewardWeek"></small><button type="button" data-close-modal="infinityRewardModal">Continue</button></div>
+    </section>
+  </div>
+
+  <script id="firebaseAppCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script defer src="./online_utils.js?v=20261105-evolution-ui-1"></script>
+  <script defer src="./firebase.js?v=20261105-evolution-ui-1"></script>
+  <script defer src="./startup.js?v=20261105-evolution-ui-1"></script>
+
+  <!-- PORTALS: entry lives exclusively in Storage. Combat reuses battleArena. -->
+  <div id="portalModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="portalTitle">
+    <section class="modal-panel portal-modal">
+      <header class="modal-header"><div><p class="eyebrow">STORAGE / PORTALS</p><h2 id="portalTitle">Namek Portal</h2></div><button id="portalClose" class="modal-close" type="button" aria-label="Exit Portal">×</button></header>
+      <section class="portal-inspector" aria-label="Pre-match modifiers"><img src="assets/items/nportals.png" alt="Namek Portal" width="80" height="80" onerror="this.hidden=true"><div><p id="portalModifiers"></p><p id="portalAttempts"></p><p id="portalRewards"></p></div></section>
+      <p id="portalStatus" class="portal-status" role="status"></p>
+      <div id="portalChoices" class="portal-actions"><button id="portalSolo" class="battle-primary-button" type="button">Solo · 4 cards</button><button id="portalParty" class="ghost-button" type="button">Party · 2–4 players (Tier 4+)</button></div>
+      <section id="portalRoom" class="portal-room" hidden>
+        <div class="portal-actions"><label>Party size <input id="portalPartySize" type="number" min="2" max="4" step="1" value="2"></label><button id="portalCreateRoom" type="button">Create Room</button><label>Room ID <input id="portalJoinCode" placeholder="PORTAL-A1B2C3D4" maxlength="23" autocomplete="off"></label><button id="portalJoinRoom" type="button">Join Room</button></div>
+        <p><strong id="portalRoomCode">No room</strong> · Host limit: 10 starts per UTC day.</p><p id="portalMembers"></p>
+        <p>2 players: 2 + 2 cards · 3 players: Host 2 + 1 + 1 · 4 players: 1 each. Guest items x0.5; 4-player MVP items x3. Secret cards are never duplicated by MVP.</p>
+      </section>
+      <section id="portalBuilder" hidden>
+        <div id="portalStandardSelector"></div>
+        <label class="battle-auto-continue" for="portalAutoContinue"><span>Auto Continue</span><input id="portalAutoContinue" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label>
+        <div class="portal-actions"><button id="portalReady" type="button" hidden>Lock In / Ready</button><button id="portalHostStart" type="button" hidden>Start Party</button></div>
+      </section>
+    </section>
+  </div>
+  <div id="relicEquipModal" class="modal-backdrop hidden relic-equip-modal" role="dialog" aria-modal="true" aria-labelledby="relicEquipTitle">
+    <section class="modal-panel"><header class="modal-header"><h2 id="relicEquipTitle">Equip Relic</h2><button id="relicEquipClose" class="modal-close" type="button" aria-label="Close Relic equip">×</button></header>
+      <p>One Relic per card ID, shared across all mutations and copies. Equipping replaces the card's current Relic.</p>
+      <div class="relic-equip-fields"><label>Search owned cards<input id="relicCardSearch" type="search" placeholder="Name / element..."></label><label>Card<select id="relicCardSelect"></select></label></div>
+      <p id="relicEquipStatus" role="status"></p><div class="portal-actions"><button id="relicEquipConfirm" type="button" class="battle-primary-button">Equip this card</button><button id="relicUnequip" type="button" class="ghost-button">Unequip Relic</button></div>
+    </section>
+  </div>
+  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./category.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./background.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enten.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_rotation.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261105-evolution-ui-1"></script>
+  <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
+  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261105-evolution-ui-1"></script>
+  <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
+  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./index_filters.js?v=20261105-evolution-ui-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261105-evolution-ui-1"></script>
+</body>
+</html>

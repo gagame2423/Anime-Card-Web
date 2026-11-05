@@ -1,0 +1,252 @@
+/* Raid definitions, entry keys, exclusive coins, upgrades and durable rewards. */
+(function (host) {
+  'use strict';
+  const KEY = 'anime_card_rng_raid_v1', MODE = 'raid';
+  const KEY_ITEM = Object.freeze({ id: 'marine_fort_raid_key', name: 'Marine Ford Raid Key', type: 'ticket', icon: '🗝️', tier: 'epic', description: 'One Marine Ford Raid entry. 10% drop on regular 1v1 / 4v4 victories.' });
+  const GRAIL_KEY=Object.freeze({id:'holy_grail_raid_key',name:'Holy Grail Raid Key',type:'ticket',icon:'🗝️',tier:'mythic',description:'One Holy Grail Raid entry. 50% drop per Fate enemy defeated in regular 1v1 / 4v4 battles.'});
+  const SHIBUYA_KEY=Object.freeze({id:'shibuya_raid_key',name:'Shibuya Raid Key',type:'ticket',icon:'🗝️',tier:'secret',description:'One Shibuya Raid entry. Gomen Event Shop: 10 Gomen Coins; completed Normal 1v1 / 4v4 while Malevolent is active: 1 Key.'});
+  const AKATSUKI_KEY=Object.freeze({id:'akatsuki_raid_key',name:'Akatsuki Raid Key',type:'ticket',icon:'🗝️',tier:'secret',description:'One Akatsuki Raid entry. 30% chance on any Time Trial victory with a Ninja in the starting lineup.'});
+  const SHIBUYA_CARDS=Object.freeze(['jogo','haruta']);
+  const SECRET_IDS = Object.freeze(['raid-secret-ace', 'raid-secret-marco', 'raid-secret-mihawk']);
+  const TYPES = Object.freeze({ marine_fort: Object.freeze({ name: 'Marine Ford Raid', coinName:'Marine Ford Raid Coins', keyId: KEY_ITEM.id,
+    enemies: Object.freeze([
+      ["starter-epic", 3000, 5000, 175, 300],
+      ["buggy", 1750, 3000, 300, 500],
+      ["ice-admiral", 3500, 5000, 350, 500],
+      ["light-admiral", 2500, 4000, 700, 1000],
+      ["garp", 7500, 10000, 500, 700],
+      ["boa-hancock", 2500, 4000, 500, 600],
+      ["doflamingo", 3000, 5000, 750, 1000],
+      ["shanks", 4500, 6000, 1250, 2500],
+      ["blackbeard", 6500, 8000, 900, 1200],
+      ["whitebeard", 15000, 30000, 3000, 10000]
+    ].map(row => Object.freeze(row))) }), holy_grail:Object.freeze({name:'Holy Grail Raid',coinName:'Holy Grail Raid Coins',keyId:GRAIL_KEY.id,
+    enemies:Object.freeze([
+      ['saber',5000,10000,500,2000],['saber-knight',7500,15000,800,2500],['iskandar',20000,23000,1750,2500],
+      ['medea',25000,50000,3500,5000],['cu-chalinn',25000,40000,7000,10000],['shirou',75000,100000,5000,7000],
+      ['kiritsu',25000,40000,5000,6000],['mash',30000,50000,7500,10000],['merlin',45000,60000,12500,25000],['gilgamesh',200000,500000,50000,100000]
+    ].map(Object.freeze))}), shibuya:Object.freeze({name:'Shibuya Raid',coinName:'Shibuya Coins',keyId:SHIBUYA_KEY.id,enemies:Object.freeze([
+      ['haruta',6000,7000,600,700],['hanami',10000,12000,1000,3000],['mechamaru',60000,70000,5000,10000],
+      ['dagon',40000,100000,10000,25000],['choso',80000,200000,15000,30000],['mahito',85000,220000,18000,40000],
+      ['true-mahito',100000,300000,30000,60000],['toji',150000,300000,40000,80000],['mahoraga',250000,500000,50000,90000],
+      ['sukuna-shibuya',400000,800000,60000,90000]
+    ].map(Object.freeze))}),akatsuki:Object.freeze({name:'Akatsuki Raid',coinName:'Akatsuki Coins',keyId:AKATSUKI_KEY.id,enemies:Object.freeze([
+      ['konan',10000,15000,500,1000],['kisame-hoshigaki',15000,16000,500,1500],['deidara',50000,55000,1000,3000],
+      ['hidan',100000,150000,5000,15000],['sasori',140000,150000,7500,25000],['kakuzu',142500,200000,9500,30000],
+      ['orochimaru',150000,250000,15000,40000],['zetsu',175000,300000,20000,50000],['pain',200000,350000,25000,65000],
+      ['itachi-awakened',300000,500000,30000,55000]
+    ].map(Object.freeze))}) });
+  const SHOP = Object.freeze([{id:'web_string',cost:6220},{id:'cannon_ball',cost:3899}, ...['exp_potion', 'rich_potion', 'speed_potion', 'speed_battle_potion'].map(id => Object.freeze({ id, cost: id === 'speed_battle_potion' ? 50 : 25 }))]);
+  const GRAIL_SHOP=Object.freeze([...SHOP.filter(offer=>!['web_string','cannon_ball'].includes(offer.id)),Object.freeze({id:'excalibur_sword',cost:80000})]);
+  const SHIBUYA_SHOP=Object.freeze([...GRAIL_SHOP.filter(offer=>offer.id!=='excalibur_sword'),Object.freeze({id:'mahito_puppet',cost:10500})]);
+  const AKATSUKI_SHOP=Object.freeze([Object.freeze({id:'ramen_bowl',cost:10}),Object.freeze({id:'lucky_potion',cost:25}),...GRAIL_SHOP.filter(offer=>offer.id!=='excalibur_sword')]);
+  const offers=type=>type==='akatsuki'?AKATSUKI_SHOP:type==='shibuya'?SHIBUYA_SHOP:type==='holy_grail'?GRAIL_SHOP:validType(type)?SHOP:[];
+  // Archived Gomen rewards remain readable for migration, never playable as a Raid.
+  const rewardItemId=type=>({akatsuki:'mangekyo_eye',holy_grail:'excalibur_sword',gomen:'gojo_eye',shibuya:'equipment_cursed_finger'})[type]||null;
+  const excaliburChance=d=>.008+.072*(difficulty(d)-1)/999;
+  const LEVEL_GROWTH = .075;
+  const object = v => Boolean(v && typeof v === 'object' && !Array.isArray(v));
+  const integer = (v, min = 0, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(v) && v >= min && v <= max;
+  const validType = type => Object.hasOwn(TYPES, type);
+  const savedType = type => validType(type) || type === 'gomen';
+  const difficulty = n => Math.max(1, Math.min(1000, Math.floor(Number(n) || 1)));
+  const randomUnit = random => Math.max(0, Math.min(1 - Number.EPSILON, Number(random()) || 0));
+  const fresh = () => ({ version: 1, types: Object.fromEntries(Object.keys(TYPES).map(type => [type, { coins: 0, upgradeLevel: 0, wins: 0, difficulty: 1 }])), claimedSecrets: {}, activeAttempt: null, pendingReward: null });
+  function coinRange(d) {
+    const t = Math.pow((difficulty(d) - 1) / 999, .85);
+    return { min: Math.round(1 + 69 * t), max: Math.round(1 + 99 * t) };
+  }
+  function secretChance(d) { return (1 + 9 * (difficulty(d) - 1) / 999) / 100; }
+  function validAttempt(a) {
+    return object(a) && typeof a.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(a.id) && savedType(a.type) && integer(a.difficulty, 1, 1000) && integer(a.startedAt);
+  }
+  function validSave(v) {
+    if (!object(v) || v.version !== 1 || !object(v.types) || !object(v.claimedSecrets)) return false;
+    if (Object.keys(v.types).some(type => !savedType(type)) || !object(v.types.marine_fort)) return false;
+    for (const entry of Object.values(v.types)) if (!integer(entry.coins) || !integer(entry.wins) || !integer(entry.upgradeLevel, 0, 100) || !integer(entry.difficulty, 1, 1000)) return false;
+    if (Object.entries(v.claimedSecrets).some(([id, flag]) => ![...SECRET_IDS,...SHIBUYA_CARDS,'pain'].includes(id) || typeof flag !== 'boolean')) return false;
+    if (v.activeAttempt !== null && !validAttempt(v.activeAttempt)) return false;
+    const p = v.pendingReward;
+    if (p === null) return true;
+    if (!validAttempt(p) || !object(v.types[p.type]) || !v.activeAttempt || p.id !== v.activeAttempt.id || p.type !== v.activeAttempt.type || p.difficulty !== v.activeAttempt.difficulty || p.startedAt !== v.activeAttempt.startedAt) return false;
+    const range = coinRange(p.difficulty);
+    if ('baseCoins' in p || 'dropMultiplier' in p) {
+      if (!integer(p.baseCoins, range.min, range.max) || typeof p.dropMultiplier !== 'number' || !Number.isFinite(p.dropMultiplier) || p.dropMultiplier < 1 || p.dropMultiplier > host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER) return false;
+      const exact = p.baseCoins * p.dropMultiplier;
+      if (!integer(p.coins, Math.floor(exact), Math.ceil(exact))) return false;
+    } else if (!integer(p.coins, range.min, range.max)) return false;
+    if(p.item!==undefined && p.item!==null && (!rewardItemId(p.type)||!object(p.item)||p.item.id!==rewardItemId(p.type)||!integer(p.item.quantity,1,Math.ceil(host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER))))return false;
+    if(p.type!=='marine_fort' && p.secret!==null)return false;
+    if(p.cards!==undefined && (!['shibuya','akatsuki'].includes(p.type)||!Array.isArray(p.cards)||p.cards.length>2||new Set(p.cards.map(c=>c?.cardId)).size!==p.cards.length||p.cards.some(c=>!object(c)||!(p.type==='akatsuki'?['pain']:SHIBUYA_CARDS).includes(c.cardId)||(p.type==='akatsuki'&&(c.raidReceipt!==p.id))||!Array.isArray(c.mutationIds)||c.mutationIds.length>2||new Set(c.mutationIds).size!==c.mutationIds.length||c.mutationIds.some(id=>!Object.hasOwn(host.MUTATION_BY_ID||{},id)))))return false;
+    return p.secret === null || (object(p.secret) && SECRET_IDS.includes(p.secret.cardId) && Array.isArray(p.secret.mutationIds) && p.secret.mutationIds.length <= 2 && new Set(p.secret.mutationIds).size === p.secret.mutationIds.length && p.secret.mutationIds.every(id => typeof id === 'string' && Object.hasOwn(host.MUTATION_BY_ID || {}, id)));
+  }
+  function load() { try { const v = JSON.parse(host.localStorage.getItem(KEY) || 'null'); if(!validSave(v))return fresh();for(const [type,entry]of Object.entries(fresh().types))v.types[type] ||= entry;return v; } catch (_) { return fresh(); } }
+  let data = load(), bridge = {}, serial = 0;
+  if (!data.pendingReward) data.activeAttempt = null; // Interrupted fights never refund a spent key.
+  function persist() { try { host.localStorage.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; } catch (e) { console.warn('Raid save unavailable', e); return false; } }
+  function requirePersist() { if (!persist()) throw new Error('Không thể lưu Raid. Thao tác chưa hoàn tất.'); }
+  function registerKey() { host.InventorySystem.registerItem(KEY_ITEM);host.InventorySystem.registerItem(GRAIL_KEY);host.InventorySystem.registerItem(SHIBUYA_KEY);host.InventorySystem.registerItem(AKATSUKI_KEY); }
+  registerKey(); persist();
+  function commitPending() {
+    const p = data.pendingReward;
+    if (!p) return null;
+    if (p.secret && bridge.grantSecret?.(p.secret) !== true) throw new Error('Chưa thể lưu thẻ Raid. Phần thưởng sẽ được khôi phục ở lần tải sau.');
+    for(const card of p.cards||[])if(bridge.grantSecret?.(card)!==true)throw new Error('Chưa thể lưu thẻ Raid. Phần thưởng đang chờ khôi phục.');
+    if(p.item&&!host.InventorySystem.grantOnce('raid_'+p.type,p.id,p.item.id,p.item.quantity))throw new Error('Chưa thể lưu vật phẩm Raid. Phần thưởng đang chờ khôi phục.');
+    const previous = JSON.parse(JSON.stringify(data)), entry = data.types[p.type];
+    const granted = Math.min(p.coins, Number.MAX_SAFE_INTEGER - entry.coins);
+    entry.coins += granted; entry.wins = Math.min(Number.MAX_SAFE_INTEGER, entry.wins + 1);
+    if (p.secret) data.claimedSecrets[p.secret.cardId] = true;
+    for(const card of p.cards||[])data.claimedSecrets[card.cardId]=true;
+    data.pendingReward = null; data.activeAttempt = null;
+    if (!persist()) { data = previous; throw new Error('Chưa thể lưu Raid Coins. Phần thưởng đang chờ khôi phục.'); }
+    return { won: true, coins: granted, secret: p.secret, cards:p.cards||[], item:p.item||null, type: p.type, difficulty: p.difficulty, dropMultiplier: p.dropMultiplier || 1 };
+  }
+  function configure(options = {}) {
+    bridge = options;
+    for (const id of [...SECRET_IDS,...SHIBUYA_CARDS,'pain']) if (bridge.hasSecret?.(id)) data.claimedSecrets[id] = true;
+    persist();
+    if (data.pendingReward) { try { commitPending(); } catch (e) { console.warn(e.message); } }
+  }
+  function canEnter(type = 'marine_fort') { return !host.SandboxSystem?.active && validType(type) && !data.pendingReward && (!TYPES[type].keyId || host.InventorySystem.quantity(TYPES[type].keyId) >= 1); }
+  function setDifficulty(type, value) {
+    if (!validType(type) || data.activeAttempt) return false;
+    const before = data.types[type].difficulty; data.types[type].difficulty = difficulty(value);
+    if (persist()) return true; data.types[type].difficulty = before; return false;
+  }
+  function enemies(type = 'marine_fort', d = data.types[type]?.difficulty, random = Math.random) {
+    if (!validType(type)) return [];
+    const level = difficulty(d), scale = (1 + (level - 1) * LEVEL_GROWTH) * (['holy_grail','shibuya'].includes(type) ? .5 : 1);
+    return TYPES[type].enemies.map(([id, hpMin, hpMax, atkMin, atkMax]) => {
+      const hp = hpMin + Math.floor(randomUnit(random) * (hpMax - hpMin + 1));
+      const atk = atkMin + Math.floor(randomUnit(random) * (atkMax - atkMin + 1));
+      const native = host.ALL_CARDS.find(card => card.id === id);
+      if (!native) throw new Error('Thiếu thẻ boss Raid: ' + id);
+      const stats = { hp: Math.round(hp * scale), atk: Math.round(atk * scale) };
+      // Legacy passive helpers read card.stats; use this Raid-only level snapshot
+      // so their ATK effects scale with the displayed boss, without editing CARDS.
+      const card = { ...native, stats: { ...stats } };
+      return { card, display: { name: card.name, image: card.image, ...stats }, mutations: [], hp: stats.hp, maxHp: stats.hp, atk: stats.atk, defeated: false, level, isRaidEnemy: true };
+    });
+  }
+  function preview(type = 'marine_fort', d = data.types[type]?.difficulty) {
+    if (!validType(type)) return [];
+    const level = difficulty(d), scale = (1 + (level-1)*LEVEL_GROWTH) * (['holy_grail','shibuya'].includes(type) ? .5 : 1);
+    return TYPES[type].enemies.map(([id,h0,h1,a0,a1]) => ({ card:host.ALL_CARDS.find(c=>c.id===id), level, hpMin:Math.round(h0*scale),hpMax:Math.round(h1*scale),atkMin:Math.round(a0*scale),atkMax:Math.round(a1*scale) }));
+  }
+  function start(battle, type = 'marine_fort') {
+    if (battle?.mode !== MODE || battle.playerTeam?.length !== 4 || battle.enemyTeam?.length !== TYPES[type]?.enemies.length || !canEnter(type) || data.activeAttempt) throw new Error('Cần đội 4 thẻ, đúng số đối thủ và điều kiện vào Raid.');
+    const previous = JSON.parse(JSON.stringify(data)), now = Date.now(), entry = data.types[type];
+    const attempt = { id: `${now}_${++serial}`, type, difficulty: entry.difficulty, startedAt: now };
+    data.activeAttempt = attempt;
+    try { requirePersist(); if (TYPES[type].keyId && !host.InventorySystem.remove(TYPES[type].keyId, 1)) throw new Error('Không thể tiêu Raid Key. Trận chưa bắt đầu.'); }
+    catch (e) { data = previous; persist(); throw e; }
+    battle.raid = { ...attempt, upgradeLevel: entry.upgradeLevel, completed: false };
+    const multiplier = 1 + entry.upgradeLevel / 100;
+    battle.playerTeam.forEach(unit => { unit.maxHp = Math.round(unit.maxHp * multiplier); unit.hp = unit.maxHp; unit.atk = Math.round(unit.atk * multiplier); Object.assign(unit.display, { hp: unit.maxHp, atk: unit.atk }); });
+    return battle.raid;
+  }
+  function rollSecret(d, random = Math.random) {
+    if (randomUnit(random) >= secretChance(d)) return null;
+    const pick = randomUnit(random), cardId = SECRET_IDS[pick < .55 ? 0 : pick < .90 ? 1 : 2];
+    // Owned results remain misses; never reweight the specified 55/35/10 split.
+    if (data.claimedSecrets[cardId] || bridge.hasSecret?.(cardId)) return null;
+    const mutationIds = (bridge.rollMutations?.() || []).map(m => typeof m === 'string' ? m : m.id);
+    return { cardId, mutationIds };
+  }
+  function akatsukiChances(d){const t=(difficulty(d)-1)/999;return {mangekyo_eye:.0003+(.03-.0003)*t,pain:.0005+(.05-.0005)*t};}
+  function shibuyaChances(d){const t=(difficulty(d)-1)/999;return {jogo:.0031+.0279*t,haruta:.052+.468*t,equipment_cursed_finger:.001+.009*t};}
+  function rollShibuyaCards(d,random){
+    const chances=shibuyaChances(d),cards=[];
+    for(const cardId of SHIBUYA_CARDS)if(randomUnit(random)<chances[cardId]&&!data.claimedSecrets[cardId]&&!bridge.hasSecret?.(cardId))cards.push({cardId,mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)});
+    return cards;
+  }
+  function finish(battle, won, random = Math.random) {
+    const run = battle?.raid;
+    if (!run || run.completed || !validType(run.type)) return null;
+    if (won && ((battle.enemyTeam || []).length < TYPES[run.type].enemies.length || battle.enemyTeam.some(u => !u.defeated && u.hp > 0))) return null;
+    if (data.pendingReward) {
+      if (data.pendingReward.id !== run.id) throw new Error('Có phần thưởng Raid đang chờ lưu.');
+      const result = commitPending(); run.completed = true; return result;
+    }
+    if (!data.activeAttempt || data.activeAttempt.id !== run.id) return null;
+    if (!won) { const previous = data.activeAttempt; data.activeAttempt = null; if (!persist()) { data.activeAttempt = previous; throw new Error('Không thể lưu kết quả Raid.'); } run.completed = true; return { won: false, coins: 0, secret: null, type: run.type, difficulty: run.difficulty }; }
+    const range = coinRange(run.difficulty);
+    const baseCoins = range.min + Math.floor(randomUnit(random) * (range.max - range.min + 1));
+    data.pendingReward = { ...data.activeAttempt, baseCoins, dropMultiplier: host.InventorySystem.getDropMultiplier(), coins: host.InventorySystem.scaleDrop(baseCoins, random), secret: run.type==='marine_fort'?rollSecret(run.difficulty, random):null };
+    if(run.type==='akatsuki')data.pendingReward.cards=randomUnit(random)<akatsukiChances(run.difficulty).pain?[{cardId:'pain',raidReceipt:run.id,mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)}]:[];
+    if(run.type==='shibuya')data.pendingReward.cards=rollShibuyaCards(run.difficulty,random);
+    if(rewardItemId(run.type))data.pendingReward.item=randomUnit(random)<(run.type==='akatsuki'?akatsukiChances(run.difficulty).mangekyo_eye:run.type==='shibuya'?shibuyaChances(run.difficulty).equipment_cursed_finger:excaliburChance(run.difficulty))?{id:rewardItemId(run.type),quantity:host.InventorySystem.scaleDrop(1,random)}:null;
+    if (!persist()) { data.pendingReward = null; throw new Error('Không thể lưu phần thưởng Raid.'); }
+    const result = commitPending(); run.completed = true; return result;
+  }
+  function abort(battle) { if (battle?.raid && !battle.raid.completed && !data.pendingReward) { try { finish(battle, false); } catch (e) { console.warn(e.message); } } }
+  function claimTimeTrialKey(battle,won,random=Math.random){
+    const run=battle?.trial;
+    if(!run?.completed||!won||!run.ninjaLineup||run.reason==='save-error'||!host.TimeTrialSystem.isMode(battle.mode)||host.SandboxSystem?.active||host.PvPSystem?.active||battle.sandbox||battle.pvp)return {quantity:0};
+    if(run.akatsukiKey)return run.akatsukiKey;
+    const quantity=randomUnit(random)<.30?host.InventorySystem.scaleDrop(1,random):0;
+    if(quantity&&!host.InventorySystem.grantOnce('trial_akatsuki',run.id,AKATSUKI_KEY.id,quantity))return {quantity:0,error:'Unable to save Akatsuki Raid Key.'};
+    return run.akatsukiKey={quantity};
+  }
+  function rollKey(mode, random = Math.random) {
+    if (!['1v1', '4v4'].includes(mode) || randomUnit(random) >= .10) return false;
+    return host.InventorySystem.grant(KEY_ITEM.id, host.InventorySystem.scaleDrop(1, random));
+  }
+  // Chỉ trận thường hoàn tất mới nhận Key; không cấp thưởng cho Online PvP.
+  function claimShibuyaKey(battle,malevolent){
+    if(host.PvPSystem?.active||host.SandboxSystem?.active||battle?.sandbox||battle?.pvp||!['1v1','4v4'].includes(battle?.mode)||!battle.finished||!['victory','defeat'].includes(battle.outcome)||battle.exitReason||malevolent!==true)return {quantity:0};
+    if(battle.shibuyaKeyReward)return battle.shibuyaKeyReward;
+    const receipt=battle.shibuyaKeyReceipt ||= host.OnlineUtils.token();
+    if(!host.InventorySystem.grantOnce('normal_shibuya',receipt,SHIBUYA_KEY.id,1))return {quantity:0,error:'Unable to save Shibuya Raid Key.'};
+    host.CloudSaveSystem?.markDirty();
+    return battle.shibuyaKeyReward={quantity:1};
+  }
+  const fateReceipts=new WeakMap();
+  function rollFateKey(battle,victim,source,random=Math.random){
+    if(host.SandboxSystem?.active||!['1v1','4v4'].includes(battle?.mode)||!battle.enemyTeam?.includes(victim)||!battle.playerTeam?.includes(source)||victim?.isClone||victim?.isSummoned||victim?.isTemporaryAlly||!host.CategorySystem.has(victim,'Fate'))return 0;
+    let seen=fateReceipts.get(battle);if(!seen){seen=new WeakSet();fateReceipts.set(battle,seen);}if(seen.has(victim))return 0;seen.add(victim);
+    if(randomUnit(random)>=.50)return 0;
+    const quantity=host.InventorySystem.scaleDrop(1,random);return host.InventorySystem.grant(GRAIL_KEY.id,quantity)?quantity:0;
+  }
+  function purchase(type, id, quantity = 1) {
+    if (!validType(type)) return false;
+    const offer = offers(type).find(item => item.id === id), entry = data.types[type];
+    if (!offer || !entry || data.pendingReward) return false;
+    return host.ShopBulkSystem.purchase({key:KEY,id,cost:offer.cost,balance:entry.coins,count:quantity,
+      setBalance:value=>{entry.coins=value;return persist();}});
+  }
+  function upgradeCost(type) { return 5 + 5 * Math.floor((data.types[type]?.upgradeLevel || 0) / 10); }
+  function upgrade(type) {
+    if (!validType(type)) return false;
+    const entry = data.types[type]; if (!entry || data.activeAttempt || data.pendingReward || entry.upgradeLevel >= 100 || entry.coins < upgradeCost(type)) return false;
+    const cost = upgradeCost(type); entry.coins -= cost; entry.upgradeLevel++;
+    if (persist()) return true; entry.coins += cost; entry.upgradeLevel--; return false;
+  }
+  function snapshot(type = 'marine_fort') { return { ...data.types[type] }; }
+  function totalWins() { return Object.keys(TYPES).reduce((sum, type) => Math.min(Number.MAX_SAFE_INTEGER, sum + data.types[type].wins), 0); }
+  function legacyGomenProgress() {
+    // configure() recovers the old durable item reward before Boss Event migration.
+    if (data.pendingReward?.type === 'gomen') return {ready:false};
+    const entry=data.types.gomen;
+    return entry ? {ready:true,coins:entry.coins,wins:entry.wins,difficulty:entry.difficulty} : {ready:true,coins:0,wins:0,difficulty:1};
+  }
+  function renderShop(grid, type, onChange = () => {}) {
+    if (!grid || !validType(type)) return; grid.replaceChildren(); const doc = grid.ownerDocument, entry = data.types[type];
+    for (const offer of offers(type)) {
+      const item = host.InventorySystem.getItem(offer.id), box = doc.createElement('article'); box.className = 'module-item';
+      const name = doc.createElement('strong'); name.textContent = `${item.icon} ${item.name}`;
+      if(offer.id==='ramen_bowl'){const image=doc.createElement('img');image.className='raid-food-icon';image.src=item.image;image.alt=item.name;image.loading='lazy';image.addEventListener('error',()=>image.remove(),{once:true});box.append(image);}
+      const text = doc.createElement('p'); text.textContent = item.description;
+      const button = doc.createElement('button'); button.type = 'button'; button.textContent = `${offer.cost} ${TYPES[type].coinName}`; button.disabled = host.ShopBulkSystem.blocked || Boolean(data.pendingReward);
+      button.addEventListener('click', () => { if (purchase(type, offer.id, host.ShopBulkSystem.requested(grid))) onChange(); else host.alert('Không thể mua vật phẩm Raid.'); }); box.append(name, text, button); grid.append(box);
+    }
+    const box = doc.createElement('article'); box.className = 'module-item';
+    const name = doc.createElement('strong'); name.textContent = `Team HP / ATK +${entry.upgradeLevel}%`;
+    const text = doc.createElement('p'); text.textContent = 'Each upgrade adds 1% HP and ATK inside '+TYPES[type].name+' only. Maximum +100%.';
+    const button = doc.createElement('button'); button.type = 'button'; button.textContent = entry.upgradeLevel >= 100 ? 'MAX +100%' : `Upgrade • ${upgradeCost(type)} Coins`; button.disabled = entry.upgradeLevel >= 100 || entry.coins < upgradeCost(type) || Boolean(data.activeAttempt);
+    button.addEventListener('click', () => { if (upgrade(type)) onChange(); else host.alert('Không thể nâng cấp đội Raid.'); }); box.append(name, text, button); grid.append(box);
+  }
+  function reset() { data = fresh(); registerKey(); persist(); }
+  host.RaidSystem = Object.freeze({ KEY, MODE, AKATSUKI_KEY, akatsukiChances, claimTimeTrialKey, KEY_ITEM, GRAIL_KEY, SHIBUYA_KEY, SHIBUYA_CARDS, shibuyaChances, SECRET_IDS, TYPES, SHOP, offers, rewardItemId, materialChance:excaliburChance, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, claimShibuyaKey, purchase, upgrade, upgradeCost, snapshot, totalWins, legacyGomenProgress, renderShop, reset, flush: persist });
+})(window);
