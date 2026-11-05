@@ -1,47 +1,83 @@
 NHẬT KÝ CẬP NHẬT 05/11/2026
-THIẾT KẾ LẠI BỘ LỌC CARD INDEX
+AKATSUKI RAID, TIẾN HÓA ITACHI VÀ GIỚI HẠN CẤP 100
 
-1. Nút mở bộ lọc
-- Thêm nút hai mũi tên lên/xuống trong phần đầu Card Index, kèm số lựa chọn đang áp dụng.
-- Biểu tượng mũi tên được vẽ bằng SVG trực tiếp trong HTML; không cần bổ sung tệp ảnh hoặc tài nguyên nhị phân.
-- Giữ ô tìm thẻ và bộ lọc Mutation hiện có; chuyển lựa chọn sắp xếp, Element và Category vào hộp thoại mới.
+1. Giới hạn cấp thẻ
+- Cấp tối đa mới: 100. Khi đọc dữ liệu lưu hoặc tính chỉ số, cấp vượt 100 được đưa về 100; EXP dư ở cấp tối đa được xóa.
+- Thẻ cấp 100 không nhận thêm EXP từ bản sao, thức ăn hoặc phần thưởng trận đấu.
+- Giữ công thức EXP và tăng chỉ số của các cấp 1–99. Không thay đổi cấp độ khó Raid/Boss Event 1–1000 hoặc chỉ số cấu hình của các chế độ khác.
+- Cập nhật nhãn Feed, Storage và preset Sandbox theo giới hạn mới. Dữ liệu thẻ, tiền, vật phẩm và đội hình đang có được giữ lại khi di chuyển dữ liệu.
 
-2. Bốn chế độ sắp xếp
-- DAMAGE: ATK giảm dần, từ cao xuống thấp.
-- HP: HP tối đa giảm dần.
-- RARITY: tỷ lệ xuất hiện thấp nhất trước; các thẻ độc quyền 1 in 0 đứng đầu, sau đó mẫu số 1 in X giảm dần.
-- LEVEL: cấp thẻ giảm dần; thẻ chưa sở hữu nằm sau các thẻ đã sở hữu.
-- DAMAGE/HP dùng giá trị cao nhất trong các Mutation đang sở hữu, gồm cấp thẻ và Relic phù hợp. Thẻ chưa sở hữu dùng chỉ số gốc cấp 1.
-- Giá trị sắp xếp được tính một lần cho mỗi thẻ và dùng bộ nhớ đệm của giao diện; không quét Kho đồ trong hàm so sánh.
+2. Akatsuki Raid
+- Thêm Akatsuki Raid vào bộ chọn Raid tiêu chuẩn, dùng giao diện Battle Arena hiện có: 4 thẻ người chơi đấu 10 đối thủ.
+- Mỗi lượt vào tiêu 1 Akatsuki Raid Key. Thắng bất kỳ chế độ Time Trial nào với ít nhất 1 thẻ Ninja trong đội hình ban đầu có 30% cơ hội nhận Key; quân triệu hồi không bổ sung điều kiện này.
+- Sandbox, Online PvP, trận thua và việc xử lý lại cùng một kết quả không cấp Key.
+- Đội địch theo thứ tự: Konan, Kisame Hoshigaki, Deidara, Hidan, Sasori, Kakuzu, Orochimaru, Zetsu, Pain, Itachi Awakened.
+- Dùng đúng khoảng HP/ATK cấp khó 1 được yêu cầu. Hệ số độ khó dùng quy tắc Raid hiện tại: 1 + (độ khó - 1) × 0,075.
+- Akatsuki Coins, số trận thắng, lựa chọn độ khó và nâng cấp đội được lưu riêng. Shop có potion tiêu chuẩn, mua số lượng lớn theo ngân sách và nâng cấp HP/ATK của riêng Raid này.
+- Mangekyo Eye: 0,03% ở độ khó 1, tăng tuyến tính đến 3% ở độ khó 1000.
+- Pain: 0,05% ở độ khó 1, tăng tuyến tính đến 5% ở độ khó 1000. Hai lượt kiểm tra Eye/Pain độc lập.
+- Pain nhận Mutation qua bộ sinh Mutation tiêu chuẩn, tối đa 2 Mutation. Các lần rơi Pain sau vẫn nhận được bản sao/biến thể mới.
+- Phần thưởng chờ lưu có thể khôi phục; mã giao dịch ngăn cấp trùng thẻ, vật phẩm và Coins khi thử lưu lại.
 
-3. Element và Rarity
-- Sáu Element dùng đúng ảnh đang có của game: assets/fire.png, assets/water.png, assets/nature.png, assets/electric.png, assets/dark.png, assets/holy.png.
-- Có thể chọn nhiều Element; nếu ảnh bị thiếu, tên Element và biểu tượng thay thế vẫn dùng được.
-- Thay biểu tượng sao bằng nút tên độ hiếm lấy từ dữ liệu thẻ: Common, Rare, Epic, Legendary, Mythic, Secret.
-- Các tier mới sẽ xuất hiện khi có trong cards.js. Monarch hiện là Mutation, không phải tier độ hiếm của thẻ.
-- Có thể bật/tắt nhiều độ hiếm. Không chọn mục nào trong một nhóm nghĩa là không giới hạn nhóm đó.
+3. Mangekyo Eye và tiến hóa
+- Thêm Mangekyo Eye, dùng ảnh có sẵn: assets/items/eeye.png.
+- Công thức: 1 Uchiha Itachi cấp 100 + 1 Mangekyo Eye → Itachi Awakened cấp 100, EXP 0, giữ chính xác Mutation của bản sao đã chọn.
+- Tiêu đúng 1 bản sao và 1 Eye. Thiếu cấp/vật phẩm hoặc lỗi ghi dữ liệu không làm mất nguyên liệu.
+- Itachi Awakened thừa hưởng điều kiện Tower của Uchiha Itachi. Công thức tiến hóa cũ vẫn tạo kết quả cấp 1 như trước.
 
-4. Multi-Category và APPLY
-- Category lấy trực tiếp từ category.js; nhiều Category được chọn cùng lúc.
-- Trong cùng nhóm dùng điều kiện HOẶC: chọn VideoGame và Villian sẽ hiển thị thẻ có ít nhất một trong hai Category.
-- Giữa các nhóm dùng điều kiện VÀ: thẻ phải đồng thời khớp Element, Rarity, Category, tìm kiếm và bộ lọc Mutation đang bật.
-- Tìm kiếm Category chỉ ẩn/hiện các nhãn; không xóa các Category đã chọn.
-- Thay đổi trong hộp thoại là bản nháp. APPLY áp dụng cùng lúc, cập nhật lưới và đưa phân trang về trang đầu khi tiêu chí đổi.
-- Cancel, nút X, nhấn nền hoặc Escape hủy bản nháp. Escape chỉ đóng bộ lọc, không đóng Card Index phía dưới.
-- Reset xóa lựa chọn trong bản nháp; cần APPLY để xác nhận. Giữ bộ lọc đã áp dụng khi mở lại Index trong cùng phiên chơi.
-- Không thêm phần FILTERS với TRADEABLES, CAN EVOLVE, FEATURED, BLESSING, LOCKED hoặc SHINY.
+4. Mười thẻ Akatsuki mới
+- Itachi Awakened: Fire / Secret / tiến hóa; HP 38.000, ATK 9.300. Có đủ 10 kỹ thuật, hồi sinh Kotoamatsukami rồi Izanagi, hiệu ứng Seal, Yata Mirror, Crow Clone và Sharingan Copy.
+- Konan: Nature / Mythic / Wind / 1 in 2.900.000; HP 32.200, ATK 7.900. Paper, né, hồi máu và hiệu ứng khi chết.
+- Kisame Hoshigaki: Water / Mythic / Raining / 1 in 3.300.000; HP 36.400, ATK 8.900. Water Domain, Hindered, khiên và cộng chỉ số.
+- Deidara: Fire / Mythic / Sunny / 1 in 3.450.000; HP 46.700, ATK 2.900. Nổ nhiều mục tiêu, chim hỗ trợ và nổ khi chết.
+- Sasori: Dark / Mythic / Reaper / 1 in 4.600.000; HP 69.700, ATK 4.300. Chọn Puppet, cộng chỉ số, tăng cơ hội triệu hồi và kế thừa kỹ năng.
+- Kakuzu: Holy / Secret / Shadow / 1 in 5.800.000; HP 38.800, ATK 9.500. Heart, cướp nội tại/Element và hồi sinh tiêu Heart.
+- Hidan: Nature / Secret / Malevolent / 1 in 6.960.000; HP 78.600, ATK 7.200. Voodoo phản sát thương và đổi hồi máu thành ATK có thời hạn.
+- Zetsu: Nature / Secret / Tsukuyomi / 1 in 7.450.000; HP 35.300, ATK 8.600. White sao chép chỉ số/nội tại; Black chia chỉ số cho đồng đội rồi hy sinh.
+- Orochimaru: Nature / Secret / Eclipse / 1 in 6.350.000; HP 59.700, ATK 3.700. Poison xuyên khiên/giảm sát thương nhưng không kết liễu, hồi sinh đồng đội và tự hồi sinh.
+- Pain: Electric / Secret / chỉ rơi Akatsuki Raid; HP 75.700, ATK 18.500. Đủ 6 Path, đổi Path sau hạ địch, chuyển Nagato và gọi các Path clone đánh hỗ trợ.
+- Category, Element, độ hiếm và đường dẫn ảnh của 10 thẻ dùng đúng dữ liệu đã cung cấp. Nội tại được tách thành akatsuki_passives.js; cộng phần trăm chỉ số theo nền chỉ số gốc để tránh nhân dồn.
 
-5. Giao diện và kiểm tra
-- Bố cục tối, viền neon, trạng thái lựa chọn rõ ràng và nút APPLY luôn nằm trong vùng điều khiển.
-- Bố cục tương thích máy tính/điện thoại; có cuộn nội dung và vùng Category riêng, không tràn ngang.
-- Kiểm tra bộ lọc kết hợp, bốn kiểu sắp xếp, tìm kiếm, hủy bản nháp, phân trang và khởi động trình duyệt.
-- Không thay đổi cards.js, Category/Element registry, RNG, tiến trình, lưu game, combat hoặc các bộ chọn đội hình Arena.
-- Nhãn cache mới: 20261105-index-filters-1. Thay đầy đủ mã nguồn rồi tải lại bằng Ctrl+F5.
+5. Các quy tắc đã chốt
+- Orochimaru chỉ hồi sinh mỗi đồng đội 1 lần trong trận; đơn vị triệu hồi và thẻ cấm hồi sinh không được hồi sinh bằng cách này.
+- Sasori chỉ áp dụng +10% ATK/+15% HP một lần cho Puppet đang chọn; nội tại từ các Puppet đã chết được tích lũy, không thêm trùng. Khi Sasori chết, Puppet hiện tại chết theo.
+- Nagato chỉ tạo một bộ 6 clone trong trận, mỗi clone giữ một Path và 20% chỉ số hiện tại của Pain. Clone không tạo thêm clone; chỉ clone còn sống mới đánh hỗ trợ.
+- Itachi dùng hết kỹ thuật rồi nghỉ đúng 5 lượt của mình. Izanami chỉ dùng một lần trong trận; các chu kỳ sau còn 9 kỹ thuật.
+- Crow Clone tối đa 1 con đang sống cho mỗi người triệu hồi; đánh ở lượt phe tiếp theo rồi xuống cuối đội. Nổ khi chết trúng tối đa 2 địch phía trước, bằng 80% ATK của clone.
+- Sharingan Copy chưa có đòn địch để ghi nhận sẽ không gây sát thương; khi đã có, sao chép 120% sát thương ghi nhận, không tự cộng chí mạng lần nữa.
+- Konan cần ít nhất 5 Paper để phá khiên mới được cấp, tiêu đúng 5 Paper. Mỗi Paper giảm 1 điểm phần trăm giảm sát thương của mục tiêu.
+- Đòn khắc chế Element Kakuzu cướp gây x1,5; điểm yếu Element gốc vẫn theo bảng x3 hiện tại. Khi tấn công, dùng lợi thế tốt nhất từ các Element đang có.
+- Poison tính theo lượt của mục tiêu, bỏ qua khiên/giảm sát thương và luôn để lại ít nhất 1 HP. Amaterasu được giữ lại qua tẩy hiệu ứng thông thường; Izanagi tẩy toàn bộ hiệu ứng bất lợi của bản thân.
+- Relic và giá trị đã roll được giữ khi hồi sinh; Crow/Path clone thừa hưởng bản sao Relic chiến đấu theo hệ thống hiện có, không tạo vật phẩm Kho đồ.
+
+6. Kiểm tra và phát hành
+- Kiểm tra cú pháp toàn bộ 74 tệp JavaScript; tất cả đường dẫn script cục bộ và chữ hoa/thường khớp tên tệp.
+- 60 kiểm tra cơ chế/giao dịch chạy qua: cấp 100, di chuyển save, kỹ thuật Itachi, Puppet, Heart, Poison, 6 Path, giới hạn clone, tiến hóa, xác suất Key, rơi Mutation, Shop và khôi phục phần thưởng.
+- Thêm 24 mô phỏng đội Akatsuki hỗn hợp: không có lỗi runtime, chỉ số không hợp lệ hoặc vượt hạn mức 6 clone Nagato.
+- Đối chiếu mô phỏng có seed của 181 thẻ cũ trong tối đa 50 lượt/thẻ: kết quả không thay đổi. Đối chiếu dữ liệu 181 thẻ cũ, bảng 6 Element và công thức cấp 1–99: không thay đổi.
+- Kiểm tra mở Raid, đổi độ khó, Shop và Evolution ở màn hình 1440px và 390px, không ghi nhận lỗi JavaScript.
+- Giữ nguyên mã online_utils.js, cấu hình TURN/STUN, Firebase, Online PvP và các bộ quy tắc Tower/Boss Event/Spooky/Infinity. Kiểm tra kết nối dịch vụ trực tuyến thực tế không nằm trong lượt kiểm thử cục bộ này.
+- Nhãn cache mới: 20261105-akatsuki-1. Thay đầy đủ mã nguồn, giữ thư mục assets hiện có rồi tải lại bằng Ctrl+F5.
+- Không tạo Excel hoặc tệp ảnh/nhị phân tài nguyên. Các ảnh thẻ cần có trong dự án: assets/cards/itachiawa.png, konan.png, kisame.png, deidara.png, sasori.png, kakuzu.png, hidan.png, zetsu.png, orochimaru.png, pain.png (các tên còn lại đều trong assets/cards/).
 
 Modified Files Note
-- index_filters.js (mới): trạng thái nháp/đã áp dụng, chọn nhiều Element/Rarity/Category, tìm kiếm Category và điều khiển hộp thoại.
-- app.js: nối bộ lọc mới vào Index, sắp xếp DAMAGE/HP/RARITY/LEVEL, bộ nhớ đệm chỉ số và phân trang.
-- index.html: nút hai mũi tên, hộp thoại bộ lọc, phần tóm tắt, thứ tự tải script và nhãn cache.
-- styles.css: giao diện bộ lọc, trạng thái nút và bố cục đáp ứng.
-- startup.js: kiểm tra mô-đun và nút bộ lọc đã khởi tạo đầy đủ.
-- README.txt: chỉ giữ nhật ký của bản cập nhật này.
+- akatsuki_passives.js (mới): toàn bộ kỹ năng Akatsuki, Path, Paper, Poison, Puppet và hồi sinh.
+- cards.js: thêm 10 thẻ, dữ liệu Category/nguồn nhận và mô tả ngắn.
+- raid.js: Akatsuki Raid, Key, Coins, Shop, nâng cấp, dải chỉ số và phần thưởng có mã giao dịch.
+- timetrial.js: ghi nhận Ninja của đội hình ban đầu để kiểm tra rơi Key.
+- evolution.js: Mangekyo Eye và công thức Itachi giữ cấp 100, kế thừa Tower.
+- levels.js: giới hạn cấp 100 dùng chung.
+- app.js: di chuyển cấp trong save, nối Raid/Key/tiến hóa, cấp Pain và thông tin giao diện.
+- combat_stats.js: hỗ trợ xóa buff/reset ATK phục vụ Kotoamatsukami và Izanagi.
+- companions.js: hạn mức Crow/Nagato và hồi sinh Snake một lần theo mục tiêu.
+- elements.js: lợi thế/tương khắc nhiều Element của Kakuzu; giữ đường xử lý nhanh cho thẻ thông thường.
+- passives.js: nối mô-đun mới vào đòn đánh, sát thương, khiên, né, sao chép, tẩy hiệu ứng và vòng đời chiến đấu.
+- yuno.js: thông báo cấp lớp khiên để Paper xử lý đúng.
+- relics.js: nhận diện đòn hỗ trợ Animal Path của Pain.
+- exp_food.js: nhãn Feed lấy giới hạn cấp dùng chung.
+- storage.js: sửa hướng dẫn thức ăn và EXP Capsule theo cấp tối đa 100.
+- sandbox.js: preset cấp tối đa theo giới hạn mới.
+- portal_rules.js: đọc lựa chọn cấp cũ tương thích nhưng tính chỉ số người chơi theo cấp tối đa 100.
+- index.html: lựa chọn Akatsuki Raid, script mới, nhãn cấp và cache.
+- startup.js: kiểm tra mô-đun Akatsuki khi khởi động.
+- README.txt: chỉ chứa nhật ký của bản cập nhật này.

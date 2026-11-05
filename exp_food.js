@@ -37,7 +37,7 @@
    host.localStorage.setItem(host.InventorySystem.KEY,plan.itemsAfter);host.localStorage.setItem(MAIN_KEY,plan.mainAfter);
    host.localStorage.setItem(KEY,JSON.stringify({version:1,pending:null}));
    host.InventorySystem.reload();try{bridge.onCommit?.();}catch(error){host.console?.warn('Feeding saved; UI refresh failed.',error);}
-   return{ok:true,...plan.result,message:'+'+plan.result.gained.toLocaleString('en-US')+' EXP · Lvl '+plan.result.level+'/1000'};
+   return{ok:true,...plan.result,message:'+'+plan.result.gained.toLocaleString('en-US')+' EXP · Lvl '+plan.result.level+'/'+host.CardLevelSystem.MAX_LEVEL};
   }catch(error){const restored=recover();if(restored)bridge.onCommit?.();return{ok:false,message:restored?'Unable to feed: '+error.message+' Food and EXP preserved.':'Storage unavailable. Reload to recover feeding before continuing.'};}
   finally{busy=false;}
  }
@@ -64,7 +64,7 @@
  }
  function paint(rebuild=true){
   if(!ui)return;const info=bridge.describe?.(cardId);if(!info)return;
-  ui.name.textContent=info.name;ui.level.textContent=`Lvl ${info.level}/1000`;ui.exp.textContent=info.maxed?'MAX LEVEL':`${info.exp.toLocaleString('en-US')} / ${info.required.toLocaleString('en-US')} EXP`;ui.progress.value=info.progress;
+  ui.name.textContent=info.name;ui.level.textContent=`Lvl ${info.level}/${host.CardLevelSystem.MAX_LEVEL}`;ui.exp.textContent=info.maxed?'MAX LEVEL':`${info.exp.toLocaleString('en-US')} / ${info.required.toLocaleString('en-US')} EXP`;ui.progress.value=info.progress;
   if(ui.image.getAttribute('src')!==info.image){ui.image.hidden=!info.image;ui.fallback.hidden=Boolean(info.image);if(info.image)ui.image.src=info.image;else ui.image.removeAttribute('src');}ui.image.alt=info.name;ui.fallback.textContent=info.name;
   if(rebuild){const tiles=FOODS.filter(food=>host.InventorySystem.quantity(food.id)>0).map(food=>{const owned=host.InventorySystem.quantity(food.id),tile=make('label','feed-food-tile'),input=make('input');input.type='number';input.min='0';input.max=String(owned);input.step='1';input.value=String(Math.min(selected.get(food.id)||0,owned));input.dataset.foodQuantity=food.id;input.setAttribute('aria-label',food.name+' quantity');tile.append(foodArt(food),make('strong','',food.name),make('small','',`x${owned.toLocaleString('en-US')} · ${food.baseExp.toLocaleString('en-US')} EXP each`),input);return tile;});ui.grid.replaceChildren(...(tiles.length?tiles:[make('p','','No EXP Food owned. Win a battle for Bread or visit Spooky Shop.')]));}
   const rows=normalizeSelection(selected).map(row=>({...row,quantity:Math.min(row.quantity,host.InventorySystem.quantity(row.id))})).filter(row=>row.quantity>0);

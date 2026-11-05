@@ -2952,6 +2952,257 @@ CARDS.push({
     "description": "Start: 10 Living + 10 Departed Ammo; 0 Lament. Attacks: 70% one random bullet, 30% both.\nLiving: 90% ATK; heals 2% max HP (4% below half HP). Departed: 80% ATK; adds 1 Butterfly (max 10), +5% damage taken per mark; Bleed 1 turn at 5% ATK.\nMarked enemy dies: +2 Lament and heal 2.5% max HP per Butterfly. Any hit taken: +1 Lament. Reload: +3. Each Lament: +3% ATK (max 15 / +45%).\nEvery 10th attack: Final Requiem, 220% ATK to all enemies; consumes ordinary / Crystal Butterflies for 5% / 10% of each target’s current HP per mark, ignoring damage reduction (shields / immunity still work). Revives one dead teammate at full HP at the front for 3 battle turns, retaining stats and Relic. Loses 10 Lament and 15% max HP (nonfatal).\nEither chamber empty: skip next attack to refill both to 10, heal 30% max HP and gain 3 Lament. Stun / Freeze interrupts the pending Reload: lose all ammo, no Lament, Burn for 2 turns at 10% ATK.\nWith 2+ unique debuffs: +25% damage, apply 2 Butterflies per hit, Living healing becomes +20% ATK damage ignoring reduction, external healing -90%, immune to Stun / Freeze.\nOnce per match, first reaching 15 Lament replaces the next attack (including Requiem) with 3 Crystal Butterflies per enemy, outside the ordinary cap: +10% damage taken each; Bleed 3 turns at 15% ATK. After the following 10th-attack Requiem, fully heal and restore 5 Ammo of each type. Reloads never reset the cumulative attack counter."
   }
 });
+CARDS.push(...[
+  {
+    "id": "itachi-awakened",
+    "name": "Itachi Awakened",
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 0,
+    "requiredWeather": null,
+    "category": [
+      "Ninja",
+      "AntiHero",
+      "Human",
+      "Swordman",
+      "Brutal",
+      "Magician"
+    ],
+    "stats": {
+      "hp": 38000,
+      "atk": 9300
+    },
+    "image": "assets/cards/itachiawa.png",
+    "passive": {
+      "name": "Mangekyou Awakening",
+      "description": "Each attack draws one unused technique; after the pool is spent, skip 5 own turns, then refill. Izanami is removed after its first use.\nTsukuyomi: 150% ATK, ignores shields; Stun 1 turn and +30% damage taken for 2 turns.\nAmaterasu: uncleansable Burn for 3 turns at 25% ATK/turn; spreads to another enemy if the target is already burning.\nSusanoo: 200% ATK; seals a surviving target below 30% HP. Gain a one-hit shield reflecting 50% incoming damage.\nShackling Stakes: 100% ATK to all enemies; 15% miss chance for 2 turns.\nGreat Fireball: 180% ATK to the target; 40% ATK to 3 other random enemies.\nEphemeral: 50% ATK; Stun 2 turns without a shield, otherwise ignore the shield for an extra 100% ATK.\nYasaka Magatama: 250% ATK to the target and 50% to its two nearest allies; ignores dodge and normal shields.\nIzanami, once: 300% ATK. A survivor loses passive/healing for 3 turns; a kill heals Itachi for 20% max HP.\nCrow Clone: 15% max HP / 20% ATK; attacks in Itachi's place next team turn, 30% dodge; death deals 80% clone ATK to nearby enemies.\nSharingan Copy: returns 120% of the last enemy attack's damage; cannot be dodged.\nFirst fatal hit: revive at 50% HP, remove the attacker's buffs and Stun them 2 turns. Second fatal hit: revive at 30% HP, cleanse self and restore base ATK. Each revival occurs once."
+    },
+    "evolutionOnly": true,
+    "evolvesFrom": "uchiha-itachi"
+  },
+  {
+    "id": "konan",
+    "name": "Konan",
+    "element": "Nature",
+    "rarity": "Mythic",
+    "chance": 2900000,
+    "requiredWeather": "Wind",
+    "category": [
+      "Villian",
+      "Ninja",
+      "Magician"
+    ],
+    "stats": {
+      "hp": 32200,
+      "atk": 7900
+    },
+    "image": "assets/cards/konan.png",
+    "passive": {
+      "name": "Paper Genkai",
+      "description": "Attacks add 1 Paper to the target; each reduces incoming damage reduction by 1 percentage point. With 5+ Paper, a newly granted shield breaks and consumes 5 stacks.\n20% dodge; a dodge heals 10% max HP and grants +5% ATK.\nDeath: apply 5–25 Paper to every enemy. Cannot be cloned or revived."
+    }
+  },
+  {
+    "id": "kisame-hoshigaki",
+    "name": "Kisame Hoshigaki",
+    "element": "Water",
+    "rarity": "Mythic",
+    "chance": 3300000,
+    "requiredWeather": "Raining",
+    "category": [
+      "Unhuman",
+      "Villian",
+      "Brutal",
+      "Swordman",
+      "Ninja"
+    ],
+    "stats": {
+      "hp": 36400,
+      "atk": 8900
+    },
+    "image": "assets/cards/kisame.png",
+    "passive": {
+      "name": "Samehada",
+      "description": "Start: Water Domain for 3 battle turns. Enemies attacking Kisame inside it have a 50% chance to gain Hindered for 2 turns.\nAttacking a shielded enemy grants a shield equal to 50% ATK for 5 turns.\nAttacks inside the Domain grant permanent +3% ATK and +3% HP, stacking additively without a cap."
+    }
+  },
+  {
+    "id": "deidara",
+    "name": "Deidara",
+    "element": "Fire",
+    "rarity": "Mythic",
+    "chance": 3450000,
+    "requiredWeather": "Sunny",
+    "category": [
+      "Human",
+      "Villian",
+      "Brutal",
+      "Magician",
+      "Ninja",
+      "Supporter"
+    ],
+    "stats": {
+      "hp": 46700,
+      "atk": 2900
+    },
+    "image": "assets/cards/deidara.png",
+    "passive": {
+      "name": "Clay Genkai",
+      "description": "Every 3rd attack blasts up to 3 random enemies for 40% ATK each.\nWhile an ally attacks, 40% chance to strike a random enemy for 50% of that ally's ATK.\nDeath: 1500% ATK to all enemies. Cannot be cloned or revived."
+    }
+  },
+  {
+    "id": "sasori",
+    "name": "Sasori",
+    "element": "Dark",
+    "rarity": "Mythic",
+    "chance": 4600000,
+    "requiredWeather": "Reaper",
+    "category": [
+      "Unhuman",
+      "Ninja",
+      "Supporter",
+      "Brutal"
+    ],
+    "stats": {
+      "hp": 69700,
+      "atk": 4300
+    },
+    "image": "assets/cards/sasori.png",
+    "passive": {
+      "name": "Puppet Genkai",
+      "description": "Start: choose a Puppet ally, preferring the frontline. Puppet gains +10% ATK, +15% HP and +10 percentage points to clone-summon chances. Without a clone passive, heals 1% HP each turn instead.\nWhen the Puppet dies, choose another ally and carry forward its passive skills. Stat bonuses apply once per Puppet, not once per inherited skill.\nSasori's death instantly kills the current Puppet. Cannot be cloned or revived."
+    }
+  },
+  {
+    "id": "kakuzu",
+    "name": "Kakuzu",
+    "element": "Holy",
+    "rarity": "Secret",
+    "chance": 5800000,
+    "requiredWeather": "Shadow",
+    "category": [
+      "Unhuman",
+      "Magician",
+      "Ninja",
+      "Brutal",
+      "PureEvil",
+      "Villian"
+    ],
+    "stats": {
+      "hp": 38800,
+      "atk": 9500
+    },
+    "image": "assets/cards/kakuzu.png",
+    "passive": {
+      "name": "Grudge Fear",
+      "description": "Each kill grants 1 Heart (max 5), with independent 33% chance to steal a passive and 66% chance to steal the enemy's element.\nUse the best offensive advantage among owned elements. Attacks countering a stolen element deal x1.5 instead of x3; original-element weaknesses stay normal.\nFatal hit: consume 1 Heart, revive at 50% max HP and lose one random stolen passive and element."
+    }
+  },
+  {
+    "id": "hidan",
+    "name": "Hidan",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 6960000,
+    "requiredWeather": "Malevolent",
+    "category": [
+      "Unhuman",
+      "Villian",
+      "PureEvil",
+      "Brutal",
+      "Ninja",
+      "Swordman"
+    ],
+    "stats": {
+      "hp": 78600,
+      "atk": 7200
+    },
+    "image": "assets/cards/hidan.png",
+    "passive": {
+      "name": "Undead Genkai",
+      "description": "Attacking a bleeding enemy has 66% chance to apply Voodoo for 3 turns. Reflect 50% of damage taken from a Voodoo enemy back to them.\nAll healing attempts become an equal percentage of temporary ATK for 5 turns instead of restoring HP."
+    }
+  },
+  {
+    "id": "zetsu",
+    "name": "Zetsu",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 7450000,
+    "requiredWeather": "Tsukuyomi",
+    "category": [
+      "Unhuman",
+      "Villian",
+      "Brutal",
+      "PureEvil",
+      "Ninja",
+      "Supporter"
+    ],
+    "stats": {
+      "hp": 35300,
+      "atk": 8600
+    },
+    "image": "assets/cards/zetsu.png",
+    "passive": {
+      "name": "White / Black",
+      "description": "Start: random stance. White copies the enemy frontline's stats x1.3 and passive once.\nBlack gives 50% of Zetsu's HP/ATK to one random ally, shares the other 50% among remaining allies, then dies immediately.\nCannot be cloned or revived."
+    }
+  },
+  {
+    "id": "orochimaru",
+    "name": "Orochimaru",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 6350000,
+    "requiredWeather": "Eclipse",
+    "category": [
+      "Unhuman",
+      "Villian",
+      "Magician",
+      "Supporter",
+      "Ninja",
+      "Brutal"
+    ],
+    "stats": {
+      "hp": 59700,
+      "atk": 3700
+    },
+    "image": "assets/cards/orochimaru.png",
+    "passive": {
+      "name": "Snake Genkai",
+      "description": "25% chance per attack to inflict Poison for 3 turns at 10% ATK/turn. Poison ignores shields and damage reduction, but cannot kill.\nWhile alive, revive each fallen teammate once per match at the back with 130% of their starting battle stats, retaining their Relic and passive.\nSelf-revives once at the back with 50% max HP. Cannot be cloned or revived externally."
+    }
+  },
+  {
+    "id": "pain",
+    "name": "Pain",
+    "element": "Electric",
+    "rarity": "Secret",
+    "chance": 0,
+    "requiredWeather": null,
+    "category": [
+      "Ninja",
+      "Brutal",
+      "AntiHero",
+      "Villian",
+      "Magician",
+      "Supporter"
+    ],
+    "stats": {
+      "hp": 75700,
+      "atk": 18500
+    },
+    "image": "assets/cards/pain.png",
+    "passive": {
+      "name": "Rinnegan",
+      "description": "Start in a random Path. Each kill completes it and selects an unused Path.\nDeva: charge for 3 own turns, immune to passive attacks while charging; then 200% ATK to all enemies.\nAsura: +25% ATK/+25% HP while active; every 3 battle turns gains a shield equal to 25% ATK.\nAnimal: 50% chance per attack for the ally behind Pain to follow up.\nPreta: heal 25% of damage dealt and 10% of damage taken.\nHuman: 20% chance to Hypnotize for 1 turn, with 80% chance to attack an ally.\nNaraka: 25% chance to disable the target's passive next turn and heal all allies for 10% Pain max HP.\nAfter completing all 6 Paths, become Nagato and summon one set of 6 Path clones at the back, each with 20% of Pain's current stats. Each Nagato attack calls 1–6 living clones for follow-ups. Clones cannot summon further clones."
+    },
+    "raidOnly": true,
+    "raidType": "akatsuki",
+    "unlockRequirement": "raid_card_pain"
+  }
+]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

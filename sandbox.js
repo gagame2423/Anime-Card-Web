@@ -218,7 +218,7 @@
       if (action === 'add') return add(side);
       if (action === 'clear') setup[side] = [];
       if (action === 'reset') for (const c of setup[side]) { c.level = 1; c.mutationIds = []; c.hp = null; c.atk = null; }
-      if (action === 'level') for (const c of setup[side]) { c.level = 1000; c.hp = null; c.atk = null; }
+      if (action === 'level') for (const c of setup[side]) { c.level = host.CardLevelSystem.MAX_LEVEL; c.hp = null; c.atk = null; }
       renderSetup(side);
     }));
     bind(document, 'keydown', event => { if (active && event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); exit(); } }, true);

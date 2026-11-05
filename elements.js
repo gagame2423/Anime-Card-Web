@@ -11,10 +11,17 @@
   }
   function multiplier(source, target) {
     const attacker = of(source), defender = of(target);
-    if (!attacker || !defender || attacker === defender) return 1;
-    // Advantage takes precedence for the bidirectional Holy/Dark pair.
-    if (COUNTERS[attacker] === defender) return 3;
-    return COUNTERS[defender] === attacker ? 1 / 3 : 1;
+    if (!attacker || !defender) return 1;
+    if(!source?.akatsukiElements?.length&&!target?.akatsukiElements?.length)return attacker===defender?1:COUNTERS[attacker]===defender?3:COUNTERS[defender]===attacker?1/3:1;
+    const bonus=value=>Array.isArray(value?.akatsukiElements)?value.akatsukiElements.filter(e=>TYPES.includes(e)):[];
+    const sources=[...new Set([attacker,...bonus(source)])],stolen=bonus(target);let best=0;
+    for(const element of sources){
+      let current=element===defender?1:COUNTERS[element]===defender?3:COUNTERS[defender]===element?1/3:1;
+      for(const extra of stolen)if(COUNTERS[element]===extra)current=Math.max(current,1.5);
+      best=Math.max(best,current);
+    }
+    return best;
+
   }
   const MATRIX = Object.freeze(Object.fromEntries(TYPES.map(a => [a, Object.freeze(Object.fromEntries(TYPES.map(b => [b, multiplier(a, b)])))])));
   function damage(source, target, amount) { return Math.max(0, Number(amount) || 0) * multiplier(source, target); }

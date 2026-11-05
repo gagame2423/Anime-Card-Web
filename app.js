@@ -69,6 +69,7 @@ const defaultState = {
   cardProgress: {},
   teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
   arenaTeams: {},
+  akatsukiCardReceipt: '',
   cardLocks: {},
   trainingDummyRewardReceipt: '',
   migrations: {},
@@ -303,6 +304,7 @@ function cloneDefaultState() {
     cardProgress: {},
     teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
   arenaTeams: {},
+  akatsukiCardReceipt: '',
   cardLocks: {},
     trainingDummyRewardReceipt: '',
     migrations: {},
@@ -361,7 +363,7 @@ function mergeLegacyPlayerCardProgress(parsed, progress) {
     const id = resolveId(rawId), level = Math.floor(Number(rawLevel));
     if (!id || !getCardById(id) || !Number.isFinite(level) || level < 1) return;
     // Canonical progress wins; legacy containers only fill missing records.
-    if (!progress[id]) progress[id] = { level: window.CardLevelSystem.normalizeLevel(level), exp: Math.max(0, Math.floor(Number(rawExp) || 0)) };
+    if (!progress[id]) progress[id] = { level: window.CardLevelSystem.normalizeLevel(level), exp: level>=CARD_LEVEL_MAX?0:Math.max(0, Math.floor(Number(rawExp) || 0)) };
   };
   for (const field of ['cardProgress', 'cardLevels', 'levels']) {
     for (const [id, entry] of Object.entries(parsed[field] || {})) {
@@ -796,6 +798,7 @@ function normalizeState(parsed = {}) {
   normalized.schemaVersion = SAVE_SCHEMA_VERSION;
   normalized.teamLoadouts = window.StorageSystem.normalizeTeamLoadouts(parsed.teamLoadouts);
   normalized.cardLocks = Object.fromEntries(Object.entries(parsed.cardLocks||{}).filter(([id,locked])=>locked===true&&getCardById(id)).map(([id])=>[id,true]));
+  normalized.akatsukiCardReceipt = typeof parsed.akatsukiCardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(parsed.akatsukiCardReceipt)?parsed.akatsukiCardReceipt:'';
   normalized.arenaTeams = window.ArenaLoadouts.normalize(parsed.arenaTeams);
   normalized.trainingDummyRewardReceipt = typeof parsed.trainingDummyRewardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(parsed.trainingDummyRewardReceipt)?parsed.trainingDummyRewardReceipt:'';
 
@@ -1019,7 +1022,10 @@ function loadState() {
     // Primary key is authoritative once it exists and parses successfully.
     const primary = parseStoredSave(localStorage.getItem(STORAGE_KEY));
     if (primary) {
-      const loaded = normalizeState(primary);
+      const loaded = normalizeState(primary);loaded.migrations.cardLevelCap100=true;
+      if(!primary.migrations?.cardLevelCap100||Object.values(primary.cardProgress||{}).some(v=>Number(v?.level)>CARD_LEVEL_MAX)){
+        try{localStorage.setItem(STORAGE_KEY,JSON.stringify(loaded));window.CloudSaveSystem?.markDirty();}catch(error){console.warn('Card cap migration will be saved on the next successful save.',error);}
+      }
       return loaded;
     }
 
@@ -2231,7 +2237,7 @@ function renderCollection() {
         const requirement=document.createElement('span');requirement.className='weather-requirement active';requirement.textContent=getBossEventCardSource(card)+' exclusive • Never in normal RNG';meta.appendChild(requirement);
       } else if (card?.raidOnly) {
         const requirement = document.createElement('span'); requirement.className = 'weather-requirement active';
-        requirement.textContent = `${['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Never in normal RNG`; meta.appendChild(requirement);
+        requirement.textContent = `${card.id==='pain'?'Akatsuki':['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Never in normal RNG`; meta.appendChild(requirement);
       } else if (card?.unlockRequirement) {
         const requirement = document.createElement('span');
         requirement.className = `weather-requirement ${isCardRollUnlocked(card) ? 'active' : ''}`;
@@ -2541,7 +2547,7 @@ function renderPreview() {
     ? previewMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")
     : "Normal Variant";
   els.previewCollectedCount.textContent = `x${getOwnedCardCount(card.id).toLocaleString("en-US")} total`;
-  els.previewRequirement.textContent = card.bossEventOnly ? `${getBossEventCardSource(card)} exclusive • Never available in normal RNG` : card.raidOnly ? `${['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Once per card • Never available in normal RNG` : card.unlockRequirement
+  els.previewRequirement.textContent = card.bossEventOnly ? `${getBossEventCardSource(card)} exclusive • Never available in normal RNG` : card.raidOnly ? `${card.id==='pain'?'Akatsuki':['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Once per card • Never available in normal RNG` : card.unlockRequirement
     ? `${card.questOnly ? 'Complete Quest Cards in the utility menu' : window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement} • Permanently unlocked in the standard pool`
     : card.requiredWeather ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}` : 'Available in the standard pool';
 
@@ -4334,6 +4340,18 @@ function hasRaidSecret(cardId) {
 function grantRaidSecret(secret) {
   const card = getCardById(secret.cardId);
   if (!card?.raidOnly) return false;
+  if(card.id==='pain'){
+    if(!secret.raidReceipt)return false;
+    if(state.akatsukiCardReceipt===secret.raidReceipt)return true;
+    const previous=JSON.parse(JSON.stringify(state));
+    const ids=normalizeCardMutations(secret.mutationIds),key=canonicalVariantKey(card.id,ids);
+    state.unlocked[card.id]=getUnlockedCountById(card.id)+1;
+    state.mutations[key]=(Number(state.mutations[key])||0)+1;
+    state.inventory[key]={id:card.id,cardId:card.id,mutation:ids.join('+'),mutationIds:ids,count:(Number(state.inventory[key]?.count)||0)+1};
+    ensureCardProgress(card.id);state.akatsukiCardReceipt=secret.raidReceipt;
+    window.RollPerformanceSystem?.acquired(state,card.id,key);
+    if(saveState())return true;state=previous;window.RollPerformanceSystem?.invalidateOwnership();return false;
+  }
   const receipt = card.unlockRequirement;
   if (state.achievementRewardReceipts?.[receipt]) return true;
   const previous = JSON.parse(JSON.stringify(state));
@@ -4363,6 +4381,7 @@ function renderRaidControls() {
   const def=raid.TYPES[type],material=raid.rewardItemId(type),dropName=material?window.InventorySystem.getItem(material)?.name:'secret card';
   setViewText('raidBalances', `${def.keyId?window.InventorySystem.quantity(def.keyId)+' Keys':'Free entry'} • ${progress.coins.toLocaleString('en-US')} ${def.coinName} • Team HP/ATK +${progress.upgradeLevel}%`);
   setViewText('raidRules', `4 player cards vs ${def.enemies.length} preset opponent(s) • ${def.keyId?'1 Key per entry':'No entry key or weather requirement'} • Victory: ${range.min}–${range.max} ${def.coinName} • ${((material?raid.materialChance(progress.difficulty):raid.secretChance(progress.difficulty))*100).toFixed(2)}% ${dropName} roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`);
+  if(type==='akatsuki'){const chances=raid.akatsukiChances(progress.difficulty);setViewText('raidRules',`4 player cards vs 10 opponents • 1 Akatsuki Raid Key • Victory: ${range.min}–${range.max} Akatsuki Coins • Mangekyo Eye ${(chances.mangekyo_eye*100).toFixed(3)}% • Pain ${(chances.pain*100).toFixed(3)}% (independent rolls) • No VNĐ or EXP • Speed Battle Potion applies.`);}
   if(type==='shibuya'){const chances=raid.shibuyaChances(progress.difficulty);setViewText('raidRules',`4 player cards vs 10 opponents • 1 Shibuya Raid Key • Victory: ${range.min}–${range.max} Shibuya Coins • Jogo ${(chances.jogo*100).toFixed(2)}% • Haruta ${(chances.haruta*100).toFixed(2)}% • Cursed Finger ${(chances.equipment_cursed_finger*100).toFixed(2)}% (independent rolls) • No VNĐ or EXP • Speed Battle Potion applies.`);}
   setViewText('raidEnemyPreviewTitle',`Preset boss lineup • ${def.enemies.length} opponent${def.enemies.length===1?'':'s'}`);
   const list = document.getElementById('raidEnemyPreview'); if (!list) return; list.replaceChildren();
@@ -4467,7 +4486,7 @@ function finishTimeTrialBattle(won, reason = '') {
     appendBattleLog(error.message, 'defeat');
   }
   if (!summary) return;
-  if(summary.reason!=='save-error')window.PortalsSystem.dropTimeTrial(battleState,summary.won);
+  if(summary.reason!=='save-error'){window.PortalsSystem.dropTimeTrial(battleState,summary.won);summary.akatsukiKey=window.RaidSystem.claimTimeTrialKey(battleState,summary.won);}
   if (summary.reason !== 'save-error') { battleState.questResultWon = summary.won; recordQuestBattleCompletion(battleState); }
   clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
   battleState.finished = true; battleState.isBattling = false;
@@ -4475,8 +4494,9 @@ function finishTimeTrialBattle(won, reason = '') {
   refreshAchievements(); saveState(); updateStats(); renderCollection(); renderTimeTrialControls();
   const body = document.getElementById('timeTrialSummary');
   body.textContent = summary.material?`Material Room ${summary.room} ${summary.won?'Cleared':'Failed'}\n${Object.entries(summary.materials||{}).map(([id,n])=>(window.InventorySystem.getItem(id)?.name||id)+' +'+n).join('\n')||'No materials dropped.'}\nNo Shards • No EXP • No VNĐ\n${summary.won?'Next Material Room: '+summary.nextRoom:'Material progress reset to Room 1'}`:summary.exp
-    ? `Total Damage Dealt: ${(summary.totalDamage||0).toLocaleString('en-US')}\nConverted EXP Earned: +${(summary.convertedExperience||0).toLocaleString('en-US')} EXP\nApplied: +${summary.experience.toLocaleString('en-US')} EXP • ${summary.levelUps} level-ups • Level 1000 cap respected\nDPS: ${Math.floor(summary.dps||0).toLocaleString('en-US')} • Best: ${Math.floor(summary.bestDps||trial.bestDps).toLocaleString('en-US')}${summary.newDpsRecord?'\n★ NEW HIGHEST DPS RECORD!':''}\nNo global EXP multiplier • No VNĐ or Shards`
+    ? `Total Damage Dealt: ${(summary.totalDamage||0).toLocaleString('en-US')}\nConverted EXP Earned: +${(summary.convertedExperience||0).toLocaleString('en-US')} EXP\nApplied: +${summary.experience.toLocaleString('en-US')} EXP • ${summary.levelUps} level-ups • Level 100 cap respected\nDPS: ${Math.floor(summary.dps||0).toLocaleString('en-US')} • Best: ${Math.floor(summary.bestDps||trial.bestDps).toLocaleString('en-US')}${summary.newDpsRecord?'\n★ NEW HIGHEST DPS RECORD!':''}\nNo global EXP multiplier • No VNĐ or Shards`
     : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • Victory: 1–3 Bread`;
+  if(summary.akatsukiKey?.quantity)body.textContent+=`\nAkatsuki Raid Key +${summary.akatsukiKey.quantity}`;
   body.classList.remove('hidden');body.classList.toggle('is-new-dps-record',Boolean(summary.exp&&summary.newDpsRecord));
   document.getElementById('timeTrialResultShopButton')?.classList.remove('hidden');
   els.battleResultTitle.textContent = summary.won ? '🏆 TIME TRIAL COMPLETE' : '⏱ TIME TRIAL ENDED';
@@ -4837,7 +4857,7 @@ function prepareEvolution(recipe, variantKey) {
     const ids = normalizeCardMutations(variant.mutations), key = canonicalVariantKey(recipe.id,ids);
     state.mutations[key] = 1; state.unlocked[recipe.id] = 1;
     state.inventory[key] = {id:recipe.id,cardId:recipe.id,mutationIds:ids,mutation:ids.join('+'),count:1};
-    state.cardProgress[recipe.id] = {level:1,exp:0};
+    state.cardProgress[recipe.id] = {level:recipe.resultLevel||1,exp:0};
     state.achievementRewardReceipts['evolution_' + recipe.id] = true;
     // Equipment may only refer to copies that still exist after the sacrifice.
     syncOwnershipRecords(); mainAfter = JSON.stringify(state);
@@ -5703,7 +5723,7 @@ window.ExpFoodSystem.configure({
   describe:id=>{const card=getCardById(id);return card&&isCardOwned(id)?{...getCardLevelInfo(id),name:card.name,image:card.image}:null;},
   open:()=>openModal('feedFoodModal'),
   prepare:(id,rows,amount)=>{
-    if(!canEvolveNow()||!isCardOwned(id)||getCardLevelInfo(id).maxed)throw Error('Choose an owned card below Lvl 1000.');
+    if(!canEvolveNow()||!isCardOwned(id)||getCardLevelInfo(id).maxed)throw Error('Choose an owned card below Lvl 100.');
     if(!saveState()||!window.InventorySystem.flush())throw Error('Unable to save current progress.');
     const mainBefore=localStorage.getItem(STORAGE_KEY),itemsBefore=localStorage.getItem(window.InventorySystem.KEY);
     const main=JSON.parse(mainBefore),items=JSON.parse(itemsBefore),card=getCardById(id);

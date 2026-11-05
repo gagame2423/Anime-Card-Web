@@ -14,6 +14,7 @@
       if(existing)existing.amount=Math.min(LIMIT,existing.amount+value);
       else layers.push({amount:value,expiresAt});
       r.shield=Math.min(LIMIT,r.shield+value);
+      api.onShield?.(unit);
       if(!r.shieldKind)r.shieldKind='wind';
       refresh(unit);
     }

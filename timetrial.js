@@ -159,7 +159,7 @@
       requirePersist();
       if (consumeTicket && !host.InventorySystem.remove(ticketId(battle.mode), 1)) throw new Error('Không thể tiêu vé. Lượt thử chưa bắt đầu.');
     } catch (error) { data = previous; persist(); throw error; }
-    battle.trial = { ...attempt, cardId: battle.setup.team[0].cardId, shardsEarned: 0, monsters: 0,
+    battle.trial = { ninjaLineup: battle.playerTeam.some(u=>!u.isClone&&!u.isSummoned&&(u.card.category||[]).includes('Ninja')), ...attempt, cardId: battle.setup.team[0].cardId, shardsEarned: 0, monsters: 0,
       materials:{}, experience: 0, totalDamage: 0, convertedExperience: 0, progressPercent: 0, levelUps: 0, owner: battle.playerTeam[0] };
     if(!isExp(battle.mode)){
       Object.assign(battle.trial,{clockAt:now,timeBudget:LIMITS[battle.mode],speedUntil:speedUntil(),turnMs:turnMs(battle.mode)});

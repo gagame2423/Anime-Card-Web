@@ -51,7 +51,7 @@
     if(id==='senzu_bean')result.push('Namek Portal victory: 1–3 at Tier 1, 10–20 at Tier 5 / Secret. Feed for 2,500 base EXP or evolve Lv.100+ Gohan (8,500) / Frieza (7,690).');
     if(id==='star_orb')result.push('Infinity Mode: clear waves for 1–2 Orbs at Wave 1 up to 8–10 at Wave 100. Personal weekly reward: highest wave × 100 Star Orbs, claimed automatically on local startup; Google sync is optional.');
     if(id==='bread')result.push('Win any real battle mode: 1–3 Bread per victory. Sandbox excluded. Feed from an owned card’s details → Feed.');
-    if(item?.type==='exp_food')result.push('EXP gained = total base Food EXP × Player EXP Multiplier; capped at Lvl 1000. Feed from card details.');
+    if(item?.type==='exp_food')result.push(`EXP gained = total base Food EXP × Player EXP Multiplier; capped at Lvl ${host.CardLevelSystem.MAX_LEVEL}. Feed from card details.`);
     if(!result.length)result.push(item?.metadata?.source||'No acquisition source is currently registered for this item.');
     return result;
   }
@@ -83,7 +83,7 @@
   function showCapsuleResult(result){
     const drop=result?.cards?.[0],card=drop?host.ALL_CARDS.find(card=>card.id===drop.cardId):null;if(!card)return;
     const mutations=(drop.mutationIds||[]).map(id=>host.MUTATION_BY_ID[id]?.name||id).join(' + ');
-    capsuleResult=`Capsule reward: ${mutations?'['+mutations+'] ':''}${card.name} · +1 owned · duplicates: +10% level EXP (until Lv.1000) · no VNĐ / roll count.`;
+    capsuleResult=`Capsule reward: ${mutations?'['+mutations+'] ':''}${card.name} · +1 owned · duplicates: +10% level EXP (until Lv.${host.CardLevelSystem.MAX_LEVEL}) · no VNĐ / roll count.`;
     if(ui)host.RollPerformanceSystem.schedule(refreshVisibleDetails);
   }
   function refreshVisibleDetails(){if(ui&&!ui.root.classList.contains('hidden'))refreshDetails();}

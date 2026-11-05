@@ -3,6 +3,7 @@
   'use strict';
   const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
   const RECIPES = Object.freeze([
+    Object.freeze({id:'itachi-awakened',baseId:'uchiha-itachi',itemId:'mangekyo_eye',level:100,resultLevel:100,name:'Itachi Awakened'}),
     Object.freeze({id:'ultimate-gohan',baseId:'gohan',itemId:'senzu_bean',itemCount:8500,level:100,name:'Ultimate Gohan'}),
     Object.freeze({id:'golden-frieza',baseId:'frieza',itemId:'senzu_bean',itemCount:7690,level:100,name:'Golden Frieza'}),
     Object.freeze({id:'true-mahito',baseId:'mahito',itemId:'mahito_puppet',level:100,name:'True Mahito'}),
@@ -15,6 +16,7 @@
     Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100, name:'Prime Garp' })
   ]);
   const MATERIALS = Object.freeze([
+    Object.freeze({id:'mangekyo_eye',name:'Mangekyo Eye',type:'material',icon:'◉',image:'assets/items/eeye.png',tier:'secret',description:'Evolve Lv.100 Uchiha Itachi into Lv.100 Itachi Awakened, keeping mutations. Akatsuki Raid: 0.03%–3% by difficulty.'}),
     Object.freeze({id:'mahito_puppet',name:'Mahito Puppet',type:'material',icon:'♟',image:'assets/items/mpuppet.png',tier:'secret',description:'Evolve Lv.100+ Mahito (any mutation) into True Mahito. Shibuya Raid Shop: 10,500 Shibuya Coins.'}),
     Object.freeze({id:"gojo_eye",name:"Gojo Eye",type:"material",icon:"◉",image:"assets/items/gojoeye.png",tier:"mythic",description:"Evolve Lv.100+ Gojo Young (any mutation) into Gojo Revice. Gomen Boss Event victory: 0.8%–8% by difficulty; Boss Event Shop: 888,888 Gomen Coins."}),
     Object.freeze({id:"machete",name:"Machete",type:"material",icon:"🔪",image:"assets/items/machete.png",tier:"secret",description:"Evolve Lv.100+ The Trapper (any mutation) into Jason 13th. Spooky Wave 50 victory only: 1%; Spooky Shop: 613,000 Coins."}),
@@ -69,7 +71,7 @@
       host.localStorage.setItem(MAIN_KEY,plan.mainAfter);
       host.localStorage.setItem(KEY,JSON.stringify({version:1,pending:null}));
       host.InventorySystem.reload(); bridge.onCommit?.();
-      return {ok:true,message:`Đã tiến hóa thành ${recipe.name} • Lv.1 • giữ nguyên mutation.`};
+      return {ok:true,message:`Đã tiến hóa thành ${recipe.name} • Lv.${recipe.resultLevel||1} • giữ nguyên mutation.`};
     } catch (_) {
       const restored = recover(); if (restored) bridge.onCommit?.();
       return {ok:false,message:restored ? 'Không thể lưu tiến hóa. Thẻ và vật phẩm đã được khôi phục.' : 'Bộ nhớ chưa khả dụng. Hãy tải lại để khôi phục giao dịch trước khi chơi tiếp.'};
@@ -82,7 +84,7 @@
       const box=doc.createElement('article');box.className='module-item evolution-recipe';
       const title=doc.createElement('h3');title.textContent=recipe.name;
       const item=host.InventorySystem.getItem(recipe.itemId),info=bridge.describe?.(recipe)||{};
-      const text=doc.createElement('p');text.textContent=`${info.baseName || recipe.baseId} Lv.${recipe.level}+ + ${recipe.itemCount||1} ${item?.name || recipe.itemId} (x${host.InventorySystem.quantity(recipe.itemId)} owned). Result: Lv.1; exact mutations inherited. One evolution per result card.`;
+      const text=doc.createElement('p');text.textContent=`${info.baseName || recipe.baseId} Lv.${recipe.level}+ + ${recipe.itemCount||1} ${item?.name || recipe.itemId} (x${host.InventorySystem.quantity(recipe.itemId)} owned). Result: Lv.${recipe.resultLevel||1}; exact mutations inherited. One evolution per result card.`;
       const select=doc.createElement('select'); select.className='select-input'; select.setAttribute('aria-label',`Base mutation for ${recipe.name}`);
       for (const variant of info.variants || []) { const o=doc.createElement('option');o.value=variant.key;o.textContent=`${variant.label} • x${variant.count} • Lv.${info.level}`;select.append(o); }
       if (!select.options.length) { const o=doc.createElement('option');o.textContent='No eligible base card';select.append(o);select.disabled=true; }

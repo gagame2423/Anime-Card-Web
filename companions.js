@@ -2,13 +2,13 @@
 (function(host){
   'use strict';
   const RULES=Object.freeze(Object.fromEntries(Object.entries({
-    dark_aurora:{active:2},hermes:{active:3},d4c:{active:10},robot:{active:10,scope:'team'},puppet:{active:1},
+    crow:{active:1},nagato:{active:6,lifetime:6},dark_aurora:{active:2},hermes:{active:3},d4c:{active:10},robot:{active:10,scope:'team'},puppet:{active:1},
     divine_steed:{active:3,lifetime:3},iskandar:{active:3,lifetime:3},
     ghost:{active:Infinity},duo:{active:Infinity},ito:{active:Infinity},shadow:{active:Infinity},
     metal_cooler:{active:Infinity},jin_mori:{active:Infinity},igris:{active:Infinity},
     dagon:{active:Infinity},transfigured:{active:Infinity}
   }).map(([key,value])=>[key,Object.freeze(value)])));
-  const REVIVALS=Object.freeze({dark_revive:Object.freeze({lifetime:2,scope:'target'}),dante_revive:Object.freeze({lifetime:1,scope:'owner'}),josuke_revive:Object.freeze({lifetime:1,scope:'owner'})});
+  const REVIVALS=Object.freeze({snake_revive:Object.freeze({lifetime:1,scope:'target'}),dark_revive:Object.freeze({lifetime:2,scope:'target'}),dante_revive:Object.freeze({lifetime:1,scope:'owner'}),josuke_revive:Object.freeze({lifetime:1,scope:'owner'})});
   const generated=u=>Boolean(u&&(u.isClone||u.isSummoned||u.isTemporaryAlly||u.championSummonType||u.companionOwner));
   host.createCompanionRules=function(api){
     const lifetimes=new WeakMap();

@@ -1,7 +1,7 @@
 /* Drop-rate driven progression. Bounded tables keep large EXP grants cheap. */
 (function (host) {
   'use strict';
-  const MAX_LEVEL = 1000, MAX_INTEGER = Number.MAX_SAFE_INTEGER, GROWTH = .075, BASE_EXP = 150;
+  const MAX_LEVEL = 100, MAX_INTEGER = Number.MAX_SAFE_INTEGER, GROWTH = .075, BASE_EXP = 150;
   const RARITY = Object.freeze({ Common:1, Rare:1.6, Epic:2.4, Legendary:3.6, Mythic:5.2, Secret:8 });
   const UNROLLABLE_RATES = Object.freeze({Common:10,Rare:100,Epic:1000,Legendary:10000,Mythic:500000,Secret:1000000});
   const parameters = new WeakMap(), totals = new WeakMap();

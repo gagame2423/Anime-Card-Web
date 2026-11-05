@@ -12,8 +12,9 @@
   function add(u,stat,pct,heal=false){const r=ensure(u);r.percent[stat]+=finite(pct);return sync(u,stat,heal);}
   function set(u,stat,key,pct,heal=false){const r=ensure(u);if(pct)r.named[stat].set(key,finite(pct));else r.named[stat].delete(key);return sync(u,stat,heal);}
   function flat(u,stat,amount,heal=false){ensure(u).flat[stat]+=finite(amount);return sync(u,stat,heal);}
+  function clear(u,stat,positiveOnly=false){const r=ensure(u);if(positiveOnly){r.percent[stat]=Math.min(0,r.percent[stat]);r.flat[stat]=Math.min(0,r.flat[stat]);for(const [key,value]of r.named[stat])if(value>0)r.named[stat].delete(key);}else{r.percent[stat]=0;r.flat[stat]=0;r.named[stat].clear();}sync(u,stat);}
   function reset(u){records.delete(u);ensure(u);}
   function scale(u,factor,heal=true){const r=ensure(u),oldHp=u.hp;r.base.hp*=factor;r.base.atk*=factor;r.flat.hp*=factor;r.flat.atk*=factor;sync(u,'hp');sync(u,'atk');u.hp=Math.min(u.maxHp,heal?Math.round(oldHp*factor):oldHp);}
-  return Object.freeze({ensure,value,percent,add,set,flat,reset,scale});
+  return Object.freeze({ensure,value,percent,add,set,flat,clear,reset,scale});
  };
 })(window);
