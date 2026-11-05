@@ -1,66 +1,47 @@
-NHẬT KÝ CẬP NHẬT 04/11/2026
-CARD INDEX, RELIC DÙNG CHUNG, KHÓA THẺ VÀ THE MOURNER
+NHẬT KÝ CẬP NHẬT 05/11/2026
+THIẾT KẾ LẠI BỘ LỌC CARD INDEX
 
-1. Giao diện chi tiết thẻ trong Index
-- Bố cục mới cho máy tính và điện thoại: tên thẻ, cấp, tổng số bản sao xN, nút EQUIP và Feed.
-- Ô Relic ở góc trên trái ảnh thẻ mở danh sách trang bị; hiển thị tên, độ hiếm và đúng các chỉ số đã roll của từng Relic.
-- Bộ chọn Mutation chỉ liệt kê các biến thể đang sở hữu, gồm cả đột biến kép. Đổi biến thể chỉ đổi phần xem trước.
-- Hiển thị ATK, HP, thanh EXP và toàn bộ Category dưới dạng nhãn. Không thêm SPA, Cost hoặc phần Leader.
-- Nhãn kỹ năng Bleed, Heal, Stun, Freeze, Follow Up và Shield được tạo theo mô tả nội tại của thẻ.
-- Hai nút dưới cùng: Salvage 1 Copy và Salvage Extra Duplicate; bố cục không tràn ngang trên điện thoại.
+1. Nút mở bộ lọc
+- Thêm nút hai mũi tên lên/xuống trong phần đầu Card Index, kèm số lựa chọn đang áp dụng.
+- Biểu tượng mũi tên được vẽ bằng SVG trực tiếp trong HTML; không cần bổ sung tệp ảnh hoặc tài nguyên nhị phân.
+- Giữ ô tìm thẻ và bộ lọc Mutation hiện có; chuyển lựa chọn sắp xếp, Element và Category vào hộp thoại mới.
 
-2. Relic gắn theo ID thẻ
-- Mỗi ID thẻ có tối đa một Relic được trang bị, dùng chung cho mọi bản sao, Mutation và Double Mutation của thẻ đó.
-- Chỉ số đã roll và Unique của Relic được giữ nguyên; không roll lại khi chuyển đổi dữ liệu hoặc đổi Mutation.
-- Dữ liệu gắn theo bản sao cũ được chuyển tự động. Nếu nhiều Relic từng gắn vào các biến thể của cùng thẻ, ưu tiên bản có số thứ tự bản sao thấp hơn, rồi ID Relic; các Relic còn lại được tháo và giữ nguyên trong Kho đồ.
-- Xóa hết một biến thể không tháo Relic nếu vẫn còn sở hữu biến thể khác của cùng thẻ. Mất toàn bộ bản sao mới tháo Relic về Kho đồ.
-- Giữ cơ chế bảo toàn Relic khi hồi sinh và sao chép Relic của chủ thể triệu hồi cho đơn vị được tạo.
+2. Bốn chế độ sắp xếp
+- DAMAGE: ATK giảm dần, từ cao xuống thấp.
+- HP: HP tối đa giảm dần.
+- RARITY: tỷ lệ xuất hiện thấp nhất trước; các thẻ độc quyền 1 in 0 đứng đầu, sau đó mẫu số 1 in X giảm dần.
+- LEVEL: cấp thẻ giảm dần; thẻ chưa sở hữu nằm sau các thẻ đã sở hữu.
+- DAMAGE/HP dùng giá trị cao nhất trong các Mutation đang sở hữu, gồm cấp thẻ và Relic phù hợp. Thẻ chưa sở hữu dùng chỉ số gốc cấp 1.
+- Giá trị sắp xếp được tính một lần cho mỗi thẻ và dùng bộ nhớ đệm của giao diện; không quét Kho đồ trong hàm so sánh.
 
-3. Khóa thẻ và bảo vệ bản sao
-- Nút khóa trong chi tiết Index được lưu vào hồ sơ người chơi theo ID thẻ.
-- Thẻ đã khóa được bảo vệ khi Salvage All Extra Duplicates và khi salvage riêng trong cửa sổ chi tiết.
-- Salvage chỉ xử lý số lượng dư: luôn giữ một bản của mỗi tổ hợp Mutation chính xác. Hai đột biến có cùng thành phần nhưng khác thứ tự vẫn dùng khóa biến thể chuẩn của game.
-- Salvage 1 Copy không xóa bản cuối của biến thể đang xem. Mở khóa để tiếp tục salvage các bản dư.
+3. Element và Rarity
+- Sáu Element dùng đúng ảnh đang có của game: assets/fire.png, assets/water.png, assets/nature.png, assets/electric.png, assets/dark.png, assets/holy.png.
+- Có thể chọn nhiều Element; nếu ảnh bị thiếu, tên Element và biểu tượng thay thế vẫn dùng được.
+- Thay biểu tượng sao bằng nút tên độ hiếm lấy từ dữ liệu thẻ: Common, Rare, Epic, Legendary, Mythic, Secret.
+- Các tier mới sẽ xuất hiện khi có trong cards.js. Monarch hiện là Mutation, không phải tier độ hiếm của thẻ.
+- Có thể bật/tắt nhiều độ hiếm. Không chọn mục nào trong một nhóm nghĩa là không giới hạn nhóm đó.
 
-4. Thẻ Secret mới: The Mourner
-- Dark; 1 in 168,000,000; HP 149,000; ATK 36,500.
-- Category: Villian, Unhuman, VideoGame, Brutal, Supporter.
-- Mở khóa qua chuỗi nhiệm vụ mới; sau khi hoàn thành có thể roll trong Eclipse Weather.
-- The Solemn Lament được tách vào mourner.js: hai buồng đạn, Butterfly thường và Crystal, Lament cộng dồn theo chỉ số gốc, Prayer/Reload, Lament Condition và Final Requiem.
-- Mỗi Butterfly trên kẻ địch bị hạ cho +2 Lament và hồi 2.5% HP tối đa. Lament tối đa 15, tương ứng +45% ATK; không cộng nhân chồng chỉ số.
-- Đếm đòn độc lập với mục tiêu; Reload không đặt lại bộ đếm. Hai viên đạn được xử lý tuần tự qua khiên và HP.
-- Final Requiem tiêu thụ Butterfly để gây phần sát thương theo HP hiện tại, bỏ qua giảm sát thương nhưng vẫn chịu khiên và miễn nhiễm.
-- Đồng đội được Requiem hồi sinh trở lại tuyến đầu với đầy HP, giữ chỉ số hiện có và Relic; bị loại sau đúng 3 lượt chiến đấu của cả hai phe. Tôn trọng các nội tại cấm hồi sinh của thẻ.
-- Crystal Butterflies kích hoạt một lần mỗi trận. Lần Final Requiem ở mốc 10 đòn kế tiếp hồi đầy HP và khôi phục thêm 5 viên mỗi loại, tối đa 10 viên mỗi buồng.
-- Chỉ tham chiếu ảnh assets/cards/themourner.png. Người chơi tự bổ sung ảnh; gói mã nguồn không chứa ảnh, âm thanh hoặc tệp Excel.
+4. Multi-Category và APPLY
+- Category lấy trực tiếp từ category.js; nhiều Category được chọn cùng lúc.
+- Trong cùng nhóm dùng điều kiện HOẶC: chọn VideoGame và Villian sẽ hiển thị thẻ có ít nhất một trong hai Category.
+- Giữa các nhóm dùng điều kiện VÀ: thẻ phải đồng thời khớp Element, Rarity, Category, tìm kiếm và bộ lọc Mutation đang bật.
+- Tìm kiếm Category chỉ ẩn/hiện các nhãn; không xóa các Category đã chọn.
+- Thay đổi trong hộp thoại là bản nháp. APPLY áp dụng cùng lúc, cập nhật lưới và đưa phân trang về trang đầu khi tiêu chí đổi.
+- Cancel, nút X, nhấn nền hoặc Escape hủy bản nháp. Escape chỉ đóng bộ lọc, không đóng Card Index phía dưới.
+- Reset xóa lựa chọn trong bản nháp; cần APPLY để xác nhận. Giữ bộ lọc đã áp dụng khi mở lại Index trong cùng phiên chơi.
+- Không thêm phần FILTERS với TRADEABLES, CAN EVOLVE, FEATURED, BLESSING, LOCKED hoặc SHINY.
 
-5. Chuỗi nhiệm vụ The Mourner
-- Bước 1: Hồi sinh hoặc tạo bản sao tổng cộng 1,000 đồng đội.
-- Bước 2: Kích hoạt 10,000 đòn follow-up.
-- Bước 3: Roll 168,000 lần trong Eclipse Weather.
-- Bước 4: Thắng 1,680 trận 1v1 thường trong Eclipse Weather.
-- Bước 5: Sống sót qua 168 đòn chí tử trong Eclipse Weather.
-- Chỉ bước hiện tại được tính sau khi nhận nhiệm vụ; không cộng ngược dữ liệu cũ. Sandbox và Online PvP không được tính. Hoàn thành nhận đúng một thẻ Normal và mở khóa roll.
-- Trong Portal Party chỉ tính sự kiện của người chơi sở hữu đơn vị, không cộng sự kiện của thành viên khác.
-
-6. Kiểm tra bản cập nhật
-- Kiểm tra cú pháp toàn bộ JavaScript và đường dẫn script, tên tệp phân biệt hoa/thường.
-- Kiểm tra trình duyệt cho chuyển dữ liệu Relic, trang bị trên mọi Mutation, lưu khóa thẻ, salvage an toàn, chọn biến thể và EQUIP trên điện thoại.
-- Kiểm tra đạn kép, khiên, Reload bị gián đoạn, điều kiện miễn Stun/Freeze, Butterfly/Lament, Requiem và hồi sinh tạm thời 3 lượt.
-- Kiểm tra nhiệm vụ tuần tự, loại trừ mô phỏng/PvP và chỉ trao thưởng một lần.
-- So sánh mô phỏng có cùng seed cho 180 thẻ cũ với bản trước: không thay đổi kết quả chiến đấu trong bộ kiểm tra hồi quy.
-- Cập nhật nhãn cache thành 20261104-mourner-index-1. Sau khi thay đủ mã nguồn trên GitHub Pages, tải lại bằng Ctrl+F5.
+5. Giao diện và kiểm tra
+- Bố cục tối, viền neon, trạng thái lựa chọn rõ ràng và nút APPLY luôn nằm trong vùng điều khiển.
+- Bố cục tương thích máy tính/điện thoại; có cuộn nội dung và vùng Category riêng, không tràn ngang.
+- Kiểm tra bộ lọc kết hợp, bốn kiểu sắp xếp, tìm kiếm, hủy bản nháp, phân trang và khởi động trình duyệt.
+- Không thay đổi cards.js, Category/Element registry, RNG, tiến trình, lưu game, combat hoặc các bộ chọn đội hình Arena.
+- Nhãn cache mới: 20261105-index-filters-1. Thay đầy đủ mã nguồn rồi tải lại bằng Ctrl+F5.
 
 Modified Files Note
-- cards.js: thêm định nghĩa, chỉ số, nguồn roll và mô tả The Mourner.
-- mourner.js (mới): toàn bộ cơ chế The Solemn Lament và hồi sinh tạm thời.
-- passives.js: nối kỹ năng mới vào engine, sát thương/khiên/DoT/trạng thái và ghi nhận các lần sống sót, hồi sinh.
-- companions.js: ghi nhận các lần tạo bản sao hoặc hồi sinh được chấp thuận.
-- quests.js: chuỗi nhiệm vụ The Mourner, dùng chung bộ đếm follow-up và chặn sự kiện mô phỏng/PvP.
-- relics.js: gắn Relic theo ID thẻ, chuyển dữ liệu cũ và kiểm tra quyền sở hữu chung.
-- card_details.js (mới): giao diện chọn Mutation, Category, nhãn kỹ năng, khóa thẻ và chọn Relic.
-- app.js: lưu khóa thẻ, bảo vệ salvage, cập nhật phần xem trước và nối các mô-đun.
-- index.html: bố cục chi tiết Index, danh sách Relic và thứ tự tải script/nhãn cache mới.
-- styles.css: giao diện Index, EQUIP, nút salvage, các nhãn và bố cục tương thích điện thoại.
-- startup.js: kiểm tra tải đủ hai mô-đun mới.
+- index_filters.js (mới): trạng thái nháp/đã áp dụng, chọn nhiều Element/Rarity/Category, tìm kiếm Category và điều khiển hộp thoại.
+- app.js: nối bộ lọc mới vào Index, sắp xếp DAMAGE/HP/RARITY/LEVEL, bộ nhớ đệm chỉ số và phân trang.
+- index.html: nút hai mũi tên, hộp thoại bộ lọc, phần tóm tắt, thứ tự tải script và nhãn cache.
+- styles.css: giao diện bộ lọc, trạng thái nút và bố cục đáp ứng.
+- startup.js: kiểm tra mô-đun và nút bộ lọc đã khởi tạo đầy đủ.
 - README.txt: chỉ giữ nhật ký của bản cập nhật này.

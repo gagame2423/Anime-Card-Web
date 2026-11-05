@@ -164,7 +164,6 @@ const els = {
   collectionModalCount: document.getElementById("collectionModalCount"),
   searchInput: document.getElementById("searchInput"),
   mutationFilter: document.getElementById("mutationFilter"),
-  sortSelect: document.getElementById("sortSelect"),
   collectionGrid: document.getElementById("collectionGrid"),
 
   previewModal: document.getElementById("cardPreviewModal"),
@@ -225,9 +224,7 @@ const els = {
   cardSearchInput: document.getElementById("cardSearchInput"),
   cardSortSelect: document.getElementById("cardSortSelect"),
   battleCategoryFilter: document.getElementById("battleCategoryFilter"),
-  collectionCategoryFilter: document.getElementById("collectionCategoryFilter"),
   battleElementFilter: document.getElementById("battleElementFilter"),
-  collectionElementFilter: document.getElementById("collectionElementFilter"),
   battleVariantGrid: document.getElementById("battleVariantGrid"),
   battleTeamSlots: document.getElementById("battleTeamSlots"),
   battleTeamCount: document.getElementById("battleTeamCount"),
@@ -1983,12 +1980,9 @@ function cardMatchesMutationFilter(card, filterValue) {
 function getFilteredCards() {
   const query = String(els.searchInput?.value || "").trim().toLowerCase();
   const filter = String(els.mutationFilter?.value || "all").toLowerCase();
-  const sort = String(els.sortSelect?.value || "dropChance").toLowerCase();
-
-  const element = els.collectionElementFilter?.value || "all";
+  const sort = window.IndexFilterSystem.state.sort;
   const filteredCards = ALL_CARDS.filter(card => {
-    if (element !== "all" && card.element !== element) return false;
-    if (!window.CategorySystem.matches(card,els.collectionCategoryFilter?.value)) return false;
+    if (!window.IndexFilterSystem.matches(card)) return false;
     try {
       const normalizedId = normalizeCardId(card?.id);
       const safeName = String(card?.name || "Unknown Card");
@@ -1996,7 +1990,7 @@ function getFilteredCards() {
       const profile = getCardMutationProfile(normalizedId);
       const searchText=window.UIPerformanceSystem.memo('search:'+normalizedId,()=>{
         const names=profile.mutationIds.map(id=>MUTATION_BY_ID[id]?.name||id);
-        return `${safeName} ${safePassive} ${names.join(' ')} ${(card.category||[]).join(' ')}`.toLowerCase();
+        return `${safeName} ${normalizedId} ${card.element} ${card.rarity} ${safePassive} ${names.join(' ')} ${(card.category||[]).join(' ')}`.toLowerCase();
       });
       const searchMatch = !query || searchText.includes(query);
 
@@ -2010,29 +2004,28 @@ function getFilteredCards() {
     }
   });
 
-  // NEVER sort the base ALL_CARDS array. Always sort a fresh shallow copy.
-  const sortedCards = [...filteredCards].sort((a, b) => {
-    try {
-      const chanceA = Number.isFinite(Number(a?.chance)) ? Number(a.chance) : 0;
-      const chanceB = Number.isFinite(Number(b?.chance)) ? Number(b.chance) : 0;
-      const nameA = String(a?.name || "Unknown Card");
-      const nameB = String(b?.name || "Unknown Card");
-
-      if (sort === "category") return window.CategorySystem.compare(a,b) || nameA.localeCompare(nameB);
-      if (sort === "element") return window.ElementSystem.compare(a, b) || nameA.localeCompare(nameB);
-      if (sort === "name") return nameA.localeCompare(nameB);
-      if (sort === "atk") return (Number(b?.stats?.atk) || 0) - (Number(a?.stats?.atk) || 0);
-      if (sort === "collected") return getOwnedCardCount(b?.id) - getOwnedCardCount(a?.id) || nameA.localeCompare(nameB);
-
-      // Default + dropChance: numeric hardest-first ordering.
-      return chanceB - chanceA || nameA.localeCompare(nameB);
-    } catch (error) {
-      console.warn("Collection sort skipped malformed card metadata:", a?.id, b?.id, error);
-      return 0;
-    }
-  });
+  // Resolve values once per card; the comparator never scans mutation inventory.
+  const values = new Map(filteredCards.map(card => [card.id,
+    sort === 'damage' || sort === 'hp' ? getIndexCardStat(card, sort === 'hp' ? 'hp' : 'atk') :
+    sort === 'level' && isCardOwned(card.id) ? getCardLevelInfo(card).level : 0]));
+  const sortedCards = [...filteredCards].sort((a,b) =>
+    (sort === 'rarity' ? 0 : values.get(b.id) - values.get(a.id)) || window.IndexFilterSystem.rarityCompare(a,b));
 
   return sortedCards;
+}
+
+function getIndexCardStat(card, stat) {
+  const owned = isCardOwned(card.id);
+  if (!owned) return Math.max(0, Number(card.stats?.[stat]) || 0);
+  const variants = getPreviewVariants(card.id), level = getCardLevelInfo(card).level;
+  return window.UIPerformanceSystem.memo(`index-stat:${card.id}:${stat}:${level}:${window.InventorySystem.revision}`, () => {
+    let best = 0;
+    for (const variant of variants) {
+      const display = window.RelicSystem.preview(card, getDisplayCard(card, variant.mutations), variant.key);
+      best = Math.max(best, display[stat] || 0);
+    }
+    return best;
+  });
 }
 
 function getAvailableRollPool() { return getSortedCardsForRolling(); }
@@ -2150,7 +2143,7 @@ function renderCollection() {
     console.warn("Collection filter failed safely:", error);
   }
 
-  const filterKey=[els.searchInput?.value,els.mutationFilter?.value,els.sortSelect?.value,els.collectionElementFilter?.value,els.collectionCategoryFilter?.value].join('|');
+  const filterKey=JSON.stringify([els.searchInput?.value,els.mutationFilter?.value,window.IndexFilterSystem.signature]);
   cards=window.UIPerformanceSystem.paginate('Collection',cards,filterKey,els.collectionGrid,renderCollection);
   const fragment=document.createDocumentFragment();
   for (const card of cards) {
@@ -5508,7 +5501,6 @@ document.addEventListener('keydown', event => {
     document.getElementById('elementChartOpenButton')?.focus();
   }
 }, true);
-els.collectionElementFilter?.addEventListener("change", () => renderCollection());
 els.battleElementFilter?.addEventListener("change", () => populateBattleFighterSelect());
 els.cardSearchInput?.addEventListener("input", () => window.UIPerformanceSystem.debounce("arena-search",()=>{if(!isBattleMatchActive()&&(!els.battleModal?.classList.contains("hidden")||window.PortalsSystem?.active))populateBattleFighterSelect();}));
 els.cardSortSelect?.addEventListener("change", () => populateBattleFighterSelect());
@@ -5529,10 +5521,6 @@ els.battleCloseResultButton?.addEventListener("click", event => {
 els.rollButton?.addEventListener("click", () => rollCard("manual"));
 els.searchInput?.addEventListener("input", () => window.UIPerformanceSystem.debounce('collection-search',()=>{collectionNeedsRefresh=false;renderCollection();}));
 els.mutationFilter?.addEventListener("change", () => {
-  collectionNeedsRefresh = false;
-  renderCollection();
-});
-els.sortSelect?.addEventListener("change", () => {
   collectionNeedsRefresh = false;
   renderCollection();
 });
@@ -5755,9 +5743,7 @@ renderCooldownUI(Date.now());
 startGlobalLoop();
 
 // Registry-driven filters include future categories without duplicated HTML options.
-window.CategorySystem.mount(els.collectionCategoryFilter);
 window.CategorySystem.mount(els.battleCategoryFilter);
-els.collectionCategoryFilter?.addEventListener("change",renderCollection);
 els.battleCategoryFilter?.addEventListener("change",populateBattleFighterSelect);
 
 
@@ -5954,3 +5940,5 @@ window.CardDetailsSystem.configure({
  toggleLock:id=>{state.cardLocks ||= {};if(isCardLocked(id))delete state.cardLocks[id];else state.cardLocks[id]=true;saveState();renderPreview();},
  notify:message=>window.ShopBulkSystem.notify(message)
 });
+
+window.IndexFilterSystem.configure({onApply:()=>{collectionNeedsRefresh=false;renderCollection();}});
