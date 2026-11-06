@@ -2015,7 +2015,7 @@ function getFilteredCards() {
     sort === 'damage' || sort === 'hp' ? getIndexCardStat(card, sort === 'hp' ? 'hp' : 'atk') :
     sort === 'level' && isCardOwned(card.id) ? getCardLevelInfo(card).level : 0]));
   const sortedCards = [...filteredCards].sort((a,b) =>
-    (sort === 'rarity' ? 0 : values.get(b.id) - values.get(a.id)) || window.IndexFilterSystem.rarityCompare(a,b));
+    window.IndexFilterSystem.unrollableCompare(a,b) || (sort === 'rarity' ? 0 : values.get(b.id) - values.get(a.id)) || window.IndexFilterSystem.rarityCompare(a,b));
 
   return sortedCards;
 }
@@ -4383,7 +4383,7 @@ function renderRaidControls() {
   setViewText('raidRules', `4 player cards vs ${def.enemies.length} preset opponent(s) • ${def.keyId?'1 Key per entry':'No entry key or weather requirement'} • Victory: ${range.min}–${range.max} ${def.coinName} • ${((material?raid.materialChance(progress.difficulty):raid.secretChance(progress.difficulty))*100).toFixed(2)}% ${dropName} roll • No VNĐ, EXP or ordinary drops • Speed Battle Potion applies.`);
   if(type==='akatsuki'){const chances=raid.akatsukiChances(progress.difficulty);setViewText('raidRules',`4 player cards vs 10 opponents • 1 Akatsuki Raid Key • Victory: ${range.min}–${range.max} Akatsuki Coins • Mangekyo Eye ${(chances.mangekyo_eye*100).toFixed(3)}% • Pain ${(chances.pain*100).toFixed(3)}% (independent rolls) • No VNĐ or EXP • Speed Battle Potion applies.`);}
   if(type==='shibuya'){const chances=raid.shibuyaChances(progress.difficulty);setViewText('raidRules',`4 player cards vs 10 opponents • 1 Shibuya Raid Key • Victory: ${range.min}–${range.max} Shibuya Coins • Jogo ${(chances.jogo*100).toFixed(2)}% • Haruta ${(chances.haruta*100).toFixed(2)}% • Cursed Finger ${(chances.equipment_cursed_finger*100).toFixed(2)}% (independent rolls) • No VNĐ or EXP • Speed Battle Potion applies.`);}
-  setViewText('raidEnemyPreviewTitle',`Preset boss lineup • ${def.enemies.length} opponent${def.enemies.length===1?'':'s'}`);
+  setViewText('raidEnemyPreviewTitle',`Preset boss lineup • ${def.enemies.length} opponent${def.enemies.length===1?'':'s'} • ${raid.ENEMY_ELEMENTS[type]} Element`);
   const list = document.getElementById('raidEnemyPreview'); if (!list) return; list.replaceChildren();
   for (const enemy of raid.preview(type)) { const li = document.createElement("li"); li.textContent = `${enemy.card.name} • Lv.${enemy.level} • HP ${enemy.hpMin.toLocaleString("en-US")}–${enemy.hpMax.toLocaleString("en-US")} • ATK ${enemy.atkMin.toLocaleString("en-US")}–${enemy.atkMax.toLocaleString("en-US")}`; list.append(li); }
   if (isRaidBattle() && !isBattleMatchActive()) els.battleStartButton.disabled = !isBattleSetupValid() || !raid.canEnter(type);
@@ -5198,6 +5198,8 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if(id==='relicFusionModal'&&window.RelicFusionSystem?.dialogOpen){window.RelicFusionSystem.closeDialog();return;}
+  if(id==='inventoryModal'&&window.RelicFusionSystem?.active)window.RelicFusionSystem.cancel();
   if(id==='evolutionModal'&&window.EvolutionSystem?.active){window.EvolutionSystem.close();return;}
   if(id==='portalModal'){window.PortalsSystem.exit();return;}
   if(id==='battleModal'&&window.PortalCombatView?.active)return;
@@ -5713,7 +5715,7 @@ window.EvolutionSystem.configure({
   describe:recipe=>({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(' + ')||'Normal'}))}),
   display:(card,variant,level,isBase)=>isBase?window.RelicSystem.preview(card,getDisplayCard(card,variant.mutations,level),variant.key):getDisplayCard(card,variant.mutations,level),
   passive:getCardPassiveCopy,open:()=>openModal('evolutionModal'),
-  onEvolved:(recipe,mutations)=>{openCardPreview(recipe.id,canonicalVariantKey(recipe.id,mutations));window.ShopBulkSystem.notify(`Evolved into ${recipe.name} · Lv.100 · mutations preserved.`);}
+  onEvolved:(recipe,mutations)=>{openCardPreview(recipe.id,canonicalVariantKey(recipe.id,mutations));window.ShopBulkSystem.notify(`Evolved into ${recipe.name} · Lv.${getCardLevelInfo(recipe.id).level} · mutations preserved.`);}
 });
 let lastSpookyTurnMs=window.SettingsSystem.spookySpeedUp?1000:2000;
 window.SettingsSystem.configure({maxBaseLuck:getMaximumBaseLuck,totalLuck:getLuckMultiplier,canAct:()=>!isImportingSave&&!saveTransferBusy&&!isSimulationActive(),onChange:()=>{
@@ -5744,6 +5746,7 @@ document.getElementById('previewFeedButton')?.addEventListener('click',()=>{if(p
 window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished){if(['time-trial','material-time-trial'].includes(getBattleMode()))window.TimeTrialSystem.remaining(battleState);else if(!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}}});
 window.RelicSystem.configure({count:getOwnedCardCount,canAct:canEvolveNow,cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),variants:getVariantEntries,onChange:()=>{renderPotionInventory();if(previewSelection)renderPreview();if(!isBattleMatchActive())populateBattleFighterSelect();}});
 window.StorageSales.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();}});
+window.RelicFusionSystem.configure({canAct:canEvolveNow,begin:id=>window.StorageSystem.beginFusion(id),end:id=>window.StorageSystem.endFusion(id),refresh:()=>window.StorageSystem.refresh()});
 window.CraftingSystem.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 window.QuestsSystem.mount(document.getElementById('questModal'));
 window.QuestsSystem.configure({clock:()=>state.weather.gameSeconds,snapshot:()=>({rolls:state.totalRolls,bestRoom:window.TimeTrialSystem.bestRoom}),canAct:canEvolveNow,isImporting:()=>isImportingSave,reward:applyQuestBoardReward,onChange:()=>{updateStats();renderClockAndWeather(true);refreshAchievements();}});

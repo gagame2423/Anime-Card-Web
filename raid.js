@@ -44,6 +44,7 @@
   // Archived Gomen rewards remain readable for migration, never playable as a Raid.
   const rewardItemId=type=>({akatsuki:'mangekyo_eye',holy_grail:'excalibur_sword',gomen:'gojo_eye',shibuya:'equipment_cursed_finger'})[type]||null;
   const excaliburChance=d=>.008+.072*(difficulty(d)-1)/999;
+  const ENEMY_ELEMENTS=Object.freeze({marine_fort:'Water',holy_grail:'Holy',shibuya:'Fire',akatsuki:'Dark'});
   const LEVEL_GROWTH = .075;
   const object = v => Boolean(v && typeof v === 'object' && !Array.isArray(v));
   const integer = (v, min = 0, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(v) && v >= min && v <= max;
@@ -125,14 +126,14 @@
       const stats = { hp: Math.round(hp * scale), atk: Math.round(atk * scale) };
       // Legacy passive helpers read card.stats; use this Raid-only level snapshot
       // so their ATK effects scale with the displayed boss, without editing CARDS.
-      const card = { ...native, stats: { ...stats } };
+      const card = { ...native, element:ENEMY_ELEMENTS[type], stats: { ...stats } };
       return { card, display: { name: card.name, image: card.image, ...stats }, mutations: [], hp: stats.hp, maxHp: stats.hp, atk: stats.atk, defeated: false, level, isRaidEnemy: true };
     });
   }
   function preview(type = 'marine_fort', d = data.types[type]?.difficulty) {
     if (!validType(type)) return [];
     const level = difficulty(d), scale = (1 + (level-1)*LEVEL_GROWTH) * (['holy_grail','shibuya'].includes(type) ? .5 : 1);
-    return TYPES[type].enemies.map(([id,h0,h1,a0,a1]) => ({ card:host.ALL_CARDS.find(c=>c.id===id), level, hpMin:Math.round(h0*scale),hpMax:Math.round(h1*scale),atkMin:Math.round(a0*scale),atkMax:Math.round(a1*scale) }));
+    return TYPES[type].enemies.map(([id,h0,h1,a0,a1]) => ({ card:{...host.ALL_CARDS.find(c=>c.id===id),element:ENEMY_ELEMENTS[type]}, level, hpMin:Math.round(h0*scale),hpMax:Math.round(h1*scale),atkMin:Math.round(a0*scale),atkMax:Math.round(a1*scale) }));
   }
   function start(battle, type = 'marine_fort') {
     if (battle?.mode !== MODE || battle.playerTeam?.length !== 4 || battle.enemyTeam?.length !== TYPES[type]?.enemies.length || !canEnter(type) || data.activeAttempt) throw new Error('Cần đội 4 thẻ, đúng số đối thủ và điều kiện vào Raid.');
@@ -248,5 +249,5 @@
     button.addEventListener('click', () => { if (upgrade(type)) onChange(); else host.alert('Không thể nâng cấp đội Raid.'); }); box.append(name, text, button); grid.append(box);
   }
   function reset() { data = fresh(); registerKey(); persist(); }
-  host.RaidSystem = Object.freeze({ KEY, MODE, AKATSUKI_KEY, akatsukiChances, claimTimeTrialKey, KEY_ITEM, GRAIL_KEY, SHIBUYA_KEY, SHIBUYA_CARDS, shibuyaChances, SECRET_IDS, TYPES, SHOP, offers, rewardItemId, materialChance:excaliburChance, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, claimShibuyaKey, purchase, upgrade, upgradeCost, snapshot, totalWins, legacyGomenProgress, renderShop, reset, flush: persist });
+  host.RaidSystem = Object.freeze({ KEY, MODE, AKATSUKI_KEY, akatsukiChances, claimTimeTrialKey, KEY_ITEM, GRAIL_KEY, SHIBUYA_KEY, SHIBUYA_CARDS, ENEMY_ELEMENTS, shibuyaChances, SECRET_IDS, TYPES, SHOP, offers, rewardItemId, materialChance:excaliburChance, excaliburChance, rollFateKey, LEVEL_GROWTH, configure, validType, validSave, coinRange, secretChance, rollSecret, canEnter, setDifficulty, enemies, preview, start, finish, abort, rollKey, claimShibuyaKey, purchase, upgrade, upgradeCost, snapshot, totalWins, legacyGomenProgress, renderShop, reset, flush: persist });
 })(window);

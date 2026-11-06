@@ -1,54 +1,69 @@
-NHẬT KÝ CẬP NHẬT 05/11/2026
-RAMEN BOWL VÀ TIẾN HÓA TRỰC TIẾP TRONG CARD DETAILS
+NHẬT KÝ CẬP NHẬT 06/11/2026
+SỬA CẤP TIẾN HÓA, SẮP XẾP INDEX, ELEMENT RAID VÀ RELIC FUSION
 
-1. Ramen Bowl
-- Thêm EXP Food Ramen Bowl, ID ramen_bowl, ảnh assets/items/ramenb.png.
-- Mỗi phần cho 10.000 EXP gốc. EXP thực nhận = 10.000 × số lượng dùng × EXP Multiplier của người chơi, theo hệ thống Feed hiện có.
-- Bán riêng tại Akatsuki Raid Shop với giá 10 Akatsuki Coins/phần.
-- Dùng ô Quantity của Raid Shop để mua nhiều phần. Số lượng thực mua tự giới hạn theo Coins còn lại và sức chứa vật phẩm; chỉ trừ đúng chi phí số phần nhận được.
-- Ramen xuất hiện trong Storage → EXP Food và lưới Feed XP Food. Thông tin nguồn nhận lấy trực tiếp từ Akatsuki Shop.
-- Thẻ cấp 100 không thể dùng thức ăn; không tiêu Ramen khi Feed bị từ chối. EXP, vật phẩm và Coins dùng cơ chế lưu/khôi phục giao dịch đang có.
+1. Cấp thẻ tiến hóa mới
+- Cả 11 công thức tạo thẻ tiến hóa chưa mở khóa ở cấp 1, EXP 0, thay cho cấp 100.
+- Yêu cầu thẻ gốc cấp 100 và nguyên liệu của từng công thức được giữ nguyên.
+- Giữ đúng Mutation đang chọn, gồm Normal, Mutation đơn hoặc Mutation kép; chỉ tiêu đúng bản sao được chọn.
+- Evolve Unit xem trước chỉ số cấp 1 của kết quả và thông báo đúng cấp sau khi tiến hóa.
+- Không hạ cấp hoặc xóa tiến trình của những thẻ tiến hóa đã có trong save. Giữ giới hạn cấp tối đa 100 và công thức EXP hiện tại.
 
-2. Evolve trong Card Details
-- Gỡ nút Evolution riêng khỏi menu ba chấm và bỏ lưới công thức tiến hóa cũ.
-- Thẻ có công thức tiến hóa hiện nút Evolve ngay bên phải thông tin Variant/Mutation trong Card Details.
-- Thẻ không có công thức không hiện nút này. Có thể xem trước tiến hóa khi chưa đủ cấp hoặc nguyên liệu; nút xác nhận sẽ bị khóa và nêu điều kiện còn thiếu.
-- Mutation được lấy đúng từ lựa chọn hiện tại trong Card Details. Không tự đổi sang Normal, biến thể mạnh nhất hoặc bản sao khác khi tiến hóa.
+2. Thứ tự Card Index
+- Thẻ chance: 0 luôn nằm sau toàn bộ thẻ có tỷ lệ roll, kể cả khi chọn DAMAGE, HP, RARITY hoặc LEVEL.
+- Trong từng nhóm vẫn dùng tiêu chí đang chọn. RARITY sắp mẫu số 1 in X từ cao xuống thấp cho các thẻ có thể roll.
+- Giữ tìm kiếm, lọc nhiều Category/Element/Rarity và phân trang. Không đổi tỷ lệ roll hoặc nguồn nhận thẻ độc quyền.
 
-3. Hộp thoại Evolve Unit
-- Bố cục gồm thẻ gốc bên trái, mũi tên chuyển đổi ở giữa, thẻ tiến hóa và bảng Requirements bên phải.
-- Hai thẻ hiện ảnh, tên, cấp, độ hiếm, Element, HP và ATK. Bên dưới là Mutation sẽ giữ lại, chênh lệch chỉ số thực tế và toàn bộ mô tả nội tại của thẻ tiến hóa.
-- Số liệu xem trước dùng cùng công thức chỉ số/cấp/Mutation của game, không dùng mức tăng giả định như +40% cố định.
-- Nguyên liệu hiện ảnh hoặc biểu tượng thay thế, tên và số lượng Đang có/Cần dùng. Màu xanh khi đủ, màu đỏ khi thiếu.
-- Nút Evolve dùng màu hồng/tím; Cancel và X đóng hộp thoại, trở về Card Details với Mutation đã chọn.
-- Escape và nhấn nền chỉ đóng hộp thoại tiến hóa ở trên. Khóa tương tác Card Details phía dưới và giữ focus bàn phím trong hộp thoại khi đang mở.
-- Bố cục đáp ứng trên điện thoại; nội dung dài có vùng cuộn, nút xác nhận/hủy luôn ở hàng điều khiển cuối.
-- Ảnh bị thiếu dùng phần hiển thị thay thế; không tạo hoặc đính kèm tài nguyên ảnh mới.
+3. Đồng bộ Element địch theo Raid
+- Marine Ford / Marine Fort Raid: cả 10 địch dùng Water.
+- Holy Grail Raid: cả 10 địch dùng Holy.
+- Shibuya Raid: cả 10 địch dùng Fire.
+- Akatsuki Raid: cả 10 địch dùng Dark.
+- Chỉ ghi đè Element trên bản sao dữ liệu của địch trong Raid và phần xem trước. Không thay Element gốc trong cards.js.
+- Giữ tên, ảnh, nội tại, khoảng HP/ATK, tăng độ khó, Coins và phần thưởng hiện có. Tiêu đề xem trước hiển thị Element của đội địch.
 
-4. Kết quả tiến hóa và bảo vệ dữ liệu
-- Cả 11 công thức hiện có tạo thẻ kết quả cấp 100, EXP 0, giữ nguyên Normal/Mutation đơn/Mutation kép của bản sao đã chọn.
-- Áp dụng cho Itachi Awakened, Ultimate Gohan, Golden Frieza, True Mahito, Gojo Revice, Jason 13th, Saber Knight, Yuno Spirit, Awakened Doflamingo, Sea Goddess Valkyrie và Prime Garp.
-- Chỉ tiêu 1 bản sao của đúng biến thể cùng số nguyên liệu công thức yêu cầu. Các biến thể/bản sao khác không bị dùng thay.
-- Kiểm tra lại cấp, biến thể, nguyên liệu và quyền thao tác ngay lúc xác nhận. Thiếu điều kiện hoặc lỗi lưu thì không hoàn tất giao dịch; dữ liệu trước giao dịch được khôi phục khi có thể ghi lại.
-- Giữ quy tắc mỗi kết quả tiến hóa chỉ mở khóa một lần. Thẻ đã tiến hóa trong save cũ không bị tự tăng cấp hoặc thay Mutation bởi lần cập nhật này.
-- Sau thành công mở Card Details của thẻ kết quả với đúng Mutation và cấp 100.
+4. Relic Fusion trong Storage
+- Thêm nút Fuse ngay trên Equip Relic ở bảng chi tiết của tab Relic.
+- Nhấn Fuse để vào chế độ chọn nguyên liệu. Kho đồ chỉ hiện cùng loại Relic và cùng độ hiếm với Relic gốc; ví dụ Nail Common không trộn với Bomb Common hoặc Nail Rare.
+- Các bản cùng loại/độ hiếm có thể có chỉ số và Element đã roll khác nhau. Mỗi bản riêng biệt chỉ được chọn một lần.
+- Relic gốc tự được chọn và luôn nằm trong số nguyên liệu yêu cầu. Bộ đếm Selected hiển thị số đã chọn trên số cần; nút Fuse chỉ bật khi đủ chính xác.
+- Common → Rare: 10 Common cùng loại.
+- Rare → Legendary thường: 10 Rare cùng loại. Kết quả thành công không có Unique.
+- Legendary thường → Legendary Unique: 5 Legendary thường cùng loại.
+- Legendary đã có Unique không được dùng làm nguyên liệu và không thể làm Relic gốc cho một lần Fuse mới.
+- Lựa chọn được giữ khi chuyển trang và tìm kiếm trong nhóm phù hợp. Bán nhiều vật phẩm, bán lẻ và Equip được tắt trong lúc chọn Fuse.
+- Cancel Fusion hoặc đổi tab hủy lựa chọn, không tiêu vật phẩm. Hủy sẽ khôi phục lựa chọn/tìm kiếm/trang trước đó.
 
-5. Kiểm tra và phát hành
-- Kiểm tra cú pháp toàn bộ 74 tệp JavaScript, đường dẫn script đúng tên/chữ hoa thường, ID DOM không trùng và nhãn cache đồng nhất.
-- 20 kiểm tra cơ chế/giao dịch chạy qua, gồm 11 công thức, Mutation đơn/kép/Normal, bản sao còn lại, thiếu cấp/nguyên liệu, lựa chọn hết hạn, khôi phục lỗi lưu, EXP Multiplier và giới hạn cấp 100.
-- Kiểm tra luồng thực tế: mua Quantity 100 với 35 Coins nhận đúng 3 Ramen và còn 5 Coins; tải lại vẫn giữ vật phẩm; tìm thấy trong EXP Food; Feed 1 phần nhận đúng 10.000 EXP khi EXP Multiplier là x1.
-- Kiểm tra Evolve Unit ở 1440px, 390px và 320px: không tràn ngang, nút cuối luôn trong màn hình, Cancel/Escape/X/nhấn nền trở lại đúng Card Details. Kiểm tra mô tả dài của Itachi và số nguyên liệu thiếu màu đỏ.
-- Giữ nguyên cards.js, chỉ số thẻ đã cân bằng, nội tại chiến đấu, giới hạn cấp 100, công thức EXP và mã combat của các chế độ khác. Không đổi Firebase, PvP, cấu hình TURN/STUN hoặc cơ chế mua số lượng lớn dùng chung.
-- Nhãn cache mới: 20261105-evolution-ui-1. Thay đầy đủ mã nguồn, giữ thư mục assets hiện có, bổ sung assets/items/ramenb.png nếu chưa có rồi tải lại bằng Ctrl+F5.
-- Không xuất Excel. Gói phát hành chỉ chứa mã nguồn và nhật ký cập nhật.
+5. Xác nhận, RNG và kết quả
+- Tất cả ba bậc đều có đúng 50% thành công và 50% thất bại, theo yêu cầu đã xác nhận.
+- Nhấn Fuse khi đủ nguyên liệu mở hộp thoại Confirm / Decline, nêu số bản sẽ tiêu, bậc kết quả và tỷ lệ 50%.
+- Decline, X hoặc Escape đóng xác nhận và giữ lựa chọn; chưa tiêu bất kỳ nguyên liệu nào.
+- Confirm mới thực hiện RNG và giao dịch Kho đồ.
+- Thành công: tiêu toàn bộ nguyên liệu đã chọn, nhận đúng 1 Relic ở bậc đích với chỉ số và Element phù hợp được roll mới. Unique có giá trị số cụ thể được lưu cố định.
+- Thất bại: tiêu toàn bộ nguyên liệu đã chọn, không nhận vật phẩm, tiền hoặc phần thưởng bù. Việc mất nguyên liệu vẫn được lưu sau khi tải lại.
+- Hộp thoại kết quả thành công hiển thị tên, ảnh, độ hiếm và các chỉ số mới; thất bại hiển thị rõ không nhận vật phẩm.
+- Relic đang trang bị có thể được chọn. Xác nhận cho biết số bản đang trang bị; khi bị tiêu, liên kết trang bị được gỡ. Kết quả mới ở trạng thái chưa trang bị.
+- Tiêu nguyên liệu và thêm kết quả trong cùng một giao dịch Kho đồ. Lỗi ghi dữ liệu hủy giao dịch và giữ nguyên nguyên liệu; khác với một lượt RNG thất bại hợp lệ.
+- Kiểm tra lại vật phẩm trước khi ghi, chặn ID trùng, chọn thiếu/thừa, sai loại/độ hiếm và gửi lại một lượt Fuse đã hoàn tất.
+- Giữ xác suất crafting cũ 70% Common / 25% Rare / 5% Legendary và 10% Unique khi crafting Legendary. Fusion dùng quy tắc riêng, không đổi cơ chế crafting đó.
+
+6. Kiểm tra và phát hành
+- Kiểm tra cú pháp toàn bộ 75 tệp JavaScript, đường dẫn script đúng chữ hoa/thường, ID DOM không trùng và nhãn cache đồng nhất.
+- 52 kiểm tra cơ chế/giao dịch chạy qua: 11 tiến hóa cấp 1, giữ Mutation, không reset cấp đã có, bốn kiểu Index sort, bốn Raid, cả ba bậc Fusion cho đủ bảy loại Relic, thất bại/mất toàn bộ, giới hạn chọn, ràng buộc trang bị, lỗi lưu, chặn gửi trùng và biên RNG 50%.
+- Đối chiếu 700 kết quả roll crafting có seed với bản trước: trùng hoàn toàn.
+- Kiểm tra giao diện chọn qua nhiều trang, Confirm/Decline, Escape, kết quả thành công/thất bại, hủy chế độ Fuse và khôi phục Kho đồ sau tải lại trên máy tính/điện thoại.
+- Giữ nguyên cards.js, chỉ số thẻ đã cân bằng, mã combat/nội tại, các chế độ ngoài thay đổi Element Raid, Firebase, PvP, TURN/STUN, Ramen Bowl 10.000 EXP và hệ thống mua số lượng lớn.
+- Nhãn cache mới: 20261106-relic-fusion-1. Thay đầy đủ mã nguồn, giữ assets hiện có rồi tải lại bằng Ctrl+F5.
+- Không tạo tệp ảnh/tài nguyên nhị phân hoặc Excel. Gói phát hành gồm đầy đủ mã nguồn và nhật ký này.
 
 Modified Files Note
-- exp_food.js: đăng ký Ramen Bowl 10.000 EXP, ảnh và nguồn Akatsuki Shop; dùng lại Feed hiện có.
-- raid.js: thêm Ramen giá 10 Akatsuki Coins và ảnh món ăn vào Shop; dùng lại giao dịch Quantity đang có.
-- card_details.js: nút Evolve theo công thức của thẻ, truyền chính xác Mutation đang chọn.
-- evolution.js: điều khiển hộp thoại Evolve Unit, xem trước, Requirements, focus/đóng modal, kết quả cấp 100 và xử lý lỗi cập nhật giao diện sau giao dịch.
-- app.js: nối Card Details với tiến hóa, xem trước chỉ số ở cấp kết quả, giữ cấp 100, mở thẻ kết quả và bỏ liên kết menu cũ.
-- index.html: gỡ mục Evolution riêng, thêm nút trong vùng Variant, bố cục Evolve Unit và nhãn cache.
-- styles.css: nút Evolve, khung so sánh, Requirements, nội tại, nút cuối, hiển thị điện thoại và ảnh Ramen trong Shop.
-- startup.js: kiểm tra mô-đun và các điều khiển tiến hóa đã khởi tạo.
-- README.txt: chỉ chứa nhật ký của bản cập nhật này.
+- evolution.js: kết quả các công thức và xem trước tiến hóa ở cấp 1.
+- index_filters.js: đưa chance: 0 xuống cuối và dùng chung bộ so sánh cho các nhóm thẻ.
+- raid.js: ánh xạ Element cho bốn Raid, ghi đè trên dữ liệu địch/xem trước của riêng Raid.
+- relics.js: roll theo bậc bắt buộc cho Fusion, quy tắc 10/10/5, tỷ lệ 50/50, kiểm tra chọn và giao dịch nguyên tử; giữ roll crafting cũ.
+- relic_fusion.js (mới): chế độ chọn, bộ đếm, xác nhận, kết quả, điều khiển focus và hủy an toàn.
+- storage.js: nút Fuse, lọc nguyên liệu, chọn qua nhiều trang, tách khỏi thao tác bán/trang bị và thông tin nguồn Fusion.
+- app.js: nối Fusion với Storage, đóng modal đúng thứ tự, thông báo cấp tiến hóa và Element Raid; thứ tự Index ưu tiên nhóm có thể roll.
+- index.html: điều khiển Fuse, hộp thoại xác nhận/kết quả, tải mô-đun mới và nhãn cache.
+- styles.css: nút Fuse, dấu chọn, bộ đếm và hộp thoại phù hợp máy tính/điện thoại.
+- startup.js: kiểm tra mô-đun và giao diện Fusion khi khởi động.
+- README.txt: chỉ giữ nhật ký của bản cập nhật này.

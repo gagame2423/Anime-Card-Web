@@ -21,9 +21,11 @@
   function matches(card){
     return (!sets.elements.size||sets.elements.has(card?.element))&&(!sets.rarities.size||sets.rarities.has(card?.rarity))&&(!sets.categories.size||(card?.category||[]).some(c=>sets.categories.has(c)));
   }
+  const unrollableCompare=(a,b)=>Number(Number(a?.chance)===0)-Number(Number(b?.chance)===0);
   function rarityCompare(a,b){
-    // 1-in-0 exclusives have zero normal-roll probability and sort first.
-    const chance=c=>Number(c?.chance)===0?Infinity:Math.max(0,Number(c?.chance)||0),aa=chance(a),bb=chance(b);
+    // Thẻ không thể roll luôn đứng sau nhóm có tỷ lệ roll.
+    const exclusive=unrollableCompare(a,b);if(exclusive)return exclusive;
+    const chance=c=>Math.max(0,Number(c?.chance)||0),aa=chance(a),bb=chance(b);
     if(aa!==bb)return aa>bb?-1:1;
     return RARITY_ORDER.indexOf(b?.rarity)-RARITY_ORDER.indexOf(a?.rarity)||String(a?.name||'').localeCompare(String(b?.name||''));
   }
@@ -94,5 +96,5 @@
   }
   function open(){if(!mount())return false;draft=normalize(applied);ui.search.value='';paintDraft();ui.root.classList.remove('hidden');ui.trigger.setAttribute('aria-expanded','true');ui.close.focus();return true;}
   function close(){if(!ui)return;ui.root.classList.add('hidden');ui.trigger.setAttribute('aria-expanded','false');draft=null;ui.trigger.focus();}
-  host.IndexFilterSystem=Object.freeze({SORTS,matches,rarityCompare,apply,open,close,configure(options={}){bridge=options;return mount();},get state(){return applied;},get signature(){return JSON.stringify(applied);},get ready(){return Boolean(ui);}});
+  host.IndexFilterSystem=Object.freeze({SORTS,matches,unrollableCompare,rarityCompare,apply,open,close,configure(options={}){bridge=options;return mount();},get state(){return applied;},get signature(){return JSON.stringify(applied);},get ready(){return Boolean(ui);}});
 })(window);

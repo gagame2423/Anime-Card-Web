@@ -3,17 +3,17 @@
   'use strict';
   const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
   const RECIPES = Object.freeze([
-    Object.freeze({id:'itachi-awakened',baseId:'uchiha-itachi',itemId:'mangekyo_eye',level:100,resultLevel:100,name:'Itachi Awakened'}),
-    Object.freeze({id:'ultimate-gohan',baseId:'gohan',itemId:'senzu_bean',itemCount:8500,level:100,resultLevel:100,name:'Ultimate Gohan'}),
-    Object.freeze({id:'golden-frieza',baseId:'frieza',itemId:'senzu_bean',itemCount:7690,level:100,resultLevel:100,name:'Golden Frieza'}),
-    Object.freeze({id:'true-mahito',baseId:'mahito',itemId:'mahito_puppet',level:100,resultLevel:100,name:'True Mahito'}),
-    Object.freeze({id:"gojo-revice",baseId:"gojo-young",itemId:"gojo_eye",level:100,resultLevel:100,name:"Gojo Revice"}),
-    Object.freeze({id:"jason-13th",baseId:"the-trapper",itemId:"machete",level:100,resultLevel:100,name:"Jason 13th"}),
-    Object.freeze({id:"saber-knight",baseId:"saber",itemId:"excalibur_sword",level:100,resultLevel:100,name:"Saber Knight"}),
-    Object.freeze({id:'yuno-spirit',baseId:'yuno',itemId:'spirit_crown',level:100,resultLevel:100,name:'Yuno Spirit'}),
-    Object.freeze({ id:'awakened-doflamingo', baseId:'doflamingo', itemId:'web_string', level:100,resultLevel:100, name:'Awakened Doflamingo' }),
-    Object.freeze({ id:'sea-goddess-valkyrie', baseId:'noelle-silva', itemId:'sea_valkyrie', level:100,resultLevel:100, name:'Sea Goddess Valkyrie' }),
-    Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100,resultLevel:100, name:'Prime Garp' })
+    Object.freeze({id:'itachi-awakened',baseId:'uchiha-itachi',itemId:'mangekyo_eye',level:100,resultLevel:1,name:'Itachi Awakened'}),
+    Object.freeze({id:'ultimate-gohan',baseId:'gohan',itemId:'senzu_bean',itemCount:8500,level:100,resultLevel:1,name:'Ultimate Gohan'}),
+    Object.freeze({id:'golden-frieza',baseId:'frieza',itemId:'senzu_bean',itemCount:7690,level:100,resultLevel:1,name:'Golden Frieza'}),
+    Object.freeze({id:'true-mahito',baseId:'mahito',itemId:'mahito_puppet',level:100,resultLevel:1,name:'True Mahito'}),
+    Object.freeze({id:"gojo-revice",baseId:"gojo-young",itemId:"gojo_eye",level:100,resultLevel:1,name:"Gojo Revice"}),
+    Object.freeze({id:"jason-13th",baseId:"the-trapper",itemId:"machete",level:100,resultLevel:1,name:"Jason 13th"}),
+    Object.freeze({id:"saber-knight",baseId:"saber",itemId:"excalibur_sword",level:100,resultLevel:1,name:"Saber Knight"}),
+    Object.freeze({id:'yuno-spirit',baseId:'yuno',itemId:'spirit_crown',level:100,resultLevel:1,name:'Yuno Spirit'}),
+    Object.freeze({ id:'awakened-doflamingo', baseId:'doflamingo', itemId:'web_string', level:100,resultLevel:1, name:'Awakened Doflamingo' }),
+    Object.freeze({ id:'sea-goddess-valkyrie', baseId:'noelle-silva', itemId:'sea_valkyrie', level:100,resultLevel:1, name:'Sea Goddess Valkyrie' }),
+    Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100,resultLevel:1, name:'Prime Garp' })
   ]);
   const MATERIALS = Object.freeze([
     Object.freeze({id:'mangekyo_eye',name:'Mangekyo Eye',type:'material',icon:'◉',image:'assets/items/eeye.png',tier:'secret',description:'Evolve Lv.100 Uchiha Itachi into Lv.100 Itachi Awakened, keeping mutations. Akatsuki Raid: 0.03%–3% by difficulty.'}),
@@ -84,7 +84,7 @@
     paths.push(recipe); byBase.set(recipe.baseId, paths);
   }
   const recipesFor = cardId => [...(byBase.get(String(cardId)) || [])];
-  const resultLevel = (recipe, level = recipe.level) => host.CardLevelSystem.normalizeLevel(Math.max(recipe.level, level));
+  const resultLevel = recipe => host.CardLevelSystem.normalizeLevel(recipe.resultLevel || 1);
   const number = value => Math.round(Number(value) || 0).toLocaleString('en-US');
   let ui = null, selection = null, confirming = false;
   const make = (tag, className = '', text) => {

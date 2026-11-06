@@ -36,7 +36,16 @@
  function validBinding(b){return b===null||Boolean(b&&typeof b.cardId==='string'&&b.cardId.length<=100&&(b.variantKey===undefined||(typeof b.variantKey==='string'&&b.variantKey.length<=250&&Number.isSafeInteger(b.copy)&&b.copy>=0)));}
  function validItem(item){return item?.type!=='relic'||Boolean(/^relic_[a-f0-9]{32}$/.test(item.id)&&item.quantity===1&&validRoll(item.metadata?.relic)&&validBinding(item.metadata?.binding));}
  function validItems(items){const bound=new Set();for(const item of Object.values(items||{})){if(!validItem(item))return false;if(item?.type==='relic'&&item.metadata.binding){const b=item.metadata.binding;const address=b.variantKey===undefined?key(b):JSON.stringify([b.cardId,b.variantKey,b.copy]);if(bound.has(address))return false;bound.add(address);}}return true;}
- function roll(kind,random=Math.random){const d=byKind.get(kind);if(!d)throw Error('Unknown Relic.');const n=randomUnit(random),tier=n<.70?0:n<.95?1:2,unique=tier===2&&randomUnit(random)<.10,range=d.ranges[tier];return {kind,rarity:RARITIES[tier],unique,element:d.category?null:ELEMENTS[Math.floor(randomUnit(random)*6)],hp:d.stat==='hp'||d.stat==='both'?pct(range,random):0,atk:d.stat==='atk'||d.stat==='both'?pct(range,random):0,dodge:unique&&kind==='god_leaf'?pct([1,5],random):0,critChance:unique&&kind==='nail'?pct([10,20],random):0,critDamage:unique&&kind==='nail'?pct([15,30],random):0,expBonus:unique&&kind==='millennium_puzzle'?pct([10,30],random):0,followChance:kind==='enten_blade'?pct(range,random):0,specialBonus:unique&&kind==='enten_blade'?pct([5,50],random):0,...(kind==='bomb'?{bombVersion:2,firstAttackBonus:unique?pct([30,300],random):0}:{})};}
+ function rollAtTier(kind,rarity,unique=false,random=Math.random){
+  const d=byKind.get(kind),tier=RARITIES.indexOf(rarity);
+  if(!d||tier<0||typeof unique!=='boolean'||unique&&tier!==2)throw Error('Invalid Relic rarity.');
+  const range=d.ranges[tier];return {kind,rarity,unique,element:d.category?null:ELEMENTS[Math.floor(randomUnit(random)*6)],hp:d.stat==='hp'||d.stat==='both'?pct(range,random):0,atk:d.stat==='atk'||d.stat==='both'?pct(range,random):0,dodge:unique&&kind==='god_leaf'?pct([1,5],random):0,critChance:unique&&kind==='nail'?pct([10,20],random):0,critDamage:unique&&kind==='nail'?pct([15,30],random):0,expBonus:unique&&kind==='millennium_puzzle'?pct([10,30],random):0,followChance:kind==='enten_blade'?pct(range,random):0,specialBonus:unique&&kind==='enten_blade'?pct([5,50],random):0,...(kind==='bomb'?{bombVersion:2,firstAttackBonus:unique?pct([30,300],random):0}:{})};
+ }
+ function roll(kind,random=Math.random){
+  if(!byKind.has(kind))throw Error('Unknown Relic.');
+  const n=randomUnit(random),tier=n<.70?0:n<.95?1:2,unique=tier===2&&randomUnit(random)<.10;
+  return rollAtTier(kind,RARITIES[tier],unique,random);
+ }
  function normalizeBomb(r){
   if(r?.kind!=='bomb'||r.bombVersion===2)return r;
   const tier=RARITIES.indexOf(r.rarity);if(tier<0)return r;
@@ -69,6 +78,50 @@
  }
  function list(){return host.InventorySystem.list().filter(item=>item.type==='relic'&&item.quantity===1&&validItem(item));}
  function get(id){const item=host.InventorySystem.getItem(id);return item?.type==='relic'&&validItem(item)?item:null;}
+ // Mọi bậc dung hợp: 50% thành công, 50% mất toàn bộ nguyên liệu.
+ const FUSION_RULES=Object.freeze({
+  common:Object.freeze({required:10,rarity:'rare',unique:false,successRate:.50}),
+  rare:Object.freeze({required:10,rarity:'legendary',unique:false,successRate:.50}),
+  legendary:Object.freeze({required:5,rarity:'legendary',unique:true,successRate:.50})
+ });
+ function fusionRule(item){return item?.type==='relic'&&validItem(item)&&!item.metadata.relic.unique?FUSION_RULES[item.metadata.relic.rarity]||null:null;}
+ function fusionMatches(base,item){return Boolean(fusionRule(base)&&fusionRule(item)&&base.metadata.relic.kind===item.metadata.relic.kind&&base.metadata.relic.rarity===item.metadata.relic.rarity);}
+ function fusionPlan(baseId,ids=[]){
+  const base=get(baseId),rule=fusionRule(base),selected=Array.isArray(ids)?ids:[],seen=new Set(selected);
+  let reason='';
+  if(!rule)reason='Choose a Common, Rare or non-Unique Legendary Relic.';
+  else if(selected.length!==seen.size||selected.some(id=>typeof id!=='string'))reason='Select each Relic only once.';
+  else if(!seen.has(baseId))reason='The initial Relic must be included.';
+  else if(selected.length!==rule.required)reason=`Select exactly ${rule.required} Relics, including the initial one.`;
+  else if(selected.some(id=>!fusionMatches(base,get(id))))reason='Selected Relics must have the same item type and rarity.';
+  else if(!canAct())reason='Finish the current activity first.';
+  const configured=Number.isFinite(rule?.successRate)&&rule.successRate>=0&&rule.successRate<=1;
+  return {base,rule,ids:[...selected],ready:!reason,configured,reason};
+ }
+ function fuse(baseId,ids,random=Math.random){
+  const plan=fusionPlan(baseId,ids);
+  if(!plan.ready||!plan.configured)return {ok:false,success:false,message:plan.reason||'Fusion success rates are not configured. No Relics consumed.'};
+  let outcome=null;
+  const ok=host.InventorySystem.transactItems(items=>{
+   const base=items[baseId];
+   if(plan.ids.some(id=>!fusionMatches(base,items[id])))return false;
+   const success=randomUnit(random)<plan.rule.successRate;
+   let item=null;
+   if(success){
+    const rolled=rollAtTier(base.metadata.relic.kind,plan.rule.rarity,plan.rule.unique,random),newId='relic_'+host.OnlineUtils.token();
+    if(items[newId])return false;
+    item=itemFor(newId,rolled);item.metadata.source='Relic Fusion';
+   }
+   // Tiêu nguyên liệu và nhận kết quả trong cùng một lần ghi Kho đồ.
+   for(const id of plan.ids)delete items[id];
+   if(item)items[item.id]=item;
+   outcome={success,item,consumed:plan.ids.length};return true;
+  });
+  if(!ok)return {ok:false,success:false,message:'Unable to save fusion. No Relics consumed.'};
+  indexRevision=-1;
+  try{bridge.onChange?.();}catch(error){host.console?.warn('Fusion saved; UI refresh failed.',error);}
+  return {ok:true,...outcome,message:outcome.success?'Fusion successful! Received '+outcome.item.name+'.':'Fusion failed. All '+outcome.consumed+' selected Relics were consumed.'};
+ }
  function bindingOwned(b){return Boolean(b&&(bridge.count?bridge.count(b.cardId)>0:(bridge.variants?.(b.cardId)||[]).some(v=>v.count>0)));}
  function bind(id,binding){if(!canAct()||!get(id)||!validBinding(binding)||binding&&!bindingOwned(binding))return false;const ok=host.InventorySystem.transactItems(items=>{for(const item of Object.values(items))if(item.type==='relic'&&binding&&key(item.metadata.binding)===key(binding)){item.metadata.binding=null;item.description=describe(item.metadata.relic);}items[id].metadata.binding=binding?{cardId:binding.cardId}:null;items[id].description=describe(items[id].metadata.relic,binding);return true;});if(ok)bridge.onChange?.();return ok;}
  // Gắn theo ID thẻ; chuyển dữ liệu cũ mà không xóa Relic.
@@ -122,5 +175,5 @@
  function open(id){if(!canAct()||!get(id)||!mount())return false;editing=id;ui.search.value='';renderCards();const b=get(id).metadata.binding;if(b)ui.card.value=b.cardId;ui.title.textContent=get(id).name+' · Equip Relic';ui.root.classList.remove('hidden');return true;}
  function renderCards(){if(!ui)return;const query=ui.search.value.trim().toLowerCase(),old=ui.card.value;ui.card.replaceChildren();for(const c of bridge.cards?.()||[]){if(!`${c.name} ${c.element}`.toLowerCase().includes(query))continue;const o=host.document.createElement('option');o.value=c.id;o.textContent=c.name+' · all mutations';ui.card.append(o);}if([...ui.card.options].some(o=>o.value===old))ui.card.value=old;ui.equip.disabled=!ui.card.value;}
  function mount(){if(ui)return true;const el=id=>host.document.getElementById(id),next={root:el('relicEquipModal'),title:el('relicEquipTitle'),search:el('relicCardSearch'),card:el('relicCardSelect'),equip:el('relicEquipConfirm'),unequip:el('relicUnequip'),status:el('relicEquipStatus')};if(Object.values(next).some(v=>!v))return false;ui=next;ui.search.addEventListener('input',()=>host.UIPerformanceSystem.debounce('relic-search',renderCards));ui.equip.addEventListener('click',()=>{const ok=bind(editing,{cardId:ui.card.value});ui.status.textContent=ok?'Relic equipped across all mutations.':'Unable to equip. Check ownership or current activity.';if(ok)ui.root.classList.add('hidden');});ui.unequip.addEventListener('click',()=>{if(bind(editing,null))ui.root.classList.add('hidden');});el('relicEquipClose')?.addEventListener('click',()=>ui.root.classList.add('hidden'));return true;}
- host.RelicSystem=Object.freeze({DEFINITIONS,RECIPES,FOLLOW_UP_IDS,hasFollowUp,register,roll,validRoll,validItem,validItems,validBinding,normalizeBomb,migrateBombs,uniqueText,refreshDescriptions,migrateBindings,equipped,matchingUnit,factors,rebase,inherit,describe,craft,list,get,bind,key,matching,snapshotFor,ownershipChanged,reconcile,applyToUnit,attachTeam,preview,expMultiplier,open,count:kind=>list().filter(i=>i.metadata.relic.kind===kind).length,isRecipe:id=>RECIPES.some(r=>r.id===id),configure(options){bridge=options||{};migrateBombs();migrateBindings();refreshDescriptions();indexRevision=-1;mount();reconcile();}});
+ host.RelicSystem=Object.freeze({DEFINITIONS,RECIPES,FOLLOW_UP_IDS,hasFollowUp,register,roll,rollAtTier,FUSION_RULES,fusionRule,fusionMatches,fusionPlan,fuse,validRoll,validItem,validItems,validBinding,normalizeBomb,migrateBombs,uniqueText,refreshDescriptions,migrateBindings,equipped,matchingUnit,factors,rebase,inherit,describe,craft,list,get,bind,key,matching,snapshotFor,ownershipChanged,reconcile,applyToUnit,attachTeam,preview,expMultiplier,open,count:kind=>list().filter(i=>i.metadata.relic.kind===kind).length,isRecipe:id=>RECIPES.some(r=>r.id===id),configure(options){bridge=options||{};migrateBombs();migrateBindings();refreshDescriptions();indexRevision=-1;mount();reconcile();}});
 })(window);
