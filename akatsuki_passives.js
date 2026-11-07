@@ -46,7 +46,7 @@
     if(id==='orochimaru')c.revived=false;
     if(id==='pain'){c.completed=[];c.clones=[];path(bs,u,pick(PATHS));}
     if(id==='zetsu'){
-     if(random()<.50){c.stance='White';const target=enemies(bs,u)[0];if(target){api.replaceStats(u,target.maxHp*1.3,atk(target)*1.3,target);for(const skill of api.passiveIds(target,true))api.copy(bs,u,skill);}}
+     if(random()<.50){c.stance='White';const target=enemies(bs,u)[0];if(target){api.replaceStats(u,target.maxHp*1.15,atk(target)*1.15,target);runtime(u).effectivePassiveId='zetsu-empty';}}
      else{c.stance='Black';const line=allies(bs,u,false),target=pick(line);if(target){api.flat(target,'hp',u.maxHp*.50,true);api.flat(target,'atk',atk(u)*.50);const rest=line.filter(v=>v!==target);for(const ally of rest){api.flat(ally,'hp',u.maxHp*.50/rest.length,true);api.flat(ally,'atk',atk(u)*.50/rest.length);}}api.forceDeath(bs,u,u);}
     }
    }
@@ -70,7 +70,7 @@
   }
   function reflect(bs,u,source,amount,meta={}){
    if(!(amount>0)||!alive(source)||meta.akatsukiReflect||meta.grimoireReflection||meta.fateAbsorb||meta.championRedirect)return;
-   if(has(u,'itachi-awakened')){const c=state(u,'itachi-awakened');if(c.yata&&runtime(u).shield>0&&!meta.ignoreShield){c.yata=false;api.reflect(bs,u,source,amount*.50);}}
+   if(has(u,'itachi-awakened')){const c=state(u,'itachi-awakened');if(c.yata&&runtime(u).shield>0&&!meta.ignoreShield){api.reflect(bs,u,source,amount*.50);}}
   }
   function damaged(bs,u,source,damage,meta={}){
    if(!(damage>0))return;
@@ -91,8 +91,8 @@
    const r=runtime(u);if(r.akatsukiDeathHandled)return;r.akatsukiDeathHandled=true;
    for(const owner of all(bs))if(owner!==u&&has(owner,'sasori')&&state(owner,'sasori').puppet===u){const skills=api.passiveIds(u,true);releasePuppet(owner);if(alive(owner))puppet(bs,owner,skills);}
    if(has(u,'konan'))for(const enemy of enemies(bs,u))paper(enemy,5+Math.floor(random()*21),u);
-   if(has(u,'deidara'))for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*15,{specialAttack:true});
-   if(u.akatsukiCrow)for(const enemy of enemies(bs,u).slice(0,2))api.hit(bs,u,enemy,atk(u)*.80,{specialAttack:true});
+   if(has(u,'deidara'))for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*5,{specialAttack:true});
+   if(u.akatsukiCrow)for(const enemy of enemies(bs,u).slice(0,2))api.hit(bs,u,enemy,atk(u)*2,{specialAttack:true});
    if(has(u,'sasori')){const victim=state(u,'sasori').puppet;releasePuppet(u);if(alive(victim))api.forceDeath(bs,u,victim);}
   }
   function killed(bs,u,victim){
@@ -123,16 +123,16 @@
    const c=state(u,'itachi-awakened'),out=result(u,target);c.pool ||= shuffle([0,1,2,3,4,5,6,7,8,9].filter(n=>n!==7||!c.izanamiUsed));if(c.cooldown>0)return {...out,skipped:true};
    const move=c.pool.pop(),special={...options,specialAttack:true};c.lastSkill=move;log('[PASSIVE] Itachi technique '+(move+1)+'.','passive');
    const hit=(enemy,scale,extra={})=>hitResult(bs,u,enemy,scale,{...special,...extra},out);
-   if(move===0){hit(target,1.5,{ignoreShield:true});if(alive(target)&&api.allowed(target,u)){api.status(target,'stunTurns',1,u);runtime(target).incomingVulnerabilityTurns=Math.max(2,runtime(target).incomingVulnerabilityTurns||0);runtime(target).incomingVulnerabilityPct=Math.max(.30,runtime(target).incomingVulnerabilityPct||0);}}
+   if(move===0){hit(target,1.1,{ignoreShield:true});if(alive(target)&&api.allowed(target,u)){api.status(target,'stunTurns',1,u);runtime(target).incomingVulnerabilityTurns=Math.max(2,runtime(target).incomingVulnerabilityTurns||0);runtime(target).incomingVulnerabilityPct=Math.max(.10,runtime(target).incomingVulnerabilityPct||0);}}
    if(move===1){const burning=runtime(target).burn.some(e=>e.turns>0);api.dot(target,'burn',3,atk(u)*.25,u,{uncleansable:true});if(burning){const extra=pick(enemies(bs,u).filter(v=>v!==target));if(extra)api.dot(extra,'burn',3,atk(u)*.25,u,{uncleansable:true});}out.hit=true;}
-   if(move===2){hit(target,2);if(alive(target)&&target.hp<target.maxHp*.30){api.seal(bs,u,target);out.killed=true;}if(alive(u)){c.yata=true;api.shield(u,1,null);}}
-   if(move===3)for(const enemy of [...enemies(bs,u)]){const before=out.damage;hit(enemy,1);if(out.damage>before&&alive(enemy)&&api.allowed(enemy,u))runtime(enemy).akatsukiMiss={turns:2,applied:bs.turnCount};}
-   if(move===4){hit(target,1.8);for(const enemy of shuffle(enemies(bs,u).filter(v=>v!==target)).slice(0,3))hit(enemy,.4);}
-   if(move===5){const shielded=runtime(target).shield>0;hit(target,.5);if(alive(target)){if(shielded)hit(target,1,{ignoreShield:true});else api.status(target,'stunTurns',2,u);}}
-   if(move===6){const line=enemies(bs,u),at=line.indexOf(target),nearest=[line[at-1],line[at+1]].filter(Boolean);hit(target,2.5,{ignoreShield:true,ignoreDodge:true});for(const enemy of nearest)hit(enemy,.50,{ignoreShield:true,ignoreDodge:true});}
-   if(move===7){c.izanamiUsed=true;hit(target,3);if(alive(target)){api.disable(target,3,bs,u);stopHealing(target,3,bs);}else api.heal(u,u.maxHp*.20,'Izanami',bs,u);}
-   if(move===8){const clone=api.summon(bs,u,'crow',.15,.20,'Crow Clone');if(clone){clone.akatsukiCrow=true;clone.akatsukiCrowOwner=u;}out.hit=true;}
-   if(move===9){const last=c.lastEnemyAttack||0;if(last>0){const shot=api.primary(bs,u,target,last*1.20,{...special,specialAttack:false,ignoreDodge:true,noCritical:true,akatsukiRawDamage:true,grimoireReflection:true,akatsukiReflect:true});out.hit=shot.hit;out.damage=shot.damage||0;out.killed=shot.killed;}else log('[PASSIVE] Sharingan Copy: no prior enemy attack.','passive');}
+   if(move===2){hit(target,1.5);if(alive(target)&&target.hp<target.maxHp*.15){api.seal(bs,u,target);out.killed=true;}if(alive(u)){c.yata=true;api.shield(u,u.maxHp*.30,null);}}
+   if(move===3)for(const enemy of [...enemies(bs,u)]){const before=out.damage;hit(enemy,.50);if(out.damage>before&&alive(enemy)&&api.allowed(enemy,u))runtime(enemy).akatsukiMiss={turns:2,applied:bs.turnCount};}
+   if(move===4){hit(target,1.2);for(const enemy of shuffle(enemies(bs,u).filter(v=>v!==target)).slice(0,3))hit(enemy,.3);}
+   if(move===5){const shielded=runtime(target).shield>0;hit(target,.5);if(alive(target)){if(shielded)hit(target,.70,{ignoreShield:true});else api.status(target,'stunTurns',2,u);}}
+   if(move===6){const line=enemies(bs,u),at=line.indexOf(target),nearest=[line[at-1],line[at+1]].filter(Boolean);hit(target,1.8);for(const enemy of nearest)hit(enemy,.40);}
+   if(move===7){c.izanamiUsed=true;hit(target,2);if(alive(target)){api.disable(target,3,bs,u);stopHealing(target,3,bs);if(alive(u)){u.hp=Math.max(1,u.hp-u.maxHp*.20);refresh(u);}}else api.heal(u,u.maxHp*.20,'Izanami',bs,u);}
+   if(move===8){const clone=api.summon(bs,u,'crow',.30,.40,'Crow Clone');if(clone){clone.akatsukiCrow=true;clone.akatsukiCrowOwner=u;}out.hit=true;}
+   if(move===9){const last=c.lastEnemyAttack||0;if(last>0){const shot=api.primary(bs,u,target,last*.60,{...special,specialAttack:false,noCritical:true,akatsukiRawDamage:true,grimoireReflection:true,akatsukiReflect:true});out.hit=shot.hit;out.damage=shot.damage||0;out.killed=shot.killed;}else log('[PASSIVE] Sharingan Copy: no prior enemy attack.','passive');}
    if(!c.pool.length)c.cooldown=5;
    return out;
   }
@@ -173,7 +173,7 @@
    if(actor.akatsukiCrow){const owner=actor.akatsukiCrowOwner,line=team(bs,actor);if(alive(actor)&&alive(owner)){line.splice(line.indexOf(actor),1);line.push(actor);bs[line===bs.playerTeam?'playerIndex':'enemyIndex']=line.indexOf(owner);api.indices(bs);}}
   }
   function hypnosisTarget(bs,u,fallback){return runtime(u).akatsukiHypnosis?.turns>0&&random()<.80?pick(allies(bs,u,false))||fallback:fallback;}
-  function badges(u){const r=runtime(u),rows=[];if(r.akatsukiPaper)rows.push({label:'PAPER '+r.akatsukiPaper,icon:'▤',tone:'debuff',category:'status'});if(r.akatsukiPoison?.length)rows.push({label:'POISON '+Math.max(...r.akatsukiPoison.map(p=>p.turns))+'t',icon:'☠',tone:'debuff',category:'status'});if(r.akatsukiVoodoo?.length)rows.push({label:'VOODOO',icon:'◈',tone:'debuff',category:'status'});if(r.akatsukiPuppets?.some(p=>alive(p.owner)))rows.push({label:'PUPPET · ATK +10% / HP +15%',icon:'♟',tone:'buff',category:'buff'});if(has(u,'kakuzu'))rows.push({label:'HEART '+(state(u,'kakuzu').hearts||0)+'/5 · '+(u.akatsukiElements||[]).join('/'),icon:'♥',tone:'passive',category:'passive'});if(isPain(u))rows.push({label:'RINNEGAN · '+painState(u).path+(painState(u).path==='Deva'?' '+(painState(u).charge||0)+'/3':''),icon:'◉',tone:'passive',category:'passive'});if(has(u,'itachi-awakened')){const c=state(u,'itachi-awakened');rows.push({label:'TECHNIQUES '+(c.pool?.length||0)+' · COOLDOWN '+(c.cooldown||0),icon:'◉',tone:'passive',category:'passive'});}return rows;}
-  return {IDS,PATHS,state,painState,entry,counted,attack,skipTurn,cloneChance,hasClone,hasLife,uncloneable,noLife,noExternalRevive,reviveAlly,died,killed,fatal,interceptHeal,dodgeChance,dodge,misses,immune,incoming,reflect,damaged,startTurn,endTurn,hypnosisTarget,observeAttack,rememberBurn,restoreBurn,cleanse,clearBuffs,shieldGranted,paperReduction,badges};
+  function badges(u){const r=runtime(u),rows=[];if(r.burn.some(e=>e.uncleansable&&e.turns>0))rows.push({label:'BLACK FLAME',icon:'♨',tone:'debuff',category:'status'});if(r.akatsukiPaper)rows.push({label:'PAPER '+r.akatsukiPaper,icon:'▤',tone:'debuff',category:'status'});if(r.akatsukiPoison?.length)rows.push({label:'POISON '+Math.max(...r.akatsukiPoison.map(p=>p.turns))+'t',icon:'☠',tone:'debuff',category:'status'});if(r.akatsukiVoodoo?.length)rows.push({label:'VOODOO',icon:'◈',tone:'debuff',category:'status'});if(r.akatsukiPuppets?.some(p=>alive(p.owner)))rows.push({label:'PUPPET · ATK +10% / HP +15%',icon:'♟',tone:'buff',category:'buff'});if(has(u,'kakuzu'))rows.push({label:'HEART '+(state(u,'kakuzu').hearts||0)+'/5 · '+(u.akatsukiElements||[]).join('/'),icon:'♥',tone:'passive',category:'passive'});if(isPain(u))rows.push({label:'RINNEGAN · '+painState(u).path+(painState(u).path==='Deva'?' '+(painState(u).charge||0)+'/3':''),icon:'◉',tone:'passive',category:'passive'});if(has(u,'itachi-awakened')){const c=state(u,'itachi-awakened');rows.push({label:'TECHNIQUES '+(c.pool?.length||0)+' · COOLDOWN '+(c.cooldown||0),icon:'◉',tone:'passive',category:'passive'});}return rows;}
+  return {IDS,PATHS,state,painState,entry,counted,attack,skipTurn,cloneChance,hasClone,hasLife,uncloneable,noLife,noExternalRevive,reviveAlly,died,killed,fatal,interceptHeal,dodgeChance,dodge,misses,immune,incoming,reflect,damaged,startTurn,endTurn,hypnosisTarget,observeAttack,rememberBurn,restoreBurn,cleanse,clearBuffs,shieldGranted,shieldBroken:u=>{state(u,'itachi-awakened').yata=false;},paperReduction,badges};
  };
 })(window);

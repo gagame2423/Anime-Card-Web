@@ -98,9 +98,9 @@
         if(c.doubleStreak>=2&&!c.trueForm){c.trueForm=true;api.atkBonus(u,1);api.shield(u,u.maxHp);}
         if(c.trueForm&&!options.isFollowUp&&!c.chaining){
           c.chaining=true;
-          try{let chance=.24;while(alive(u)&&has(u,'true-mahito')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,chance)){
+          try{let count=0,chance=.24;while(alive(u)&&has(u,'true-mahito')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,chance,count>0)){
             const next=alive(target)?target:enemies(bs,u)[0];api.countFollow(bs,u,next);const shot=api.primary(bs,u,next,atk(u)*.15,{isFollowUp:true,passiveAttack:true});
-            if(shot.hit)chance=Math.min(.72,chance+.12);if(shot.skipped)break;
+            count++;if(shot.hit)chance=Math.min(.72,chance+.12);if(shot.skipped)break;
           }}finally{c.chaining=false;}
         }
       }

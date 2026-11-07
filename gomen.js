@@ -38,7 +38,7 @@
         const c=state(u,TOJI),initialChance=api.followChance(bs,u,.80);let index=0;
         while(alive(u)&&has(u,TOJI)&&c.mode==='spear'&&api.canFollow(u)&&enemies(bs,u).length){
           // 80%, 75%, ... 5%, 0%: termination comes from the skill's own rule.
-          const chance=Math.max(0,initialChance-index*.05);if(chance<=0||random()>=chance)break;
+          const raw=Math.max(0,initialChance-index*.05),chance=raw>0?api.chainChance(u,raw,index>0):0;if(chance<=0||random()>=chance)break;
           target=alive(target)?target:enemies(bs,u)[0];
           const shot=api.attack(bs,u,target,{isFollowUp:true,passiveAttack:true,damageMultiplier:.30,chainDepth:0,gomenToken:token,grimoireDriver:options.grimoireDriver});
           if(shot.skipped||shot.outOfTurn)break;index++;

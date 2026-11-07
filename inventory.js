@@ -153,15 +153,20 @@
   }
   // Material costs, Relic metadata and unique instances commit together.
   let revision=0;
-  function transactItems(change){
-    const before=data.items,draft=JSON.parse(JSON.stringify(before));
+  function transactItems(change,receipt=null){
+    if(receipt&&(!/^[a-z0-9_]{1,40}$/.test(receipt.stream)||typeof receipt.id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(receipt.id)))return false;
+    if(receipt&&data.receipts[receipt.stream]===receipt.id)return true;
+    const before=data.items,beforeReceipts=data.receipts,draft=JSON.parse(JSON.stringify(before));
     try{
       if(change(draft)!==true)return false;
       if(Object.entries(draft).some(([id,item])=>!safeId(id)||!item||item.id!==id||!Number.isSafeInteger(item.quantity)||item.quantity<0||host.RelicSystem?.validItem?.(item)===false))return false;
       if(host.RelicSystem?.validItems(draft)===false)return false;
-      data.items=draft;if(persist()){revision++;return true;}data.items=before;return false;
-    }catch(error){data.items=before;console.warn('Item transaction aborted:',error.message);return false;}
+      data.items=draft;if(receipt)data.receipts={...beforeReceipts,[receipt.stream]:receipt.id};
+      if(persist()){revision++;return true;}
+      data.items=before;data.receipts=beforeReceipts;return false;
+    }catch(error){data.items=before;data.receipts=beforeReceipts;console.warn('Item transaction aborted:',error.message);return false;}
   }
+
   function remove(id, count = 1) {
     const amount = countOf(count);
     if (amount < 1 || quantity(id) < amount) return false;

@@ -117,12 +117,12 @@
       try {
         const first = options.grimoireInitialResult || api.attack(bs, unit, target, { ...options, godspeedToken: token });
         if (first.skipped || first.outOfTurn) return first;
-        let chance = api.followChance(bs,unit,Math.min(1, api.skillState(unit, 'speed-wizard').followChance));
-        while (alive(unit) && has(unit, 'speed-wizard') && enemies(bs, unit).length && random() < chance) {
+        let count=0,chance = api.followChance(bs,unit,Math.min(1, api.skillState(unit, 'speed-wizard').followChance));
+        while (alive(unit) && has(unit, 'speed-wizard') && enemies(bs, unit).length && random() < api.chainChance(unit,chance,count>0)) {
           target = alive(target) ? target : api.enemyFront(bs, unit);
           const result = api.attack(bs, unit, target, { isFollowUp: true, passiveAttack: true, chainDepth: 0, damageMultiplier: .5, godspeedToken: token, grimoireDriver: options.grimoireDriver });
           if (result.skipped || result.outOfTurn) break;
-          chance *= .5;
+          count++;chance *= .5;
         }
         return first;
       } finally { chains.delete(unit); }

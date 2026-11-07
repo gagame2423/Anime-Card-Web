@@ -80,8 +80,9 @@
         // Geometric chain, iterative rather than recursive; no gameplay cap.
         if(rifle){
           after(bs,unit,target,first,options);supportAttack(bs,unit,first,options);result.fateProcessed=true;
-          while(alive(unit)&&has(unit,'kiritsu')&&enemies(bs,unit).length&&random()<followChance(bs,unit,.60)){
-            const next=alive(target)?target:enemies(bs,unit)[0];
+          let chainHits=0;
+          while(alive(unit)&&has(unit,'kiritsu')&&enemies(bs,unit).length&&random()<followChance(bs,unit,.60,chainHits>0)){
+            chainHits++;const next=alive(target)?target:enemies(bs,unit)[0];
             api.countedFollowUp(bs,unit,next);counted(bs,unit,{isFollowUp:true});
             const shot=primary(bs,unit,next,.30,{isFollowUp:true,passiveAttack:true});merge(result,shot);after(bs,unit,next,shot,{isFollowUp:true});
           }
@@ -139,7 +140,7 @@
     }
     const FOLLOW_IDS=new Set(['jotaro-kujo','denji','kamen-rider-kabuto','uchiha-itachi','uchiha-sasuke','weather-shadow-monarch','yuno','kiritsu','boss-event-alucard','alexander-anderson','madara-lubu','speed-wizard','tower-champion-bizare','tower-champion-shadow-200','tower-champion-heavenly-200','merlin','iskandar']);
     const hasFollowUp=unit=>api.hasExtraFollowUp(unit)||api.passiveIds(unit).some(key=>FOLLOW_IDS.has(key));
-    const followChance=(bs,unit,chance)=>{if(!api.canFollow(unit))return 0;const base=chance+(boon(bs,unit)==='dagger'?.10:0)+(api.followBonus?.(bs,unit,chance)||0),extra=api.relicFollowBonus?.(unit)||0;/* A new relic bonus cannot create a guaranteed endless chain. */const cap=extra>0&&base<1?Math.max(base,.99):1;return Math.min(cap,base+extra);};
+    const followChance=(bs,unit,chance,secondary=false,naturalCap=1)=>{if(!api.canFollow(unit))return 0;const base=chance+(boon(bs,unit)==='dagger'?.10:0)+(api.followBonus?.(bs,unit,chance)||0),extra=api.relicFollowBonus?.(unit)||0;/* A new relic bonus cannot create a guaranteed endless chain. */const cap=extra>0&&base<1?Math.max(base,.99):1;return api.relicChainChance?.(unit,Math.min(naturalCap,cap,base+extra),secondary)??Math.min(naturalCap,cap,base+extra);};
     function guardian(bs,target,meta={}){return !meta.fateAbsorb&&!meta.dot?allies(bs,target,false).find(owner=>has(owner,'mash')):null;}
     function redirect(bs,source,target,amount,meta){
       if(!(amount>0))return amount;const owner=guardian(bs,target,meta);if(!owner)return amount;

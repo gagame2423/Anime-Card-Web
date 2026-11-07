@@ -63,7 +63,7 @@
    if(options.isFollowUp||!has(u,FLORENTINO)||state(u,FLORENTINO).attacks%3!==0||!api.canFollow(u))return;
    let hits=0;
    for(let n=0;n<3&&alive(u)&&api.canFollow(u)&&enemies(bs,u).length;n++){
-    if(random()>=api.followChance(bs,u,.80-.20*n))break;
+    if(random()>=api.followChance(bs,u,.80-.20*n,n>0))break;
     const enemy=alive(target)?target:enemies(bs,u)[0],shot=api.attack(bs,u,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:.60,tower200Flower:true});
     if(shot.skipped||shot.outOfTurn)break;hits++;
    }

@@ -25,7 +25,7 @@
    if(options.isFollowUp||options.isCounter||!api.canFollow(u))return;
    let count=0,chance=.22;
    while(alive(u)&&has(u,WOLTE)&&enemies(bs,u).length&&api.canFollow(u)){
-    if(random()>=Math.min(.72,api.followChance(bs,u,chance)))break;
+    if(random()>=api.followChance(bs,u,chance,count>0,.72))break;
     const enemy=alive(target)?target:enemies(bs,u)[0];
     const shot=api.attack(bs,u,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:.50,wolteChain:true});
     if(shot.skipped||shot.outOfTurn)break;

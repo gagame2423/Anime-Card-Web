@@ -41,6 +41,7 @@
     for(const [type,def]of Object.entries(host.BossEventSystem.TYPES))for(const offer of host.BossEventSystem.offers(type))if(offer.id===id)result.push(def.name+' Shop: '+format(offer.cost)+' '+def.coinName+'.');
     if(id===host.RaidSystem.KEY_ITEM.id)result.push('10% chance after a regular 1v1 or 4v4 victory. Not a Tower, Time Trial, Raid or Boss Event drop.');
     for(const source of host.SpookySystem?.sources(id)||[])result.push(source);
+    for(const source of host.RiftSystem?.sources(id)||[])result.push(source);
     if(id===host.SpookySystem?.CAPSULE.id){
       result.push('Open 1 Capsule in Storage → Items to receive 1 card. Duplicates grant 10% of current level EXP requirement; no VNĐ or standard roll count.');
       const pool=host.SpookySystem.capsulePool();

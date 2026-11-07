@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070811" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261106-relic-fusion-1" />
-  <link rel="stylesheet" href="./passives.css?v=20261106-relic-fusion-1" />
-  <link rel="stylesheet" href="./pvp.css?v=20261106-relic-fusion-1" />
-  <link rel="stylesheet" href="./infinity.css?v=20261106-relic-fusion-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261107-rumbling-rift-1" />
+  <link rel="stylesheet" href="./passives.css?v=20261107-rumbling-rift-1" />
+  <link rel="stylesheet" href="./pvp.css?v=20261107-rumbling-rift-1" />
+  <link rel="stylesheet" href="./infinity.css?v=20261107-rumbling-rift-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -410,6 +410,7 @@
             <button type="button" class="battle-mode-option" data-battle-mode="tower" aria-pressed="false"><strong>🏰 TOWER</strong><span>Infinite floors • 4v4 • Tower Coins</span></button>
             <button id="timeTrialOpenButton" type="button" class="battle-mode-option" aria-pressed="false" aria-haspopup="dialog" aria-controls="timeTrialModeModal"><strong>⏱ TIME TRIAL</strong><span id="timeTrialModeHint">Choose Normal or EXP</span></button>
             <button type="button" class="battle-mode-option" data-battle-mode="raid" aria-pressed="false"><strong>⚓ RAID</strong><span>Marine Ford / Holy Grail</span></button>
+            <button type="button" class="battle-mode-option" data-battle-mode="rift" aria-pressed="false"><strong>◇ RIFT MODE</strong><span id="riftRotationHint">Rumbling Rift • 30 minutes each hour • 5v5</span></button>
             <button type="button" class="battle-mode-option" data-battle-mode="boss-event" aria-pressed="false"><strong>🩸 BOSS EVENT</strong><span id="bossEventRotationHint">12-hour rotation • 5 vs 1</span></button>
             <button id="pvpOpenButton" type="button" class="battle-mode-option" aria-haspopup="dialog" aria-controls="pvpModal"><strong>🌐 ONLINE PVP</strong><span>1v1 / 4v4 • Blind Pick • Level 1 • No rewards</span></button>
             <button id="infinityOpenButton" type="button" class="battle-mode-option" aria-haspopup="dialog" aria-controls="infinityModal"><strong>∞ INFINITY</strong><span>Weekly Category • Continuous 4v4 • Star Orbs</span></button>
@@ -419,6 +420,12 @@
             <strong id="spookyAvailability" role="status"></strong><strong id="spookyWaveDisplay">Wave 1 / 50</strong><strong id="spookyBalance">0 Spooky Coins</strong>
             <div class="spooky-control-actions"><button id="spookyChooseButton" type="button" class="tower-shop-button hidden">Choose run modifier</button><button id="spookyInfoSetupButton" type="button" class="ghost-button">... Run Modifiers</button><button id="spookyShopOpenButton" type="button" class="tower-shop-button">🎃 Spooky Shop</button></div>
             <p>6vs3 • October 1–31 (Asia/Bangkok) • 50 waves • No VNĐ / EXP • Manual Continue only. Select a permanent run modifier before Waves 5, 10, ... 50.</p><p id="spookyRewardPreview"></p>
+          </div>
+          <div id="riftControls" class="boss-event-controls hidden">
+            <strong id="riftAvailability" role="status"></strong><strong id="riftBalance"></strong>
+            <button id="riftShopOpenButton" class="tower-shop-button" type="button">◇ Rift Shop</button>
+            <label class="battle-auto-continue" for="riftAutoGuarantee"><span>Auto Guarantee</span><input id="riftAutoGuarantee" type="checkbox" role="switch"><span class="battle-auto-continue__track" aria-hidden="true"></span></label>
+            <small id="riftGuaranteeCount"></small><p>5v5 • Open during the first 30 minutes of each UTC hour. Nature enemies. Victory: 1–5 Rift Shards, Eren 0.5%, O.D.M. 5%.</p>
           </div>
           <div id="bossEventControls" class="boss-event-controls hidden">
             <strong id="bossEventActiveName" class="boss-event-active-name">Active Boss Event</strong>
@@ -647,10 +654,12 @@
         <div id="timeTrialSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="spookySummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="raidSummary" class="time-trial-summary hidden" aria-live="polite"></div>
+        <div id="riftSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="bossEventSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="portalResultActions" class="battle-result__actions" hidden><label class="battle-auto-continue" for="portalResultAuto"><span>Auto Continue</span><input id="portalResultAuto" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label><button id="portalContinue" class="battle-primary-button" type="button">Continue / Next Match</button></div>
         <div class="battle-result__actions">
           <button id="timeTrialResultShopButton" class="ghost-button hidden" type="button">◆ Time Trial Shop</button>
+          <button id="riftResultShopButton" class="ghost-button hidden" type="button">◇ Rift Shop</button>
           <button id="bossEventResultShopButton" class="ghost-button hidden" type="button">🩸 Event Shop</button>
           <button id="raidResultShopButton" class="ghost-button hidden" type="button">⚓ Raid Shop</button>
           <button id="battle-again-btn" class="battle-primary-button" type="button">⚔️ Battle Again</button>
@@ -830,6 +839,7 @@
     </section>
   </div>
 
+  <div id="riftShopModal" class="modal-backdrop hidden"><section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="riftShopTitle"><header class="modal-header"><h2 id="riftShopTitle">◇ Rift Shop</h2><button class="modal-close" data-close-modal="riftShopModal" type="button" aria-label="Close Rift Shop">×</button></header><p id="riftShopBalance" class="module-description"></p><div id="riftShopGrid" class="module-grid"></div></section></div>
   <div id="bossEventShopModal" class="modal-backdrop hidden">
     <section class="modal-panel module-modal" role="dialog" aria-modal="true" aria-labelledby="bossEventShopTitle"><header class="modal-header"><h2 id="bossEventShopTitle">🩸 Boss Event Shop</h2><button class="modal-close" data-close-modal="bossEventShopModal" type="button" aria-label="Close Boss Event shop">×</button></header><p id="bossEventShopBalance" class="module-description"></p><div id="bossEventShopGrid" class="module-grid"></div></section>
   </div>
@@ -933,9 +943,9 @@
   <script id="firebaseAuthCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script defer src="./online_utils.js?v=20261106-relic-fusion-1"></script>
-  <script defer src="./firebase.js?v=20261106-relic-fusion-1"></script>
-  <script defer src="./startup.js?v=20261106-relic-fusion-1"></script>
+  <script defer src="./online_utils.js?v=20261107-rumbling-rift-1"></script>
+  <script defer src="./firebase.js?v=20261107-rumbling-rift-1"></script>
+  <script defer src="./startup.js?v=20261107-rumbling-rift-1"></script>
 
   <!-- PORTALS: entry lives exclusively in Storage. Combat reuses battleArena. -->
   <div id="portalModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="portalTitle">
@@ -963,79 +973,81 @@
       <p id="relicEquipStatus" role="status"></p><div class="portal-actions"><button id="relicEquipConfirm" type="button" class="battle-primary-button">Equip this card</button><button id="relicUnequip" type="button" class="ghost-button">Unequip Relic</button></div>
     </section>
   </div>
-  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./category.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./background.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./enten.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_fusion.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./boss_rotation.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261106-relic-fusion-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./category.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./background.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./levels.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enemy_stats.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./companions.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./enten.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./titan_passives.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_fusion.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./timetrial.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./raid.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_rotation.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./rift.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261107-rumbling-rift-1"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261106-relic-fusion-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261107-rumbling-rift-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./index_filters.js?v=20261106-relic-fusion-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261106-relic-fusion-1"></script>
+  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./index_filters.js?v=20261107-rumbling-rift-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261107-rumbling-rift-1"></script>
 </body>
 </html>

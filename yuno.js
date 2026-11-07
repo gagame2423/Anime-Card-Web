@@ -9,12 +9,12 @@
     const layerTotal=unit=>(runtime(unit).yunoShields||[]).reduce((sum,layer)=>Math.min(LIMIT,sum+layer.amount),0);
     function addLayer(unit,amount,expiresAt=null) {
       const value=bounded(amount); if(!unit||!alive(unit)||!value)return;
-      const r=runtime(unit), layers=r.yunoShields ||= [];
+      const r=runtime(unit),before=r.shield,layers=r.yunoShields ||= [];
       const existing=layers.find(layer=>layer.expiresAt===expiresAt);
       if(existing)existing.amount=Math.min(LIMIT,existing.amount+value);
       else layers.push({amount:value,expiresAt});
       r.shield=Math.min(LIMIT,r.shield+value);
-      api.onShield?.(unit);
+      api.onShield?.(unit,before);
       if(!r.shieldKind)r.shieldKind='wind';
       refresh(unit);
     }

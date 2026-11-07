@@ -1,6 +1,6 @@
 /* Weather scheduling and benefits. Mutation data lives in mutations.js. */
 const WEATHER_CONFIG = Object.freeze({ WEATHER_CHECK_INTERVAL_SECONDS: 300, WEATHER_DURATION_SECONDS: 600, WEATHER_TRIGGER_CHANCE: .55, MAX_MUTATIONS_PER_ROLL: 2 });
-const WEATHER_TIERS = Object.freeze({"common": {"id": "common", "name": "Common", "chance": 0.65, "weatherIds": ["raining", "snowing", "sunny", "lucky"]}, "uncommon": {"id": "uncommon", "name": "Uncommon", "chance": 0.25, "weatherIds": ["sugar", "reaper", "eclipse", "wind"]}, "rare": {"id": "rare", "name": "Rare", "chance": 0.1, "weatherIds": ["malevolent", "tsukuyomi", "heavenly", "shadow", "bizare"]}});
+const WEATHER_TIERS = Object.freeze({"common": {"id": "common", "name": "Common", "chance": 0.65, "weatherIds": ["raining", "snowing", "sunny", "lucky"]}, "uncommon": {"id": "uncommon", "name": "Uncommon", "chance": 0.25, "weatherIds": ["sugar", "reaper", "eclipse", "wind"]}, "rare": {"id": "rare", "name": "Rare", "chance": 0.1, "weatherIds": ["malevolent", "tsukuyomi", "heavenly", "shadow", "bizare", "rumbling"]}});
 const WEATHERS = [
   {
     "id": "raining",
@@ -145,7 +145,8 @@ const WEATHERS = [
     "buffs": {
       "battleCoins": 0.66
     }
-  }
+  },
+  {"id": "rumbling", "name": "Rumbling", "icon": "\ud83c\udf0b", "tier": "rare", "mutationId": "colossal", "color": "#704b4d", "buffs": {"exp": 1}}
 ].map(w => Object.freeze({ ...w, buffs: Object.freeze(w.buffs) }));
 const WEATHER_BY_ID = Object.freeze(Object.fromEntries(WEATHERS.map(w => [w.id, Object.freeze({ ...w, mutation: MUTATION_BY_ID[w.mutationId] })])));
 (function(host) {

@@ -2975,7 +2975,7 @@ CARDS.push(...[
     "image": "assets/cards/itachiawa.png",
     "passive": {
       "name": "Mangekyou Awakening",
-      "description": "Each attack draws one unused technique; after the pool is spent, skip 5 own turns, then refill. Izanami is removed after its first use.\nTsukuyomi: 150% ATK, ignores shields; Stun 1 turn and +30% damage taken for 2 turns.\nAmaterasu: uncleansable Burn for 3 turns at 25% ATK/turn; spreads to another enemy if the target is already burning.\nSusanoo: 200% ATK; seals a surviving target below 30% HP. Gain a one-hit shield reflecting 50% incoming damage.\nShackling Stakes: 100% ATK to all enemies; 15% miss chance for 2 turns.\nGreat Fireball: 180% ATK to the target; 40% ATK to 3 other random enemies.\nEphemeral: 50% ATK; Stun 2 turns without a shield, otherwise ignore the shield for an extra 100% ATK.\nYasaka Magatama: 250% ATK to the target and 50% to its two nearest allies; ignores dodge and normal shields.\nIzanami, once: 300% ATK. A survivor loses passive/healing for 3 turns; a kill heals Itachi for 20% max HP.\nCrow Clone: 15% max HP / 20% ATK; attacks in Itachi's place next team turn, 30% dodge; death deals 80% clone ATK to nearby enemies.\nSharingan Copy: returns 120% of the last enemy attack's damage; cannot be dodged.\nFirst fatal hit: revive at 50% HP, remove the attacker's buffs and Stun them 2 turns. Second fatal hit: revive at 30% HP, cleanse self and restore base ATK. Each revival occurs once."
+      "description": "Each attack draws one unused technique. After the pool is spent, skip 5 own turns, then refill; Izanami is removed after its first use.\nTsukuyomi: 110% ATK ignoring shields; Stun 1 turn and +10% damage taken for 2 turns.\nAmaterasu: Black Flame for 3 turns (25% ATK/turn); uncleansable Burn, spreading to another enemy if the target already has Burn.\nSusanoo: 150% ATK; seal a surviving target below 15% HP (cannot clone/revive). Gain 30% max HP shield, reflecting 50% incoming damage while it remains.\nShackling Stakes: 50% ATK to all enemies, 15% miss chance for 2 turns.\nGreat Fireball: 120% ATK to target and 30% ATK to up to 3 other random enemies.\nEphemeral: 50% ATK; Stun 2 turns without a shield, otherwise another 70% ATK ignoring shield.\nYasaka Magatama: 180% ATK to target and 40% to its two nearest allies.\nIzanami (once): 200% ATK. Survivor loses passive/healing for 3 turns and Itachi loses 20% max HP (non-lethal); a kill heals Itachi for 20% max HP.\nCrow Clone: 30% max HP / 40% ATK; attacks next team turn, 30% dodge; death deals 200% clone ATK to nearby enemies.\nSharingan Copy: returns 60% of the last enemy attack damage.\nFirst fatal hit: revive at 50% HP, remove attacker buffs and Stun 2 turns. Second fatal hit: revive at 30% HP, cleanse self and restore base ATK. Each revival once."
     },
     "evolutionOnly": true,
     "evolvesFrom": "uchiha-itachi"
@@ -3048,7 +3048,7 @@ CARDS.push(...[
     "image": "assets/cards/deidara.png",
     "passive": {
       "name": "Clay Genkai",
-      "description": "Every 3rd attack blasts up to 3 random enemies for 40% ATK each.\nWhile an ally attacks, 40% chance to strike a random enemy for 50% of that ally's ATK.\nDeath: 1500% ATK to all enemies. Cannot be cloned or revived."
+      "description": "Every 3rd attack blasts up to 3 random enemies for 40% ATK each. While an ally attacks, 40% chance to strike a random enemy for 50% of that ally's ATK. Death: 500% ATK to all enemies. Cannot be cloned or revived."
     }
   },
   {
@@ -3146,7 +3146,7 @@ CARDS.push(...[
     "image": "assets/cards/zetsu.png",
     "passive": {
       "name": "White / Black",
-      "description": "Start: random stance. White copies the enemy frontline's stats x1.3 and passive once.\nBlack gives 50% of Zetsu's HP/ATK to one random ally, shares the other 50% among remaining allies, then dies immediately.\nCannot be cloned or revived."
+      "description": "Start in a random stance. White: copy enemy frontline stats x1.15 once; do not copy its passive and have no passive afterward. Black: give 50% of own HP/ATK to a random ally, share the other 50% among remaining allies, then die immediately. Cannot be cloned or revived."
     }
   },
   {
@@ -3201,7 +3201,152 @@ CARDS.push(...[
     "raidOnly": true,
     "raidType": "akatsuki",
     "unlockRequirement": "raid_card_pain"
+  },
+{
+  "id": "dumb-titan",
+  "name": "Dumb Titan",
+  "element": "Nature",
+  "rarity": "Common",
+  "chance": 30,
+  "requiredWeather": null,
+  "category": [
+    "Titan",
+    "Unhuman",
+    "Brutal",
+    "PureEvil"
+  ],
+  "stats": {
+    "hp": 390,
+    "atk": 96
+  },
+  "image": "assets/cards/dumbtitan.png",
+  "passive": {
+    "name": "Stomp",
+    "description": "One outcome per attack: 30% miss; 10% hit and Stun the target for 1 turn; 60% hit and strike another enemy for 50% ATK."
   }
+},
+{
+  "id": "war-hammer-titan",
+  "name": "War Hammer Titan",
+  "element": "Water",
+  "rarity": "Secret",
+  "chance": 29000000,
+  "requiredWeather": "Rumbling",
+  "category": [
+    "Titan",
+    "Swordman",
+    "Brutal",
+    "Unhuman"
+  ],
+  "stats": {
+    "hp": 60900,
+    "atk": 14900
+  },
+  "image": "assets/cards/warhammer.png",
+  "passive": {
+    "name": "Crystal Heart",
+    "description": "If first in the lineup, permanently sacrifice all teammates and create a Crystal at the back with their combined max HP. While Crystal lives: survive fatal hits, each costing Crystal 500% of this card ATK; gain 60% damage reduction and heal 1% current HP every turn. Every 5th attack chooses a mode for the next 5 attacks: HAMMER hits 2 enemies for 60% ATK each; SPEAR deals half its damage through shields and half to shields."
+  }
+},
+{
+  "id": "jaw-titan",
+  "name": "Jaw Titan",
+  "element": "Nature",
+  "rarity": "Mythic",
+  "chance": 1345000,
+  "requiredWeather": "Rumbling",
+  "category": [
+    "Titan",
+    "Unhuman",
+    "Brutal",
+    "Animal"
+  ],
+  "stats": {
+    "hp": 25500,
+    "atk": 6200
+  },
+  "image": "assets/cards/jawtitan.png",
+  "passive": {
+    "name": "Iron Jaw",
+    "description": "Every attack gains a shield equal to 10% of actual damage dealt, lasting 2 turns. Can attack while Stunned at 70% damage; Freeze still prevents attacking."
+  }
+},
+{
+  "id": "armored-titan",
+  "name": "Armored Titan",
+  "element": "Electric",
+  "rarity": "Secret",
+  "chance": 45000000,
+  "requiredWeather": "Rumbling",
+  "category": [
+    "Titan",
+    "Brutal",
+    "Supporter",
+    "Unhuman"
+  ],
+  "stats": {
+    "hp": 131000,
+    "atk": 8000
+  },
+  "image": "assets/cards/armoredtitan.png",
+  "passive": {
+    "name": "Titan Shield",
+    "description": "On entry, grant all teammates a shield equal to 50% of this card max HP for the rest of the match. While not attacking, when a teammate shield breaks, grant a shield equal to 50% of that broken shield and Stun the attacker for 3 turns (once per teammate)."
+  }
+},
+{
+  "id": "eren-rumbling",
+  "name": "Eren",
+  "element": "Dark",
+  "rarity": "Secret",
+  "chance": 0,
+  "requiredWeather": null,
+  "category": [
+    "Protagonist",
+    "Hero",
+    "AntiHero",
+    "Villian",
+    "AntiVillian",
+    "Mastermind",
+    "TitanSlayer",
+    "Human"
+  ],
+  "stats": {
+    "hp": 91300,
+    "atk": 22300
+  },
+  "image": "assets/cards/eren.png",
+  "passive": {
+    "name": "Titan Wrath",
+    "description": "On fatal damage, revive once per match: gain +250% HP bonus, fully heal, and gain +35% ATK permanently. On killing a Titan-category enemy, absorb 50% of its ATK and append its passive skill."
+  },
+  "riftOnly": true,
+  "riftType": "rumbling"
+},
+{
+  "id": "beast-titan",
+  "name": "Beast Titan",
+  "element": "Holy",
+  "rarity": "Secret",
+  "chance": 18000000,
+  "requiredWeather": "Rumbling",
+  "category": [
+    "Titan",
+    "Animal",
+    "Brutal",
+    "Unhuman",
+    "Mastermind"
+  ],
+  "stats": {
+    "hp": 48800,
+    "atk": 18700
+  },
+  "image": "assets/cards/beasttitan.png",
+  "passive": {
+    "name": "Rock Throw",
+    "description": "Every turn not attacking, charge 1–2 Rock (uncapped). On attacking, throw all stored rocks at random enemies; each rock deals 50% ATK and can destroy an entire shield."
+  }
+}
 ]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;

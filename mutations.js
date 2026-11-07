@@ -221,7 +221,8 @@ const MUTATIONS = [
       "rank": 13
     },
     "description": "HP x3 • ATK x4"
-  }
+  },
+  {"id": "colossal", "name": "Colossal", "rarity": "rare", "hpMultiplier": 8, "atkMultiplier": 2, "multiplier": 4, "color": "#784f50", "className": "mutation-colossal", "secondaryColor": "#4a4143", "tier": {"id": "colossal", "name": "Colossal", "rank": 14}, "description": "HP x8 \u2022 ATK x2"}
 ].map(Object.freeze);
 const MUTATION_TIERS = Object.freeze({ normal: Object.freeze({ id: 'normal', name: 'Normal', rank: 0 }), ...Object.fromEntries(MUTATIONS.map(m => [m.id, m.tier])), multi: Object.freeze({ id: 'multi', name: 'Multi-Mutations', rank: 99 }) });
 const canonicalMutationMap = Object.fromEntries(MUTATIONS.map(m => [m.id, m]));

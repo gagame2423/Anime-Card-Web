@@ -112,7 +112,7 @@
         const c=state(unit,key);if(key==='the-legion'&&c.attacks%4!==0)return first;
         if(key==='the-clown'&&c.mode!=='haste')return first;
         const threshold=Math.max(1,enemies(bs,unit).length);let count=0,burst=false;
-        while(alive(unit)&&has(unit,key)&&canFollow(unit)&&enemies(bs,unit).length&&random()<api.followChance(bs,unit,key==='the-legion'?.44:.33)){
+        while(alive(unit)&&has(unit,key)&&canFollow(unit)&&enemies(bs,unit).length&&random()<api.followChance(bs,unit,key==='the-legion'?.44:.33,count>0)){
           if(key==='the-clown'&&c.mode!=='haste')break;
           target=alive(target)?target:enemies(bs,unit)[0];count++;
           const shot=api.attack(bs,unit,target,{isFollowUp:true,passiveAttack:true,damageMultiplier:key==='the-legion'?.44:.66,chainDepth:0,spookyChainToken:token,grimoireDriver:options.grimoireDriver});

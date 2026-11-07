@@ -26,6 +26,10 @@
    const r=unit.relic,card=unit.card;
    return r?.kind==='enten_blade'&&(card?.category||unit.relicCategory||[]).some(c=>c==='Swordman'||c==='Swordsman')&&api.hasFollowUp(unit)?Math.max(0,Math.min(.09,Number(r.followChance)||0)):0;
   }
+  function chainChance(unit,chance,secondary=false){
+   const r=trait(unit),action=unit&&actions.get(unit);
+   return r?.kind==='odm'&&(secondary||action?.isFollowUp||action?.chainDepth>0)?Math.min(.99,chance+Math.max(0,Math.min(.10,Number(r.odmChainBonus)||0))):chance;
+  }
   function specialMultiplier(unit,meta={}){
    const action=unit&&actions.get(unit);if(action?.isFollowUp||action?.followOwner||action?.chainDepth>0)return 1;
    const r=trait(unit);if(r?.kind!=='enten_blade'||meta.entenBonusApplied||meta.dot||meta.isFollowUp||meta.followOwner||meta.chainDepth>0||meta.fateSupport||meta.requiemSupport===true||meta.isCounter||meta.championCounter||meta.raidCounter||meta.championRedirect||meta.fateAbsorb||meta.entenReflect||meta.grimoireReflection)return 1;
@@ -39,12 +43,12 @@
    return specialMultiplier(unit,meta)*(excluded?1:factor);
   }
   function withAction(unit,options,callback){
-   if(!['enten_blade','bomb'].includes(trait(unit)?.kind))return callback();
+   if(!['enten_blade','bomb','odm'].includes(trait(unit)?.kind))return callback();
    options={...options};
    const previous=actions.get(unit);actions.set(unit,options);
    try{return callback();}finally{if(previous)actions.set(unit,previous);else actions.delete(unit);}
   }
   function burnTurns(source,turns){return trait(source)?.kind==='eternal_eye'?turns*2:turns;}
-  return {prepareBattle,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,firstReady:u=>state(u).first,specialMultiplier,attackMultiplier,withAction};
+  return {prepareBattle,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,chainChance,firstReady:u=>state(u).first,specialMultiplier,attackMultiplier,withAction};
  };
 })(window);

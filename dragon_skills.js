@@ -48,7 +48,7 @@
   function after(bs,u,target,result,options={}){
    if(!has(u,'goku-ssj3')||options.isFollowUp||!alive(u)||result.skipped||!api.canFollow(u))return;
    const c=state(u,'goku-ssj3');let count=0;
-   while(alive(u)&&has(u,'goku-ssj3')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.30)){
+   while(alive(u)&&has(u,'goku-ssj3')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.30,count>0)){
     target=alive(target)?target:enemies(bs,u)[0];
     const shot=api.attack(bs,u,target,{isFollowUp:true,passiveAttack:true,damageMultiplier:.30,dragonChain:true});
     if(shot.skipped||shot.outOfTurn)break;count++;c.next+=.05;

@@ -2,7 +2,7 @@
 (function(host){
   'use strict';
   // Add a name here, then add it to card.category arrays in cards.js.
-  const TYPES=Object.freeze(['Hero','Villian','AntiHero','AntiVillian','Protagonist','Berserk','VideoGame','JoJo','Jujutsu','Fate','Pirate','DragonWarrior','PlanetDestroyer','Ninja','Unhuman','Human','Captain','Brutal','PureEvil','DemonSlayer','Sins','Alternative','Army','Swordman','Supporter','Magician','Reaper','Hunter']);
+  const TYPES=Object.freeze(['Hero','Villian','AntiHero','AntiVillian','Protagonist','Berserk','VideoGame','JoJo','Jujutsu','Fate','Pirate','DragonWarrior','PlanetDestroyer','Ninja','Unhuman','Human','Captain','Brutal','PureEvil','DemonSlayer','Sins','Alternative','Army','Swordman','Supporter','Magician','Reaper','Hunter','Titan','TitanSlayer','Animal','Mastermind']);
   const valid=new Set(TYPES), order=new Map(TYPES.map((type,index)=>[type,index]));
   const of=value=>{const card=value?.card||value;return Array.isArray(card?.category)?card.category:[];};
   const has=(value,category)=>of(value).includes(category);

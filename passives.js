@@ -23,9 +23,9 @@
   const combatStats = window.createCombatStats();
   let passiveLogSequence = 0;
   const passiveScopes = new WeakMap();
-  let phaseUnit = null, activeCombat = null, tower200 = null, statusSource = null, ragna = null, enten = null, mourner = null, akatsuki = null;
+  let phaseUnit = null, activeCombat = null, tower200 = null, statusSource = null, ragna = null, enten = null, mourner = null, akatsuki = null, titan = null;
   const compositeChains = new WeakSet();
-  const SHARED_PASSIVE_FIELDS = new Set(('attackCount ownAttackCount baseAtkAtBattleStart displayAtkBonusPct displayHpBonusPct flatAtkBonusDisplay atkBonusPct maxHpBonusPct damageReductionPct critChanceBonus critDamageBonus stunTurns freezeTurns incomingImmuneTurns weakenAttackTurns weakenAttackPct snailTurns burn bleed shield shieldKind invincibleTurns passiveImmune noDodgeAgainstUnit incomingVulnerabilityTurns incomingVulnerabilityPct passiveSuppressionTurns passiveSuppressedUntilDeath suppressionAppliedTurn activeTags lastCrit lastDodge lastPassiveTrigger lastActionLabel lastFacingEnemy initialLineupIndex brotherSoul grimoireShield yunoShields shibuyaHypnosis hindredTurns hindredAppliedTurn spookyFrogTurns spookyFrogAppliedTurn spookyStolenPassives successfulHits followUpHits akatsukiPuppets akatsukiPaper akatsukiPaperOwner akatsukiPoison akatsukiVoodoo akatsukiMiss akatsukiHypnosis akatsukiHealBlock akatsukiHealApplied akatsukiDeathHandled lastAttacker').split(' '));
+  const SHARED_PASSIVE_FIELDS = new Set(('attackCount ownAttackCount baseAtkAtBattleStart displayAtkBonusPct displayHpBonusPct flatAtkBonusDisplay atkBonusPct maxHpBonusPct damageReductionPct critChanceBonus critDamageBonus stunTurns freezeTurns incomingImmuneTurns weakenAttackTurns weakenAttackPct snailTurns burn bleed shield shieldKind invincibleTurns passiveImmune noDodgeAgainstUnit incomingVulnerabilityTurns incomingVulnerabilityPct passiveSuppressionTurns passiveSuppressedUntilDeath suppressionAppliedTurn activeTags lastCrit lastDodge lastPassiveTrigger lastActionLabel lastFacingEnemy initialLineupIndex brotherSoul grimoireShield yunoShields shibuyaHypnosis hindredTurns hindredAppliedTurn spookyFrogTurns spookyFrogAppliedTurn spookyStolenPassives successfulHits followUpHits akatsukiPuppets akatsukiPaper akatsukiPaperOwner akatsukiPoison akatsukiVoodoo akatsukiMiss akatsukiHypnosis akatsukiHealBlock akatsukiHealApplied akatsukiDeathHandled lastAttacker titanShieldCapacity titanStunPenalty').split(' '));
 
   // Passive definitions are derived directly from the loaded cards.js database.
   // No duplicate passive descriptions or balance values are maintained here.
@@ -307,8 +307,8 @@
     const atk = unit => computeWeakenedAtk(unit);
     const pick = list => list[Math.min(list.length - 1, Math.floor(Math.random() * list.length))];
     const rand = (min, max) => min + Math.min(max - min, Math.floor(Math.random() * (max - min + 1)));
-    const uncloneable = unit => akatsuki?.uncloneable(unit) || ([prefix + 'reaper','boss-event-alucard','tower-champion-shadow-200'].includes(cardIdOf(unit)) || id(unit) === 'reaper' || getEffectivePassiveCardId(unit) === 'boss-event-alucard') || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || hasPassive(unit,prefix+'reaper') || hasPassive(unit,'boss-event-alucard') || hasPassive(unit,'tower-champion-shadow-200') || Boolean(unit?.spookyMyersDoomed) || cardIdOf(unit)==='saber-knight' || hasPassive(unit,'saber-knight') || cardIdOf(unit)==='sukuna-shibuya' || hasPassive(unit,'sukuna-shibuya');
-    const noExternalRevive = unit => akatsuki?.noExternalRevive(unit) || ([prefix + 'reaper', prefix + 'snowing', 'alexander-anderson', 'tower-champion-shadow-200'].includes(cardIdOf(unit)) || ensureRuntime(unit).effectivePassiveId === 'alexander-anderson' || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || [prefix+'reaper',prefix+'snowing','alexander-anderson','tower-champion-shadow-200'].some(key=>hasPassive(unit,key)) || Boolean(unit?.spookyMyersDoomed) || cardIdOf(unit)==='saber-knight' || hasPassive(unit,'saber-knight') || cardIdOf(unit)==='sukuna-shibuya' || hasPassive(unit,'sukuna-shibuya');
+    const uncloneable = unit => unit?.isTitanCrystal || akatsuki?.uncloneable(unit) || ([prefix + 'reaper','boss-event-alucard','tower-champion-shadow-200'].includes(cardIdOf(unit)) || id(unit) === 'reaper' || getEffectivePassiveCardId(unit) === 'boss-event-alucard') || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || hasPassive(unit,prefix+'reaper') || hasPassive(unit,'boss-event-alucard') || hasPassive(unit,'tower-champion-shadow-200') || Boolean(unit?.spookyMyersDoomed) || cardIdOf(unit)==='saber-knight' || hasPassive(unit,'saber-knight') || cardIdOf(unit)==='sukuna-shibuya' || hasPassive(unit,'sukuna-shibuya');
+    const noExternalRevive = unit => unit?.isTitanCrystal || akatsuki?.noExternalRevive(unit) || ([prefix + 'reaper', prefix + 'snowing', 'alexander-anderson', 'tower-champion-shadow-200'].includes(cardIdOf(unit)) || ensureRuntime(unit).effectivePassiveId === 'alexander-anderson' || ['reaper', 'snowing'].includes(id(unit))) || Boolean(unit?.championPermanentDeath || unit?.grimoireRevived) || [prefix+'reaper',prefix+'snowing','alexander-anderson','tower-champion-shadow-200'].some(key=>hasPassive(unit,key)) || Boolean(unit?.spookyMyersDoomed) || cardIdOf(unit)==='saber-knight' || hasPassive(unit,'saber-knight') || cardIdOf(unit)==='sukuna-shibuya' || hasPassive(unit,'sukuna-shibuya');
     function log(unit, text) { ensureRuntime(unit).lastPassiveTrigger = text; safeLog(`[CHAMPION] ${unit.display?.name || unit.card?.name}: ${text}`, 'passive'); }
     function describe(unit) {
       if (!unit) return null;
@@ -492,7 +492,7 @@
       if (cardIdOf(unit)==='saber-knight'||hasPassive(unit,'saber-knight'))return false;
       if (unit.championPermanentDeath || cardIdOf(unit)==='tower-champion-shadow-200' || hasPassive(unit,'tower-champion-shadow-200')) return false;
       if(akatsuki.noLife(unit))return false;
-      if(akatsuki.fatal(bs,unit,source||ensureRuntime(unit).lastAttacker))return true;
+      if(titan.fatal(bs,unit)||akatsuki.fatal(bs,unit,source||ensureRuntime(unit).lastAttacker))return true;
       if (enten.fatal(bs, unit)) return true;
       if (ragna.fatal(bs, unit)) return true;
       if (requiem.fatal(bs, unit)) return true;
@@ -513,7 +513,7 @@
       if(unit.akatsukiSealed){if(!state(unit).deathHandled){state(unit).deathHandled=true;host.onUnitDefeated?.(bs,unit,attacker);}return false;}
       if(state(unit).akatsukiPermanentHandled)return false;
       if(akatsuki.noLife(unit)){requiem.death(bs,unit);spooky.death(bs,unit);raidSecrets.death(bs,unit);return permanentDeath(bs,unit,attacker);}
-      if(akatsuki.fatal(bs,unit,attacker))return true;
+      if(titan.fatal(bs,unit)||akatsuki.fatal(bs,unit,attacker))return true;
       if(enten.fatal(bs,unit))return true;
       if(ragna.fatal(bs,unit))return true;
       if(spooky.revive(bs,unit))return true;
@@ -546,7 +546,7 @@
       if(state(unit).akatsukiPermanentHandled)return false;
       if(akatsuki.reviveAlly(bs,unit))return true;
       state(unit).deathHandled=true;state(unit).akatsukiPermanentHandled=true;
-      akatsuki.died(bs,unit,attacker);
+      akatsuki.died(bs,unit,attacker);titan.died(bs,unit);
       shibuya.death(bs,unit,attacker);
       fate.death(bs,unit);
       expansion.death(bs, unit, attacker);
@@ -949,7 +949,9 @@
       try{
         const first=options.grimoireInitialResult || performAttack(bs,unit,target,{...options,hermesToken:token});
         if(first.skipped||first.outOfTurn||(!first.hit&&!first.dodged&&!first.missed)||getCardAttackCount(unit)<6)return first;
-        while(isAlive(unit)&&active(unit)&&enemiesOf(bs,unit).length&&Math.random()<fate.followChance(bs,unit,.66)){
+        let chainHits=0;
+        while(isAlive(unit)&&active(unit)&&enemiesOf(bs,unit).length&&Math.random()<fate.followChance(bs,unit,.66,chainHits>0)){
+          chainHits++;
           const enemy=isAlive(target)?target:activeDefender(bs,unit);if(!enemy)break;
           const result=performAttack(bs,unit,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:.33,chainDepth:0,hermesToken:token,grimoireDriver:options.grimoireDriver});
           if(result.skipped||result.outOfTurn)break;
@@ -1116,7 +1118,7 @@
         while(isAlive(unit)&&activeChain(unit)&&enemiesOf(bs,unit).length){
           const madara=isMadara(unit);
           if(madara?getCardAttackCount(unit)<5:state(unit).lowHpUsed)break;
-          if(Math.random()>=fate.followChance(bs,unit,madara?.5:.77))break;
+          if(Math.random()>=fate.followChance(bs,unit,madara?.5:.77,count>0))break;
           const enemy=isAlive(target)?target:activeDefender(bs,unit);if(!enemy)break;
           count++;
           const result=performAttack(bs,unit,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:madara?1:.77,chainDepth:0,questChainToken:token,questCalled:options.questCalled,grimoireDriver:options.grimoireDriver});
@@ -1184,7 +1186,7 @@
     try { return callback(); } finally { if (previous) passiveScopes.set(unit,previous); else passiveScopes.delete(unit); }
   }
   function activateCopy(bs,unit,copy) { withPassive(unit,copy,()=>{runOnEntry(bs,unit);champions.entry(bs,unit);expansion.entry(bs,unit);}); }
-  const grimoire = window.createGrimoireSkills({followChance:(bs,u,n)=>fate.followChance(bs,u,n),
+  const grimoire = window.createGrimoireSkills({chainChance:(u,n,secondary)=>relic.chainChance(u,n,secondary),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),
     runtime:ensureRuntime,id:getEffectivePassiveCardId,alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,
     atk:computeWeakenedAtk,hit:(...args)=>champions.hit(...args),shield:addShield,status:setStatus,refresh:refreshUnitDisplay,
     log:safeLog,random:()=>Math.random(),hasPassive,passiveIds,skillState,canFutureRevive:(bs,target)=>!champions.noExternalRevive(target)&&alliesOf(bs,target,false).some(unit=>!unit.passiveState?.passiveSuppressedUntilDeath&&((passiveIds(unit,true).includes('dante-limbus')&&(passiveRuntimeFor(unit,'dante-limbus').reviveCount||0)<1)||(passiveIds(unit,true).includes('josuke')&&!passiveRuntimeFor(unit,'josuke').expansion?.revived))),addCopy:addPassiveCopy,replaceCopies:(unit,ids)=>{unit.passiveState.grimoire.copies=[];for(const key of ids)addPassiveCopy(unit,key);},card:key=>host.getCardById?.(key)||SOURCE_CARDS.find(card=>card.id===key),
@@ -1196,13 +1198,13 @@
   });
 
   const yuno = window.createYunoSkills({
-    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,onShield:u=>akatsuki?.shieldGranted(u),
+    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
     all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,enemyTeam:enemyTeamOf,
     atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,log:safeLog,
     indices:ensureCurrentIndices,hit:(...args)=>champions.hit(...args)
   });
 
-  const requiem=window.createRequiemSkills({canFollow:unit=>spooky.canFollow(unit),followChance:(bs,u,n)=>fate.followChance(bs,u,n),owns:(u,key)=>(u?.passiveState?.effectivePassiveId||cardIdOf(u))===key||Boolean(u?.passiveState?.grimoire?.copies?.some(copy=>copy.id===key)),runtime:ensureRuntime,id:getEffectivePassiveCardId,rawId:cardIdOf,has:hasPassive,passiveRuntimeFor,alive:isAlive,
+  const requiem=window.createRequiemSkills({canFollow:unit=>spooky.canFollow(unit),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),owns:(u,key)=>(u?.passiveState?.effectivePassiveId||cardIdOf(u))===key||Boolean(u?.passiveState?.grimoire?.copies?.some(copy=>copy.id===key)),runtime:ensureRuntime,id:getEffectivePassiveCardId,rawId:cardIdOf,has:hasPassive,passiveRuntimeFor,alive:isAlive,
     allies:alliesOf,enemies:enemiesOf,team:teamOf,all:allUnits,atk:computeWeakenedAtk,random:()=>Math.random(),hit:(...args)=>champions.hit(...args),
     status:setStatus,dot:addDot,refresh:refreshUnitDisplay,log:safeLog,enemyFront:activeDefender,stunned:isUnitStunned,
     flatHp:(u,n)=>combatStats.flat(u,'hp',n,!isBleeding(u)),
@@ -1215,7 +1217,7 @@
     front:(bs,lineup)=>firstLiving(lineup,lineup===bs.playerTeam?bs.playerIndex:bs.enemyIndex),
     death:(bs,unit)=>onTeammateDeath(bs,unit)});
 
-  const fate=window.createFateSkills({canFollow:unit=>spooky.canFollow(unit),followBonus:(bs,u,n)=>shibuya.followBonus(bs,u,n),relicFollowBonus:u=>relic.followBonus(u),hasExtraFollowUp:unit=>hasPassive(unit,'true-mahito')||hasPassive(unit,'todo')||hasPassive(unit,'the-legion')||hasPassive(unit,'the-clown')||hasPassive(unit,'toji')||hasPassive(unit,'woltekamui')||(unit.relic?.kind==='enten_blade'&&window.RelicSystem.hasFollowUp(unit)),currentBattle:()=>activeCombat,runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,passiveIds,
+  const fate=window.createFateSkills({canFollow:unit=>spooky.canFollow(unit),followBonus:(bs,u,n)=>shibuya.followBonus(bs,u,n),relicFollowBonus:u=>relic.followBonus(u),relicChainChance:(u,n,secondary)=>relic.chainChance(u,n,secondary),hasExtraFollowUp:unit=>hasPassive(unit,'true-mahito')||hasPassive(unit,'todo')||hasPassive(unit,'the-legion')||hasPassive(unit,'the-clown')||hasPassive(unit,'toji')||hasPassive(unit,'woltekamui')||(unit.relic?.kind==='enten_blade'&&window.RelicSystem.hasFollowUp(unit)),currentBattle:()=>activeCombat,runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,passiveIds,
     alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,atk:computeWeakenedAtk,
     random:()=>Math.random(),hit:(...args)=>champions.hit(...args),heal,refresh:refreshUnitDisplay,
     status:setStatus,shield:(...args)=>yuno.addLayer(...args),generated:isGeneratedUnit,canSummon:canCreateCompanion,
@@ -1244,16 +1246,16 @@
       const outcome={...result,hit:!result.dodged&&!result.reflected,critical};ragna.critical(bs,source,target,outcome);return outcome;
     },
     execute:(bs,source,target)=>champions.execute?champions.execute(bs,source,target):executeSpookyTarget(bs,source,target),
-    death:(bs,unit)=>onTeammateDeath(bs,unit),indices:ensureCurrentIndices,attack:(...args)=>performAttack(...args),followChance:(bs,u,n)=>fate.followChance(bs,u,n),
+    death:(bs,unit)=>onTeammateDeath(bs,unit),indices:ensureCurrentIndices,attack:(...args)=>performAttack(...args),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),
     setHpBonus:(u,key,pct)=>combatStats.set(u,'hp',key,pct,!isBleeding(u)),
     atkBonus:applyPermanentAtkBonus,hpBonus:applyMaxHpBonus});
-  const gomen=window.createGomenSkills({runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,id:getEffectivePassiveCardId,alive:isAlive,all:allUnits,enemies:enemiesOf,enemyTeam:enemyTeamOf,atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,allowed:sourcePassiveAllowed,status:setStatus,dot:addDot,canFollow:unit=>spooky.canFollow(unit),attack:(...args)=>performAttack(...args),indices:ensureCurrentIndices,primary:primarySkillHit,followChance:(bs,u,n)=>fate.followChance(bs,u,n)});
+  const gomen=window.createGomenSkills({chainChance:(u,n,secondary)=>relic.chainChance(u,n,secondary),runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,id:getEffectivePassiveCardId,alive:isAlive,all:allUnits,enemies:enemiesOf,enemyTeam:enemyTeamOf,atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,allowed:sourcePassiveAllowed,status:setStatus,dot:addDot,canFollow:unit=>spooky.canFollow(unit),attack:(...args)=>performAttack(...args),indices:ensureCurrentIndices,primary:primarySkillHit,followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap)});
   const shibuya=window.createShibuyaSkills({runtime:ensureRuntime,passiveRuntimeFor,has:hasPassive,alive:isAlive,all:allUnits,
     allies:alliesOf,enemies:enemiesOf,team:teamOf,atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,
     primary:primarySkillHit,hit:(...args)=>champions.hit(...args),status:setStatus,dot:addDot,heal,atkBonus:applyPermanentAtkBonus,
     shield:(...args)=>yuno.addLayer(...args),indices:ensureCurrentIndices,allowed:sourcePassiveAllowed,stunned:isUnitStunned,
     front:(bs,lineup)=>firstLiving(lineup,lineup===bs.playerTeam?bs.playerIndex:bs.enemyIndex),
-    canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n)=>fate.followChance(bs,u,n),hasFollowUp:u=>fate.hasFollowUp(u),
+    canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),hasFollowUp:u=>fate.hasFollowUp(u),
     canSummon:canCreateCompanion,canSpawn:companions.canSpawn,canClone:u=>!isGeneratedUnit(u)&&!champions.uncloneable(u)&&!champions.noExternalRevive(u),
     countFollow(bs,u,target){const r=ensureRuntime(u);r.ownAttackCount=(r.ownAttackCount||0)+1;r.attackCount=r.ownAttackCount;grimoire.countedAttack(bs,u);fate.counted(bs,u,{isFollowUp:true});reagan.countedAttack(bs,u,{isFollowUp:true});spooky.counted(bs,u,target,{isFollowUp:true});gomen.counted(bs,u,{isFollowUp:true});shibuya.counted(bs,u,{isFollowUp:true});dragon.counted(bs,u,{isFollowUp:true});tower200.counted(bs,u,{isFollowUp:true});ragna.counted(bs,u,{isFollowUp:true});},
     enter(bs,u){runOnEntry(bs,u);champions.entry(bs,u);expansion.entry(bs,u);},
@@ -1271,15 +1273,15 @@
   const dragon=window.createDragonSkills({has:hasPassive,passiveRuntimeFor,runtime:ensureRuntime,alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,atk:computeWeakenedAtk,random:()=>Math.random(),
     front:(bs,line)=>firstLiving(line,line===bs.playerTeam?bs.playerIndex:bs.enemyIndex),
     setAtk:(u,key,pct)=>combatStats.set(u,'atk',key,pct),setHp:(u,key,pct)=>combatStats.set(u,'hp',key,pct,!isBleeding(u)),
-    heal,stunned:isUnitStunned,canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n)=>fate.followChance(bs,u,n),
+    heal,stunned:isUnitStunned,canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),
     hit:(...args)=>champions.hit(...args),primary:primarySkillHit,attack:(...args)=>performAttack(...args),indices:ensureCurrentIndices});
   tower200=window.createTower200Skills({has:hasPassive,passiveRuntimeFor,runtime:ensureRuntime,alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,atk:computeWeakenedAtk,random:()=>Math.random(),
-    currentSource:()=>statusSource,log:safeLog,stunned:isUnitStunned,canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n)=>fate.followChance(bs,u,n),
+    currentSource:()=>statusSource,log:safeLog,stunned:isUnitStunned,canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),
     allowed:sourcePassiveAllowed,dot:addDot,hit:(...args)=>champions.hit(...args),primary:primarySkillHit,attack:(...args)=>performAttack(...args),heal,
     bleedFactor:(bs,u)=>alucard.bleedMultiplier(bs,u),addAtk:(u,pct)=>applyPermanentAtkBonus(u,pct),flat:(u,stat,n)=>{combatStats.flat(u,stat,n,stat==='hp'&&!isBleeding(u));refreshUnitDisplay(u);}});
   ragna=window.createRagnaSkills({has:hasPassive,passiveRuntimeFor,runtime:ensureRuntime,alive:isAlive,allies:alliesOf,enemies:enemiesOf,team:teamOf,atk:computeWeakenedAtk,random:()=>Math.random(),
     allowed:sourcePassiveAllowed,status:setStatus,dot:addDot,attack:(...args)=>performAttack(...args),heal,indices:ensureCurrentIndices,refresh:refreshUnitDisplay,log:safeLog,
-    canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n)=>fate.followChance(bs,u,n),addAtk:applyPermanentAtkBonus,
+    canFollow:u=>spooky.canFollow(u),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),addAtk:applyPermanentAtkBonus,
     reviveForbidden:u=>Boolean(u?.championPermanentDeath||u?.grimoireRevived||['saber-knight','tower-champion-shadow-200','sukuna-shibuya','alexander-anderson'].some(id=>cardIdOf(u)===id||hasPassive(u,id)))});
   enten=window.createEntenSkills({id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,runtime:ensureRuntime,alive:isAlive,enemies:enemiesOf,atk:computeWeakenedAtk,
     primary:primarySkillHit,shield:(...args)=>yuno.addLayer(...args),dot:addDot,allowed:sourcePassiveAllowed,refresh:refreshUnitDisplay,log:safeLog,
@@ -1297,7 +1299,7 @@
       return primarySkillHit(bs,u,target,amount,options);
     },
     hit:(...args)=>champions.hit(...args),shield:(...args)=>yuno.addLayer(...args),indices:ensureCurrentIndices,generated:isGeneratedUnit,
-    front:(bs,u)=>firstLiving(teamOf(bs,u),bs.playerTeam.includes(u)?bs.playerIndex:bs.enemyIndex),token:prefix=>prefix+'_'+(++akatsukiSerial),followChance:(bs,u,n)=>fate.followChance(bs,u,n),
+    front:(bs,u)=>firstLiving(teamOf(bs,u),bs.playerTeam.includes(u)?bs.playerIndex:bs.enemyIndex),token:prefix=>prefix+'_'+(++akatsukiSerial),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),
     base:u=>({...combatStats.ensure(u).base}),percent:(u,s,k,n,h=false)=>{combatStats.set(u,s,k,n,h&&!isBleeding(u));refreshUnitDisplay(u);},
     add:(u,s,n,h=false)=>{combatStats.add(u,s,n,h&&!isBleeding(u));refreshUnitDisplay(u);},flat:(u,s,n,h=false)=>{combatStats.flat(u,s,n,h&&!isBleeding(u));refreshUnitDisplay(u);},
     copy(bs,u,id){const copy=addPassiveCopy(u,id,SOURCE_CARDS.length);if(copy)activateCopy(bs,u,copy);return copy;},
@@ -1317,9 +1319,24 @@
     seal(bs,source,target){if(!isAlive(target))return;target.akatsukiSealed=true;target.championPermanentDeath=true;const before=target.hp;target.hp=0;target.defeated=true;recordBattleDamage(bs,source,target,before);champions.death(bs,target,source);onKill(bs,source,target);onTeammateDeath(bs,target);ensureCurrentIndices(bs);},
     summon(bs,owner,kind,hpScale,atkScale,label){if(!canCreateCompanion(owner)||!companions.canSpawn(bs,owner,kind))return null;
       const native=cardOf(owner),hp=Math.max(1,Math.round(owner.maxHp*hpScale)),attack=Math.max(1,Math.round(computeWeakenedAtk(owner)*atkScale));
-      const card={...native,id:kind==='crow'?'akatsuki-crow':'akatsuki-path-'+label.toLowerCase(),name:label,stats:{hp,atk:attack},passive:{name:label,description:kind==='crow'?'30% dodge; death blast for 80% ATK.':'Rinnegan · '+label+' Path'}};
+      const card={...native,id:kind==='crow'?'akatsuki-crow':'akatsuki-path-'+label.toLowerCase(),name:label,stats:{hp,atk:attack},passive:{name:label,description:kind==='crow'?'30% dodge; death blast for 200% clone ATK.':'Rinnegan · '+label+' Path'}};
       const unit={card,display:{name:label,hp,atk:attack},level:owner.level,hp,maxHp:hp,atk:attack,mutations:[...(owner.mutations||[])],isClone:true,isSummoned:true,defeated:false};
       ensureRuntime(unit);if(!companions.admit(bs,owner,unit,kind))return null;const line=teamOf(bs,owner),key=line===bs.playerTeam?'playerIndex':'enemyIndex',active=firstLiving(line,bs[key]);if(kind==='crow'){line.splice(line.indexOf(owner),0,unit);bs[key]=line.indexOf(unit);}else{line.push(unit);bs[key]=Math.max(0,line.indexOf(active));}refreshUnitDisplay(unit);return unit;
+    }
+  });
+  titan=window.createTitanSkills({has:hasPassive,id:getEffectivePassiveCardId,passiveRuntimeFor,passiveIds,runtime:ensureRuntime,alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,
+    atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,log:safeLog,allowed:sourcePassiveAllowed,status:setStatus,heal,primary:primarySkillHit,
+    shield:(...args)=>yuno.addLayer(...args),generated:isGeneratedUnit,acting:(bs,u)=>statusSource===u,
+    add:(u,s,n)=>{combatStats.add(u,s,n);refreshUnitDisplay(u);},flat:(u,s,n)=>{combatStats.flat(u,s,n);refreshUnitDisplay(u);},
+    copy(bs,u,id){const copy=addPassiveCopy(u,id,SOURCE_CARDS.length);if(copy)activateCopy(bs,u,copy);return copy;},
+    canCrystal:(bs,u)=>canCreateCompanion(u)&&companions.canSpawn(bs,u,'war_crystal'),
+    sacrifice(bs,owner,u){u.championPermanentDeath=true;u.hp=0;u.defeated=true;const r=ensureRuntime(u);r.champion ||= {};r.champion.deathHandled=true;r.champion.akatsukiPermanentHandled=true;refreshUnitDisplay(u);},
+    crystal(bs,owner,hp){
+      const card={id:'titan-crystal',name:'Crystal',element:owner.card.element,rarity:'Common',category:[],stats:{hp,atk:0},image:owner.card.image,passive:{name:'Crystal Heart',description:'Cannot attack, clone or revive. Stores the sacrificed team max HP.'}};
+      const unit={card,display:{name:'Crystal',hp,atk:0},hp,maxHp:hp,atk:0,level:1,mutations:[],defeated:false,isTitanCrystal:true,isClone:true,isSummoned:true,sandboxAllowZeroAttack:true};
+      ensureRuntime(unit);if(!companions.admit(bs,owner,unit,'war_crystal'))return null;
+      // Crystal HP is the exact sacrificed maximum; Relic snapshot still follows summon rules.
+      unit.hp=unit.maxHp=hp;unit.atk=0;combatStats.reset(unit);teamOf(bs,owner).push(unit);refreshUnitDisplay(unit);return unit;
     }
   });
   function attackMisses(bs,u,options={}){return spooky.misses(bs,u,options)||akatsuki.misses(bs,u,options);}
@@ -1709,7 +1726,7 @@
     if(mourner.condition(unit))return ensureRuntime(unit).snailTurns>0;
     const runtime = ensureRuntime(unit);
     // Disabling a passive (Reigen's solo form) never disables basic attacks.
-    return runtime.stunTurns > 0 || runtime.freezeTurns > 0 || runtime.snailTurns > 0;
+    return (runtime.stunTurns > 0&&!hasPassive(unit,'jaw-titan')) || runtime.freezeTurns > 0 || runtime.snailTurns > 0;
   }
 
   function tickStatusEffects(battleState, unit) {
@@ -1753,13 +1770,16 @@
       if (!isAlive(unit)) break;
     }
 
-    if (runtime.stunTurns > 0 || runtime.freezeTurns > 0) {
+    const jawStunned=hasPassive(unit,'jaw-titan')&&runtime.stunTurns>0&&runtime.freezeTurns<=0;
+    titan.jawTurn(unit,jawStunned);
+    if ((runtime.stunTurns > 0 && !hasPassive(unit,'jaw-titan')) || runtime.freezeTurns > 0) {
       skipped = true;
       runtime.stunTurns = Math.max(0, runtime.stunTurns - 1);
       runtime.freezeTurns = Math.max(0, runtime.freezeTurns - 1);
       safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} is unable to attack this turn.`, 'status');
     }
 
+    if(jawStunned)runtime.stunTurns--;
     if (runtime.snailTurns > 0) runtime.snailTurns -= 1;
     if (runtime.incomingImmuneTurns > 0) runtime.incomingImmuneTurns -= 1;
     if (runtime.noDodgeTurns > 0) runtime.noDodgeTurns -= 1;
@@ -1815,17 +1835,18 @@
   function addShield(unit, amount, kind = 'shield') {
     const runtime = ensureRuntime(unit);
     const value = Math.max(0, Math.floor(Number(amount) || 0));
-    const layers=yuno.layerTotal(unit);
+    const previousShield=runtime.shield,layers=yuno.layerTotal(unit);
     runtime.shield = layers + Math.max(0,runtime.shield-layers,value);
     runtime.shieldKind = kind;
     addActiveTag(unit, `${kind}-shield`);
-    if(value>0)akatsuki?.shieldGranted(unit);
+    if(value>0){titan?.shieldGranted(unit,previousShield);akatsuki?.shieldGranted(unit);}
   }
 
   function absorbShieldDamage(unit, amount, battleState, source) {
     const runtime = ensureRuntime(unit);
     let remaining = Math.max(0, Number(amount) || 0);
     if (runtime.shield <= 0) return remaining;
+    const capacity=Math.max(runtime.titanShieldCapacity||0,runtime.shield);
     const blocked = Math.min(runtime.shield, remaining);
     yuno.consumeLayers(unit,blocked);
     runtime.shield -= blocked;
@@ -1834,6 +1855,8 @@
       const kind = runtime.shieldKind;
       runtime.shieldKind = '';
       removeActiveTag(unit, `${kind}-shield`);
+      akatsuki.shieldBroken(unit);
+      titan.shieldBroken(battleState,unit,source,capacity);
       grimoire.shieldBroken(battleState, unit, kind);
       if (kind === 'weather') {
         const sourceUnit = source;
@@ -1877,7 +1900,7 @@
   }
 
   function deferFatality(battleState, target) {
-    return Boolean(akatsuki.hasLife(target)||akatsuki.paperReduction(target)>0||mourner.incoming(target)!==1||hasPassive(target,'pennywise')||shibuya.canProtect(battleState,target)||shibuya.immune(target,{passiveAttack:true})||spooky.reduction(battleState,target)||spooky.eventBonus(battleState,target,'dodge')||spooky.dodgeChance(target)||fate.guardian(battleState,target) || hasPassive(target,'medea') || fate.dodgeChance(target) || reagan.reduction(target) || yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+    return Boolean(titan.hasLife(target)||akatsuki.hasLife(target)||akatsuki.paperReduction(target)>0||mourner.incoming(target)!==1||hasPassive(target,'pennywise')||shibuya.canProtect(battleState,target)||shibuya.immune(target,{passiveAttack:true})||spooky.reduction(battleState,target)||spooky.eventBonus(battleState,target,'dodge')||spooky.dodgeChance(target)||fate.guardian(battleState,target) || hasPassive(target,'medea') || fate.dodgeChance(target) || reagan.reduction(target) || yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
   function borrowFirstHumanPassive(bs,unit,source,meta,amount) {
@@ -1949,12 +1972,12 @@
     meta.entenBonusApplied=true;
     if(!meta.akatsukiRawDamage&&!meta.fateAbsorb&&!meta.entenReflect)remaining*=fate.damageAura(battleState,attacker);
     if (targetRuntime.incomingVulnerabilityTurns > 0) remaining *= 1 + targetRuntime.incomingVulnerabilityPct;
-    if(!meta.akatsukiRawDamage)remaining*=mourner.outgoing(source)*mourner.incoming(target);
+    if(!meta.akatsukiRawDamage)remaining*=mourner.outgoing(source)*mourner.incoming(target)*titan.outgoing(source);
     if(!meta.akatsukiRawDamage)remaining *= (meta.yunoDamageApplied?1:yuno.offensive(source,target)) * yuno.defensive(source,target) * (meta.entenReflect?1:tower200.offensive(battleState,source,target));
     const shielded = !meta.ignoreShield && remaining > 0 && targetRuntime.shield > 0;
     if(remaining>0){mourner.hitTaken(battleState,target,meta);recordCombatHit(source,meta);gomen.incoming(battleState,source,target,meta);}
     const reduction = meta.ignoreReduction ? 0 : clamp(
-      -akatsuki.paperReduction(target) + shibuya.reduction(target) + spooky.reduction(battleState,target) + reagan.reduction(target) + requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
+      titan.reduction(target) -akatsuki.paperReduction(target) + shibuya.reduction(target) + spooky.reduction(battleState,target) + reagan.reduction(target) + requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
       (hasPassive(target,'aquaman') && host.isWeatherActive?.('Raining') ? 0.50 : 0),
       0,
       0.95
@@ -1967,7 +1990,10 @@
     enten.reflect(battleState,target,source,afterReduction,meta);
     if(!isAlive(target))return {damage:0,killed:true};
     if(yuno.absorb(battleState,source,target,afterReduction,meta))return {damage:0,killed:false,absorbed:true,reflected:false};
-    if(!meta.ignoreShield)remaining = absorbShieldDamage(target,remaining,battleState,source);
+    if(!meta.ignoreShield){
+      if(meta.shatterShield&&targetRuntime.shield>0){absorbShieldDamage(target,targetRuntime.shield,battleState,source);remaining=0;}
+      else{const through=remaining*Math.max(0,Math.min(1,Number(meta.shieldPierceFraction)||0));remaining=through+absorbShieldDamage(target,remaining-through,battleState,source);}
+    }
     if(!unreduced)remaining *= (1 - reduction);
     remaining=fate.redirect(battleState,source,target,remaining,meta);
     const calamityProtected = !meta.championRedirect && Boolean(champions.guardianFor(battleState, target));
@@ -2197,7 +2223,7 @@
     spooky.entry(battleState,unit);
     gomen.entry(battleState,unit);
     shibuya.entry(battleState,unit);
-    akatsuki.entry(battleState,unit);
+    akatsuki.entry(battleState,unit);titan.entry(battleState,unit);
   }
 
   function beforeAttack(battleState, attacker, target) {
@@ -2485,7 +2511,7 @@
             isFollowUp: true, passiveAttack: true, damageMultiplier: 0.40, chainDepth: outcome.chainDepth + 1
           });
           safeLog(`[PASSIVE] ${attacker.display?.name || 'Jotaro Kujo'} [Ora Ora] follow-up triggered: 40% ATK (${Math.max(0, Number(first?.damage) || 0).toLocaleString('en-US')} damage).`, 'passive');
-          if (Math.random() < fate.followChance(battleState,attacker,0.25) && isAlive(attacker) && isAlive(target) && outcome.chainDepth < 7) {
+          if (Math.random() < fate.followChance(battleState,attacker,0.25,true) && isAlive(attacker) && isAlive(target) && outcome.chainDepth < 7) {
             const second = performAttack(battleState, attacker, target, {
               isFollowUp: true, passiveAttack: true, damageMultiplier: 0.40, chainDepth: outcome.chainDepth + 2
             });
@@ -2696,7 +2722,7 @@
             performAttack(battleState, attacker, next, {
               isFollowUp: true, passiveAttack: true, damageMultiplier: 1, chainDepth: outcome.chainDepth + 1
             });
-            if (Math.random() < Math.min(1,0.15+relic.followBonus(attacker))) {
+            if (Math.random() < relic.chainChance(attacker,Math.min(1,0.15+relic.followBonus(attacker)),true)) {
               const nextNext = enemies[index + 2];
               if (nextNext) {
                 performAttack(battleState, attacker, nextNext, {
@@ -2957,7 +2983,7 @@
   function onKill(battleState, killer, victim, context = {}) {
     if (!killer || !victim) return;
     if(window.TrainingDummySystem?.isTarget(battleState,victim)){window.TrainingDummySystem.restore(victim);return;}
-    akatsuki.killed(battleState,killer,victim);
+    akatsuki.killed(battleState,killer,victim);titan.killed(battleState,killer,victim);
     tower200.killed(battleState,victim);
     shibuya.kill(battleState,killer,victim);
     spooky.killed(battleState,killer,victim);
@@ -3101,7 +3127,7 @@
     if (!target || !attacker) return false;
     if (target.championPermanentDeath || cardIdOf(target)==='tower-champion-shadow-200' || hasPassive(target,'tower-champion-shadow-200')) return false;
     if(akatsuki.noLife(target))return false;
-    if(akatsuki.fatal(battleState,target,attacker))return true;
+    if(titan.fatal(battleState,target)||akatsuki.fatal(battleState,target,attacker))return true;
     if(enten.fatal(battleState,target))return true;
     if(ragna.fatal(battleState,target))return true;
     if(spooky.revive(battleState,target))return true;
@@ -3307,6 +3333,7 @@
             else if (alucard.active(attacker)) alucard.attack(battleState,attacker,requestedTarget,driverOptions);
             else if (getEffectivePassiveCardId(attacker)===requiem.SPR) requiem.chain(battleState,attacker,requestedTarget,driverOptions);
             else if (getEffectivePassiveCardId(attacker)==='speed-wizard') grimoire.attack(battleState,attacker,requestedTarget,driverOptions);
+            else if(titan.IDS.includes(getEffectivePassiveCardId(attacker)))titan.attack(battleState,attacker,requestedTarget,driverOptions);
             else if(akatsuki.IDS.includes(getEffectivePassiveCardId(attacker)))akatsuki.attack(battleState,attacker,requestedTarget,driverOptions);
           });
         }
@@ -3365,16 +3392,16 @@
     tower200.counted(battleState,attacker,options);
     ragna.counted(battleState,attacker,options);
     enten.counted(battleState,attacker);
-    akatsuki.counted(battleState,attacker);
+    akatsuki.counted(battleState,attacker);titan.counted(battleState,attacker);
     if (!isAlive(attacker)) return {hit:false,damage:0,killed:false};
     if (!isAlive(target)) { target=activeDefender(battleState,attacker); if(!isAlive(target))return {hit:false,damage:0,killed:true}; }
 
     if(attackMisses(battleState,attacker,options)){spooky.attackTarget(battleState,attacker,target);return {hit:false,damage:0,killed:false,missed:true};}
     options={...options,fearChecked:true};
-    if(akatsuki.IDS.includes(getEffectivePassiveCardId(attacker))||attacker.akatsukiPath||attacker.akatsukiCrow){
+    if(titan.IDS.includes(getEffectivePassiveCardId(attacker))||attacker.isTitanCrystal||akatsuki.IDS.includes(getEffectivePassiveCardId(attacker))||attacker.akatsukiPath||attacker.akatsukiCrow){
       beforeAttack(battleState,attacker,target);champions.beforeAttack(battleState,attacker,target,options);expansion.beforeAttack(battleState,attacker,target,options);
       if(!isAlive(attacker))return {hit:false,damage:0,killed:false,attacker,target};
-      const out=akatsuki.attack(battleState,attacker,target,options);
+      const out=titan.attack(battleState,attacker,target,options)||akatsuki.attack(battleState,attacker,target,options);
       if(out&&!out.skipped){out.chainDepth=Number(options.chainDepth)||0;if(out.hit){applyHitEffects(battleState,attacker,target,out);if(out.critical)onCritical(battleState,attacker,target,out);}champions.afterAttack(battleState,attacker,target,out,options);expansion.afterAttack(battleState,attacker,target,out,options);questSkills.afterAttack(battleState,attacker,target,out,options);}
       if(out)return out;
     }
@@ -3715,7 +3742,7 @@
   }
 
   function checkBattleWinner(battleState) {
-    const includeReserves = battleState?.sandbox === true || battleState?.mode === 'sandbox' || battleState?.mode === 'tower' || battleState?.mode === 'raid' || battleState?.mode === 'boss-event' || battleState?.mode === 'spooky-hunt' || battleState?.mode === 'infinity' || battleState?.mode === 'portal' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
+    const includeReserves = battleState?.sandbox === true || battleState?.mode === 'sandbox' || battleState?.mode === 'tower' || battleState?.mode === 'rift' || battleState?.mode === 'raid' || battleState?.mode === 'boss-event' || battleState?.mode === 'spooky-hunt' || battleState?.mode === 'infinity' || battleState?.mode === 'portal' || Boolean(window.TimeTrialSystem?.isMode(battleState?.mode));
     if (isTeamDefeated(battleState?.enemyTeam, includeReserves)) return 'player';
     if (isTeamDefeated(battleState?.playerTeam, includeReserves)) return 'enemy';
     return null;
@@ -3742,7 +3769,7 @@
       battleState.enemyIndex = battleState.enemyTeam.indexOf(attacker);
     }
 
-    akatsuki.startTurn(battleState,attacker);
+    akatsuki.startTurn(battleState,attacker);titan.turn(battleState,attacker);
     mourner.turn(battleState,attacker);
     enten.startTurn(battleState,attacker);
     tower200.startTurn(battleState,attacker);
@@ -3825,7 +3852,7 @@
     spooky.endTurn(battleState,actor);
     gomen.endTurn(battleState,actor);
     shibuya.endTurn(battleState,actor);
-    akatsuki.endTurn(battleState,actor);
+    akatsuki.endTurn(battleState,actor);titan.endTurn(actor);
     mourner.endTurn(battleState);
     expireFirstHumanCopies(battleState);
     ensureCurrentIndices(battleState);
@@ -3837,7 +3864,7 @@
     if (!unit) return [];
     const runtime = ensureRuntime(unit);
     const passive = getPassive(unit);
-    const badges = [...champions.badges(unit),...spooky.badges(unit),...gomen.badges(unit),...shibuya.badges(unit),...ragna.badges(unit),...enten.badges(unit),...mourner.badges(unit),...akatsuki.badges(unit)];
+    const badges = [...champions.badges(unit),...spooky.badges(unit),...gomen.badges(unit),...shibuya.badges(unit),...ragna.badges(unit),...enten.badges(unit),...mourner.badges(unit),...akatsuki.badges(unit),...titan.badges(unit)];
     if (questSkills.id(unit) === 'frieren') badges.push({icon:'✦',label:`MANA ${questSkills.state(unit).mana}%`,tone:'passive',category:'passive'});
     if (questSkills.id(unit) === 'sung-jin-woo') badges.push({icon:'✦',label:`SYSTEMS ${questSkills.state(unit).bonus.toUpperCase()} • ${questSkills.state(unit).clones.filter(isAlive).length} Shadows`,tone:'passive',category:'passive'});
     if (questSkills.id(unit) === 'alexander-anderson' && questSkills.state(unit).lowHpUsed) badges.push({icon:'✦',label:'CRUCIFIX',tone:'passive',category:'passive'});
@@ -4554,6 +4581,7 @@
       }
       const active=r.kind==='enten_blade'?relic.followBonus(unit)>0:R.matchingUnit(unit,r);
       const lines=[R.describe(r).replace(/ Unbound\.$/,''),'Base roll: '+(active?'ACTIVE':'INACTIVE — element/category/follow-up requirement not met.'),...follow,'Current total Crit Chance: '+pct(crit.chance)+'; Crit Damage: x'+crit.multiplier.toFixed(3),'Current total Dodge: '+getDisplayDodgeChance(unit)+'%.'];
+      if(r.unique&&r.kind==='odm')lines.push('Secondary chain bonus: +'+pct(r.odmChainBonus)+' points per secondary roll, non-stacking; total chance capped at 99%. The first follow-up keeps its normal chance.');
       if(r.unique&&r.kind==='bomb')lines.push('First-attack bonus: '+(relic.firstReady(unit)?'ready':'used this battle')+'.');
       if(unit.relicInherited)lines.push('Inherited battle copy from '+unit.relicOrigin+'. No inventory item created.');
       return {name:def.name,rarity:r.rarity,unique:r.unique,image:def.image,description:lines.join('\n'),baseActive:active,followBonus:relic.followBonus(unit)};
@@ -4584,6 +4612,7 @@
     },
     getPassiveTriggerClassification(cardId) {
       const id = String(cardId || '').trim();
+      if(titan.IDS.includes(id))return ['TITAN_ISOLATED_HOOKS'];
       if(akatsuki.IDS.includes(id))return ['AKATSUKI_ISOLATED_HOOKS'];
       if(id==='the-mourner')return ['MOURNER_ISOLATED_HOOKS'];
       if(id==='kagurabachi')return ['ENTEN_ISOLATED_HOOKS'];
