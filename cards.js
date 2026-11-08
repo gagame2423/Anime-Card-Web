@@ -314,7 +314,7 @@ const CARDS = [
     stats: { hp: 5110, atk: 1250 },
     passive: {
       name: "KUUGA",
-      description: "Every 3rd attack changes form.\nBlue: +20% crit chance. Green: +50% crit damage. Purple: +30% max HP."
+      description: "Every 3rd own attack turn changes form. Follow-ups do not advance the rotation.\nBlue: +20% crit chance. Green: +50% crit damage. Purple: +30% max HP while in this form."
     },
     image: "assets/cards/krkuuga.png"
   },
@@ -776,7 +776,7 @@ const CARDS = [
     stats: { hp: 34000, atk: 8320 },
     passive: {
       name: "ANTI MAGIC BOOK",
-      description: "Each turn, randomly use one mode:\nDemon Slayer: 165% ATK damage, 75% chance to Stun for 1 turn, 25% chance to reflect incoming damage.\nDemon Dweller: 150% ATK + 35% of the last hit received; take 15% less damage."
+      description: "On each own attack turn, randomly use one mode; follow-ups retain the current mode:\nDemon Slayer: 165% ATK damage, 75% chance to Stun for 1 turn, 25% chance to reflect incoming damage.\nDemon Dweller: 150% ATK + 35% of the last hit received; take 15% less damage."
     },
     image: "assets/cards/astademon.png"
   },
@@ -875,7 +875,7 @@ const CARDS = [
     stats: { hp: 30400, atk: 2790 },
     passive: {
       name: "BUBBLE CONTROL",
-      description: "Every 3 turns, gain a Weather Shield equal to 30% current max HP for 1 turn. If an enemy destroys it, turn that enemy into a Snail for 2 turns."
+      description: "Every 3 own turns, gain a Weather Shield equal to 30% current max HP until its next own turn. If an enemy destroys it, turn that enemy into a Snail for 2 turns."
     },
     image: "assets/cards/weatherreaport.png"
   },
@@ -903,7 +903,7 @@ const CARDS = [
     stats: { hp: 981, atk: 90 },
     passive: {
       name: "Plant",
-      description: "Below 30% max HP, heal 5% max HP each turn."
+      description: "Below 30% max HP, heal 5% max HP each own turn."
     },
     image: "assets/cards/peashooter.png"
   },
@@ -945,7 +945,7 @@ const CARDS = [
     stats: { hp: 22400, atk: 2060 },
     passive: {
       name: "DEVELOPER",
-      description: "Each turn, store 10% of the active enemy’s ATK as Tower Power. If it dies while Builderman lives, convert stored power into HP."
+      description: "On each own turn, store 10% of the active enemy’s ATK as Tower Power. If it dies while Builderman lives, convert stored power into HP."
     },
     image: "assets/cards/builderman.png"
   },
@@ -1057,7 +1057,7 @@ const CARDS = [
     stats: { hp: 4200, atk: 1600 },
     passive: {
       name: "Absolute Zero",
-      description: "On combat turn 5, gain +50% ATK. Later attacks have a 50% chance to Stun for 1 turn."
+      description: "On its fifth own turn, gain +50% ATK. Later attacks have a 50% chance to Stun for 1 turn."
     },
     image: "assets/cards/toshiro.png"
   },
@@ -1226,7 +1226,7 @@ const CARDS = [
     stats: { hp: 5560, atk: 1360 },
     passive: {
       name: "Ascension",
-      description: "When targeted by a passive attack, copies the attacker’s passive for 3 turns, then loses it. Cooldown: 5 turns after the copy expires."
+      description: "When targeted by a passive attack, copies the attacker’s passive for 3 own turns, then loses it. Cooldown: 5 own turns after the copy expires."
     },
     image: "assets/cards/adamror.png"
   },
@@ -1432,7 +1432,7 @@ CARDS.push(...TOWER_REWARD_CARDS);
 // Raid-only secrets never enter RNG pools, including after their first unlock.
 const RAID_SECRET_CARDS = [
   { id: 'raid-secret-mihawk', element: 'Nature', name: 'Mihawk', category: ["Swordman", "Human", "AntiVillian", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 13100, atk: 5000 }, image: 'assets/cards/mihawk.png',
-    passive: { name: 'Hawkeye', description: "50% dodge; successful dodge counters for 500% current ATK.\nPrimary attacks pierce the enemy lineup; each damaging hit reduces the next target’s damage by 25%. Dodges/fully blocked hits do not consume a falloff step.\nEach combat turn: 25% chance for Haki for 2 turns (+250% ATK, 25% damage reduction); refreshes without stacking." } },
+    passive: { name: 'Hawkeye', description: "50% dodge; successful dodge counters for 500% current ATK.\nPrimary attacks pierce the enemy lineup; each damaging hit reduces the next target’s damage by 25%. Dodges/fully blocked hits do not consume a falloff step.\nEach combat turn: 25% chance for Haki for 2 own turns (+250% ATK, 25% damage reduction); refreshes without stacking." } },
   { id: 'raid-secret-ace', element: 'Fire', name: 'Ace', category: ["Pirate", "Human", "Hero", "Supporter", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 3970, atk: 1510 }, image: 'assets/cards/ace.png',
     passive: { name: 'Mera Mera', description: "Successful attacks: 10% chance to Burn for 3 turns (100% current ATK/turn).\nOn death: living teammates gain Brother Soul. Their successful attacks have a separate 10% chance to Burn for 1 turn (100% their current ATK). Stacks with other Burns; multiple Ace deaths do not increase the chance." } },
   { id: 'raid-secret-marco', element: 'Water', name: 'Marco', category: ["Pirate", "Human", "Supporter", "Hero"], rarity: 'Secret', chance: 0, stats: { hp: 51500, atk: 3140 }, image: 'assets/cards/marco.png',
@@ -1595,7 +1595,7 @@ const EXPANSION_CARDS = [
     "image": "assets/cards/awakeneddoflamingo.png",
     "passive": {
       "name": "Ito Ito",
-      "description": "Starting in slot 1: if alive at combat turn 10, hit all enemies for x10 current ATK once.\nEvery 3rd primary attack: 60% chance to summon a passive-free Clone with 60% current HP/ATK; no count limit. Its death stuns its attacker for 2 turns.\nThe 5th primary attack disables its target’s passive until that enemy dies (once)."
+      "description": "Starting in slot 1: if alive on its tenth own turn, hit all enemies for x10 current ATK once.\nEvery 3rd primary attack: 60% chance to summon a passive-free Clone with 60% current HP/ATK; no count limit. Its death stuns its attacker for 2 turns.\nThe 5th primary attack disables its target’s passive until that enemy dies (once)."
     },
     "evolutionOnly": true
   },
@@ -3345,6 +3345,81 @@ CARDS.push(...[
   "passive": {
     "name": "Rock Throw",
     "description": "Every turn not attacking, charge 1–2 Rock (uncapped). On attacking, throw all stored rocks at random enemies; each rock deals 50% ATK and can destroy an entire shield."
+  }
+},
+{
+  "id": "michael-kaiser",
+  "name": "Michael Kaiser",
+  "element": "Holy",
+  "rarity": "Secret",
+  "chance": 15000000,
+  "requiredWeather": null,
+  "category": [
+    "Villian",
+    "AntiHero",
+    "Human",
+    "Brutal",
+    "Captain",
+    "Baller"
+  ],
+  "stats": {
+    "hp": 57700,
+    "atk": 22000
+  },
+  "image": "assets/cards/kaiser.png",
+  "unlockRequirement": "penalty_predators_eye",
+  "passive": {
+    "name": "Predator Instinct",
+    "description": "On each own active attack turn: 60% chance to skip attacking and gain 1 EyE stack (max 4). While EyE > 0: 20% incoming damage reduction.\nWhen choosing to attack, consume all EyE: 1 = 120% ATK; 2 = 150% ATK plus 30% ATK directly through shields if the target was shielded; 3 = 150% ATK ignoring shields; 4 = 180% ATK ignoring damage reduction.\nEXECUTE: A special EyE attack against a target already below 10% max HP instantly kills it, bypassing revival and death prevention. Out-of-turn follow-ups do not charge or consume EyE."
+  }
+},
+{
+  "id": "isagi-yoichi",
+  "name": "Isagi Yoichi",
+  "element": "Electric",
+  "rarity": "Secret",
+  "chance": 22400000,
+  "requiredWeather": null,
+  "category": [
+    "Hero",
+    "Protagonist",
+    "Human",
+    "Baller"
+  ],
+  "stats": {
+    "hp": 66600,
+    "atk": 16300
+  },
+  "image": "assets/cards/isagi.png",
+  "unlockRequirement": "penalty_egoist_metavision",
+  "passive": {
+    "name": "Metavision",
+    "description": "Attacks by Isagi or allies apply 1 Read to each attacked enemy (max 3); Isagi taking HP damage also applies 1 Read to the attacker. Each Read gives the team +5% damage dealt and 1% damage reduction against that enemy, while an allied Isagi is alive.\nDIRECT SHOT: Isagi attacking a target with 3 Read deals 150% ATK and ignores 25% of its damage reduction.\nEGOIST GROWTH: On a 3-Read enemy's death, heal 15% of that enemy max HP and gain +10% base ATK permanently (max 5 growth stacks).\nDESPERATION: Below 35% HP, allied hits against Read-marked enemies splash 50% damage to one other random enemy. First entry below this threshold grants Stun immunity for 2 own turns. Read aura bonuses from multiple Isagis use the highest stack count, not a sum."
+  }
+},
+{
+  "id": "don-lorenzo",
+  "name": "Don Lorenzo",
+  "element": "Dark",
+  "rarity": "Secret",
+  "chance": 55500000,
+  "requiredWeather": null,
+  "category": [
+    "Supporter",
+    "Human",
+    "Brutal",
+    "Baller",
+    "Captain"
+  ],
+  "stats": {
+    "hp": 142000,
+    "atk": 8700
+  },
+  "image": "assets/cards/lorenzo.png",
+  "unlockRequirement": "penalty_ace_eater",
+  "passive": {
+    "name": "Ace Eater",
+    "description": "Intercept 40% of damage that would reach an ally after their shield/defenses. Only one Lorenzo intercepts each hit; redirected damage cannot redirect again. Each incoming attack hit grants 1 Zombie (max 10).\nREGENERATION: On each own turn, heal the ally with the lowest current HP for 3% of Lorenzo max HP per Zombie. Does not spend stacks or Lorenzo HP.\nCOUNTER STRIKE: At 10 Zombie, the next own attack deals 50% of all intercepted damage since battle start to every enemy, then resets Zombie to 0. The accumulated intercepted total is retained."
   }
 }
 ]);

@@ -48,11 +48,12 @@
     }
     function dodge(bs,u){if(has(u,GOJO)){const c=state(u,GOJO),bucket=c.bonuses.find(b=>b.turns===8);if(bucket)bucket.count++;else c.bonuses.push({turns:8,count:1});if(++c.streak===4){c.streak=0;c.ready=true;}refresh(u);}}
     function incoming(bs,source,target,meta){if(has(target,GOJO)&&!meta.dot){state(target,GOJO).streak=0;}}
-    function defeated(bs,victim){for(const u of all(bs))if(alive(u)&&has(u,TOJI)&&api.enemyTeam(bs,u).includes(victim))state(u,TOJI).mode=pick(['spear','katana','cloud','chains']);}
+    function defeated(bs,victim){for(const u of all(bs))if(alive(u)&&has(u,TOJI)&&api.enemyTeam(bs,u).includes(victim)){const c=state(u,TOJI);if(api.ownTurn(bs,u))c.mode=pick(['spear','katana','cloud','chains']);else c.pendingMode=true;}}
+    function ownStart(bs,u){if(api.ownTurn(bs,u)&&has(u,TOJI)&&state(u,TOJI).pendingMode){const c=state(u,TOJI);c.pendingMode=false;c.mode=pick(['spear','katana','cloud','chains']);}}
     function endTurn(bs,actor){if(!actor)return;const c=api.passiveRuntimeFor(actor,GOJO).gomen;if(c)c.bonuses=c.bonuses.map(b=>({turns:b.turns-1,count:b.count})).filter(b=>b.turns>0);}
     const stacks=u=>state(u,GOJO).bonuses.reduce((n,b)=>n+b.count,0);
     const damageFactor=u=>has(u,GOJO)?1+stacks(u)*.08:1;
     function badges(u){const out=[];if(has(u,GOJO)){const c=state(u,GOJO);if(c.bonuses.length)out.push({icon:'∞',label:`DAMAGE +${stacks(u)*8}%`,tone:'buff'});if(c.ready)out.push({icon:'✦',label:'NEXT x8',tone:'buff'});}if(has(u,TOJI))out.push({icon:'⚔',label:({spear:'INVERTED SPEAR',katana:'SS KATANA',cloud:'PLAYFUL CLOUD',chains:'THOUSAND CHAINS'})[state(u,TOJI).mode]||'HEAVENLY RESTRICTION',tone:'passive'});return out;}
-    return {GOJO,GETO,TOJI,IDS,state,entry,counted,prepare,attack,canChain,chain,linked:(u,o)=>Boolean(o.gomenToken&&chains.get(u)===o.gomenToken),dodge,incoming,defeated,endTurn,damageFactor,badges,isGojo:u=>has(u,GOJO)};
+    return {GOJO,GETO,TOJI,IDS,state,entry,counted,prepare,attack,canChain,chain,linked:(u,o)=>Boolean(o.gomenToken&&chains.get(u)===o.gomenToken),dodge,incoming,defeated,ownStart,endTurn,damageFactor,badges,isGojo:u=>has(u,GOJO)};
   };
 })(window);

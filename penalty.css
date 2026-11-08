@@ -1,0 +1,29 @@
+/* Standalone penalty scene; existing combat selectors are untouched. */
+.penalty-panel{width:min(1040px,96vw);max-height:96dvh;overflow:auto;background:linear-gradient(145deg,#111d2b,#081717);border:1px solid #428b7a;box-shadow:0 0 55px #37d7b926}
+.penalty-toolbar,.penalty-hud,.penalty-shot-controls,.penalty-result-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.penalty-toolbar{padding:14px 20px;border-bottom:1px solid #48726450}.penalty-toolbar h2{margin:0;font-size:24px}.penalty-toolbar .eyebrow{margin:0 0 4px;color:#82a99c}.penalty-tools{display:flex;gap:7px;flex-wrap:wrap}.penalty-tools button{font-size:12px;padding:8px 10px}
+.penalty-content{padding:16px 20px}.penalty-hud{margin-bottom:12px}.penalty-score{font-size:22px;font-weight:900;color:#b6ffe2}.penalty-wallet{color:#ffdb89;font-weight:800}.penalty-wallet small{display:block;color:#acb8b4;font-size:10px;letter-spacing:.12em}
+.penalty-stage{position:relative;aspect-ratio:16/10;overflow:hidden;border:1px solid #577c70;border-radius:16px;background:#122c32}.penalty-stage canvas{width:100%;height:100%;display:block}.penalty-targets{position:absolute;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);gap:3px}.penalty-targets button{min-width:0;border:1px solid #8df7d54d;background:#26bfa00b;border-radius:5px;color:#d7fff4b3;font-size:clamp(9px,1.4vw,14px);padding:4px;touch-action:manipulation}.penalty-targets button:hover,.penalty-targets button.is-selected{border-color:#b0ffd8;background:#81ffe32b;color:#fff;box-shadow:inset 0 0 18px #66f3c222}.penalty-targets.is-inactive{opacity:0;pointer-events:none}
+.penalty-rating{position:absolute;left:8px;right:8px;top:54%;pointer-events:none;text-align:center;font-size:clamp(23px,5vw,52px);font-weight:1000;letter-spacing:.025em;color:#e4ffbc;text-shadow:0 3px #0b3532,0 0 20px #00d2a0;opacity:0;margin:0}.penalty-rating.is-visible{animation:penalty-pop .85s ease-out forwards}
+@keyframes penalty-pop{0%{opacity:0;transform:scale(.65)}25%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+.penalty-timing{margin:15px 0 10px}.penalty-meter{height:26px;background:#b84253;position:relative;border:2px solid #718c84;border-radius:8px;overflow:hidden}.penalty-meter-zone{position:absolute;inset-block:0;background:#dab44e}.penalty-meter-zone.green{background:#4bd58b}.penalty-meter-marker{position:absolute;top:0;bottom:0;width:4px;background:white;box-shadow:0 0 8px white;transform:translateX(-2px)}.penalty-meter-label{display:flex;justify-content:space-between;gap:12px;color:#bed4cc;font-size:11px;margin-top:5px}
+.penalty-shoot{touch-action:none;user-select:none;-webkit-user-select:none;min-height:56px;min-width:230px;background:linear-gradient(110deg,#1a9c77,#46c8a8);border:1px solid #b6ffe4;font-weight:1000;letter-spacing:.08em;box-shadow:0 0 22px #39f1ae22}.penalty-result{font-size:13px;color:#c5dbd0;flex:1;min-width:220px}.penalty-error{color:#ffacb4;min-height:18px;font-size:13px}.penalty-upgrades{position:absolute;inset:0;z-index:5;background:#06141aeb;display:grid;place-items:center;padding:22px}.penalty-upgrade-panel{width:min(630px,100%);max-height:88dvh;overflow:auto;background:#10222d;border:1px solid #66b39a;border-radius:18px;padding:20px;box-shadow:0 0 40px #0008}.penalty-upgrade-panel header{display:flex;justify-content:space-between;align-items:center;gap:12px}.penalty-upgrade-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:16px 0;border-bottom:1px solid #5e8a7650}.penalty-upgrade-row p,.penalty-upgrade-row small{margin:4px 0;color:#afc7c1;font-size:12px}.penalty-upgrade-row button{min-width:130px}.penalty-footnote{font-size:11px;color:#8baba1;line-height:1.6}
+@media(max-width:600px){.penalty-panel{width:100vw;max-height:100dvh;border-radius:0}.penalty-content{padding:12px}.penalty-toolbar{padding:12px}.penalty-tools{width:100%}.penalty-tools button{flex:1;min-height:40px}.penalty-stage{aspect-ratio:1/1}.penalty-shoot{width:100%}.penalty-upgrades{position:fixed;padding:12px}.penalty-upgrade-row{grid-template-columns:1fr}.penalty-upgrade-row button{width:100%;min-height:44px}.penalty-targets button{font-size:10px}.penalty-score{font-size:19px}}
+@media(prefers-reduced-motion:reduce){.penalty-rating.is-visible{animation:none;opacity:1}.penalty-shoot{transition:none}}
+
+.penalty-stage{max-height:55dvh}.penalty-shoot{border-radius:12px;font-size:16px}.penalty-tools button:not(.ghost-button){background:#217e69;border:1px solid #7bdfbc;color:#ecfff8;border-radius:12px}
+@media(max-width:600px){.penalty-stage{max-height:45dvh}}
+
+.penalty-stage{width:100%}.penalty-upgrade-row button:not(:disabled){background:#217e69;border:1px solid #7bdfbc;color:#edfff7;border-radius:10px}
+
+/* Visible hit bounds and frozen shot feedback use the engine's timing result. */
+.penalty-meter-marker{pointer-events:none;transition:none}
+.penalty-meter-marker[data-quality="green"]{background:#e0ffbe;box-shadow:0 0 10px #a2ff80}
+.penalty-meter-marker[data-quality="yellow"]{background:#fff0ae;box-shadow:0 0 8px #ffdb68}
+.penalty-meter[data-result="green"]{border-color:#8fffaf;box-shadow:0 0 14px #38e59270}
+.penalty-meter[data-result="yellow"]{border-color:#ffda73;box-shadow:0 0 12px #ffca493b}
+.penalty-meter[data-result="red"]{border-color:#ff7186;box-shadow:0 0 14px #f6406460}
+.penalty-timing:has([data-result="green"]) #penaltyTimingFeedback{color:#a4ffbe}
+.penalty-timing:has([data-result="yellow"]) #penaltyTimingFeedback{color:#ffdb8b}
+.penalty-timing:has([data-result="red"]) #penaltyTimingFeedback{color:#ff9cad}
+.penalty-meter-label{flex-wrap:wrap}

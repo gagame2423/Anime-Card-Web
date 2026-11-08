@@ -46,6 +46,7 @@
       api.setHpBonus(unit,'myers-stalking',c.stalkHp);refresh(unit);
     }
     function startTurn(bs,actor,side){
+      if(api.ownTurn(bs,actor)&&has(actor,'the-clown')&&state(actor,'the-clown').pendingMode){state(actor,'the-clown').pendingMode=false;mode(actor);}
       for(const owner of all(bs))if(alive(owner)&&has(owner,'pennywise')&&state(owner,'pennywise').domain>0)for(const enemy of enemies(bs,owner)){runtime(enemy).deadlightsFearTurn=bs.turnCount;if(runtime(enemy).deadlightsFearTurn===bs.turnCount)api.onStatus?.(bs,enemy,owner);}
 
       for(const owner of all(bs))if(alive(owner)&&has(owner,'myers')&&owner!==actor&&(bs.playerTeam.includes(owner)?'player':'enemy')===side){const c=state(owner,'myers');c.stalkAtk=Math.min(LIMIT,c.stalkAtk+.06);c.stalkHp=Math.min(LIMIT,c.stalkHp+.03);resizeMyers(owner,c);}
@@ -130,7 +131,7 @@
       const c=api.passiveRuntimeFor(victim,'jason-13th').spooky,borrowed=c?.borrowed;
       if(borrowed){const r=runtime(borrowed.donor);if(r.spookyStolenPassives?.[borrowed.key]===victim)delete r.spookyStolenPassives[borrowed.key];api.removeCopy(victim,borrowed.copy);c.borrowed=null;refresh(borrowed.donor);}
     }
-    function defeated(bs,victim){for(const unit of all(bs))if(alive(unit)&&has(unit,'the-clown')&&api.enemyTeam(bs,unit).includes(victim))mode(unit);}
+    function defeated(bs,victim){for(const unit of all(bs))if(alive(unit)&&has(unit,'the-clown')&&api.enemyTeam(bs,unit).includes(victim)){if(api.ownTurn(bs,unit))mode(unit);else state(unit,'the-clown').pendingMode=true;}}
     function onHit(bs,source,target,damage,meta){
       const chance=eventBonus(bs,source,'bleed');if(!(damage>0)||!chance||!alive(source)||!alive(target)||meta.dot||!api.allowed(target,source))return;
       if(random()<chance)dot(target,'bleed',1+Math.floor(random()*3),atk(source)*.33,source);

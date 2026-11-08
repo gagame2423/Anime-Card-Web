@@ -32,7 +32,7 @@
    if(owns(u)){const r=api.runtime(u);if(condition(u)){r.stunTurns=0;r.freezeTurns=0;}else if(state(u).reload&&(r.stunTurns>0||r.freezeTurns>0))interrupted(bs,u);}
   }
   function attack(bs,u,target,options={}){
-   if(api.id(u)!==ID)return null;const c=state(u),result={hit:false,damage:0,killed:false,target,attacker:u};
+   if(api.id(u)!==ID||!api.ownTurn(bs,u,options))return null;const c=state(u),result={hit:false,damage:0,killed:false,target,attacker:u};
    const hit=(enemy,scale,extra={})=>{if(!api.alive(u)||!api.alive(enemy))return null;const shot=api.primary(bs,u,enemy,api.atk(u)*scale,{...options,...extra,specialAttack:true});result.hit ||= shot.hit;result.damage+=shot.damage||0;result.killed ||= shot.killed;return shot;};
    if(c.reload){c.reload=false;c.reloadInterrupted=false;c.living=10;c.departed=10;api.heal(u,u.maxHp*.30,'Prayer / Reload',bs,u);lament(u,3);api.log('[PASSIVE] Prayer: both chambers reloaded.','passive');return {...result,skipped:true,reloaded:true};}
    c.attacks++;

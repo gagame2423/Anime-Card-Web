@@ -96,6 +96,7 @@
   function paintStorage(){if(ui)render(ui.root);}
   function render(root){
     if(!mount(root)||ui.root.classList.contains('hidden'))return;
+    const wallet=host.document.getElementById('storageFootballTokens');if(wallet)wallet.textContent=(host.PenaltyStatsSystem?.snapshot().tokens||0).toLocaleString('en-US')+' Football Tokens';
     const fusion=host.RelicFusionSystem;fusion.sync();
     const join=host.document.getElementById('portalJoinStorage');if(join)join.hidden=tab!=='portals';
     const matches=filtered(),pageCount=Math.max(1,Math.ceil(matches.length/32));portalPage=Math.min(portalPage,pageCount-1);

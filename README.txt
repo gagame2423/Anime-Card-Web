@@ -1,147 +1,210 @@
-ANIME CARD RNG — RUMBLING RIFT
-Bản cập nhật: 07/11/2026
+ANIME CARD RNG — PENALTY TIMING REBALANCE
+Bản cập nhật: 08/11/2026
 
-1. RIFT MODE
-- Vào Arena > Rift Mode; dùng chính bộ chọn đội, Battle Arena, thanh HP/khiên,
-  hiệu ứng, nhật ký và màn hình kết quả hiện có. Đội hình 5 thẻ đấu 5 kẻ địch.
-- Mở 30 phút đầu mỗi giờ UTC (phút 00–29), đóng 30 phút còn lại. Loại Rift
-  được chọn bằng seed của giờ UTC để mọi người thấy cùng một loại. Hiện có
-  Rumbling Rift; có thể thêm loại mới trong RiftSystem.TYPES.
-- Trận đã bắt đầu được phép kết thúc sau giờ đóng. Không bắt đầu lượt mới khi
-  Rift đóng; Auto Continue kiểm tra lại điều kiện trước mỗi lượt.
-- Địch đều mang hệ Nature. Bốn Dumb Titan: HP/ATK lần lượt
-  100.000/10.000; 150.000/15.000; 200.000/20.000; 250.000/25.000.
-  Boss chọn ngẫu nhiên War Hammer, Jaw, Beast hoặc Armored Titan: 1.000.000 HP,
-  50.000 ATK. Các thay đổi này chỉ áp dụng cho địch trong Rift.
-- Mỗi trận thắng nhận 1–5 Rift Shards, lưu trong Storage > Material.
-  Hai lượt kiểm tra đặc biệt độc lập: Eren 0,5%; O.D.M. 5%.
-  Không cộng VNĐ/EXP thưởng thường; Bread và quest thắng trận dùng hệ thống cũ.
+- Green gốc giảm từ 18% xuống 6%. Accuracy tăng đều +0,24 điểm phần trăm
+  mỗi cấp, đạt 18% ở cấp 50. Tolerance 0,1 điểm phần trăm mỗi cạnh được
+  hiển thị trong vùng xanh: khoảng chấp nhận thực tế là 6,2% → 18,2%.
+- Hai dải Yellow còn 6% mỗi bên. Red chiếm 81,8% khi chưa nâng cấp và
+  69,8% ở Accuracy 50, luôn là phần lớn thanh. Shoot/Curve và cách thủ môn
+  tính bàn thắng/pha cứu thua giữ nguyên; chỉ Green được báo TIMING HIT.
+- Kim chạy qua lại ngay khi ngắm và tiếp tục khi giữ SHOOT. Giữ/hủy giữ
+  không đặt lại vị trí kim. Nhả chuột/touch/Space chốt vị trí đúng timestamp
+  của input, không lấy lại vị trí từ frame trước.
+- Dùng elapsed time thực thay vì số frame; không cắt dt của kim ở 100ms.
+  Needle speed 1,4 chiều dài thanh/giây, chu kỳ đi-về khoảng 1,43 giây.
+  Pause/ẩn tab đóng băng kim, Resume không nhảy bù khoảng thời gian đã dừng.
+- Kết quả khóa kim và hiện TIMING HIT / OFF CENTER / TIMING MISS, kèm viền
+  xanh/vàng/đỏ; giữ popup kết quả sút bóng và save pending hiện có.
 
-2. RIFT SHOP VÀ GUARANTEE SHARD
-- Cửa hàng dùng chung cho mọi loại Rift, hỗ trợ Quantity và giới hạn theo số
-  shard thực có; trừ tiền và cấp vật phẩm trong cùng một giao dịch.
-- Lucky Potion: 1; Rich Potion: 1; Speed Potion: 1;
-  Speed Battle Potion: 3; Guarantee Shard: 1.000 Rift Shards.
-- Guarantee Shard thuộc Material, ảnh assets/items/gshard.png.
-- Vào thủ công khi có shard: hỏi “Do you wanna guarantee drop on win?”.
-  Đồng ý sẽ trừ 1 Guarantee Shard khi vào trận, bảo đảm 1 phần thưởng đặc biệt
-  nếu thắng; thua không nhận phần thưởng đặc biệt được bảo đảm.
-- Trong lượt bảo đảm, chọn đúng 1 món theo trọng số gốc Eren:O.D.M. = 1:10
-  (9,09% Eren / 90,91% O.D.M.); không thực hiện thêm hai lượt kiểm tra thường.
-- Khi Auto Continue bật, bỏ qua hộp hỏi và dùng công tắc Auto Guarantee.
-  Công tắc mặc định OFF, chỉ bật được khi còn ít nhất 1 Guarantee Shard,
-  tự tắt khi hết shard. Không có shard vẫn có thể chơi với tỷ lệ thường.
-- Kết quả chờ lưu được phục hồi với phần thưởng đã chốt, không quay lại RNG
-  và không cấp trùng thẻ/vật phẩm khi thử lưu lại.
+THAM SỐ CÓ THỂ CHỈNH — penalty_game.js / PenaltyGame.TIMING_CONFIG
+- baseGreenZoneWidth: 0.06 (tỷ lệ chiều dài thanh; 0.06 = 6%).
+- statScalingFactor: 0.0024 (phần chiều rộng cộng thêm mỗi cấp Accuracy).
+- needleSpeed: 1.4 (chiều dài thanh/giây, không phụ thuộc FPS).
+- hitDetectionTolerance: 0.001 (mỗi cạnh; đã tính vào vùng xanh hiển thị).
+- yellowZoneWidth: 0.06 mỗi bên; maxGreenZoneWidth: 0.24 làm trần an toàn.
+- Có thể đổi mặc định trong TIMING_CONFIG hoặc truyền timingConfig khi tạo
+  PenaltyGame.create({ timingConfig: { needleSpeed: 1.6 } }). Các helper
+  parameters/timingWindows/timing/evaluateShot dùng cùng cấu hình và bounds.
+  Tham số không hợp lệ được đưa về mặc định hoặc giới hạn an toàn.
 
-3. RUMBLING WEATHER, COLOSSAL VÀ THẺ MỚI
-- Thêm Titan, TitanSlayer, Animal, Mastermind vào category.js.
-- Rumbling là Rare Weather bình thường: thời lượng 10 phút, +100% EXP.
-  Dùng lịch và tỷ trọng Rare hiện có. Mutation Colossal: HP x8, ATK x2,
-  màu đỏ xám tối; xác suất Rare gốc 2,5%, có áp dụng multiplier và trần cũ.
-- Vẫn tối đa 2 mutation. Hai mutation cộng hệ số từng stat, không nhân nối tiếp:
-  Monarch x6 ATK + Stardust x4 ATK = x10 ATK.
-- Dumb Titan: roll thường 1/30. Stomp dùng MỘT vòng chọn kết quả:
-  30% hụt; 10% đánh và Stun 1 lượt; 60% đánh và thêm một mục tiêu với 50% ATK.
-- War Hammer Titan: chỉ roll khi Rumbling, 1/29.000.000. Nếu đứng đầu đội,
-  hy sinh vĩnh viễn đồng đội và tạo Crystal ở cuối với tổng Max HP của họ.
-  Khi Crystal còn sống: 60% giảm sát thương, hồi 1% HP hiện tại mỗi lượt;
-  chịu đòn chí tử còn 1 HP và trừ Crystal bằng 500% ATK hiện tại.
-  Đòn làm cạn Crystal vẫn được bảo vệ; đòn chí tử kế tiếp không được bảo vệ.
-  Mỗi đòn thứ 5 chọn Hammer/Spear cho 5 đòn tiếp theo, không đổi đòn vừa đánh.
-  Crystal không tấn công, không clone/revive và biến mất khi chủ chết vĩnh viễn.
-- Jaw Titan: chỉ roll khi Rumbling, 1/1.345.000. Khiên 10% sát thương thực gây
-  ra trong 2 lượt; vẫn đánh khi Stun với 70% sát thương, Freeze vẫn chặn đánh.
-- Armored Titan: chỉ roll khi Rumbling, 1/45.000.000. Khiên đội bằng 50% Max HP;
-  khi không tấn công, phục hồi 50% dung lượng khiên bị vỡ và Stun người đánh
-  3 lượt, tối đa một lần trên mỗi đồng đội cho mỗi chủ passive.
-- Beast Titan: CHỈ roll trong Rumbling Weather, 1/18.000.000.
-  Khi không tấn công tích 1–2 Rock/lượt, không có trần gameplay. Khi đánh ném
-  toàn bộ số đá vào mục tiêu ngẫu nhiên; mỗi đá 50% ATK, phá trọn một khiên.
-  Từng viên xử lý riêng để khiên vỡ trước rồi viên sau đánh vào HP.
-- Eren: chance = 0, riftOnly = true; CHỈ rơi từ Rumbling Rift.
-  Khi rơi dùng ĐÚNG rollMutations() của gacha: thời tiết đang hoạt động,
-  multiplier mutation từ Equipment, xác suất/trần hiện có và tối đa 2 mutation.
-  Không tự gán Colossal chỉ vì trận thuộc Rumbling Rift.
-  Hồi sinh một lần với +250% HP cộng theo gốc, đầy HP và +35% ATK.
-  Hạ Titan sẽ hấp thụ 50% ATK và thêm passive của mục tiêu, không chép trùng
-  cùng một passive. Chỉ số cả 6 thẻ theo yêu cầu; 191 thẻ cũ không đổi HP/ATK.
+KIỂM TRA BẢN TIMING
+- 39 kiểm tra Node: khoảng xanh/đỏ, mọi cấp Accuracy, biên hit/miss,
+  5.000 shot RNG, save/reload/retry, thưởng và chống cấp trùng.
+- Đối chiếu thời gian ở 5/30/60/144 FPS, dropped frame, Pause/Resume,
+  kim chuyển động trước khi giữ và không reset khi giữ/hủy.
+- Browser: dừng rAF rồi nhả tại timestamp định trước, xác nhận đúng vị trí
+  và feedback xanh/vàng/đỏ; nâng Accuracy thật làm rộng vùng xanh đúng +0,24%.
+- Desktop 1440px/mobile 390px: controls, Pause, upgrade, thoát về Arena,
+  5 lần sút thật, session kế tiếp, cả 3 achievement và cloud snapshot key.
+- Chạy lại: node tests/penalty_timing.test.cjs (chỉ dùng thư viện Node có sẵn).
+- Các file mode/combat, thẻ, stat, phần thưởng, save schema, Firebase và
+  TURN/STUN không thay đổi trong bản timing này. Ba sprite gốc giữ nguyên.
+- Cache tag hiện tại: 20261108-penalty-timing-1. Giữ assets cũ, push GitHub
+  và Ctrl+F5 sau khi thay source. Không cần reset hoặc migrate save.
 
-4. O.D.M. RELIC
-- Ảnh assets/items/odm.png. ATK chỉ áp dụng cho thẻ Human:
-  Common +2–6%; Rare +5–10%; Legendary +8–16%.
-- Unique chốt một giá trị +1–10 điểm phần trăm khi tạo Relic. Chỉ tăng xác suất
-  follow-up thứ hai trở đi trong chuỗi có thể đánh tiếp; lượt kích hoạt đầu
-  không đổi. Cộng đúng một lần mỗi phép thử, không tích lũy vào xác suất gốc;
-  tổng xác suất chuỗi tối đa 99%.
-- Áp dụng vào các chuỗi hiện có qua adapter chung; tooltip ghi giá trị đã roll.
-- Công thức: 150 Chain, 100 Silver Ore, 100 Calcite, 50 Mineral Ore,
-  100 Leaf, 100 Electric Ore, 100 Lapiz Ore.
-- Công thức tự xuất hiện trong Crafting từ RelicSystem.RECIPES; không cần đổi
-  logic Crafting cũ. Rift drop dùng tỷ lệ rarity Relic chuẩn 70/25/5 và
-  Legendary có 10% Unique. Tương thích Equip, Fusion, bán và kế thừa Relic.
+Modified Files Note — bản Timing Rebalance
+- penalty_game.js: cấu hình tập trung, bounds theo Accuracy, oscillator dt.
+- penalty_view.js: input timestamp, kim liên tục và feedback theo kết quả.
+- penalty.css: trạng thái hit/miss và marker, bố cục nhãn responsive.
+- index.html: nhãn timing/Accuracy, meter accessibility và cache tag mới.
+- tests/penalty_timing.test.cjs: kiểm tra engine/balance/save không dependency.
+- README.txt: ghi chú cân bằng, tham số và cách kiểm tra.
 
-5. CÂN BẰNG PASSIVE
-- Itachi Awakened: áp dụng bộ hệ số và hiệu ứng mới cho đủ 10 kỹ thuật.
-  Izanami chỉ dùng một lần và bị loại khỏi các vòng kỹ năng sau; cooldown
-  đúng 5 lượt của Itachi. Giá HP của Izanami không thể giết Itachi.
-  Susanoo phản 50% sát thương khi khiên còn, không giới hạn một đòn.
-  Black Flame là Burn không thể tẩy bằng cơ chế cleanse thường, kéo dài 3 lượt.
-- Zetsu White: chép HP/ATK x1,15 một lần, không chép passive và không còn
-  passive sau đó. Black giữ chia chỉ số 50/50; cấm clone/revive không đổi.
-- Deidara: đòn chết giảm từ 1500% xuống 500% ATK. Hai cơ chế tấn công khác giữ nguyên.
-- Các mô tả trong cards.js được cập nhật cùng logic chạy thực tế.
+======================================================================
+CHANGELOG TRƯỚC ĐÓ — PENALTY KICK & BALLER CARDS
+(Các ghi chú bên dưới mô tả tính năng đã có; bản Timing ở trên được ưu tiên.)
+======================================================================
+
+ANIME CARD RNG — PENALTY KICK & BALLER CARDS
+Bản cập nhật: 08/11/2026
+
+1. PENALTY KICK
+- Vào Arena > Penalty Kick. Minigame riêng gồm đúng 5 cú sút mỗi session,
+  không sửa chỉ số địch, phần thưởng hoặc luật của các mode chiến đấu cũ.
+- Dùng ba ảnh người chơi cung cấp: goal_field.png, keeper.png, ball_spin.png
+  trong assets/sprites/. Đã kèm đủ ba file trong gói, giữ nguyên ảnh gốc.
+- Có 9 vùng ngắm. Chọn vùng rồi giữ HOLD TO SHOOT; nhả để chốt lực và sút.
+  Bàn phím: 1–9 chọn vùng, giữ/nhả Space để sút, Escape để tạm dừng.
+  Hỗ trợ Pointer Events và giữ/nhả trên màn hình cảm ứng.
+- Thanh lực dao động liên tục: xanh = nhanh/chính xác, vàng = lực vừa và lệch
+  nhẹ, đỏ = cú sút kém với 80% khả năng ra ngoài. Thủ môn chọn hướng khi nhả.
+  Sai vùng = bàn thắng nếu bóng không ra ngoài; đúng vùng vẫn có thể bị vượt
+  qua nhờ timing tốt và các nâng cấp Shoot/Curve/Accuracy.
+- HUD: SCORE 0/5, lượt sút, Football Token, Sound, Pause, Exit, Stats Upgrade.
+  Hiện PERFECT CORNER!, GREAT SHOT!, WEAK KICK! hoặc SAVED! theo kết quả.
+- Ball atlas 8x8/64 frame, quay 24 fps, thu nhỏ từ 1 xuống 0,3 khi bay.
+  Keeper dùng tọa độ cắt từng tư thế vì ảnh không phải lưới frame đều nhau.
+  Nền trắng quanh keeper và nền đen quanh bóng được xử lý khi render/cache;
+  ảnh pitch có bóng/HUD in sẵn được che bằng vùng cỏ để tránh hiển thị trùng.
+- Chỉ có một vòng requestAnimationFrame khi minigame mở; đóng sẽ dừng vòng
+  vẽ và đóng audio. Tab ẩn tự Pause; hủy thao tác chưa nhả không mất lượt.
+  Ảnh được nạp khi mở lần đầu; xử lý ảnh chia theo batch và cache một lần.
+
+2. FOOTBALL TOKEN, NÂNG CẤP VÀ SAVE
+- Football Token là ví riêng; Storage cũng hiển thị số dư. Không dùng VNĐ,
+  Raid Coin hay chỉ số combat làm chi phí nâng cấp.
+- Shoot tăng tốc bóng; Curve tăng độ cong ở góc và giảm khả năng bắt bóng;
+  Accuracy mở rộng vùng xanh. Mỗi chỉ số có tối đa 50 cấp.
+- Do yêu cầu chưa ấn định giá/token/cấp tối đa, chọn mặc định có thể sửa tại
+  PenaltyStatsSystem.CONFIG trong penalty_stats.js:
+  + Mỗi cú sút hoàn tất: 2 Token; nếu ghi bàn thêm 8 Token.
+  + Session 5/5: thêm 50 Token; tổng session 5/5 = 100 Token.
+  + Giá nâng cấp: round(25 * 1.12^cấp_hiện_tại), tối đa cấp 50.
+- Save riêng anime_card_rng_penalty_v1, được thêm vào snapshot cloud hiện có.
+  Startup local-first, Firebase, Google Auth và TURN/STUN giữ nguyên.
+- Chốt kết quả RNG trước khi bóng bay. Kết quả đang chờ được lưu, phục hồi
+  đúng kết quả khi mở lại; lỗi ghi dữ liệu có Retry, không quay RNG lại hoặc
+  cộng Token hai lần. Mua nâng cấp lỗi lưu sẽ hoàn tác Token và cấp.
+- Khi minigame đang mở, chặn hotkey/roll phía sau; thoát quay lại Arena.
+  Nâng cấp Penalty không thay đổi HP, ATK, cấp thẻ hoặc tỷ lệ gacha.
+
+3. PENALTY ACHIEVEMENTS
+- Thêm nhóm Penalty Achievements trong Achievements, cập nhật tiến độ từ
+  save Penalty. Phần thưởng tự cấp đúng một lần khi đạt điều kiện.
+- Predator's Eye: 5.000 session đạt 5/5, nhận 1 Michael Kaiser.
+- Egoist's Metavision: Accuracy đạt cấp tối đa 50, nhận 1 Isagi Yoichi.
+- Ace Eater's Territory: tổng 5.000 bàn vào Top-Left hoặc Top-Right,
+  nhận 1 Don Lorenzo; các góc dưới không tính vào mục tiêu này.
+- Sau khi achievement hoàn tất, thẻ tương ứng cũng được mở khóa trong pool
+  roll thường theo tỷ lệ đã yêu cầu. Trước đó bị khóa bởi unlockRequirement.
+
+4. BA SECRET CARDS MỚI
+- Michael Kaiser: Holy, 1/15.000.000, HP 57.700 / ATK 22.000.
+  Predator Instinct: 60% bỏ lượt tấn công riêng và tích EyE, tối đa 4.
+  Có EyE được giảm 20% sát thương; dùng hết EyE cho đòn 120/150/150/180%.
+  2 EyE thêm 30% ATK xuyên khiên nếu mục tiêu có khiên; 3 EyE xuyên khiên;
+  4 EyE bỏ qua giảm sát thương. Đòn đặc biệt vào mục tiêu đã dưới 10% HP sẽ
+  Execute, bỏ qua hồi sinh/chống chết. Follow-up không tích hoặc tiêu EyE.
+- Isagi Yoichi: Electric, 1/22.400.000, HP 66.600 / ATK 16.300.
+  Metavision: đòn của đội và khi Isagi nhận sát thương tạo Read, tối đa 3
+  trên từng địch. Mỗi Read tăng sát thương đội 5%, giảm sát thương từ địch
+  đó 1%. Khi đủ 3 Read, đòn Isagi thành Direct Shot 150% ATK và bỏ qua 25%
+  phần giảm sát thương của địch. Một đòn nhiều thành phần không cộng Read
+  trùng cho cùng mục tiêu; follow-up độc lập vẫn được tính.
+  Địch có 3 Read chết: hồi 15% Max HP của địch và +10% ATK gốc, tối đa 5 lần.
+  Dưới 35% HP, đòn vào mục tiêu đã Read lan 50% sát thương sang một địch
+  khác; splash không tự gọi lại chính nó. Lần đầu chạm ngưỡng được miễn
+  Stun trong 2 lượt riêng. Nhiều Isagi dùng số Read cao nhất, không nhân aura.
+- Don Lorenzo: Dark, 1/55.500.000, HP 142.000 / ATK 8.700.
+  Ace Eater: chặn hộ 40% sát thương còn lại sau khiên/phòng thủ của đồng đội.
+  Một hit chỉ có một Lorenzo chặn; sát thương chuyển hướng không chuyển
+  tiếp, không tạo vòng lặp. Mỗi đòn nhận tăng Zombie, tối đa 10.
+  Lượt riêng hồi đồng đội có HP hiện tại thấp nhất bằng 3% Max HP Lorenzo
+  mỗi Zombie, không tiêu Zombie/HP. Đủ 10: đòn riêng kế tiếp đánh toàn địch
+  bằng 50% tổng sát thương đã chặn từ đầu trận, rồi đưa Zombie về 0.
+  Tổng sát thương đã chặn vẫn giữ cho các lần Counter sau.
+- Thêm category Baller. HP/ATK của toàn bộ 197 thẻ có sẵn không đổi.
+- Ảnh thẻ mới được tham chiếu: assets/cards/kaiser.png,
+  assets/cards/isagi.png, assets/cards/lorenzo.png. Cần thêm các portrait này
+  vào assets/cards/ khi triển khai nếu dự án chưa có; không tự tạo ảnh thay.
+
+5. AUDIT LƯỢT PASSIVE
+- turn_phase.js cung cấp activeAttacker, bộ đếm lượt riêng và once-per-turn
+  theo từng battle/runtime độc lập; không chia sẻ bộ đếm giữa hai trận PvP.
+- Itachi Awakened chỉ rút kỹ thuật, chuyển pool và giảm cooldown ở lượt
+  tấn công riêng. Follow-up ngoài lượt không rút kỹ thuật hay giảm cooldown.
+- Rà lại các form/pool/timer: Kagurabachi, The Mourner, War Hammer Titan,
+  Pain, Toji, The Clown, Kuuga, Demon Asta, Mihawk, Doflamingo, Toshiro,
+  Weather Report, Peashooter, Builderman, First Human và các timer liên quan.
+- Kuuga đổi form mỗi 3 lượt tấn công riêng; +30% HP Purple chỉ tồn tại trong
+  form đó, không cộng dồn vô hạn sau nhiều vòng. Demon Asta giữ nguyên form
+  trong các đòn ngoài lượt. First Human giữ passive đủ 3 lượt riêng rồi mất.
+- Những hiệu ứng có chủ đích ngoài lượt vẫn được giữ: support khi đồng đội
+  đánh, dodge, nhận hit, khi chết, entry, aura, Domain và tick DoT toàn cục.
+  Bộ đếm "mỗi hit/mỗi attack" vẫn tính hit đúng theo mô tả; không đánh đồng
+  các sự kiện đó với thời gian chờ ở lượt riêng.
+- PASSIVE_AUDIT.txt ghi danh sách đủ 200 thẻ, passive và phạm vi kiểm tra.
+  Kiểm tra có seed và kiểm tra đích danh không thể chứng minh mọi tổ hợp
+  mutation/relic/summon; báo cáo nêu rõ giới hạn này.
 
 6. KIỂM TRA VÀ TRIỂN KHAI
-- Syntax check toàn bộ 77 file JavaScript.
-- Kiểm tra trình duyệt desktop 1440px và mobile 390px: startup local-first,
-  chọn 5 thẻ, mở shop/Quantity, bắt đầu trận, kết quả và đổi về mode thường.
-- Kiểm tra biên mở/đóng, stat địch, guarantee, mua số lượng lớn, thua không
-  thưởng, phục hồi sau lỗi lưu, mutation Eren, shield từng hit và các passive mới.
-- 700 lượt roll Relic cũ có seed và 188 kịch bản combat cũ có seed cho kết quả
-  giống bản trước. Không tính 3 thẻ được chủ động sửa passive trong đối chiếu.
-- HP/ATK của 191 thẻ cũ không đổi. File scaling/logic gốc Tower, Time Trial,
-  Raid, Boss Event, Spooky Hunt, Infinity, Online PvP, Firebase và TURN/STUN
-  giữ nguyên; các hook dùng chung chỉ mở rộng cho yêu cầu mới.
-- Giải nén toàn bộ source vào thư mục game, giữ assets hiện có, rồi push GitHub.
-  Cache tag mới: 20261107-rumbling-rift-1. Hard-refresh bằng Ctrl+F5.
-- Gói chỉ chứa source/config/README, không tạo Excel hoặc tài nguyên ảnh mới.
-  Các ảnh cần có trong dự án triển khai:
-  assets/cards/dumbtitan.png
-  assets/cards/warhammer.png
-  assets/cards/jawtitan.png
-  assets/cards/armoredtitan.png
-  assets/cards/eren.png
-  assets/cards/beasttitan.png  (tên quy ước được chọn cho Beast Titan)
-  assets/items/odm.png
-  assets/items/gshard.png
+- node --check: toàn bộ 83 file JS; JSON và các tham chiếu local trong HTML.
+- 24 kiểm tra engine/save/upgrade: gồm 5.000 cú sút sinh ngẫu nhiên, session
+  5 lượt, lỗi lưu, reload pending, Pause và không thưởng lặp.
+- Combat: pool/cooldown Itachi, execute Kaiser, Read/Direct Shot/Growth,
+  immunity, splash và chuyển sát thương Lorenzo; không có runtime error.
+- 200 kịch bản combat có seed, tối đa 18 lượt mỗi thẻ; 12 kiểm tra thẻ đứng
+  ngoài lượt và 26 kiểm tra thời điểm riêng cho các passive nhạy cảm.
+- Desktop 1440px / mobile 390px: ảnh thật, đủ 9 vùng, không tràn trang,
+  giữ/nhả sút, Pause/Resume, nâng cấp, hủy giữ phím, thoát về Arena.
+- Kiểm tra 5 cú sút thật và 3 achievement tại ngưỡng; mở khóa/thưởng một lần.
+- PvP: 139 bước đồng bộ ở 3 seed với thẻ mới/Itachi, snapshot hai bên khớp;
+  không ghi save hay cấp phần thưởng PvP. Chưa kiểm tra hai thiết bị qua WAN.
+- So sánh file gốc: logic/scaling Tower, Time Trial, Raid, Boss Event,
+  Rift, Spooky, Infinity, PvP, enemy_stats, levels, relics, mutations,
+  Firebase và online_utils giữ nguyên. Shared passive hooks sửa đúng phần
+  audit và thêm Baller; không thay chỉ số địch/config của những mode đó.
+- Giải nén source vào thư mục game, GIỮ nguyên assets cũ; gói kèm 3 sprite
+  Penalty vừa cung cấp. Thêm portrait 3 thẻ nếu còn thiếu, push lên GitHub,
+  rồi Ctrl+F5. Cache tag hiện tại: 20261108-penalty-timing-1.
+- Không tạo Excel, không cần backend hay dịch vụ mới cho Penalty Kick.
 
-Modified Files Note
-- README.txt
-- akatsuki_passives.js
-- app.js
-- cards.js
-- category.js
-- companions.js
-- dragon_skills.js
-- fate.js
-- gomen.js
-- grimoire.js
-- index.html
-- inventory.js
-- mutations.js
-- passives.js
-- ragna_passives.js
-- relic_combat.js
-- relics.js
-- requiem.js
-- rift.js (mới)
-- shibuya.js
-- spooky_passives.js
-- startup.js
-- storage.js
-- styles.css
-- titan_passives.js (mới)
-- tower_200_passives.js
-- weathers.js
-- yuno.js
+Modified Files Note — bản Penalty Kick
+File mới:
+- penalty_stats.js — Token, nâng cấp, save session và pending shot.
+- penalty_game.js — timing, AI thủ môn và state machine 5 lượt.
+- penalty_sprites.js — ánh xạ atlas ảnh người chơi cung cấp.
+- penalty_view.js — canvas, animation, input, modal nâng cấp và sound.
+- penalty.css — giao diện Penalty responsive, style được giới hạn theo mode.
+- turn_phase.js — context lượt riêng theo battle/runtime.
+- baller_passives.js — logic passive ba thẻ Baller.
+- PASSIVE_AUDIT.txt — phạm vi và danh sách 200 kịch bản audit.
+- assets/sprites/keeper.png — ảnh thủ môn được cung cấp.
+- assets/sprites/goal_field.png — ảnh sân được cung cấp.
+- assets/sprites/ball_spin.png — atlas bóng được cung cấp.
+File sửa:
+- cards.js — 3 thẻ Baller và mô tả các passive có timer được chỉnh.
+- category.js — category Baller.
+- achievements.js — nhóm Penalty, tiến độ và 3 achievement tự cấp thưởng.
+- passives.js — context lượt, audit, Baller hooks và các timer/form được sửa.
+- akatsuki_passives.js — Itachi pool/cooldown và Pain own-turn gating.
+- enten.js — rotation Kagurabachi chỉ chạy ở lượt riêng.
+- mourner.js — ammo/reload/counter chỉ chạy ở lượt riêng.
+- titan_passives.js — War Hammer form chỉ chạy ở lượt riêng.
+- gomen.js — Toji chờ lượt riêng để đổi mode sau kill ngoài lượt.
+- spooky_passives.js — The Clown dùng cùng quy tắc đổi mode.
+- app.js — bridge mở/đóng, khóa input nền, snapshot/validate/reset save.
+- storage.js — hiển thị ví Football Token.
+- index.html — Arena entry, modal, HUD, script/CSS và cache tag mới.
+- startup.js — kiểm tra dependency của các module mới.
+- README.txt — ghi chú cập nhật và file tham chiếu.

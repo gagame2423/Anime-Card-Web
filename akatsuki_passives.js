@@ -52,8 +52,8 @@
    }
    if(u.akatsukiPath&&!painState(u).entered){painState(u).entered=true;path(bs,u,u.akatsukiPath);}
   }
-  function skipTurn(bs,u){if(!has(u,'itachi-awakened'))return false;const c=state(u,'itachi-awakened');if(!(c.cooldown>0))return false;if(--c.cooldown===0)c.pool=shuffle([0,1,2,3,4,5,6,7,8,9].filter(n=>n!==7||!c.izanamiUsed));log('[PASSIVE] Itachi cooldown · '+c.cooldown+' turns remaining.','status');return true;}
-  function counted(bs,u){for(const id of IDS)if(has(u,id))state(u,id).attacks++;if(u.akatsukiPath)painState(u).attacks++;}
+  function skipTurn(bs,u){if(!has(u,'itachi-awakened')||!api.ownTurn(bs,u)||!api.once(bs,u,'itachi-cooldown'))return false;const c=state(u,'itachi-awakened');if(!(c.cooldown>0))return false;if(--c.cooldown===0)c.pool=shuffle([0,1,2,3,4,5,6,7,8,9].filter(n=>n!==7||!c.izanamiUsed));log('[PASSIVE] Itachi cooldown · '+c.cooldown+' turns remaining.','status');return true;}
+  function counted(bs,u,options={}){for(const id of IDS)if(has(u,id)&&(id!=='itachi-awakened'||api.ownTurn(bs,u,options)))state(u,id).attacks++;if(u.akatsukiPath)painState(u).attacks++;}
   function stopHealing(u,turns,bs){runtime(u).akatsukiHealBlock=turns;runtime(u).akatsukiHealApplied=bs.turnCount;}
   function interceptHeal(bs,u,amount){
    if(runtime(u).akatsukiHealBlock>0)return true;
@@ -95,12 +95,15 @@
    if(u.akatsukiCrow)for(const enemy of enemies(bs,u).slice(0,2))api.hit(bs,u,enemy,atk(u)*2,{specialAttack:true});
    if(has(u,'sasori')){const victim=state(u,'sasori').puppet;releasePuppet(u);if(alive(victim))api.forceDeath(bs,u,victim);}
   }
+  function advancePain(bs,u){
+   if(has(u,'pain')&&!u.akatsukiPath){const c=painState(u);if(!c.nagato){c.completed ||= [];if(!c.completed.includes(c.path))c.completed.push(c.path);if(c.completed.length===6){c.nagato=true;c.path='Nagato';api.percent(u,'atk','rinnegan-asura',0);api.percent(u,'hp','rinnegan-asura',0);c.clones=[];for(const name of PATHS){const clone=api.summon(bs,u,'nagato',.20,.20,name);if(clone){clone.akatsukiPath=name;c.clones.push(clone);entry(bs,clone);}}log('[PASSIVE] Pain transformed into Nagato.','passive');}else path(bs,u,pick(PATHS.filter(p=>!c.completed.includes(p))));}}
+  }
   function killed(bs,u,victim){
    if(has(u,'kakuzu')){const c=state(u,'kakuzu');c.hearts=Math.min(5,(c.hearts||0)+1);c.stolen ||= [];
     if(random()<.33){const id=pick(api.passiveIds(victim,true));if(id&&api.copy(bs,u,id))c.stolen.push(id);}
     if(random()<.66){const options=[victim.card.element,...(victim.akatsukiElements||[])].filter(e=>e!==u.card.element&&!(u.akatsukiElements||[]).includes(e)),element=pick(options);if(element)(u.akatsukiElements ||= []).push(element);}
    }
-   if(has(u,'pain')&&!u.akatsukiPath){const c=painState(u);if(!c.nagato){c.completed ||= [];if(!c.completed.includes(c.path))c.completed.push(c.path);if(c.completed.length===6){c.nagato=true;c.path='Nagato';api.percent(u,'atk','rinnegan-asura',0);api.percent(u,'hp','rinnegan-asura',0);c.clones=[];for(const name of PATHS){const clone=api.summon(bs,u,'nagato',.20,.20,name);if(clone){clone.akatsukiPath=name;c.clones.push(clone);entry(bs,clone);}}log('[PASSIVE] Pain transformed into Nagato.','passive');}else path(bs,u,pick(PATHS.filter(p=>!c.completed.includes(p))));}}
+   if(has(u,'pain')&&!u.akatsukiPath){if(api.ownTurn(bs,u))advancePain(bs,u);else painState(u).pendingPaths=Math.min(6,(painState(u).pendingPaths||0)+1);}
   }
   function result(u,target){return {hit:false,damage:0,killed:false,target,attacker:u};}
   function hitResult(bs,u,target,scale,options={},out=result(u,target)){
@@ -109,7 +112,7 @@
   function painAttack(bs,u,target,options={}){
    const c=painState(u),mode=c.path,out=result(u,target),special={...options,specialAttack:true};
    if(c.nagato){hitResult(bs,u,target,1,{...options,specialAttack:false},out);const clones=(c.clones||[]).filter(alive),n=Math.min(clones.length,1+Math.floor(random()*6));for(const clone of shuffle(clones).slice(0,n)){if(!alive(u))break;const enemy=alive(target)?target:enemies(bs,u)[0];if(!enemy)break;const shot=painAttack(bs,clone,enemy,{isFollowUp:true,followOwner:u,linkedAttack:true});out.damage+=shot.damage||0;out.killed ||= shot.killed;}return out;}
-   if(mode==='Deva'){c.charge=(c.charge||0)+1;if(c.charge<3)return {...out,skipped:true,charging:true};for(const enemy of [...enemies(bs,u)])hitResult(bs,u,enemy,2,special,out);c.charge=0;return out;}
+   if(mode==='Deva'){if(!api.ownTurn(bs,u,options))return {...out,skipped:true,charging:true};c.charge=(c.charge||0)+1;if(c.charge<3)return {...out,skipped:true,charging:true};for(const enemy of [...enemies(bs,u)])hitResult(bs,u,enemy,2,special,out);c.charge=0;return out;}
    hitResult(bs,u,target,1,{...options,specialAttack:false},out);
    if(mode==='Preta')api.heal(u,out.damage*.25,'Preta Path',bs,u);
    if(mode==='Animal'&&alive(u)&&random()<api.followChance(bs,u,.50)){const line=team(bs,u),behind=line.slice(line.indexOf(u)+1).find(alive),enemy=alive(target)?target:enemies(bs,u)[0];if(behind&&enemy)api.assist(bs,behind,enemy,atk(behind),u);}
@@ -121,6 +124,7 @@
   }
   function itachiAttack(bs,u,target,options){
    const c=state(u,'itachi-awakened'),out=result(u,target);c.pool ||= shuffle([0,1,2,3,4,5,6,7,8,9].filter(n=>n!==7||!c.izanamiUsed));if(c.cooldown>0)return {...out,skipped:true};
+   if(!api.ownTurn(bs,u,options)||!api.once(bs,u,'itachi-technique',options))return hitResult(bs,u,target,1,{...options,specialAttack:false});
    const move=c.pool.pop(),special={...options,specialAttack:true};c.lastSkill=move;log('[PASSIVE] Itachi technique '+(move+1)+'.','passive');
    const hit=(enemy,scale,extra={})=>hitResult(bs,u,enemy,scale,{...special,...extra},out);
    if(move===0){hit(target,1.1,{ignoreShield:true});if(alive(target)&&api.allowed(target,u)){api.status(target,'stunTurns',1,u);runtime(target).incomingVulnerabilityTurns=Math.max(2,runtime(target).incomingVulnerabilityTurns||0);runtime(target).incomingVulnerabilityPct=Math.max(.10,runtime(target).incomingVulnerabilityPct||0);}}
@@ -153,11 +157,12 @@
    return out;
   }
   function startTurn(bs,actor){
+   if(api.ownTurn(bs,actor)&&has(actor,'pain')){const c=painState(actor),n=c.pendingPaths||0;c.pendingPaths=0;for(let i=0;i<n&&!c.nagato;i++)advancePain(bs,actor);}
    const now=bs.turnCount||0;
    for(const u of [...all(bs)]){
     if(!alive(u))continue;restoreBurn(u);
     if(has(u,'hidan')){const c=state(u,'hidan');c.healBuffs=(c.healBuffs||[]).filter(b=>b.expires>=now);api.percent(u,'atk','hidan-healing',c.healBuffs.reduce((n,b)=>n+b.percent,0));}
-    if(isPain(u)&&painState(u).path==='Asura'&&now%3===0)api.shield(u,atk(u)*.25,null);
+    if(u===actor&&api.ownTurn(bs,u)&&isPain(u)&&painState(u).path==='Asura'&&api.ownTurns(bs,u)%3===0)api.shield(u,atk(u)*.25,null);
     for(const {owner} of runtime(u).akatsukiPuppets||[])if(alive(owner)&&has(owner,'sasori')&&!hasClone(u))api.heal(u,u.maxHp*.01,'Puppet',bs,owner);
     if(u!==actor&&has(u,'deidara')&&team(bs,u).includes(actor)&&random()<.40){const enemy=pick(enemies(bs,u));if(enemy)api.hit(bs,u,enemy,atk(actor)*.50,{specialAttack:true});}
    }

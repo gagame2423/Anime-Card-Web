@@ -22,7 +22,7 @@
     if(id==='armored-titan'){c.restored=new WeakSet();for(const ally of allies(bs,u))api.shield(ally,u.maxHp*.50,null);}
    }
   }
-  function counted(bs,u){for(const id of IDS)if(has(u,id))state(u,id).attacks++;}
+  function counted(bs,u,options={}){for(const id of IDS)if(has(u,id)&&(id!=='war-hammer-titan'||api.ownTurn(bs,u,options)))state(u,id).attacks++;}
   function shieldGranted(u,before){const r=runtime(u);r.titanShieldCapacity=before===0?r.shield:Math.max(r.titanShieldCapacity||0,r.shield||0);}
   function shieldBroken(bs,u,source,capacity){
    runtime(u).titanShieldCapacity=0;
@@ -69,6 +69,7 @@
     if(wheel<.40){if(out.hit&&alive(target)&&api.allowed(target,u))api.status(target,'stunTurns',1,u);}
     else hit(enemies(bs,u).find(v=>v!==target),.50,{specialAttack:true});
    }else if(id==='war-hammer-titan'){
+    if(!api.ownTurn(bs,u,options))return null;
     if(c.mode==='hammer'){const targets=[target,...enemies(bs,u).filter(v=>v!==target)].slice(0,2);for(const enemy of targets)hit(enemy,.60,{specialAttack:true});}
     else hit(target,1,c.mode==='spear'?{specialAttack:true,shieldPierceFraction:.50}:{specialAttack:false});
     if(c.attacks%5===0)c.mode=random()<.50?'hammer':'spear';

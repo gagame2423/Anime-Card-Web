@@ -12,11 +12,11 @@
     raid: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]),
     boss: Object.freeze([1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000])
   });
-  const CATEGORIES = Object.freeze({ collection: 'Collection', battles: 'Battle wins', currency: 'VNĐ milestones', rolls: 'Total rolls', tower: 'Tower progress', timetrial: 'Time Trial rooms', raid: 'Total Raid wins', boss: 'Total Boss Event clears', spooky:'Spooky Event' });
+  const CATEGORIES = Object.freeze({ collection: 'Collection', battles: 'Battle wins', currency: 'VNĐ milestones', rolls: 'Total rolls', tower: 'Tower progress', timetrial: 'Time Trial rooms', raid: 'Total Raid wins', boss: 'Total Boss Event clears', spooky:'Spooky Event',penalty:'Penalty Achievements' });
   const count = value => Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Number(value)))) : 0;
   const record = value => value && typeof value === 'object' && !Array.isArray(value);
   const safeKey = id => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id);
-  function fresh() { return { version: 1, stats: { collection: 0, battles: 0, currencyEarned: 0, peakCurrency: 0, rolls: 0, tower: 0, timetrial: 0, raid: 0, boss: 0, spookyRuns:0, spookyEvolution:0, spookyCollection:0 }, towerProgress: {}, claimed: {}, unlockedRequirements: {} }; }
+  function fresh() { return { version: 1, stats: { collection: 0, battles: 0, currencyEarned: 0, peakCurrency: 0, rolls: 0, tower: 0, timetrial: 0, raid: 0, boss: 0, spookyRuns:0, spookyEvolution:0, spookyCollection:0,penaltyPerfectSessions:0,penaltyAccuracy:0,penaltyTopCorners:0 }, towerProgress: {}, claimed: {}, unlockedRequirements: {} }; }
   function load() {
     let raw; try { raw = JSON.parse(host.localStorage?.getItem(KEY) || 'null'); } catch (_) { raw = null; }
     const result = fresh();
@@ -72,6 +72,11 @@
       Object.freeze({id:'spooky_jason_evolved',category:'spooky',stat:'spookyEvolution',target:1,title:'Evolve The Trapper into Jason 13th',reward:Object.freeze({dropBonus:.06}),automatic:false}),
       Object.freeze({id:'spooky_collection',category:'spooky',stat:'spookyCollection',target:10,title:'Own all 10 Spooky collection cards',reward:Object.freeze({expBonus:.6}),automatic:false})
     );
+    result.push(
+      Object.freeze({id:'penalty_predators_eye',requirement:'penalty_predators_eye',category:'penalty',stat:'penaltyPerfectSessions',target:5000,title:"Predator's Eye · Score 5/5 in 5,000 sessions",reward:Object.freeze({cardId:'michael-kaiser',cardName:'Michael Kaiser'}),automatic:true}),
+      Object.freeze({id:'penalty_egoist_metavision',requirement:'penalty_egoist_metavision',category:'penalty',stat:'penaltyAccuracy',target:host.PenaltyStatsSystem.CONFIG.maxLevel,title:"Egoist's Metavision · Max Accuracy",reward:Object.freeze({cardId:'isagi-yoichi',cardName:'Isagi Yoichi'}),automatic:true}),
+      Object.freeze({id:'penalty_ace_eater',requirement:'penalty_ace_eater',category:'penalty',stat:'penaltyTopCorners',target:5000,title:"Ace Eater's Territory · Score 5,000 top-corner goals",reward:Object.freeze({cardId:'don-lorenzo',cardName:'Don Lorenzo'}),automatic:true})
+    );
     return result;
   }
   function progress(def) {
@@ -109,6 +114,7 @@
       data.stats.spookyRuns=Math.max(data.stats.spookyRuns,count(snapshot.spookyRuns));
       data.stats.spookyEvolution=Math.max(data.stats.spookyEvolution,Math.min(1,count(snapshot.spookyEvolution)));
       data.stats.spookyCollection=Math.max(data.stats.spookyCollection,Math.min(10,count(snapshot.spookyCollection)));
+      for(const key of ['penaltyPerfectSessions','penaltyAccuracy','penaltyTopCorners'])data.stats[key]=Math.max(data.stats[key],count(snapshot[key]));
       data.stats.peakCurrency = Math.max(data.stats.peakCurrency, count(snapshot.currency));
       // Old saves have no lifetime-earnings history. The known balance is the
       // migration baseline; subsequent awards are recorded explicitly.
@@ -150,7 +156,7 @@
       const bar = doc.createElement('div'); bar.className = 'achievement-progress'; bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-label', item.title); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(item.target)); bar.setAttribute('aria-valuenow', String(Math.min(item.value, item.target)));
       const fill = doc.createElement('span'); fill.style.width = `${Math.min(100, item.value / item.target * 100)}%`; bar.append(fill);
       const numbers = doc.createElement('small'); numbers.textContent = `${compact(Math.min(item.value, item.target))} / ${compact(item.target)}`; numbers.title = `${item.value.toLocaleString('en-US')} / ${item.target.toLocaleString('en-US')}`;
-      const button = doc.createElement('button'); button.type = 'button'; button.disabled = item.claimed || !item.complete || item.automatic; button.textContent = item.claimed ? (item.automatic ? 'Automatically awarded' : 'Reward claimed') : item.automatic ? 'Awarded on clear' : item.complete ? 'Claim reward' : 'Keep going';
+      const button = doc.createElement('button'); button.type = 'button'; button.disabled = item.claimed || !item.complete || item.automatic; button.textContent = item.claimed ? (item.automatic ? 'Automatically awarded' : 'Reward claimed') : item.automatic ? (item.category==='penalty'?'Awarded when complete':'Awarded on clear') : item.complete ? 'Claim reward' : 'Keep going';
       button.addEventListener('click', () => { sync(); if (claim(item.id)) { sync(); onClaim(item); render(grid, category, onClaim); } });
       card.append(head, title, detail, bar, numbers, button); grid.append(card);
     }
