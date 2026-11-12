@@ -20,7 +20,7 @@
   text('infinityWave',`Wave ${number(bs.infinity.wave)} - Continuous`);
   text('infinityRunState',bs.finished?'RUN ENDED':'INFINITY');
   text('infinityWeekBadge',`${week.id} · Seed ${week.seed}`);
-  text('infinityCategoryBadge',`Category: ${week.category}`);
+  text('infinityCategoryBadge',`x3 HP/ATK: ${week.category}`);
   text('infinityElementBadge',`Enemy Element: ${week.element}`);
   text('infinityOrbTracker',`Star Orbs +${number(info.orbs)}`);
   text('infinityRunProgress',`Run cleared: ${number(bs.infinity.highest)} · Weekly best: ${number(info.best)}`);

@@ -1443,7 +1443,7 @@ function startCooldown() {
 // ============================================================
 
 function isCardRollUnlocked(card) {
-  if (card.riftOnly || card.capsuleOnly || card.raidOnly || card.bossEventOnly || !(Number(card.chance) > 0)) return false;
+  if (card.evolutionOnly || card.riftOnly || card.capsuleOnly || card.raidOnly || card.bossEventOnly || !(Number(card.chance) > 0)) return false;
   if(card.spookyExclusive&&!window.SpookySystem.unlocked())return false;
   return !card.unlockRequirement || window.AchievementSystem?.isUnlocked(card.unlockRequirement) || state.achievementRewardReceipts?.[card.unlockRequirement] === true;
 }
@@ -3966,11 +3966,11 @@ function finishBattle(playerWon) {
       state.battleDropRateBonus = Math.max(0, Math.min(100, Number(state.battleDropRateBonus) || 0) + dropRateBonus);
       // Independent player stat: neither Reward Bonus nor money multipliers are read by the potion RNG.
       state.dropChance = Math.max(0, Math.min(20, (Number(state.dropChance) || 0) + Math.max(0, Number(baseRewardProfile.dropRateBonus) || 0))); // unmodified by Reward Bonus passives
-      const potionDrop = window.InventorySystem?.rollVictoryDrop(state.dropChance);
+      const potionDrop = window.InventorySystem?.rollVictoryDrop(state.dropChance,Math.random,battleState);
       const previousKeys = window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id);
-      const raidKeyDropped = window.RaidSystem?.rollKey(battleState.mode);
-      if (raidKeyDropped) appendBattleLog(`Marine Ford Raid Key +${window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id) - previousKeys} • 10% regular-battle drop • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}.`, 'victory');
-      const towerPrize = battleState.mode === 'tower' ? window.TowerSystem?.recordVictory(battleState.towerWeather, battleState.towerFloor) : null;
+      const raidKeyDropped = window.RaidSystem?.rollKey(battleState.mode,Math.random,battleState);
+      if (raidKeyDropped) appendBattleLog(`Marine Ford Raid Key +${window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id) - previousKeys} • 10% regular-battle drop • Drop x${window.InventorySystem.getDropMultiplier(battleState).toFixed(2)}.`, 'victory');
+      const towerPrize = battleState.mode === 'tower' ? window.TowerSystem?.recordVictory(battleState.towerWeather, battleState.towerFloor,Math.random,battleState) : null;
       refreshAchievements();
       if (potionDrop?.dropped) appendBattleLog(`🧪 Potion drop: ${potionDrop.name} x${potionDrop.quantity || 1} (${Math.round(potionDrop.chance * 100)}% roll).`, 'victory');
       else if (potionDrop) appendBattleLog(`🧪 No potion (${Math.round(potionDrop.chance * 100)}% chance) • Pity increased for next win.`, 'status');
@@ -4349,7 +4349,7 @@ function renderBossEventControls() {
   setViewText('bossEventDifficultyValue', `${progress.difficulty} • Boss Lv.${progress.difficulty}`);
   setViewText('bossEventBalance', `${progress.coins.toLocaleString('en-US')} ${def.coinName}`);
   const dropName=def.itemId?window.InventorySystem.getItem(def.itemId).name:native.name;
-  setViewText('bossEventRules', `5 player cards vs 1 ${native.name} • Victory: ${range.min}–${range.max} ${def.coinName} • ${(event.dropChance(progress.difficulty,type)*100).toFixed(2)}% ${dropName} drop • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`);
+  setViewText('bossEventRules', `5 player cards vs 1 ${native.name} • Victory: ${range.min}–${range.max} ${def.coinName} • ${type==='pride'?`${(event.cardChance(progress.difficulty,type)*100).toFixed(2)}% Meliodas + ${(event.itemChance(progress.difficulty,type)*100).toFixed(2)}% Pride Sun (independent)`:`${(event.dropChance(progress.difficulty,type)*100).toFixed(2)}% ${dropName} drop`} • No VNĐ, EXP or ordinary drops • No entry key or stat upgrade tree.`);
   setViewText('bossEventStats', `Boss HP ${boss.maxHp.toLocaleString('en-US')} • ATK ${boss.atk.toLocaleString('en-US')} • Speed Battle Potion applies. The active 12-hour Event is checked before every Continue.`);
   if(!isBattleMatchActive()){els.battleStartButton.disabled=!isBattleSetupValid()||!event.canEnter(type);els.battleStartButton.textContent=`Challenge ${def.name} • 5 cards`;}
   if(battleState?.finished){const can=canReplayBattleTeam();els.battleAutoAgainButton.disabled=!can;els.battleAutoAgainButton.textContent=can?`Continue ${def.name}`:'Event rotated out — reopen Boss Event';if(!can)clearAutoContinueBattleTimer();}
@@ -4553,7 +4553,7 @@ function finishTimeTrialBattle(won, reason = '') {
   const body = document.getElementById('timeTrialSummary');
   body.textContent = summary.material?`Material Room ${summary.room} ${summary.won?'Cleared':'Failed'}\n${Object.entries(summary.materials||{}).map(([id,n])=>(window.InventorySystem.getItem(id)?.name||id)+' +'+n).join('\n')||'No materials dropped.'}\nNo Shards • No EXP • No VNĐ\n${summary.won?'Next Material Room: '+summary.nextRoom:'Material progress reset to Room 1'}`:summary.exp
     ? `Total Damage Dealt: ${(summary.totalDamage||0).toLocaleString('en-US')}\nConverted EXP Earned: +${(summary.convertedExperience||0).toLocaleString('en-US')} EXP\nApplied: +${summary.experience.toLocaleString('en-US')} EXP • ${summary.levelUps} level-ups • Level 100 cap respected\nDPS: ${Math.floor(summary.dps||0).toLocaleString('en-US')} • Best: ${Math.floor(summary.bestDps||trial.bestDps).toLocaleString('en-US')}${summary.newDpsRecord?'\n★ NEW HIGHEST DPS RECORD!':''}\nNo global EXP multiplier • No VNĐ or Shards`
-    : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier().toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • Victory: 1–3 Bread`;
+    : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier(battleState).toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • Victory: 1–3 Bread`;
   if(summary.akatsukiKey?.quantity)body.textContent+=`\nAkatsuki Raid Key +${summary.akatsukiKey.quantity}`;
   body.classList.remove('hidden');body.classList.toggle('is-new-dps-record',Boolean(summary.exp&&summary.newDpsRecord));
   document.getElementById('timeTrialResultShopButton')?.classList.remove('hidden');
@@ -4907,25 +4907,28 @@ function prepareEquipmentCraft(recipe, selected) {
 }
 function evolutionComplete(recipe) { return state.achievementRewardReceipts?.['evolution_' + recipe.id] === true || getOwnedCardCount(recipe.id) > 0; }
 function prepareEvolution(recipe, variantKey) {
-  if (!canEvolveNow() || evolutionComplete(recipe)) throw new Error('Thẻ này đã tiến hóa hoặc game đang bận.');
+  if (!canEvolveNow()) throw new Error('Game đang bận.');
   const variant = getVariantEntries(recipe.baseId).find(v => v.key === variantKey && v.count > 0);
   if (!variant || getCardLevelInfo(recipe.baseId).level < recipe.level || window.InventorySystem.quantity(recipe.itemId)<(recipe.itemCount||1)) throw new Error('Cần đúng biến thể Lv.100+ và vật phẩm tiến hóa.');
   if (!saveState() || !window.InventorySystem.flush()) throw new Error('Không thể lưu tiến độ hiện tại.');
   const mainBefore = localStorage.getItem(STORAGE_KEY), itemsBefore = localStorage.getItem(window.InventorySystem.KEY), original = state;
-  let mainAfter;
+  let mainAfter, resultLevel;
   try {
     state = JSON.parse(mainBefore);
+    const targetKnown = Boolean(state.cardProgress[recipe.id]);
+    resultLevel = targetKnown ? getCardLevelInfo(recipe.id).level : window.EvolutionSystem.resultLevel(recipe);
+    if (getOwnedCardCount(recipe.id) >= Number.MAX_SAFE_INTEGER) throw Error('Target card storage is full.');
     if (decrementOwnershipVariant(recipe.baseId,variant.key,1) !== 1) throw new Error('Không thể tiêu thẻ gốc.');
     const ids = normalizeCardMutations(variant.mutations), key = canonicalVariantKey(recipe.id,ids);
-    state.mutations[key] = 1; state.unlocked[recipe.id] = 1;
-    state.inventory[key] = {id:recipe.id,cardId:recipe.id,mutationIds:ids,mutation:ids.join('+'),count:1};
-    state.cardProgress[recipe.id] = {level:window.EvolutionSystem.resultLevel(recipe,getCardLevelInfo(recipe.baseId).level),exp:0};
+    state.mutations[key] = (Number(state.mutations[key]) || 0) + 1; state.unlocked[recipe.id] = getUnlockedCountById(recipe.id) + 1;
+    state.inventory[key] = {id:recipe.id,cardId:recipe.id,mutationIds:ids,mutation:ids.join('+'),count:(Number(state.inventory[key]?.count)||0)+1};
+    if (!targetKnown) state.cardProgress[recipe.id] = {level:resultLevel,exp:0};
     state.achievementRewardReceipts['evolution_' + recipe.id] = true;
     // Equipment may only refer to copies that still exist after the sacrifice.
     syncOwnershipRecords(); mainAfter = JSON.stringify(state);
   } finally { state = original; }
   const items = JSON.parse(itemsBefore); items.items[recipe.itemId].quantity-=(recipe.itemCount||1);
-  return {mainBefore,mainAfter,itemsBefore,itemsAfter:JSON.stringify(items)};
+  return {mainBefore,mainAfter,itemsBefore,itemsAfter:JSON.stringify(items),resultLevel};
 }
 function onEvolutionCommitted() {
   window.CloudSaveSystem?.markDirty();
@@ -5781,7 +5784,7 @@ else initializeGameViews();
 if(window.EquipmentSystem?.blocked)window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover the pending equipment craft before playing.');
 window.EvolutionSystem.configure({
   canAct:canEvolveNow,prepare:prepareEvolution,onCommit:onEvolutionCommitted,
-  describe:recipe=>({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(' + ')||'Normal'}))}),
+  describe:recipe=>({baseName:getCardById(recipe.baseId)?.name,level:getCardLevelInfo(recipe.baseId).level,completed:evolutionComplete(recipe),targetLevel:state.cardProgress[recipe.id]?.level,variants:getVariantEntries(recipe.baseId).map(v=>({...v,label:v.mutations.map(m=>m.name).join(' + ')||'Normal'}))}),
   display:(card,variant,level,isBase)=>isBase?window.RelicSystem.preview(card,getDisplayCard(card,variant.mutations,level),variant.key):getDisplayCard(card,variant.mutations,level),
   passive:getCardPassiveCopy,open:()=>openModal('evolutionModal'),
   onEvolved:(recipe,mutations)=>{openCardPreview(recipe.id,canonicalVariantKey(recipe.id,mutations));window.ShopBulkSystem.notify(`Evolved into ${recipe.name} · Lv.${getCardLevelInfo(recipe.id).level} · mutations preserved.`);}

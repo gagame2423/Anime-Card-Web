@@ -4,7 +4,7 @@
   const KEY = 'anime_card_rng_items_v1';
   // Two quest effects per period can overlap when claimed across a reset boundary.
   // Achievements (1 + .45 + .90 + .06 Spooky), quests (2*.10 + 2*.25), one equipped Cursed Finger (.66).
-  const MAX_KNOWN_DROP_MULTIPLIER = 3.77 + 1e-8;
+  const MAX_KNOWN_DROP_MULTIPLIER = 3.77 * 6 + 1e-8; // Nami x2, Hakari x2, Aqua rewards x1.5.
   const DURATION_MS = 600000;
   const SUPER_DURATION_MS = 300000;
   const SUPER_BASE = Object.freeze({super_luck_potion:'lucky_potion',super_rich_potion:'rich_potion',super_exp_potion:'exp_potion',super_speed_potion:'speed_potion'});
@@ -38,12 +38,13 @@
   }
   const countOf = n => Number.isFinite(Number(n)) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(Number(n)))) : 0;
   let bridge = {};
-  function getDropMultiplier() {
+  function getDropMultiplier(battle = null) {
     const value = Number(bridge.getDropMultiplier?.());
-    return Number.isFinite(value) ? Math.max(1, value) : 1;
+    const base=Number.isFinite(value)?Math.max(1,value):1;
+    return Math.min(MAX_KNOWN_DROP_MULTIPLIER,base*(battle?host.PassiveSystem?.rewardMultiplier(battle)||1:1));
   }
-  function scaleDrop(amount, random = Math.random) {
-    const exact = Number(Math.min(Number.MAX_SAFE_INTEGER, countOf(amount) * getDropMultiplier()).toFixed(8));
+  function scaleDrop(amount, random = Math.random, battle = null) {
+    const exact = Number(Math.min(Number.MAX_SAFE_INTEGER, countOf(amount) * getDropMultiplier(battle)).toFixed(8));
     const whole = Math.floor(exact), fraction = Number((exact - whole).toFixed(8));
     // Stochastic rounding preserves small bonuses for a base drop of 1.
     // No extra RNG call at x1 or when the scaled amount is already integral.
@@ -205,11 +206,11 @@
     const playerStat = Math.max(0, Math.min(20, Number(dropChancePercent) || 0));
     return Math.min(.30, (.10 + data.misses * .02) + playerStat / 100);
   }
-  function rollVictoryDrop(dropChancePercent = 0, random = Math.random) {
+  function rollVictoryDrop(dropChancePercent = 0, random = Math.random, battle = null) {
     const chance = dropChance(dropChancePercent);
     if (random() < chance) {
       const index = Math.max(0, Math.min(BATTLE_DROP_IDS.length - 1, Math.floor(random() * BATTLE_DROP_IDS.length)));
-      const id = BATTLE_DROP_IDS[index], quantity = scaleDrop(1, random); grant(id, quantity); data.misses = 0; persist();
+      const id = BATTLE_DROP_IDS[index], quantity = scaleDrop(1, random, battle); grant(id, quantity); data.misses = 0; persist();
       return { dropped: true, id, name: POTIONS[id].name, quantity, chance, pity: 0 };
     }
     data.misses = Math.min(10, data.misses + 1); persist(); return { dropped: false, id: null, chance, pity: data.misses };

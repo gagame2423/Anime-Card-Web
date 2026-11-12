@@ -179,7 +179,7 @@
       if (!isExp(battle.mode) && unit.isTrialRoomEnemy) {
         const range = shardRange(run.room, unit.trialBoss);
         const baseValue = range.min + Math.min(range.max - range.min, Math.floor(random() * (range.max - range.min + 1)));
-        const value = host.InventorySystem.scaleDrop(baseValue, random);
+        const value = host.InventorySystem.scaleDrop(baseValue, random, battle);
         const granted = Math.min(value, Number.MAX_SAFE_INTEGER - data.shards);
         data.shards += granted; run.shardsEarned += granted;
       } else continue;

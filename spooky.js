@@ -55,7 +55,7 @@
     if(a!==null&&(!object(a)||!receipt(a.id)||!integer(a.wave,1,50)||a.wave!==v.run.wave||!integer(a.startedAt)||!integer(a.killSequence)||!integer(a.killCoins)))return false;
     const p=v.pending;if(p===null)return true;
     if(!object(p)||!receipt(p.id)||!['kill','wave','loss','purchase','capsule'].includes(p.kind)||!Number.isSafeInteger(p.coinsDelta)||Math.abs(p.coinsDelta)>MAX||!Array.isArray(p.items)||!Array.isArray(p.cards)||!Array.isArray(p.costs)||p.items.length>3||p.cards.length>1||p.costs.length>1)return false;
-    if(!p.items.every(row=>object(row)&&integer(row.quantity,1,p.kind==='purchase'?MAX:4)&&[EQUIPMENT,'machete',...SHOP.map(s=>s.id)].includes(row.id)))return false;
+    if(!p.items.every(row=>object(row)&&integer(row.quantity,1,p.kind==='purchase'?MAX:Math.ceil(host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER))&&[EQUIPMENT,'machete',...SHOP.map(s=>s.id)].includes(row.id)))return false;
     if(!p.cards.every(row=>object(row)&&[...CAPSULE_POOL.map(row=>row[0]),'myers'].includes(row.cardId)&&Array.isArray(row.mutationIds)&&row.mutationIds.length<=2&&new Set(row.mutationIds).size===row.mutationIds.length&&row.mutationIds.every(id=>Object.hasOwn(host.MUTATION_BY_ID||{},id))))return false;
     if(!p.costs.every(row=>object(row)&&row.id===CAPSULE.id&&row.quantity===1))return false;
     if(p.nextRun!==null&&!validRun(p.nextRun))return false;
@@ -67,7 +67,7 @@
     if(p.kind==='capsule'&&!CAPSULE_POOL.some(row=>row[0]===p.cards[0].cardId))return false;
     if(p.kind==='kill'&&(p.items.length||p.cards.length||p.costs.length||p.nextRun!==null||p.completedRun||p.coinsDelta>Math.ceil(100*7*1.66*2*host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER)))return false;
     if(p.kind==='loss'&&(p.coinsDelta!==0||p.items.length||p.cards.length||p.costs.length||p.nextRun?.wave!==1||p.nextRun.choices.length||p.completedRun))return false;
-    if(p.kind==='wave'&&(p.costs.length||p.items.some(row=>![EQUIPMENT,'machete'].includes(row.id)||row.quantity!==1)||new Set(p.items.map(row=>row.id)).size!==p.items.length||p.cards.some(row=>row.cardId!=='myers')||p.completedRun!==(a.wave===50)||p.nextRun?.wave!==(a.wave===50?1:a.wave+1)||p.coinsDelta>Math.ceil(500*7*1.66*2*host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER)))return false;
+    if(p.kind==='wave'&&(p.costs.length||p.items.some(row=>![EQUIPMENT,'machete'].includes(row.id)||row.quantity>Math.ceil(host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER))||new Set(p.items.map(row=>row.id)).size!==p.items.length||p.cards.some(row=>row.cardId!=='myers')||p.completedRun!==(a.wave===50)||p.nextRun?.wave!==(a.wave===50?1:a.wave+1)||p.coinsDelta>Math.ceil(500*7*1.66*2*host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER)))return false;
     return v.coins+p.coinsDelta>=0;
   }
   let bridge={},data;
@@ -125,8 +125,8 @@
   }
   function enemyStats(wave,slot){const t=(waveOf(wave)-1)/49,s=t;return {hp:Math.round(BASE[slot][0]+(FINAL[slot][0]-BASE[slot][0])*s),atk:Math.round(BASE[slot][1]+(FINAL[slot][1]-BASE[slot][1])*s)};}
   function coinRange(wave,kill=false){const t=(waveOf(wave)-1)/49;return kill?{min:Math.round(1+19*t),max:Math.round(5+95*t)}:{min:Math.round(5+95*t),max:Math.round(20+480*t)};}
-  function coinMultiplier(choices=data.run.choices){return (1+modifiers(choices).coins)*(1+(host.EquipmentSystem?.bonuses().spookyCoins||0))*host.InventorySystem.getDropMultiplier();}
-  function scaledCoins(base,choices,random){const exact=Math.min(MAX,base*coinMultiplier(choices)*seasonalMultiplier()),whole=Math.floor(exact);return whole+(exact>whole&&unit(random)<exact-whole?1:0);}
+  function coinMultiplier(choices=data.run.choices,battle=null){return (1+modifiers(choices).coins)*(1+(host.EquipmentSystem?.bonuses().spookyCoins||0))*host.InventorySystem.getDropMultiplier(battle);}
+  function scaledCoins(base,choices,random,battle=null){const exact=Math.min(MAX,base*coinMultiplier(choices,battle)*seasonalMultiplier()),whole=Math.floor(exact);return whole+(exact>whole&&unit(random)<exact-whole?1:0);}
   function enemies(random=Math.random){
     const pool=[...POOL],bonus=1+modifiers().enemyStats;
     return Array.from({length:ENEMY_TEAM_SIZE},(_,slot)=>{const [id]=pool.splice(roll(0,pool.length-1,random),1),native=host.ALL_CARDS.find(c=>c.id===id);if(!native)throw Error('Thiếu thẻ Spooky: '+id);const stats=enemyStats(data.run.wave,slot);stats.hp=Math.round(stats.hp*bonus);stats.atk=Math.round(stats.atk*bonus);const card={...native,element:'Fire',stats:{...stats}};return {card,display:{name:card.name,image:card.image,...stats},hp:stats.hp,maxHp:stats.hp,atk:stats.atk,level:1,defeated:false,mutations:[],isSpookyEnemy:true};});
@@ -144,7 +144,7 @@
   function recordKill(battle,victim,random=Math.random){
     if(host.SandboxSystem?.active||battle?.mode!==MODE||!battle.spooky||battle.spooky.completed||!battle.enemyTeam.includes(victim)||(!victim.defeated&&victim.hp>0)||data.activeAttempt?.id!==battle.spooky.id)return 0;
     const seen=battle.spookySeen ||= new WeakSet();if(seen.has(victim))return 0;
-    if(data.pending)commitPending();const range=coinRange(battle.spooky.wave,true),coins=scaledCoins(roll(range.min,range.max,random),battle.spooky.choices,random);
+    if(data.pending)commitPending();const range=coinRange(battle.spooky.wave,true),coins=scaledCoins(roll(range.min,range.max,random),battle.spooky.choices,random,battle);
     const result=queue('kill',{attemptId:battle.spooky.id,coinsDelta:coins,summary:{kind:'kill',wave:battle.spooky.wave}});
     seen.add(victim);battle.spooky.killCoins=Math.min(MAX,battle.spooky.killCoins+result.coins);return result.coins;
   }
@@ -154,10 +154,10 @@
     if(won&&battle.enemyTeam.some(unit=>!unit.defeated&&unit.hp>0))return null;
     if(data.pending){const p=data.pending;if(p.attemptId!==run.id)throw Error('Giao dịch Spooky khác đang chờ lưu.');const kind=p.kind,result=commitPending();if(kind==='wave'||kind==='loss'){run.completed=true;notify();return result;}}
     if(data.activeAttempt?.id!==run.id)return null;
-    const completedRun=won&&run.wave===50,range=coinRange(run.wave),coins=won?scaledCoins(roll(range.min,range.max,random),run.choices,random):0;
+    const completedRun=won&&run.wave===50,range=coinRange(run.wave),coins=won?scaledCoins(roll(range.min,range.max,random),run.choices,random,battle):0;
     const items=[],cards=[];
     // Special-drop rolls belong only to a successful final-wave clear.
-    if(completedRun){const bonus=seasonalMultiplier();if(unit(random)<.05*bonus)items.push({id:EQUIPMENT,quantity:1});if(unit(random)<.01*bonus)cards.push({cardId:'myers',mutationIds:mutationIds()});if(unit(random)<.01*bonus)items.push({id:'machete',quantity:1});}
+    if(completedRun){const bonus=seasonalMultiplier();if(unit(random)<.05*bonus)items.push({id:EQUIPMENT,quantity:host.InventorySystem.scaleDrop(1,random,battle)});if(unit(random)<.01*bonus)cards.push({cardId:'myers',mutationIds:mutationIds()});if(unit(random)<.01*bonus)items.push({id:'machete',quantity:host.InventorySystem.scaleDrop(1,random,battle)});}
     const nextRun=!won||completedRun?freshRun(data.run.season):{...data.run,wave:run.wave+1};
     const result=queue(won?'wave':'loss',{attemptId:run.id,coinsDelta:coins,items,cards,completedRun,nextRun,summary:{won,wave:run.wave,killCoins:data.activeAttempt.killCoins,nextWave:nextRun.wave}});
     run.completed=true;notify();return result;

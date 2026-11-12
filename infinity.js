@@ -79,7 +79,7 @@
  const editable=()=>active&&!busy&&!loading&&!combat;
  const usedIds=()=>new Set(selections.filter(Boolean).map(slot=>String(slot.cardId)));
  const selectedIndex=id=>selections.findIndex(slot=>String(slot?.cardId)===String(id));
- function cards(){return (bridge.cards?.()||[]).filter(card=>host.CategorySystem.has(card,week().category));}
+ function cards(){return bridge.cards?.()||[];}
  function variants(id){return bridge.variants?.(id)||[];}
  function validTeam(){
   if(selections.length!==4||loading)return false;
@@ -112,7 +112,7 @@
    try{
     while(cursor<source.length&&worked<8&&host.performance.now()<until){
      const card=source[cursor++],owned=variants(card.id).filter(v=>v.count>0),views=[];
-     for(const variant of owned){const stats=bridge.describe(card,variant);views.push({variant,stats});}
+     for(const variant of owned){const stats={...bridge.describe(card,variant)};if(host.CategorySystem.has(card,week().category)){stats.hp*=3;stats.atk*=3;}views.push({variant,stats});}
      if(views.length){
       const row={card,id:String(card.id),search:String(card.name+' '+(card.category||[]).join(' ')).toLocaleLowerCase(),views,byVariant:new Map(views.map(view=>[view.variant.key,view]))};
       row.bestAtk=views.reduce((a,b)=>b.stats.atk>a.stats.atk?b:a);row.bestHp=views.reduce((a,b)=>b.stats.hp>a.stats.hp?b:a);
@@ -152,7 +152,7 @@
  }
  function cardContents(row,view,large=false){
   const fragment=host.document.createDocumentFragment(),art=artwork(row.card,large);art.append(elementBadge(row.card));
-  const name=make('strong','infinity-card-name',row.card.name),meta=make('span','infinity-card-meta'),mutation=make('span','infinity-variant-badge',labelFor(view.variant));mutation.title=labelFor(view.variant);
+  const name=make('strong','infinity-card-name',row.card.name),meta=make('span','infinity-card-meta'),mutation=make('span','infinity-variant-badge',labelFor(view.variant));mutation.title=labelFor(view.variant);if(host.CategorySystem.has(row.card,week().category))meta.append(make('span','infinity-weekly-bonus','WEEKLY ×3'));
   meta.append(make('span','infinity-card-level','Lvl '+number(view.stats.level)),mutation);
   fragment.append(art,name,meta,statPair(view.stats));return fragment;
  }
@@ -186,9 +186,9 @@
  function renderFilterMenus(){
   const allowed=new Set(rows.flatMap(row=>row.card.category||[]));
   menu('infinityElementOptions',[['','All Elements'],...host.ElementSystem.TYPES.map(type=>[type,type])],elementFilter,'infinityElement');
-  menu('infinityCategoryOptions',[['','All '+week().category+' Cards'],...host.CategorySystem.TYPES.filter(type=>type!==week().category&&allowed.has(type)).map(type=>[type,type])],categoryFilter,'infinityCategory');
+  menu('infinityCategoryOptions',[['','All Categories'],...host.CategorySystem.TYPES.filter(type=>allowed.has(type)).map(type=>[type,type])],categoryFilter,'infinityCategory');
   menu('infinitySortOptions',SORTS,sortMode,'infinitySort');
-  text('infinityElementLabel',elementFilter||'All Elements');text('infinityCategoryLabel',categoryFilter||'All '+week().category+' Cards');text('infinitySortLabel',SORTS.find(([key])=>key===sortMode)[1]);
+  text('infinityElementLabel',elementFilter||'All Elements');text('infinityCategoryLabel',categoryFilter||'All Categories');text('infinitySortLabel',SORTS.find(([key])=>key===sortMode)[1]);
  }
  function renderPicker(){
   const grid=el('infinityCardGrid');if(!grid)return;
@@ -207,16 +207,16 @@
    if(inUse)pick.append(make('span','infinity-in-use','IN USE · SLOT '+String(selectedIndex(row.id)+1).padStart(2,'0')));
    const foot=make('div','infinity-picker-card-foot'),variantsButton=button('···','infinity-card-more');variantsButton.dataset.infinityVariants=row.id;variantsButton.setAttribute('aria-label','Choose owned mutation for '+row.card.name);variantsButton.title='Choose owned mutation';foot.append(make('small','',row.views.length+' variant'+(row.views.length===1?'':'s')),variantsButton);tile.append(pick,foot);fragment.append(tile);
   }
-  if(!entries.length)fragment.append(make('div','infinity-grid-message',eligibleCount?'No weekly cards match these filters. Try another search or clear the filters.':'No unlocked '+week().category+' cards yet. Roll eligible cards to build your team.'));
+  if(!entries.length)fragment.append(make('div','infinity-grid-message',eligibleCount?'No owned cards match these filters. Try another search or clear the filters.':'No unlocked cards yet. Roll cards to build your team.'));
   }
   grid.replaceChildren(fragment);
-  text('infinityWeeklyCategory','Active Weekly Category: '+week().category);text('infinityEligibleCount',loading?'Preparing '+eligibleCount+' eligible cards…':'Showing '+entries.length+' of '+eligibleCount+' eligible cards');
+  text('infinityWeeklyCategory','Weekly x3 HP/ATK: '+week().category);text('infinityEligibleCount',loading?'Preparing '+eligibleCount+' owned cards…':'Showing '+entries.length+' of '+eligibleCount+' owned cards');
   text('infinityPageLabel','Page '+(page+1)+' / '+pages);el('infinityPagePrevious').disabled=loading||page===0;el('infinityPageNext').disabled=loading||page>=pages-1;
  }
  function renderSetup(){
   if(!active||combat)return;renderSlots();renderPicker();
   const count=selections.filter(Boolean).length,ready=validTeam();text('infinityTeamCount',count+' / 4 selected');
-  text('infinityTeamHint',loading?'Preparing combat stats…':eligibleCount<4?'You need 4 different '+week().category+' cards. '+eligibleCount+' unlocked.':ready?'Lineup ready. Four unique cards, one weekly Category.':'Picking SLOT '+String(activeSlot+1).padStart(2,'0')+' · Choose four different cards.');
+  text('infinityTeamHint',loading?'Preparing combat stats…':eligibleCount<4?'You need 4 different owned cards. '+eligibleCount+' unlocked.':ready?'Lineup ready. Featured-category cards receive x3 HP/ATK.':'Picking SLOT '+String(activeSlot+1).padStart(2,'0')+' · Choose four different cards.');
   if(el('infinityStart')){el('infinityStart').hidden=false;el('infinityStart').disabled=busy||blocked||!ready;}
   el('infinityClearTeam').disabled=busy||loading||!count;
  }
@@ -224,7 +224,7 @@
  function chooseCard(id,key){
   if(!editable())return false;id=String(id);
   if(usedIds().has(id)){toast('This card is already in your lineup!');return false;}
-  const row=rowById.get(id),view=key?row?.byVariant.get(key):row&&viewFor(row);if(!view||!host.CategorySystem.has(row.card,week().category))return false;
+  const row=rowById.get(id),view=key?row?.byVariant.get(key):row&&viewFor(row);if(!view)return false;
   if(!variants(id).some(v=>v.key===view.variant.key&&v.count>0)){toast('This card variant is no longer owned.');refreshCollection(true);return false;}
   selections[activeSlot]={cardId:id,variantKey:view.variant.key,copy:0};pickedSlot=activeSlot;activeSlot=nextEmpty(activeSlot);focusSlotAfterRender=true;scheduleSetup();return true;
  }
@@ -271,7 +271,7 @@
   if(node.dataset.infinitySort!==undefined){sortMode=node.dataset.infinitySort;filtered=true;}
   if(filtered){node.closest('details').open=false;page=0;renderFilterMenus();scheduleSetup();}
  }
- function renderClock(){host.InfinityViewSystem.clock();const w=week(),remaining=Math.max(0,w.endMs-host.InfinityCloudSystem.now()),days=Math.floor(remaining/R.DAY),hours=Math.floor(remaining/3600000)%24,minutes=Math.floor(remaining/60000)%60;const label=`${w.id} · Category: ${w.category} · Enemy Element: ${w.element} · Reset: ${days}d ${hours}h ${minutes}m (Monday 00:00 UTC)`;if(label!==clockText){text('infinityRotation',label);clockText=label;}if(active&&runWeek&&runWeek.id!==w.id&&!combat?.battle.finished)end('Weekly rotation ended. Start a new run with this week’s Category.');if(active&&!combat&&collectionWeek&&collectionWeek!==w.id){query='';elementFilter='';categoryFilter='';el('infinitySearch').value='';refreshCollection(false);}}
+ function renderClock(){host.InfinityViewSystem.clock();const w=week(),remaining=Math.max(0,w.endMs-host.InfinityCloudSystem.now()),days=Math.floor(remaining/R.DAY),hours=Math.floor(remaining/3600000)%24,minutes=Math.floor(remaining/60000)%60;const label=`${w.id} · Category: ${w.category} · Enemy Element: ${w.element} · Reset: ${days}d ${hours}h ${minutes}m (Monday 00:00 UTC)`;if(label!==clockText){text('infinityRotation',label);clockText=label;}if(active&&runWeek&&runWeek.id!==w.id&&!combat?.battle.finished)end('Weekly rotation ended. Start a new run for the new weekly bonus.');if(active&&!combat&&collectionWeek&&collectionWeek!==w.id){query='';elementFilter='';categoryFilter='';el('infinitySearch').value='';refreshCollection(false);}}
  function battleInfo(){return {week:runWeek,orbs:sessionOrbs,best:data.best[runWeek?.id]||0,message:runMessage};}
  function renderBattle(){if(combat)host.InfinityViewSystem.render(battleInfo());}
  function stopTimer(){host.clearTimeout(timer);timer=null;}
@@ -284,7 +284,7 @@
  function rewardWave(wave,battle){
   if(runWeek.id!==week().id)throw Error('Weekly rotation ended.');const receipt=runId+'_'+wave;
   if(data.lastReceipt===receipt)return;
-  const range=R.orbRange(wave),orbs=range.min+Math.floor(Math.random()*(range.max-range.min+1));
+  const range=R.orbRange(wave),orbs=host.InventorySystem.scaleDrop(range.min+Math.floor(Math.random()*(range.max-range.min+1)),Math.random,battle);
   if(orbs>MAX-host.InventorySystem.quantity('star_orb'))throw Error('Star Orb storage is full.');
   data.pending={weekId:runWeek.id,wave,orbs,receipt};if(!persist()){data.pending=null;throw Error('Unable to save the wave reward.');}
   if(!commitReward()){blocked=true;throw Error('Storage unavailable. Reload to recover the pending Star Orbs.');}
@@ -301,7 +301,7 @@
  async function start(){
   if(!editable()||blocked||!validTeam()||host.GameStartup?.failed)return false;
   settleLocalWeek();if(blocked)return false;
-  busy=true;cancelSetupWork();closeVariants(false);renderSetup();try{runWeek=week();const players=bridge.units(selections);if(players.length!==4||new Set(players.map(u=>String(u.card.id))).size!==4||players.some(u=>!host.CategorySystem.has(u,runWeek.category)))throw Error('Choose four different cards matching '+runWeek.category+'.');runId=U.token();sessionOrbs=0;runMessage='';
+  busy=true;cancelSetupWork();closeVariants(false);renderSetup();try{runWeek=week();const players=bridge.units(selections);if(players.length!==4||new Set(players.map(u=>String(u.card.id))).size!==4)throw Error('Choose four different owned cards.');runId=U.token();sessionOrbs=0;runMessage='';
    combat=host.InfinityCombat.create(players,runWeek,{onWave:rewardWave,onUnitDefeated:bridge.onUnitDefeated,isWeatherActive:bridge.isWeatherActive,addWeather:bridge.addWeather,onLog:host.InfinityViewSystem.log,onFloatingText:host.InfinityViewSystem.float,onRender:()=>host.InfinityViewSystem.render(),onTurn:host.InfinityViewSystem.turn,onAttack:host.InfinityViewSystem.attack,prepare:(bs,engine)=>{bs.startedAt=Date.now();bridge.prepare?.(bs);host.InfinityViewSystem.mount(bs,engine,battleInfo());}});
    renderBattle();schedule();return true;
   }catch(error){if(!combat)host.InfinityViewSystem.release();text('infinityStatus',error.message);return false;}finally{busy=false;if(!combat)scheduleSetup();}

@@ -49,7 +49,7 @@
   const summary={won:Boolean(result.won),beans:0,card:null,secretPortal:false,upgraded:false,remaining:portal.attempts,mvp:Boolean(result.mvp),guest:!attempt.host,consumed:Boolean(attempt.consumedOnEntry),consumedOnEntry:Boolean(attempt.consumedOnEntry)};
   const items=inventory();let main=null;
   if(result.won){
-   const range=R.beanRange(portal.tier),base=R.integer(range.min,range.max,random),factor=(attempt.host?1:.5)*(result.mvp?3:1),exact=base*factor;
+   const range=R.beanRange(portal.tier),base=R.integer(range.min,range.max,random),factor=(attempt.host?1:.5)*(result.mvp?3:1)*host.InventorySystem.getDropMultiplier(result.battle),exact=base*factor;
    summary.beans=Math.floor(exact)+(random()<exact%1?1:0);
    items.items.senzu_bean.quantity=Math.min(Number.MAX_SAFE_INTEGER,items.items.senzu_bean.quantity+summary.beans);
    if(portal.tier==='secret'&&random()<(result.party ? .10 : 1)){

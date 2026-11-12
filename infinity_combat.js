@@ -16,6 +16,7 @@
  function create(players,week,options={}){
   const rng=options.random||Math.random,logs=[],log=(message,tone='')=>{logs.push(String(message));if(logs.length>100)logs.shift();options.onLog?.(message,tone);};
   const engine=host.PassiveSystem.createIsolated({random:rng,getCardById:id=>host.EnemyStatsSystem.card(host.ALL_CARDS.find(c=>c.id===id)),isWeatherActive:options.isWeatherActive||(()=>false),appendBattleLog:log,showBattleFloatingText:options.onFloatingText,renderBattleStats:options.onRender,onUnitDefeated:options.onUnitDefeated,addRandomCommonUncommonWeather:options.addWeather});
+  for(const unit of players){if(host.CategorySystem.has(unit,week.category)){unit.hp=Math.round(unit.hp*3);unit.maxHp=Math.round(unit.maxHp*3);unit.atk=Math.round(unit.atk*3);Object.assign(unit.display,{hp:unit.maxHp,atk:unit.atk});unit.infinityFeatured=true;}}
   const battle={mode:'infinity',playerTeam:players,enemyTeam:enemies(1,week,rng),playerIndex:0,enemyIndex:0,turn:'player',finished:false,isBattling:true,championChoices:{aqua:options.aqua||'hp'},infinity:{weekId:week.id,element:week.element,wave:1,highest:0}};
   options.prepare?.(battle,engine);engine.beginBattle(battle);
   function settle(){

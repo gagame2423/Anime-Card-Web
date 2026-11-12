@@ -20,13 +20,13 @@
   const MAX_SLASHES = 16;
 
   let host = { ...initialHost };
-  const combatStats = window.createCombatStats();
+  const combatStats = window.createCombatStats({allow:(u,stat,delta,key)=>sins?.allowStat(u,stat,delta,key)!==false});
   const phases=window.createTurnPhases();
   let passiveLogSequence = 0;
   const passiveScopes = new WeakMap();
-  let phaseUnit = null, activeCombat = null, tower200 = null, statusSource = null, ragna = null, enten = null, mourner = null, akatsuki = null, titan = null, baller = null;
+  let phaseUnit = null, activeCombat = null, tower200 = null, statusSource = null, ragna = null, enten = null, mourner = null, akatsuki = null, titan = null, baller = null, sins = null;
   const compositeChains = new WeakSet();
-  const SHARED_PASSIVE_FIELDS = new Set(('attackCount ownAttackCount ownTurnCount baseAtkAtBattleStart displayAtkBonusPct displayHpBonusPct flatAtkBonusDisplay atkBonusPct maxHpBonusPct damageReductionPct critChanceBonus critDamageBonus stunTurns freezeTurns incomingImmuneTurns weakenAttackTurns weakenAttackPct snailTurns burn bleed shield shieldKind invincibleTurns passiveImmune noDodgeAgainstUnit incomingVulnerabilityTurns incomingVulnerabilityPct passiveSuppressionTurns passiveSuppressedUntilDeath suppressionAppliedTurn activeTags lastCrit lastDodge lastPassiveTrigger lastActionLabel lastFacingEnemy initialLineupIndex brotherSoul grimoireShield yunoShields shibuyaHypnosis hindredTurns hindredAppliedTurn spookyFrogTurns spookyFrogAppliedTurn spookyStolenPassives successfulHits followUpHits akatsukiPuppets akatsukiPaper akatsukiPaperOwner akatsukiPoison akatsukiVoodoo akatsukiMiss akatsukiHypnosis akatsukiHealBlock akatsukiHealApplied akatsukiDeathHandled lastAttacker titanShieldCapacity titanStunPenalty').split(' '));
+  const SHARED_PASSIVE_FIELDS = new Set(('attackCount ownAttackCount ownTurnCount baseAtkAtBattleStart displayAtkBonusPct displayHpBonusPct flatAtkBonusDisplay atkBonusPct maxHpBonusPct damageReductionPct critChanceBonus critDamageBonus stunTurns freezeTurns incomingImmuneTurns weakenAttackTurns weakenAttackPct snailTurns burn bleed shield shieldKind invincibleTurns passiveImmune noDodgeAgainstUnit incomingVulnerabilityTurns incomingVulnerabilityPct passiveSuppressionTurns passiveSuppressedUntilDeath suppressionAppliedTurn activeTags lastCrit lastDodge lastPassiveTrigger lastActionLabel lastFacingEnemy initialLineupIndex brotherSoul grimoireShield yunoShields shibuyaHypnosis hindredTurns hindredAppliedTurn spookyFrogTurns spookyFrogAppliedTurn spookyStolenPassives successfulHits followUpHits sinsHypnosisTurns sinsHypnosisApplied sinsHypnosisOwner akatsukiPuppets akatsukiPaper akatsukiPaperOwner akatsukiPoison akatsukiVoodoo akatsukiMiss akatsukiHypnosis akatsukiHealBlock akatsukiHealApplied akatsukiDeathHandled lastAttacker titanShieldCapacity titanStunPenalty').split(' '));
 
   // Passive definitions are derived directly from the loaded cards.js database.
   // No duplicate passive descriptions or balance values are maintained here.
@@ -200,7 +200,9 @@
     unit.cardState = unit.passiveState;
     const view=passiveScopes.get(unit)?.copy?.view || unit.passiveState;
     if(ragna?.immune(unit,'freezeTurns'))view.freezeTurns=0;
-    return tower200?tower200.observe(activeCombat,unit,view):view;
+    const observed=sins?.observe(activeCombat,unit,tower200?tower200.observe(activeCombat,unit,view):view)||(tower200?tower200.observe(activeCombat,unit,view):view);
+    if(view===unit.passiveState&&sins?.blocksExternal(unit)){unit.passiveState=observed;unit.cardState=observed;}
+    return observed;
   }
 
   function ensureCardState(unit) {
@@ -292,7 +294,7 @@
   }
 
 
-  const companions=window.createCompanionRules({team:teamOf,alive:isAlive,has:hasPassive,created(bs,owner){window.QuestSystem?.trackCombat('summon',bs,owner);},revived:recordRevival,inherit(owner,unit,sources){window.RelicSystem.inherit(owner,unit,sources);combatStats.reset(unit);ensureRuntime(unit).baseAtkAtBattleStart=unit.atk;}});
+  const companions=window.createCompanionRules({team:teamOf,alive:isAlive,has:hasPassive,created(bs,owner,unit){sins?.created(bs,owner,unit);window.QuestSystem?.trackCombat('summon',bs,owner);},revived:recordRevival,inherit(owner,unit,sources){window.RelicSystem.inherit(owner,unit,sources);combatStats.reset(unit);ensureRuntime(unit).baseAtkAtBattleStart=unit.atk;}});
 
   // Champion hooks are keyed independently from legacy card/passive switches.
   const champions = (() => {
@@ -341,7 +343,7 @@
       if((options.isFollowUp||options.fateSupport||options.requiemSupport||options.followOwner)&&(!spooky.canFollow(source)||!spooky.canFollow(options.followOwner)))return {damage:0,killed:false,hit:false,skipped:true,hindered:true};
       if (!isAlive(target) || !(damage > 0)) return { damage: 0, killed: false };
       recordFollowUp(bs,source,options);
-      spooky.attackTarget(bs,source,target);if(attackMisses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,specialAttack:options.specialAttack!==false,fearChecked:true};
+      markAttackTarget(bs,source,target,options);if(attackMisses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,specialAttack:options.specialAttack!==false,fearChecked:true};
       const amount = options.akatsukiRawDamage?Math.max(0,damage):window.ElementSystem.damage(source, target, Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1) * yuno.offensive(source,target))));
       if (raidSecrets.block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       if (options.passiveAttack!==false && !options.championCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) {
@@ -1201,7 +1203,7 @@
   });
 
   const yuno = window.createYunoSkills({
-    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
+    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,shieldAmount:(u,n)=>sins?sins.shieldAmount(activeCombat,u,n):n,writeShield:(u,fn)=>sins?sins.writeShield(u,fn):fn(),onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
     all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,enemyTeam:enemyTeamOf,
     atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,log:safeLog,
     indices:ensureCurrentIndices,hit:(...args)=>champions.hit(...args)
@@ -1317,7 +1319,7 @@
     disable(u,turns,bs,source){if(sourcePassiveAllowed(u,source)){const r=ensureRuntime(u);r.passiveSuppressionTurns=Math.max(r.passiveSuppressionTurns||0,turns);r.suppressionAppliedTurn=bs.turnCount;}},
     assist(bs,u,target,amount,owner){return primarySkillHit(bs,u,target,amount,{isFollowUp:true,followOwner:owner,linkedAttack:true,specialAttack:false});},
     reflect(bs,u,target,amount){const result=damageUnit(bs,u,target,amount,{passiveAttack:true,akatsukiReflect:true,akatsukiRawDamage:true,grimoireReflection:true,elementApplied:true,yunoDamageApplied:true,dodgeChecked:true});if(result.killed){onKill(bs,u,target);onTeammateDeath(bs,target);}return result;},
-    poisonDamage(bs,u,target,amount){if(!isAlive(target))return;const before=target.hp;target.hp=Math.max(1,target.hp-Math.max(0,Math.floor(amount)));recordBattleDamage(bs,u,target,before);akatsuki.damaged(bs,target,u,before-target.hp,{dot:true});refreshUnitDisplay(target);},
+    poisonDamage(bs,u,target,amount){if(!isAlive(target))return;const before=target.hp;target.hp=Math.max(1,target.hp-Math.max(0,Math.floor(amount*sins.dotFactor(bs))));recordBattleDamage(bs,u,target,before);akatsuki.damaged(bs,target,u,before-target.hp,{dot:true});refreshUnitDisplay(target);},
     forceDeath(bs,source,target){if(!isAlive(target))return;const before=target.hp;target.hp=0;target.defeated=true;recordBattleDamage(bs,source,target,before);champions.death(bs,target,source);if(!isAlive(target)){onKill(bs,source,target);onTeammateDeath(bs,target);}refreshUnitDisplay(target);},
     seal(bs,source,target){if(!isAlive(target))return;target.akatsukiSealed=true;target.championPermanentDeath=true;const before=target.hp;target.hp=0;target.defeated=true;recordBattleDamage(bs,source,target,before);champions.death(bs,target,source);onKill(bs,source,target);onTeammateDeath(bs,target);ensureCurrentIndices(bs);},
     summon(bs,owner,kind,hpScale,atkScale,label){if(!canCreateCompanion(owner)||!companions.canSpawn(bs,owner,kind))return null;
@@ -1353,18 +1355,40 @@
       recordBattleDamage(bs,source,target,before);champions.death(bs,target,source);onKill(bs,source,target);onTeammateDeath(bs,target);refreshUnitDisplay(target);return true;
     }
   });
+  sins=window.createSinsSkills({
+    has:hasPassive,alive:isAlive,all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,runtime:ensureRuntime,passiveRuntimeFor,
+    allowed:sourcePassiveAllowed,category:(u,key)=>window.CategorySystem.has(u,key),atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,
+    ownTurn:phases.own,ownTurns:phases.ownTurns,attackToken:phases.attackToken,generated:isGeneratedUnit,uncloneable:champions.uncloneable,
+    percent:(u,stat,key,pct,heal=false)=>{const delta=combatStats.set(u,stat,key,pct,heal&&!isBleeding(u));refreshUnitDisplay(u);return delta;},
+    add:(u,stat,pct,heal=false)=>combatStats.add(u,stat,pct,heal&&!isBleeding(u)),
+    clearAtkDebuffs(u){const record=combatStats.ensure(u);record.percent.atk=Math.max(0,record.percent.atk);record.flat.atk=Math.max(0,record.flat.atk);for(const [key,n]of record.named.atk)if(n<0)record.named.atk.delete(key);},
+    buffChoices(u){const r=combatStats.ensure(u),choices=[];for(const stat of ['hp','atk']){if(r.percent[stat]>0)choices.push({stat,value:r.percent[stat]});for(const [key,value]of r.named[stat])if(value>0)choices.push({stat,key,value});}for(const field of ['atkBonusPct','critChanceBonus','critDamageBonus','damageReductionPct','postReviveDodgeBonus'])if(ensureRuntime(u)[field]>0)choices.push({field,value:ensureRuntime(u)[field]});return choices;},
+    reduceBuff(u,buff,n){if(buff.stat){if(buff.key)combatStats.set(u,buff.stat,buff.key,buff.value-n);else combatStats.add(u,buff.stat,-n);}else ensureRuntime(u)[buff.field]=Math.max(0,ensureRuntime(u)[buff.field]-n);refreshUnitDisplay(u);return true;},
+    shield:(u,n)=>yuno.addLayer(u,n),status:setStatus,dot:addDot,breakShield:(bs,source,u)=>{absorbShieldDamage(u,ensureRuntime(u).shield,bs,source);},revived:recordRevival,
+    take(bs,source,u,n,meta){const result=damageUnit(bs,source,u,n,meta);if(result.killed){onKill(bs,source,u);onTeammateDeath(bs,u);}return result;},
+    canClone:(bs,u)=>companions.canSpawn(bs,u,'diane'),
+    clone(bs,owner,target){
+      if(!companions.canSpawn(bs,owner,'diane')||champions.uncloneable(target))return null;
+      const hp=Math.max(1,Math.round(owner.maxHp*.50)),atk=Math.max(1,Math.round(computeWeakenedAtk(owner)*.50));
+      const card={...target.card,stats:{hp,atk}},unit={card,display:{name:card.name+' · Envy Clone',image:card.image,hp,atk},hp,maxHp:hp,atk,level:owner.level,mutations:[...(owner.mutations||[])],isClone:true,isSummoned:true,defeated:false};
+      ensureRuntime(unit);if(!companions.admit(bs,owner,unit,'diane'))return null;
+      const line=teamOf(bs,owner);ensureRuntime(unit).initialLineupIndex=line.length;line.push(unit);runOnEntry(bs,unit);champions.entry(bs,unit);refreshUnitDisplay(unit);return unit;
+    }
+  });
+  function markAttackTarget(bs,u,target,meta={}){sins?.target(bs,u,target,meta);spooky.attackTarget(bs,u,target);}
   function attackMisses(bs,u,options={}){return spooky.misses(bs,u,options)||akatsuki.misses(bs,u,options);}
   const revivalReceipts=new WeakMap(),fatalReceipts=new WeakMap();
   function recordRevival(bs,u){const r=ensureRuntime(u);if(r.champion)r.champion.akatsukiPermanentHandled=false;r.akatsukiDeathHandled=false;revivalReceipts.set(u,(revivalReceipts.get(u)||0)+1);window.QuestSystem?.trackCombat('summon',bs,u);}
   function recordFatal(bs,u){fatalReceipts.set(u,(fatalReceipts.get(u)||0)+1);window.QuestSystem?.trackCombat('fatal',bs,u);}
   function primarySkillHit(bs,source,target,amount,options={}){
+    sins?.prepare(bs,source,target,options);
     baller?.attacking(bs,source,target,options);
-    spooky.attackTarget(bs,source,target);if(attackMisses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,specialAttack:options.specialAttack!==false,fearChecked:true};
+    markAttackTarget(bs,source,target,options);if(attackMisses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,specialAttack:options.specialAttack!==false,fearChecked:true};
     if(options.isFollowUp&&!spooky.canFollow(source))return {hit:false,damage:0,killed:false,skipped:true};
     if(!options.ignoreDodge&&Math.random()<getDodgeChance(target,source,bs,options)*(options.enemyDodgeMultiplier??1)){onDodge(bs,target,source,{incomingDamage:amount});return {hit:false,damage:0,killed:false,dodged:true};}
     const stats=getCritStats(source),critical=!options.noCritical&&Math.random()<stats.chance;
     const result=champions.hit(bs,source,target,amount*(Number(options.damageMultiplier)||1)*(critical?stats.multiplier:1),{...options,passiveAttack:Boolean(options.passiveAttack),dodgeChecked:true});
-    const outcome={...result,hit:!result.dodged&&!result.reflected&&!result.skipped,critical};dragon.critical(bs,source,target,outcome,options);ragna.critical(bs,source,target,outcome);return outcome;
+    const outcome={...result,hit:!result.dodged&&!result.reflected&&!result.skipped,critical};dragon.critical(bs,source,target,outcome,options);ragna.critical(bs,source,target,outcome);sins?.after(bs,source,target,outcome,options);return outcome;
   }
   function recordFollowUp(battle,source,meta={}){
     if(!source||meta.questFollowTracked||!(meta.isFollowUp||meta.fateSupport||meta.requiemSupport))return;
@@ -1468,6 +1492,7 @@
 
   function heal(unit, amount, reason = '', state = null, source = null) {
     if (!unit || !isAlive(unit)) return 0;
+    if(sins?.blocksExternal(unit)&&source!==unit)return 0;
     if(akatsuki.interceptHeal(state||activeCombat,unit,Math.max(0,Number(amount)||0)))return 0;
     if (isBleeding(unit)) {
       if (Number(amount) > 0) { safeLog(`[ANTI-HEAL] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} cannot heal while BLEED is active${reason ? ` • ${reason}` : ''}.`, 'debuff'); host.showBattleFloatingText?.(unit, '🩸 HEAL BLOCKED', 'debuff'); }
@@ -1531,7 +1556,7 @@
   }
 
   function setStatus(unit, key, turns, source = null) {
-    if(baller?.immune(unit,key))return false;
+    if(baller?.immune(unit,key)||sins?.immune(unit,key))return false;
     if (!unit || ragna.immune(unit,key) || tower200.blocked(activeCombat,unit,key) || shibuya.immuneStatus(unit,key) || (source&&hasPassive(unit,'hanami')&&ensureRuntime(unit).shield>0) || mourner.status(activeCombat,unit,key)) return;
     const runtime = ensureRuntime(unit);
     if (key === 'stunTurns' && questSkills.isMadara(unit) && Math.random() < .5) { safeLog('[PASSIVE] Divine Steed resisted Stun.', 'dodge'); return; }
@@ -1550,6 +1575,7 @@
       host.showBattleFloatingText?.(unit, `${label} ${runtime[key]}t${source ? ` • ${sourceName}` : ''}`, 'debuff');
       safeLog(`[Debuff] ${unit.display?.name || cardOf(unit)?.name || 'Target'} gained ${label} for ${runtime[key]} turns${source ? ` from ${sourceName}` : ''}.`, 'debuff');
     }
+    return runtime[key]>=safeTurns;
   }
 
   function addDot(unit, kind, turns, damagePerTurn, source, options = {}) {
@@ -1621,6 +1647,7 @@
     let chance = (champions.id(attacker) === 'sunny' ? .33 : BASE_CRIT_CHANCE) + (Number(runtime.critChanceBonus) || 0);
     let multiplier = BASE_CRIT_MULTIPLIER + (Number(runtime.critDamageBonus) || 0);
     const relicCrit=relic.crit(attacker);chance+=relicCrit.chance;multiplier+=relicCrit.damage;
+    const sinsCrit=sins.crit(activeCombat,attacker);chance+=sinsCrit.chance;multiplier+=sinsCrit.damage;
     const fateCrit=fate.crit(activeCombat,attacker),shibuyaCrit=shibuya.crit(attacker);chance+=fateCrit.chance+shibuyaCrit.chance+dragon.crit(activeCombat,attacker);multiplier+=fateCrit.multiplier+shibuyaCrit.multiplier;
     if (runtime.nextAttackCritGuaranteed) chance = 1;
     if (runtime.kuugaForm === 'blue') chance += 0.20;
@@ -1651,7 +1678,7 @@
       default: break;
     }
     chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit), questSkills.isMadara(unit) ? .10 : 0, grimoire.dodgeChance(unit),yuno.dodgeChance(unit),fate.dodgeChance(unit),spooky.dodgeChance(unit),ragna.dodgeChance(unit),akatsuki.dodgeChance(unit));
-    chance += relic.dodge(unit,chance)+enten.dodgeBonus(unit);
+    chance += relic.dodge(unit,chance)+enten.dodgeBonus(unit)+sins.dodge(unit);
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0) + spooky.eventBonus(activeCombat,unit,'dodge');
     if (getEffectivePassiveCardId(unit) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0 || runtime.noDodgeAgainstUnit) chance = 0;
@@ -1731,7 +1758,7 @@
       default: break;
     }
     chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target), questSkills.isMadara(target) ? .10 : 0, grimoire.dodgeChance(target),yuno.dodgeChance(target),fate.dodgeChance(target),spooky.dodgeChance(target),ragna.dodgeChance(target),akatsuki.dodgeChance(target));
-    chance += relic.dodge(target,chance)+enten.dodgeBonus(target);
+    chance += relic.dodge(target,chance)+enten.dodgeBonus(target)+sins.dodge(target);
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0) + spooky.eventBonus(battleState,target,'dodge');
     if (getEffectivePassiveCardId(target) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0) chance = 0;
@@ -1755,13 +1782,16 @@
       const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
       const remaining = [];
       for (const effect of list) {
-        const dmg = Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : tower200.dotFactor(battleState,effect?.source,kind))) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)*ragna.dotFactor(unit,kind)*mourner.incoming(unit)*mourner.outgoing(effect?.source)));
+        const dmg = Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : tower200.dotFactor(battleState,effect?.source,kind))) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)*ragna.dotFactor(unit,kind)*mourner.incoming(unit)*mourner.outgoing(effect?.source)*sins.dotFactor(battleState)*(1-sins.reduction(unit))));
         if (dmg > 0 && isAlive(unit)) {
           const before = unit.hp;
           let absorbed = absorbShieldDamage(unit, dmg, battleState, effect.source);
           absorbed=baller.redirect(battleState,effect.source,unit,absorbed,{dot:true});
-          const marcoPending = absorbed > 0 && before - absorbed < unit.maxHp * .10 && raidSecrets.canRescue(battleState, unit);
-          const prevented = !marcoPending && absorbed >= before && champions.fatal(battleState, unit,effect.source);
+          const execute=kind==='burn'&&effect.uncleansable&&absorbed>=before&&sins.blackExecute(battleState,effect.source);
+          if(execute)unit.championPermanentDeath=true;
+          if(!execute&&sins.protect(battleState,unit,effect.source,absorbed,{dot:true}))absorbed=0;
+          const marcoPending = !execute&&absorbed > 0 && before - absorbed < unit.maxHp * .10 && raidSecrets.canRescue(battleState, unit);
+          const prevented = !execute&&!marcoPending && absorbed >= before && (sins.fatal(battleState,unit)||champions.fatal(battleState, unit,effect.source));
           const dummy=window.TrainingDummySystem?.isTarget(battleState,unit);
           if (!prevented&&!dummy) unit.hp = Math.max(marcoPending ? 1 : 0, unit.hp - absorbed);
           const actualDamage = dummy?window.TrainingDummySystem.hit(battleState,effect.source,unit,absorbed):Math.max(0, before - unit.hp);
@@ -1918,7 +1948,7 @@
   }
 
   function deferFatality(battleState, target) {
-    return Boolean(baller?.present(battleState)||titan.hasLife(target)||akatsuki.hasLife(target)||akatsuki.paperReduction(target)>0||mourner.incoming(target)!==1||hasPassive(target,'pennywise')||shibuya.canProtect(battleState,target)||shibuya.immune(target,{passiveAttack:true})||spooky.reduction(battleState,target)||spooky.eventBonus(battleState,target,'dodge')||spooky.dodgeChance(target)||fate.guardian(battleState,target) || hasPassive(target,'medea') || fate.dodgeChance(target) || reagan.reduction(target) || yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
+    return Boolean(sins?.present(battleState)||baller?.present(battleState)||titan.hasLife(target)||akatsuki.hasLife(target)||akatsuki.paperReduction(target)>0||mourner.incoming(target)!==1||hasPassive(target,'pennywise')||shibuya.canProtect(battleState,target)||shibuya.immune(target,{passiveAttack:true})||spooky.reduction(battleState,target)||spooky.eventBonus(battleState,target,'dodge')||spooky.dodgeChance(target)||fate.guardian(battleState,target) || hasPassive(target,'medea') || fate.dodgeChance(target) || reagan.reduction(target) || yuno.canAbsorb(target) || grimoire.reflectors(battleState, target).length || ensureRuntime(target).shield > 0 || raidSecrets.canRescue(battleState, target) || questSkills.isMadara(target) || champions.guardianFor(battleState, target) || Number(ensureRuntime(target).raidHakiReduction) > 0);
   }
 
   function borrowFirstHumanPassive(bs,unit,source,meta,amount) {
@@ -1946,9 +1976,10 @@
           'android-21':[['atk','sweet-destruction'],['hp','sweet-destruction']],
           'starter-common':[['atk','first-strike']],
           'kr-kuuga':[['hp','kuuga-purple']],
+          'escanor-the-one':[['atk','sins:the-one']],
           vegeta:[['atk','low-hp:vegeta']],polnareff:[['atk','low-hp:polnareff']]
         };
-        for(const copy of ending)for(const [stat,key]of statKeys[copy.id]||[])combatStats.set(unit,stat,key,0);
+        for(const copy of ending){for(const [stat,key]of statKeys[copy.id]||[])combatStats.set(unit,stat,key,0);for(const buff of copy.view?.sins?.stolen||[])if(buff.stat)combatStats.set(unit,buff.stat,buff.key,0);}
         root.grimoire.copies=root.grimoire.copies.filter(copy=>!ending.includes(copy));
         lease.copy=null;refreshUnitDisplay(unit);
       }
@@ -1966,7 +1997,7 @@
     if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
     if (!(gomen.isGojo(target)&&meta.passiveAttack) && !grimoire.dodgeChance(target) && !yuno.dodgeChance(target) && questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
     if (grimoire.reflect(battleState, attacker, target, amount, meta)) return {damage:0,killed:false,reflected:true};
-    if (meta.passiveAttack && !meta.dodgeChecked && (grimoire.dodgeChance(target)||yuno.dodgeChance(target)||fate.dodgeChance(target)||spooky.dodgeChance(target)||spooky.eventBonus(battleState,target,'dodge')||relic.hasDodge(target)||ragna.dodgeChance(target)||enten.dodgeBonus(target)||akatsuki.dodgeChance(target)) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
+    if (meta.passiveAttack && !meta.dodgeChecked && (grimoire.dodgeChance(target)||yuno.dodgeChance(target)||fate.dodgeChance(target)||spooky.dodgeChance(target)||spooky.eventBonus(battleState,target,'dodge')||relic.hasDodge(target)||ragna.dodgeChance(target)||enten.dodgeBonus(target)||sins.dodge(target)||akatsuki.dodgeChance(target)) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
     const targetRuntime = ensureRuntime(target);
     targetRuntime.lastAttacker=attacker;
     const fatalityDeferred = meta.mournerUnreducedDamage>0 || hasPassive(attacker,'the-mourner') || mourner.incoming(target)!==1 || relic.attackMultiplier(attacker,meta)!==1 || deferFatality(battleState, target) || yuno.offensive(attacker,target)!==1 || tower200.offensive(battleState,attacker,target)!==1;
@@ -1982,12 +2013,14 @@
       return { damage: 0, killed: false, reflected: false, immune: true };
     }
 
+    if(sins.counter(battleState,attacker,target,amount,meta))return {damage:0,killed:!isAlive(target),reflected:true};
     akatsuki.incoming(battleState,attacker,target,meta);
     expansion.incoming(battleState, target, attacker);
     champions.incoming(battleState, target);
     if (!isAlive(target)) return { damage: 0, killed: true };
     let remaining = meta.elementApplied ? Math.max(0, Number(amount) || 0) : window.ElementSystem.damage(source, target, amount);
     remaining=baller.transform(battleState,source,target,remaining,meta);
+    remaining=sins.damageBonus(battleState,source,target,remaining,meta);
     const relicFactor=meta.akatsukiRawDamage?1:relic.attackMultiplier(attacker,meta);remaining*=relicFactor;
     if(relicFactor!==1&&Math.abs(remaining-Math.round(remaining))<1e-8)remaining=Math.round(remaining);
     meta.entenBonusApplied=true;
@@ -1998,7 +2031,7 @@
     const shielded = !meta.ignoreShield && remaining > 0 && targetRuntime.shield > 0;
     if(remaining>0){mourner.hitTaken(battleState,target,meta);recordCombatHit(source,meta);gomen.incoming(battleState,source,target,meta);baller.incoming(battleState,target,source,meta);}
     const reduction = meta.ignoreReduction ? 0 : clamp(
-      baller.reduction(battleState,source,target,meta) + titan.reduction(target) -akatsuki.paperReduction(target) + shibuya.reduction(target) + spooky.reduction(battleState,target) + reagan.reduction(target) + requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
+      sins.reduction(target)+baller.reduction(battleState,source,target,meta) + titan.reduction(target) -akatsuki.paperReduction(target) + shibuya.reduction(target) + spooky.reduction(battleState,target) + reagan.reduction(target) + requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
       (hasPassive(target,'aquaman') && host.isWeatherActive?.('Raining') ? 0.50 : 0),
       0,
       0.95
@@ -2016,6 +2049,7 @@
       else{const through=remaining*Math.max(0,Math.min(1,Number(meta.shieldPierceFraction)||0));remaining=through+absorbShieldDamage(target,remaining-through,battleState,source);}
     }
     if(!unreduced)remaining *= (1 - reduction);
+    sins.consumeHit(target,meta);
     remaining=baller.redirect(battleState,source,target,remaining,meta);
     remaining=fate.redirect(battleState,source,target,remaining,meta);
     const calamityProtected = !meta.championRedirect && Boolean(champions.guardianFor(battleState, target));
@@ -2026,6 +2060,8 @@
     if(window.TrainingDummySystem?.isTarget(battleState,target)){const damage=window.TrainingDummySystem.hit(battleState,attacker,target,remaining);return{damage,killed:false,reflected:false,shielded};}
 
     const before = Math.max(0, Number(target.hp) || 0);
+    if(sins.protect(battleState,target,source,remaining,meta))return {damage:0,killed:false,preventedFatality:true};
+    if(remaining>=before&&remaining>0&&sins.fatal(battleState,target))return {damage:0,killed:false,preventedFatality:true};
     if(dragon.protect(battleState,target,remaining,meta))return {damage:0,killed:false,preventedFatality:true};
     if(shibuya.protect(battleState,target,attacker,remaining,meta))return {damage:0,killed:false,preventedFatality:true,todoProtected:true};
     if(remaining>=before&&remaining>0&&shibuya.fatal(battleState,target))return {damage:0,killed:false,preventedFatality:true};
@@ -2247,7 +2283,7 @@
     spooky.entry(battleState,unit);
     gomen.entry(battleState,unit);
     shibuya.entry(battleState,unit);
-    akatsuki.entry(battleState,unit);titan.entry(battleState,unit);
+    akatsuki.entry(battleState,unit);titan.entry(battleState,unit);sins.entry(battleState,unit);
   }
 
   function beforeAttack(battleState, attacker, target, options = {}) {
@@ -3158,6 +3194,7 @@
     if (!target || !attacker) return false;
     if (target.championPermanentDeath || cardIdOf(target)==='tower-champion-shadow-200' || hasPassive(target,'tower-champion-shadow-200')) return false;
     if(akatsuki.noLife(target))return false;
+    if(sins.fatal(battleState,target))return true;
     if(titan.fatal(battleState,target)||akatsuki.fatal(battleState,target,attacker))return true;
     if(enten.fatal(battleState,target))return true;
     if(ragna.fatal(battleState,target))return true;
@@ -3270,6 +3307,7 @@
       if(key==='weather-solar-deity'&&getWeatherActive('Sunny'))extra+=1;
     }
     if(runtime.jackpotBoost==='atk')extra+=.77;
+    extra+=sins.stolenBonus(attacker,'atkBonusPct');
     const attack = combatStats.value(attacker,'atk',extra);
     const bounded = window.TowerSystem?.limitEnemyAttack?.(attacker, attack) ?? attack;
     return bounded * (1 - reduction);
@@ -3339,6 +3377,7 @@
     if(attacker&&getCardAttackCount(attacker)>before)dragon.after(battleState,attacker,result.target||target,result,options);
     if(attacker&&getCardAttackCount(attacker)>before)tower200.after(battleState,attacker,result.target||target,result,options);
     if(attacker&&getCardAttackCount(attacker)>before&&!result.ragnaProcessed){result.ragnaProcessed=true;ragna.after(battleState,attacker,result.target||target,result,options);}
+    sins.after(battleState,attacker,result.target||target,result,options);
     return result;
   }
   function performAttackBase(battleState, attacker, requestedTarget, options = {}) {
@@ -3408,6 +3447,7 @@
       return { hit: false, skipped: true, killed: false, damage: 0 };
     }
 
+    sins.prepare(battleState,attacker,target,options);
     const ballerPreparation=baller.prepare(battleState,attacker,target,options);if(ballerPreparation)return ballerPreparation;
     options=relic.prepare(attacker,options);
     recordFollowUp(battleState,attacker,options);
@@ -3430,7 +3470,7 @@
     if (!isAlive(attacker)) return {hit:false,damage:0,killed:false};
     if (!isAlive(target)) { target=activeDefender(battleState,attacker); if(!isAlive(target))return {hit:false,damage:0,killed:true}; }
 
-    if(attackMisses(battleState,attacker,options)){spooky.attackTarget(battleState,attacker,target);return {hit:false,damage:0,killed:false,missed:true};}
+    if(attackMisses(battleState,attacker,options)){markAttackTarget(battleState,attacker,target,options);return {hit:false,damage:0,killed:false,missed:true};}
     options={...options,fearChecked:true};
     if(baller.IDS.includes(getEffectivePassiveCardId(attacker))||titan.IDS.includes(getEffectivePassiveCardId(attacker))||attacker.isTitanCrystal||akatsuki.IDS.includes(getEffectivePassiveCardId(attacker))||attacker.akatsukiPath||attacker.akatsukiCrow){
       beforeAttack(battleState,attacker,target,options);champions.beforeAttack(battleState,attacker,target,options);expansion.beforeAttack(battleState,attacker,target,options);
@@ -3474,7 +3514,7 @@
     ensureRuntime(attacker).overrideTarget = null;
     target = effectiveTarget;
 
-    spooky.attackTarget(battleState,attacker,target);
+    markAttackTarget(battleState,attacker,target,options);
     champions.beforeAttack(battleState, attacker, target, options);
     expansion.beforeAttack(battleState, attacker, target, options);
     if(champions.id(attacker)==='tsukuyomi'&&champions.state(attacker).mode==='naruto'&&champions.state(attacker).modeAttacks%3===0)options={...options,specialAttack:true};
@@ -3539,7 +3579,7 @@
     const attackDamage = rawDamage;
     rawDamage=Math.floor(rawDamage*yuno.offensive(attacker,target));
     rawDamage = window.ElementSystem.damage(attacker, target, rawDamage);
-    const damageReduction = baller.direct(battleState,attacker,target)?0:clamp(ensureRuntime(target).damageReductionPct, 0, 0.95);
+    const damageReduction = (baller.direct(battleState,attacker,target)||sins.present(battleState))?0:clamp(ensureRuntime(target).damageReductionPct, 0, 0.95);
     rawDamage = Math.max(attacker.sandboxAllowZeroAttack ? 0 : 1, Math.floor(rawDamage * (1 - damageReduction)));
 
     const previousHp = Math.max(0, Number(target.hp) || 0);
@@ -3803,6 +3843,7 @@
       battleState.enemyIndex = battleState.enemyTeam.indexOf(attacker);
     }
 
+    sins.startTurn(battleState,attacker);
     baller.ownStart(battleState,attacker);gomen.ownStart(battleState,attacker);
     akatsuki.startTurn(battleState,attacker);titan.turn(battleState,attacker);
     mourner.turn(battleState,attacker);
@@ -3840,6 +3881,7 @@
     const previousPlayerIndex = Number(battleState.playerIndex) || 0;
     const previousEnemyIndex = Number(battleState.enemyIndex) || 0;
 
+    target = sins.hypnosisTarget(battleState,attacker,target);
     target = akatsuki.hypnosisTarget(battleState,attacker,target);
     target = spooky.hypnosisTarget(battleState,attacker,target);
     target = shibuya.hypnosisTarget(battleState,attacker,expansion.hypnosisTarget(battleState, attacker, target));
@@ -3888,7 +3930,7 @@
     gomen.endTurn(battleState,actor);
     shibuya.endTurn(battleState,actor);
     akatsuki.endTurn(battleState,actor);titan.endTurn(actor);
-    mourner.endTurn(battleState);baller.ownEnd(battleState,actor);
+    mourner.endTurn(battleState);baller.ownEnd(battleState,actor);sins.endTurn(battleState,actor);
     expireFirstHumanCopies(battleState,true);
     ensureCurrentIndices(battleState);
     const winner = checkBattleWinner(battleState);
@@ -3905,7 +3947,7 @@
     if (!unit) return [];
     const runtime = ensureRuntime(unit);
     const passive = getPassive(unit);
-    const badges = [...champions.badges(unit),...spooky.badges(unit),...gomen.badges(unit),...shibuya.badges(unit),...ragna.badges(unit),...enten.badges(unit),...mourner.badges(unit),...akatsuki.badges(unit),...titan.badges(unit),...baller.badges(activeCombat,unit)];
+    const badges = [...champions.badges(unit),...spooky.badges(unit),...gomen.badges(unit),...shibuya.badges(unit),...ragna.badges(unit),...enten.badges(unit),...mourner.badges(unit),...akatsuki.badges(unit),...titan.badges(unit),...baller.badges(activeCombat,unit),...sins.badges(activeCombat,unit)];
     if (questSkills.id(unit) === 'frieren') badges.push({icon:'✦',label:`MANA ${questSkills.state(unit).mana}%`,tone:'passive',category:'passive'});
     if (questSkills.id(unit) === 'sung-jin-woo') badges.push({icon:'✦',label:`SYSTEMS ${questSkills.state(unit).bonus.toUpperCase()} • ${questSkills.state(unit).clones.filter(isAlive).length} Shadows`,tone:'passive',category:'passive'});
     if (questSkills.id(unit) === 'alexander-anderson' && questSkills.state(unit).lowHpUsed) badges.push({icon:'✦',label:'CRUCIFIX',tone:'passive',category:'passive'});
@@ -3962,6 +4004,10 @@
     return badges.slice(0, 5);
   }
 
+  function rewardMultiplier(battle){
+    if(!battle||battle.sandbox||battle.pvp||['sandbox','pvp','online-pvp'].includes(battle.mode))return 1;
+    return clamp(Number(modifyVictoryRewards(battle,{reward:0,experience:0,dropRateBonus:0}).passiveMultiplier)||1,1,6);
+  }
   function modifyVictoryRewards(battleState, rewardProfile) {
     if (battleState?.sandbox || battleState?.mode === 'sandbox') return {...rewardProfile,reward:0,experience:0,dropRateBonus:0,cardExperienceRewards:[]};
     const profile = { ...rewardProfile };
@@ -4477,7 +4523,7 @@
   // this registry without duplicating passive text.
   function audit(cards = []) {
     const withPassive=(Array.isArray(cards)?cards:[]).filter(c=>c?.passive?.name);
-    const modules=[baller,titan,dragon,ragna,akatsuki,fate,spooky,gomen,shibuya,tower200];
+    const modules=[sins,baller,titan,dragon,ragna,akatsuki,fate,spooky,gomen,shibuya,tower200];
     const implemented=id=>Boolean(PASSIVE_HANDLERS[id]||modules.some(m=>m.IDS?.includes(id))||['kagurabachi','the-mourner','reagan-ridley'].includes(id)||/^(tower-champion-|raid-secret-)/.test(id));
     const missing=withPassive.filter(c=>!implemented(String(c.id))).map(c=>c.id);
     return {totalCardsWithPassives:withPassive.length,registered:withPassive.length-missing.length,classified:withPassive.length-missing.length,missing,unclassified:[...missing]};
@@ -4648,6 +4694,7 @@
     },
     getPassiveTriggerClassification(cardId) {
       const id = String(cardId || '').trim();
+      if(sins.IDS.includes(id))return ['SINS_ISOLATED_HOOKS'];
       if(baller.IDS.includes(id))return ['BALLER_ISOLATED_HOOKS'];
       if(titan.IDS.includes(id))return ['TITAN_ISOLATED_HOOKS'];
       if(akatsuki.IDS.includes(id))return ['AKATSUKI_ISOLATED_HOOKS'];
@@ -4662,7 +4709,7 @@
     getPassiveDefinitions() {
       return PASSIVE_DEFINITIONS;
     },
-    modifyVictoryRewards,
+    modifyVictoryRewards,rewardMultiplier,
     onVictory,
     onRoll,
     audit,auditTurnPhases,

@@ -16,7 +16,7 @@
  function validSave(v){
   if(!v||v.version!==1||!integer(v.sequence)||typeof v.autoGuarantee!=='boolean'||v.activeAttempt!==null&&!validAttempt(v.activeAttempt))return false;
   const p=v.pendingReward;if(p===null)return true;
-  if(!validAttempt(p)||!v.activeAttempt||p.id!==v.activeAttempt.id||p.type!==v.activeAttempt.type||p.guaranteed!==v.activeAttempt.guaranteed||p.startedAt!==v.activeAttempt.startedAt||!integer(p.shards,1,5))return false;
+  if(!validAttempt(p)||!v.activeAttempt||p.id!==v.activeAttempt.id||p.type!==v.activeAttempt.type||p.guaranteed!==v.activeAttempt.guaranteed||p.startedAt!==v.activeAttempt.startedAt||!integer(p.shards,1,Math.ceil(5*inv().MAX_KNOWN_DROP_MULTIPLIER)))return false;
   if(p.card!==null&&(!p.card||p.card.cardId!=='eren-rumbling'||!Array.isArray(p.card.mutationIds)||p.card.mutationIds.length>2||new Set(p.card.mutationIds).size!==p.card.mutationIds.length||p.card.mutationIds.some(id=>!Object.hasOwn(host.MUTATION_BY_ID,id))))return false;
   if(p.relic!==null&&(!p.relic||p.relic.type!=='relic'||p.relic.metadata?.relic?.kind!=='odm'||!host.RelicSystem.validItem(p.relic)))return false;
   return !p.guaranteed||Boolean(p.card)!==Boolean(p.relic);
@@ -54,8 +54,8 @@
   battle.rift={...data.activeAttempt,completed:false};if(inv().quantity('guarantee_shard')===0&&data.autoGuarantee)setAutoGuarantee(false);
   return battle.rift;
  }
- function rollReward(attempt,random=Math.random){
-  const reward={...attempt,shards:1+Math.floor(unit(random)*5),card:null,relic:null};
+ function rollReward(attempt,random=Math.random,battle=null){
+  const reward={...attempt,shards:inv().scaleDrop(1+Math.floor(unit(random)*5),random,battle),card:null,relic:null};
   const selected=attempt.guaranteed?(unit(random)<1/11?'card':'relic'):null;
   if(selected==='card'||!selected&&unit(random)<.005)reward.card={cardId:'eren-rumbling',mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)};
   if(selected==='relic'||!selected&&unit(random)<.05){reward.relic=host.RelicSystem.createItem('relic_'+host.OnlineUtils.token(),host.RelicSystem.roll('odm',random));reward.relic.metadata.source='Rumbling Rift victory';}
@@ -76,7 +76,7 @@
   if(won&&(!battle.enemyTeam?.some(u=>u.isRiftEnemy)||battle.enemyTeam.some(u=>u.hp>0&&!u.defeated)))return null;
   if(data.pendingReward){const reward=commitPending();run.completed=true;return reward;}
   if(!won){const before=data.activeAttempt;data.activeAttempt=null;if(!persist()){data.activeAttempt=before;throw Error('Unable to save Rift result.');}run.completed=true;return {won:false,shards:0,card:null,relic:null};}
-  if(!data.pendingReward){data.pendingReward=rollReward(data.activeAttempt,random);if(!persist()){data.pendingReward=null;throw Error('Unable to save Rift rewards.');}}
+  if(!data.pendingReward){data.pendingReward=rollReward(data.activeAttempt,random,battle);if(!persist()){data.pendingReward=null;throw Error('Unable to save Rift rewards.');}}
   const reward=commitPending();run.completed=true;return reward;
  }
  function abort(battle){if(battle?.rift&&!battle.rift.completed&&!data.pendingReward){try{finish(battle,false);}catch(e){host.console.warn(e.message);}}}

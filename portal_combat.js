@@ -29,7 +29,7 @@
  function complete(partyInfo={}){
   if(!session)return null;if(session.summary)return session.summary;
   clearTimers();const b=session.combat.battle,won=b.portalWinner==='player';
-  try{const summary=host.PortalsSystem.finish({id:session.id,portal:session.portal,won,party:session.party,mvp:Boolean(partyInfo.mvp)},R.generator((session.seed^0xa52c39f1)>>>0));if(!summary)throw Error('Portal result is already closed or unavailable.');session.summary=summary;host.PortalsSystem.showSummary(summary);render();showResult(summary);return summary;}
+  try{const summary=host.PortalsSystem.finish({id:session.id,portal:session.portal,won,party:session.party,mvp:Boolean(partyInfo.mvp),battle:session.combat.battle},R.generator((session.seed^0xa52c39f1)>>>0));if(!summary)throw Error('Portal result is already closed or unavailable.');session.summary=summary;host.PortalsSystem.showSummary(summary);render();showResult(summary);return summary;}
   catch(error){text('portalCombatResult',error.message+' · Use Retry Save before leaving.');const retry=el('portalRetrySave');if(retry)retry.hidden=false;return null;}
  }
  function release(){if(!session)return;clearTimers();host.RollPerformanceSystem.cancel(render);bridge.clear?.();session=null;fronts=null;for(const[n,s]of saved){n.hidden=s.hidden;n.classList.toggle('hidden',s.cls);if(s.fullClass!==null)n.className=s.fullClass;if(s.restoreText)n.textContent=s.text;}saved.clear();el('battleVictory').setAttribute('aria-hidden',String(el('battleVictory').classList.contains('hidden')));el('portalArenaHud').hidden=true;el('portalRetrySave').hidden=true;el('battleLog')?.replaceChildren(...logBackup);logBackup=[];bridge.lock?.(false);}

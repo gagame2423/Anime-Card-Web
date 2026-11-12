@@ -43,10 +43,10 @@
   finally{busy=false;}
  }
  function rewardVictory(battle,random=Math.random){
-  if(!battle||battle.sandbox||battle.mode==='sandbox'||host.SandboxSystem?.active||battle.foodRewardRecorded)return 0;
+  if(!battle||battle.pvp||['pvp','online-pvp','sandbox'].includes(battle.mode)||battle.sandbox||battle.mode==='sandbox'||host.SandboxSystem?.active||battle.foodRewardRecorded)return 0;
   const won=battle.questResultWon??(battle.outcome==='victory');if(!won)return 0;
   const receipt=battle.questContext?.id;if(!receipt)return 0;
-  const quantity=battle.foodRewardQuantity ||= 1+Math.floor(Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0))*3);
+  const quantity=battle.foodRewardQuantity ||= host.InventorySystem.scaleDrop(1+Math.floor(Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0))*3),random,battle);
   const before=host.InventorySystem.quantity('bread');
   if(!host.InventorySystem.grantOnce('food_victory',receipt,'bread',quantity))return 0;
   battle.foodRewardRecorded=true;return host.InventorySystem.quantity('bread')-before;

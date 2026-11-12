@@ -297,12 +297,12 @@
     }
     return { min: Math.min(MAX_COINS, min), max: Math.min(MAX_COINS, max) };
   }
-  function recordVictory(mode, floor, random = Math.random) {
+  function recordVictory(mode, floor, random = Math.random, battle = null) {
     const id = weatherId(mode), expected = nextFloor(id);
     if (!Number.isInteger(floor) || floor !== expected) return { awarded: false, coins: 0 };
     const rewards = previewRewards(floor);
     const baseCoins = rewards.min + Math.floor(random() * (rewards.max - rewards.min + 1));
-    const coins = host.InventorySystem.scaleDrop(baseCoins, random);
+    const coins = host.InventorySystem.scaleDrop(baseCoins, random, battle);
     const granted = Math.min(coins, Math.max(0, MAX_COINS - data.coins));
     data.coins += granted; data.cleared[id] = floor; data.victories += 1;
     delete data.encounters[id]; persist();

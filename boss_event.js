@@ -6,7 +6,8 @@
     alucard:Object.freeze({name:'Alucard Event',coinName:'Alucard Event Coins',bossHp:66666,bossAtk:6666,cardId:CARD_ID}),
     lucius:Object.freeze({name:'Lucius Event',coinName:'Lucius Event Coins',bossHp:100000,bossAtk:5000,cardId:'boss-event-lucius'}),
     gomen:Object.freeze({name:'Gomen Event',coinName:'Gomen Coins',bossHp:88888,bossAtk:8888,cardId:'gojo-revice',itemId:'gojo_eye'}),
-    ragna:Object.freeze({name:'Ragna Event',coinName:'Ragna Event Coins',bossHp:150000,bossAtk:15000,cardId:'boss-event-ragna'})
+    ragna:Object.freeze({name:'Ragna Event',coinName:'Ragna Event Coins',bossHp:150000,bossAtk:15000,cardId:'boss-event-ragna'}),
+    pride:Object.freeze({name:'Pride Boss Event',coinName:'Pride Coins',bossHp:400000,bossAtk:20000,cardId:'escanor-the-one',dropCardId:'meliodas',itemId:'pride_sun'})
   });
   const offers=type=>type==='gomen'?[...SHOP,{id:'gojo_eye',cost:888888},{id:'equipment_infinity_eye',cost:888888},{id:'shibuya_raid_key',cost:10}]:type==='lucius'?[...SHOP,{id:'sea_valkyrie',cost:4000},{id:'spirit_crown',cost:4400}]:TYPES[type]?SHOP:[];
   const SHOP=Object.freeze(['rich_potion','exp_potion','lucky_potion','speed_potion','speed_battle_potion'].map(id=>Object.freeze({id,cost:id==='speed_battle_potion'?25:10})));
@@ -17,9 +18,9 @@
   const randomUnit=random=>Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0));
   const fresh=()=>({version:1,sequence:0,events:Object.fromEntries(Object.keys(TYPES).map(type=>[type,{coins:0,difficulty:1,wins:0}])),activeAttempt:null,pendingReward:null});
   const coinRange=d=>host.RaidSystem.coinRange(d);
-  const cardChance=(d,type='alucard')=>type==='gomen'?0:type==='ragna'?.001+.009*(difficulty(d)-1)/999:(type==='lucius'?.005:.006)+(type==='lucius'?.045:.054)*(difficulty(d)-1)/999;
-  const itemChance=d=>.008+.072*(difficulty(d)-1)/999;
-  const dropChance=(d,type='alucard')=>TYPES[type]?.itemId?itemChance(d):cardChance(d,type);
+  const cardChance=(d,type='alucard')=>type==='gomen'?0:type==='pride'?.0001+.0099*(difficulty(d)-1)/999:type==='ragna'?.001+.009*(difficulty(d)-1)/999:(type==='lucius'?.005:.006)+(type==='lucius'?.045:.054)*(difficulty(d)-1)/999;
+  const itemChance=(d,type='gomen')=>type==='pride'?.0001+.0299*(difficulty(d)-1)/999:.008+.072*(difficulty(d)-1)/999;
+  const dropChance=(d,type='alucard')=>TYPES[type]?.itemId?itemChance(d,type):cardChance(d,type);
   function validAttempt(a) {return object(a)&&typeof a.id==='string'&&/^\d+_\d+$/.test(a.id)&&Object.hasOwn(TYPES,a.type)&&integer(a.difficulty,1,1000)&&integer(a.startedAt);}
   function validSave(v) {
     if(!object(v)||v.version!==1||!integer(v.sequence)||!object(v.events)||!object(v.events.alucard)||Object.keys(v.events).some(type=>!Object.hasOwn(TYPES,type)))return false;
@@ -33,7 +34,7 @@
     const exact=Number((p.baseCoins*p.dropMultiplier).toFixed(8));
     if(!integer(p.coins,Math.floor(exact),Math.ceil(exact)))return false;
     if(p.item!==undefined&&p.item!==null&&(!TYPES[p.type].itemId||!object(p.item)||p.item.id!==TYPES[p.type].itemId||!integer(p.item.quantity,1,Math.ceil(host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER))))return false;
-    return p.card===null||(!TYPES[p.type].itemId&&object(p.card)&&p.card.cardId===TYPES[p.type].cardId&&Array.isArray(p.card.mutationIds)&&p.card.mutationIds.length<=2&&new Set(p.card.mutationIds).size===p.card.mutationIds.length&&p.card.mutationIds.every(id=>typeof id==='string'&&Object.hasOwn(host.MUTATION_BY_ID,id)));
+    return p.card===null||(cardChance(p.difficulty,p.type)>0&&object(p.card)&&p.card.cardId===(TYPES[p.type].dropCardId||TYPES[p.type].cardId)&&Array.isArray(p.card.mutationIds)&&p.card.mutationIds.length<=2&&new Set(p.card.mutationIds).size===p.card.mutationIds.length&&p.card.mutationIds.every(id=>typeof id==='string'&&Object.hasOwn(host.MUTATION_BY_ID,id)));
   }
   function load(){try{const saved=JSON.parse(host.localStorage.getItem(KEY)||'null');return validSave(saved)?saved:fresh();}catch(_){return fresh();}}
   let data=load(),bridge={};
@@ -76,10 +77,10 @@
     battle.bossEvent={...attempt,completed:false};return battle.bossEvent;
   }
   function rollCard(d,random=Math.random,type='alucard'){
-    if(!TYPES[type]||TYPES[type].itemId)return null;
+    if(!TYPES[type]||cardChance(d,type)<=0)return null;
     if(randomUnit(random)>=cardChance(d,type))return null;
     // Unlike Raid secrets, Boss Event drops may grant another card/variant.
-    return {cardId:TYPES[type].cardId,mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)};
+    return {cardId:TYPES[type].dropCardId||TYPES[type].cardId,mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)};
   }
   function commitPending(){
     const p=data.pendingReward;if(!p)return null;
@@ -98,8 +99,8 @@
     if(!data.activeAttempt||data.activeAttempt.id!==run.id)return null;
     if(!won){const before=data.activeAttempt;data.activeAttempt=null;if(!persist()){data.activeAttempt=before;throw Error('Không thể lưu kết quả Boss Event.');}run.completed=true;return {won:false,type:run.type,difficulty:run.difficulty,coins:0,card:null,dropMultiplier:1};}
     const range=coinRange(run.difficulty),baseCoins=range.min+Math.floor(randomUnit(random)*(range.max-range.min+1));
-    data.pendingReward={...data.activeAttempt,baseCoins,dropMultiplier:host.InventorySystem.getDropMultiplier(),coins:host.InventorySystem.scaleDrop(baseCoins,random),card:rollCard(run.difficulty,random,run.type)};
-    if(TYPES[run.type].itemId)data.pendingReward.item=randomUnit(random)<itemChance(run.difficulty)?{id:TYPES[run.type].itemId,quantity:host.InventorySystem.scaleDrop(1,random)}:null;
+    data.pendingReward={...data.activeAttempt,baseCoins,dropMultiplier:host.InventorySystem.getDropMultiplier(battle),coins:host.InventorySystem.scaleDrop(baseCoins,random,battle),card:rollCard(run.difficulty,random,run.type)};
+    if(TYPES[run.type].itemId)data.pendingReward.item=randomUnit(random)<itemChance(run.difficulty,run.type)?{id:TYPES[run.type].itemId,quantity:host.InventorySystem.scaleDrop(1,random,battle)}:null;
     if(!persist()){data.pendingReward=null;throw Error('Không thể lưu phần thưởng Boss Event.');}
     const result=commitPending();run.completed=true;return result;
   }

@@ -45,7 +45,6 @@
 .infinity-quiet-button:hover:not(:disabled),.infinity-clear-slot:hover:not(:disabled){color:#f1fbff;background:#243a50}
 .infinity-picker-panel{padding:14px;border:1px solid #30465c;border-radius:12px;background:#0d1829aa}
 .infinity-weekly-lock{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #426770;border-radius:7px;background:linear-gradient(100deg,#17383f,#152538);margin-bottom:17px}
-.infinity-lock-symbol{position:relative;flex:0 0 14px;height:13px;margin:6px 1px 0;border:1.5px solid #b3dcd6;border-radius:3px}.infinity-lock-symbol:before{content:"";position:absolute;left:2px;top:-8px;width:7px;height:7px;border:1.5px solid #b3dcd6;border-bottom:0;border-radius:5px 5px 0 0}
 .infinity-weekly-lock>div{display:flex;flex-direction:column;gap:5px;min-width:0}.infinity-weekly-lock strong{font-size:12px;color:#c9ede5}.infinity-weekly-lock small{font-size:10px;color:#90acae;line-height:1.5}.infinity-weekly-lock>span:last-child{margin-left:auto;text-align:right;font-size:10px;color:#9dbdbf;line-height:1.5}
 .infinity-picker-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.infinity-picker-heading h3{margin:0;font-size:14px;font-weight:650}.infinity-picker-heading>span{font-size:10px;color:#6e8b9e}
 .infinity-picker-tools{display:grid;grid-template-columns:minmax(180px,1.3fr) repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;align-items:stretch}
@@ -86,3 +85,7 @@ body.infinity-open #leaderboardModal{z-index:1800}
 
 body.infinity-open #shopPurchaseToast{bottom:112px;font-size:12px}
 @media(max-width:700px){body.infinity-open #shopPurchaseToast{bottom:170px;font-size:11px}}
+
+/* Weekly category is a bonus, not an entry restriction. */
+.infinity-featured-symbol{display:grid;place-items:center;flex:0 0 36px;height:36px;border:1px solid #8df9cc;border-radius:10px;color:#baffdf;background:#1b705a55;font-weight:900}
+.infinity-weekly-bonus{display:inline-block;border:1px solid #74dfb7;border-radius:5px;padding:2px 5px;background:#1c795c55;color:#b8ffdd;font-size:9px;font-weight:800}

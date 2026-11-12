@@ -2,6 +2,13 @@
 (function(host){
  'use strict';
  const ZONES=Object.freeze(['Top-Left','Top-Center','Top-Right','Middle-Left','Center','Middle-Right','Bottom-Left','Bottom-Center','Bottom-Right'].map((name,id)=>Object.freeze({id,name,x:(id%3+.5)/3,y:(Math.floor(id/3)+.5)/3,corner:[0,2,6,8].includes(id)})));
+ const KEEPER_CONFIG=Object.freeze({coveredZones:3});
+ const COVERAGE=Object.freeze(ZONES.map(keeper=>Object.freeze([...ZONES].sort((a,b)=>{
+  const distance=z=>(z.x-keeper.x)**2+(z.y-keeper.y)**2;
+  return distance(a)-distance(b)||Math.abs(a.y-keeper.y)-Math.abs(b.y-keeper.y)||a.id-b.id;
+ }).slice(0,KEEPER_CONFIG.coveredZones).map(z=>z.id))));
+ const keeperCoverage=zone=>COVERAGE[zone]||Object.freeze([]);
+ const keeperCovers=(keeperZone,shotZone)=>keeperCoverage(keeperZone).includes(shotZone);
  const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,Number(v)||0));
  const randomUnit=r=>clamp(r(),0,1-Number.EPSILON);
  // Widths/tolerance are fractions of the bar; speed is bar lengths per second.
@@ -59,7 +66,7 @@
   const others=ZONES.filter(z=>z.id!==actualZone),keeperZone=same?actualZone:others[Math.floor(randomUnit(random)*others.length)].id;
   const precision=1-Math.abs(power-.5)*2;
   const saveChance=clamp(({green:.35,yellow:.72,red:.96})[quality]+(1-precision)*.08-p.shoot*.006-p.curve*(target.corner?.006:.002),.03,.98);
-  const saved=!miss&&keeperZone===actualZone&&randomUnit(random)<saveChance,goal=!miss&&!saved;
+  const saved=!miss&&keeperCovers(keeperZone,actualZone)&&randomUnit(random)<saveChance,goal=!miss&&!saved;
   const rating=miss?'WEAK KICK!':saved?'SAVED!':quality==='red'?'WEAK KICK!':quality==='green'&&target.corner?'PERFECT CORNER!':'GREAT SHOT!';
   return {zone,power,actualZone,keeperZone,quality,goal,saved,miss,rating,duration:clamp(({green:.72,yellow:1.05,red:1.4})[quality]/p.speed,.30,2),curve:target.corner?(target.x<.5?1:-1)*(.02+p.curve*.0015):0,driftX,driftY};
  }
@@ -91,5 +98,5 @@
   function close(){cancelCharge();phase='closed';paused=false;shot=null;emit();}
   return Object.freeze({open,next,select,charge,cancelCharge,release,pause,update,close,snapshot,retry:()=>phase==='save-error'&&settle()});
  }
- host.PenaltyGame=Object.freeze({ZONES,TIMING_CONFIG,timingConfig,parameters,timingWindows,needleAt,timing,evaluateShot,create});
+ host.PenaltyGame=Object.freeze({ZONES,KEEPER_CONFIG,keeperCoverage,keeperCovers,TIMING_CONFIG,timingConfig,parameters,timingWindows,needleAt,timing,evaluateShot,create});
 })(window);

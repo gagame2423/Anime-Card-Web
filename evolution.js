@@ -3,6 +3,7 @@
   'use strict';
   const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
   const RECIPES = Object.freeze([
+    Object.freeze({id:'escanor-the-one',baseId:'weather-solar-deity',itemId:'pride_sun',level:100,resultLevel:1,name:'Escanor The One'}),
     Object.freeze({id:'itachi-awakened',baseId:'uchiha-itachi',itemId:'mangekyo_eye',level:100,resultLevel:1,name:'Itachi Awakened'}),
     Object.freeze({id:'ultimate-gohan',baseId:'gohan',itemId:'senzu_bean',itemCount:8500,level:100,resultLevel:1,name:'Ultimate Gohan'}),
     Object.freeze({id:'golden-frieza',baseId:'frieza',itemId:'senzu_bean',itemCount:7690,level:100,resultLevel:1,name:'Golden Frieza'}),
@@ -16,6 +17,7 @@
     Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100,resultLevel:1, name:'Prime Garp' })
   ]);
   const MATERIALS = Object.freeze([
+    Object.freeze({id:'pride_sun',name:'Pride Sun',type:'material',icon:'☀',image:'assets/items/psun.png',tier:'mythic',description:'Evolve a Lv.100 Escanor into Escanor The One, preserving mutations. Pride Boss Event: 0.01%–3% by difficulty.'}),
     Object.freeze({id:'mangekyo_eye',name:'Mangekyo Eye',type:'material',icon:'◉',image:'assets/items/eeye.png',tier:'secret',description:'Evolve Lv.100 Uchiha Itachi into Lv.100 Itachi Awakened, keeping mutations. Akatsuki Raid: 0.03%–3% by difficulty.'}),
     Object.freeze({id:'mahito_puppet',name:'Mahito Puppet',type:'material',icon:'♟',image:'assets/items/mpuppet.png',tier:'secret',description:'Evolve Lv.100+ Mahito (any mutation) into True Mahito. Shibuya Raid Shop: 10,500 Shibuya Coins.'}),
     Object.freeze({id:"gojo_eye",name:"Gojo Eye",type:"material",icon:"◉",image:"assets/items/gojoeye.png",tier:"mythic",description:"Evolve Lv.100+ Gojo Young (any mutation) into Gojo Revice. Gomen Boss Event victory: 0.8%–8% by difficulty; Boss Event Shop: 888,888 Gomen Coins."}),
@@ -72,7 +74,7 @@
       host.localStorage.setItem(KEY,JSON.stringify({version:1,pending:null}));
       host.InventorySystem.reload();
       try { bridge.onCommit?.(); } catch(error) { host.console?.warn('Evolution saved; UI refresh failed.',error); }
-      return {ok:true,message:`Đã tiến hóa thành ${recipe.name} • Lv.${resultLevel(recipe)} • giữ nguyên mutation.`};
+      return {ok:true,message:`Đã tiến hóa thành ${recipe.name} • Lv.${plan.resultLevel ?? resultLevel(recipe)} • giữ nguyên mutation.`};
     } catch (_) {
       const restored = recover(); if (restored) { try { bridge.onCommit?.(); } catch(error) { host.console?.warn('Evolution restored; UI refresh failed.',error); } }
       return {ok:false,message:restored ? 'Không thể lưu tiến hóa. Thẻ và vật phẩm đã được khôi phục.' : 'Bộ nhớ chưa khả dụng. Hãy tải lại để khôi phục giao dịch trước khi chơi tiếp.'};
@@ -97,12 +99,11 @@
     const info = bridge.describe?.(recipe) || {}, variant = info.variants?.find(v => v.key === variantKey && v.count > 0);
     const base = cardsById.get(recipe.baseId), target = cardsById.get(recipe.id);
     if (!base || !target) return null;
-    const level = host.CardLevelSystem.normalizeLevel(info.level), nextLevel = resultLevel(recipe, level);
+    const level = host.CardLevelSystem.normalizeLevel(info.level), nextLevel = info.targetLevel == null ? resultLevel(recipe) : host.CardLevelSystem.normalizeLevel(info.targetLevel);
     const material = host.InventorySystem.getItem(recipe.itemId);
     const owned = host.InventorySystem.quantity(recipe.itemId), required = recipe.itemCount || 1;
     let reason = '';
-    if (info.completed) reason = 'This evolution is already unlocked.';
-    else if (!variant) reason = 'This mutation is no longer owned. Select an owned variant in Card Details.';
+    if (!variant) reason = 'This mutation is no longer owned. Select an owned variant in Card Details.';
     else if (level < recipe.level) reason = `Requires ${base.name} at Lv. ${recipe.level}. Current: Lv. ${level}.`;
     else if (owned < required) reason = `Need ${number(required - owned)} more ${material?.name || recipe.itemId}.`;
     else if (!bridge.canAct?.()) reason = 'Finish the current activity before evolving.';

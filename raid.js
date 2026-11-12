@@ -174,10 +174,10 @@
     if (!won) { const previous = data.activeAttempt; data.activeAttempt = null; if (!persist()) { data.activeAttempt = previous; throw new Error('Không thể lưu kết quả Raid.'); } run.completed = true; return { won: false, coins: 0, secret: null, type: run.type, difficulty: run.difficulty }; }
     const range = coinRange(run.difficulty);
     const baseCoins = range.min + Math.floor(randomUnit(random) * (range.max - range.min + 1));
-    data.pendingReward = { ...data.activeAttempt, baseCoins, dropMultiplier: host.InventorySystem.getDropMultiplier(), coins: host.InventorySystem.scaleDrop(baseCoins, random), secret: run.type==='marine_fort'?rollSecret(run.difficulty, random):null };
+    data.pendingReward = { ...data.activeAttempt, baseCoins, dropMultiplier: host.InventorySystem.getDropMultiplier(battle), coins: host.InventorySystem.scaleDrop(baseCoins, random, battle), secret: run.type==='marine_fort'?rollSecret(run.difficulty, random):null };
     if(run.type==='akatsuki')data.pendingReward.cards=randomUnit(random)<akatsukiChances(run.difficulty).pain?[{cardId:'pain',raidReceipt:run.id,mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)}]:[];
     if(run.type==='shibuya')data.pendingReward.cards=rollShibuyaCards(run.difficulty,random);
-    if(rewardItemId(run.type))data.pendingReward.item=randomUnit(random)<(run.type==='akatsuki'?akatsukiChances(run.difficulty).mangekyo_eye:run.type==='shibuya'?shibuyaChances(run.difficulty).equipment_cursed_finger:excaliburChance(run.difficulty))?{id:rewardItemId(run.type),quantity:host.InventorySystem.scaleDrop(1,random)}:null;
+    if(rewardItemId(run.type))data.pendingReward.item=randomUnit(random)<(run.type==='akatsuki'?akatsukiChances(run.difficulty).mangekyo_eye:run.type==='shibuya'?shibuyaChances(run.difficulty).equipment_cursed_finger:excaliburChance(run.difficulty))?{id:rewardItemId(run.type),quantity:host.InventorySystem.scaleDrop(1,random,battle)}:null;
     if (!persist()) { data.pendingReward = null; throw new Error('Không thể lưu phần thưởng Raid.'); }
     const result = commitPending(); run.completed = true; return result;
   }
@@ -186,29 +186,30 @@
     const run=battle?.trial;
     if(!run?.completed||!won||!run.ninjaLineup||run.reason==='save-error'||!host.TimeTrialSystem.isMode(battle.mode)||host.SandboxSystem?.active||host.PvPSystem?.active||battle.sandbox||battle.pvp)return {quantity:0};
     if(run.akatsukiKey)return run.akatsukiKey;
-    const quantity=randomUnit(random)<.30?host.InventorySystem.scaleDrop(1,random):0;
+    const quantity=randomUnit(random)<.30?host.InventorySystem.scaleDrop(1,random,battle):0;
     if(quantity&&!host.InventorySystem.grantOnce('trial_akatsuki',run.id,AKATSUKI_KEY.id,quantity))return {quantity:0,error:'Unable to save Akatsuki Raid Key.'};
     return run.akatsukiKey={quantity};
   }
-  function rollKey(mode, random = Math.random) {
+  function rollKey(mode, random = Math.random, battle = null) {
     if (!['1v1', '4v4'].includes(mode) || randomUnit(random) >= .10) return false;
-    return host.InventorySystem.grant(KEY_ITEM.id, host.InventorySystem.scaleDrop(1, random));
+    return host.InventorySystem.grant(KEY_ITEM.id, host.InventorySystem.scaleDrop(1, random, battle));
   }
   // Chỉ trận thường hoàn tất mới nhận Key; không cấp thưởng cho Online PvP.
   function claimShibuyaKey(battle,malevolent){
     if(host.PvPSystem?.active||host.SandboxSystem?.active||battle?.sandbox||battle?.pvp||!['1v1','4v4'].includes(battle?.mode)||!battle.finished||!['victory','defeat'].includes(battle.outcome)||battle.exitReason||malevolent!==true)return {quantity:0};
     if(battle.shibuyaKeyReward)return battle.shibuyaKeyReward;
     const receipt=battle.shibuyaKeyReceipt ||= host.OnlineUtils.token();
-    if(!host.InventorySystem.grantOnce('normal_shibuya',receipt,SHIBUYA_KEY.id,1))return {quantity:0,error:'Unable to save Shibuya Raid Key.'};
+    const quantity=battle.shibuyaKeyQuantity ||= host.InventorySystem.scaleDrop(1,Math.random,battle);
+    if(!host.InventorySystem.grantOnce('normal_shibuya',receipt,SHIBUYA_KEY.id,quantity))return {quantity:0,error:'Unable to save Shibuya Raid Key.'};
     host.CloudSaveSystem?.markDirty();
-    return battle.shibuyaKeyReward={quantity:1};
+    return battle.shibuyaKeyReward={quantity};
   }
   const fateReceipts=new WeakMap();
   function rollFateKey(battle,victim,source,random=Math.random){
     if(host.SandboxSystem?.active||!['1v1','4v4'].includes(battle?.mode)||!battle.enemyTeam?.includes(victim)||!battle.playerTeam?.includes(source)||victim?.isClone||victim?.isSummoned||victim?.isTemporaryAlly||!host.CategorySystem.has(victim,'Fate'))return 0;
     let seen=fateReceipts.get(battle);if(!seen){seen=new WeakSet();fateReceipts.set(battle,seen);}if(seen.has(victim))return 0;seen.add(victim);
     if(randomUnit(random)>=.50)return 0;
-    const quantity=host.InventorySystem.scaleDrop(1,random);return host.InventorySystem.grant(GRAIL_KEY.id,quantity)?quantity:0;
+    const quantity=host.InventorySystem.scaleDrop(1,random,battle);return host.InventorySystem.grant(GRAIL_KEY.id,quantity)?quantity:0;
   }
   function purchase(type, id, quantity = 1) {
     if (!validType(type)) return false;

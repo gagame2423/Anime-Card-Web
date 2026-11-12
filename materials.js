@@ -29,10 +29,10 @@
  const byId=new Map(ITEMS.map(row=>[row.id,row])),seen=new WeakSet(),pending=new WeakMap();
  function register(){for(const item of ITEMS)host.InventorySystem.registerItem(item);}
  register();
- function roll(element,random=Math.random){return ITEMS.filter(row=>(!row.element||row.element===element)&&random()<row.chance).map(row=>({id:row.id,quantity:host.InventorySystem.scaleDrop(1,random)}));}
+ function roll(element,random=Math.random,battle=null){return ITEMS.filter(row=>(!row.element||row.element===element)&&random()<row.chance).map(row=>({id:row.id,quantity:host.InventorySystem.scaleDrop(1,random,battle)}));}
  function recordKill(battle,victim){
   if(battle?.mode!==MODE||battle.sandbox||host.SandboxSystem?.active||host.PvPSystem?.active||!battle.trial||!battle.enemyTeam?.includes(victim)||victim.hp>0&&!victim.defeated||seen.has(victim))return [];
-  let drops=pending.get(victim);if(!drops){drops=roll(victim.card?.element);pending.set(victim,drops);}
+  let drops=pending.get(victim);if(!drops){drops=roll(victim.card?.element,Math.random,battle);pending.set(victim,drops);}
   if(drops.length&&!host.InventorySystem.transactItems(items=>{for(const drop of drops)items[drop.id].quantity=Math.min(Number.MAX_SAFE_INTEGER,items[drop.id].quantity+drop.quantity);return true;}))throw Error('Unable to save Material drops.');
   seen.add(victim);pending.delete(victim);battle.trial.materials ||= {};
   for(const drop of drops)battle.trial.materials[drop.id]=(battle.trial.materials[drop.id]||0)+drop.quantity;

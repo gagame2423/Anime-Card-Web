@@ -1,438 +1,223 @@
-PASSIVE AUDIT — PENALTY KICK RELEASE
-Ngày: 08/11/2026
+PASSIVE AUDIT — PRIDE / SINS UPDATE
+Ngày: 12/11/2026
 
-PHẠM VI
-- Đăng ký 200/200 card passive; kiểm tra source hook và turn context.
-- Mỗi thẻ chạy trong runtime độc lập, seed 8789, cùng mục tiêu trung tính,
-  tối đa 18 lượt; dừng nếu trận kết thúc. Dùng HP lớn/ATK 1.000 để không
-  kết thúc quá sớm. Đây là fixture kiểm tra, không đổi stats trong game.
-- Xác nhận: lượt tiến, không runtime exception, HP/Max HP/ATK hữu hạn,
-  status timer không âm, activeAttacker được dọn sau lượt.
-- Bảng phân loại hook là nhãn hỗ trợ đọc source, không phải bằng chứng
-  riêng lẻ rằng mọi nhánh/passive đều đã chạy trong fixture có seed.
+Phạm vi: 206 card definitions, runtime độc lập, seed 8789, tối đa 18 lượt.
+Fixture dùng HP lớn và ATK 1.000 để giữ trận đủ dài; không đổi stats game.
+Xác nhận lượt tiến, actor được dọn, stats hữu hạn, timer không âm, không exception.
+12 idle phase guards: itachi-awakened, kagurabachi, the-mourner, war-hammer-titan, pain, toji, the-clown, raid-secret-mihawk, weather-report, toshiro, builderman, awakened-doflamingo.
 
-KIỂM TRA ĐÍCH DANH
-- 12 thẻ ở hàng chờ qua 16 lượt của đơn vị khác không tự tiến pool/form/
-  counter hoặc ownTurnCount:
-  itachi-awakened, kagurabachi, the-mourner, war-hammer-titan, pain, toji, the-clown, raid-secret-mihawk, weather-report, toshiro, builderman, awakened-doflamingo.
-- 26 assertions: Toshiro, Weather Report, Awakened Doflamingo, Mihawk,
-  Pain Deva, weakness timer, Kuuga và Demon Asta.
-- Itachi: follow-up không draw; lượt đồng đội/địch không giảm cooldown;
-  lượt Itachi giảm đúng một lần. Actor không rò sang lượt sau.
-- Kaiser: EyE cap/DR/tiêu stack, shield bonus và Execute qua fatal prevention.
-- Isagi: Read cap, bonus team, Direct Shot, Growth cap, heal, splash không
-  đệ quy và Stun immunity. Lorenzo: intercept 40%, không ping-pong, heal,
-  Counter AoE và reset Zombie.
-- PvP fixture: 139 bước, 3 seed, snapshot hai runtime bằng nhau mỗi bước;
-  không thưởng/ghi save. Đây không phải kiểm tra kết nối WAN thực tế.
+Kiểm tra sâu: 67 Sins combat assertions; 52 event/evolution/Infinity/reward checks;
+1.000 rotation windows; 43 timing/save/keeper checks; multi-mode quantity x6;
+desktop/mobile và renderer cache ở CPU throttle x4. Snapshot PvP khớp 120 bước/3 seed.
+Không bao phủ mọi đội hình, mutation, Relic, borrowed passive hoặc WAN thực tế.
+Own-turn timers/form được giữ tách khỏi support/entry/on-hit/death và global DoT.
+Meliodas/Escanor The One: chance = 0. Stats của 200 thẻ trước update không đổi.
 
-NGUYÊN TẮC
-- Turn counter/cooldown/form tự tiến chỉ ở phase của chính thẻ.
-- Bảo toàn phản ứng nhận hit/dodge/death/entry và support được mô tả rõ;
-  Domain/DoT toàn cục vẫn dùng thời gian toàn cục. Counter theo hit/attack
-  không được tự đổi thành counter theo lượt.
-- Chưa bao phủ mọi tổ hợp đội hình, mutation, relic, clone và passive copy.
-  Không suy diễn từ 200 fixture thành bảo đảm mọi tổ hợp đều không lỗi.
-
-DANH SÁCH 200 THẺ — PASS TRONG FIXTURE CÓ SEED
+Danh sách PASS trong fixture có seed:
 
 001. Naruto Kid [starter-common] — First Strike — PASS
-     Hook: attack/own-turn hooks
 002. Normal Demon [normal-demon] — Lifesteal — PASS
-     Hook: attack/own-turn hooks
 003. Sasuke Kid [sasuke-kid] — Chidori — PASS
-     Hook: attack/own-turn hooks
 004. Powerless Guy [deku-mc] — What can i get you sir — PASS
-     Hook: attack/own-turn hooks
 005. Ichigo Young [starter-rare] — Afterimage — PASS
-     Hook: attack + reactive/support hooks
 006. Gon Kid [gon-kid] — Rock — PASS
-     Hook: attack/own-turn hooks
 007. Tanjiro [tanjiro] — Rock — PASS
-     Hook: attack/own-turn hooks
 008. Luffy Kid [starter-epic] — GOMU NO MU NO PISTOL — PASS
-     Hook: attack/own-turn hooks
 009. Six Seven [six-seven] — SIX SEVEN — PASS
-     Hook: attack + reactive/support hooks
 010. Kaneki [kaneki-ghoul] — GHOUL — PASS
-     Hook: attack/own-turn hooks
 011. The Trapper [the-trapper] — Trap — PASS
-     Hook: attack + reactive/support hooks
 012. Nezuko [nezuko] — Bleed — PASS
-     Hook: attack/own-turn hooks
 013. Buggy [buggy] — Chop Chop — PASS
-     Hook: attack + reactive/support hooks
 014. Bounty Hunter [bounty-hunter] — BOUNTY — PASS
-     Hook: attack/own-turn hooks
 015. Jotaro Kujo [jotaro-kujo] — Ora Ora — PASS
-     Hook: attack/own-turn hooks
 016. Hakari [hakari] — Lucky Train — PASS
-     Hook: attack + reactive/support hooks
 017. Saber [saber] — EXCALIBUR!!! — PASS
-     Hook: attack/own-turn hooks
 018. Jonathan Joestar [jonathan-joestar] — HAMONNN — PASS
-     Hook: attack + reactive/support hooks
 019. Son Goku [starter-legendary] — Kamehameha — PASS
-     Hook: attack/own-turn hooks
 020. Vegeta [vegeta] — Super Vegeta — PASS
-     Hook: attack/own-turn hooks
 021. Kakashi [kakashi] — Kamui — PASS
-     Hook: attack + reactive/support hooks
 022. Kamen Rider Kuuga [kr-kuuga] — KUUGA — PASS
-     Hook: own-turn gated pool/form/counter
 023. Bulma [bulma] — WISH — PASS
-     Hook: attack + reactive/support hooks
 024. Denji [denji] — POCHITA — PASS
-     Hook: attack/own-turn hooks
 025. Uchiha Itachi [uchiha-itachi] — Amaterasu — PASS
-     Hook: attack/own-turn hooks
 026. Madness Doctor [madness-doctor] — Madness — PASS
-     Hook: attack/own-turn hooks
 027. Erza [erza] — MAGIC ARMOR — PASS
-     Hook: attack/own-turn hooks
 028. Yuji Itadori [yuji-itadori] — BLACK FLASH — PASS
-     Hook: attack/own-turn hooks
 029. Guts [guts] — OUTRAGE — PASS
-     Hook: attack/own-turn hooks
 030. Polnareff [polnareff] — SILVER CHARIOT — PASS
-     Hook: attack/own-turn hooks
 031. The Flash [the-flash] — FLASH — PASS
-     Hook: attack + reactive/support hooks
 032. Rimuru [rimuru] — SLIME — PASS
-     Hook: attack + reactive/support hooks
 033. The Truth [starter-secret] — Omniscience — PASS
-     Hook: attack/own-turn hooks
 034. Viltrumite [viltrumite] — PUNCH — PASS
-     Hook: attack/own-turn hooks
 035. Mahito [mahito] — Idle Transfiguration — PASS
-     Hook: attack/own-turn hooks
 036. BlackBeard [blackbeard] — Liberation — PASS
-     Hook: attack/own-turn hooks
 037. Garp [garp] — Fist of Love — PASS
-     Hook: attack/own-turn hooks
 038. Erwin [erwin] — CAPTAIN — PASS
-     Hook: attack + reactive/support hooks
 039. Boa Hancock [boa-hancock] — Mero Mero — PASS
-     Hook: attack/own-turn hooks
 040. Senku [senku] — Chemistry — PASS
-     Hook: attack + reactive/support hooks
 041. Grimmjaw [grimmjaw] — Gran Rey Cero — PASS
-     Hook: attack/own-turn hooks
 042. Reigen [reigen] — Scam — PASS
-     Hook: attack + reactive/support hooks
 043. Kamen Rider Kabuto [kamen-rider-kabuto] — CLOCK UP — PASS
-     Hook: attack/own-turn hooks
 044. Meruem [meruem] — Aura Synthesis — PASS
-     Hook: attack + reactive/support hooks
 045. Frieza [frieza] — Telekinesis — PASS
-     Hook: attack + reactive/support hooks
 046. Adam Francis [adam-francis] — Champion of Light — PASS
-     Hook: attack/own-turn hooks
 047. Katakuri [katakuri] — MOCHI — PASS
-     Hook: attack + reactive/support hooks
 048. WhiteBeard [whitebeard] — Quake Hermit — PASS
-     Hook: attack/own-turn hooks
 049. Doppio [doppio] — FROG — PASS
-     Hook: attack + reactive/support hooks
 050. Shanks [shanks] — HAKI — PASS
-     Hook: attack + reactive/support hooks
 051. Metal Cooler [metal-cooler] — CLONE — PASS
-     Hook: attack + reactive/support hooks
 052. Gohan [gohan] — MASENKO — PASS
-     Hook: attack/own-turn hooks
 053. Yuno [yuno] — Zephyr Bow — PASS
-     Hook: attack/own-turn hooks
 054. Asta [asta] — ANTI MAGIC — PASS
-     Hook: attack/own-turn hooks
 055. Demon Asta [asta-demon] — ANTI MAGIC BOOK — PASS
-     Hook: own-turn gated pool/form/counter
 056. Nami [nami] — Greedy — PASS
-     Hook: attack + reactive/support hooks
 057. Giyu Tomioka [giyu-tomioka] — Dead Calm — PASS
-     Hook: attack/own-turn hooks
 058. Sea Beast [sea-beast] — Big Fish — PASS
-     Hook: attack + reactive/support hooks
 059. Arlong [arlong] — ZAWATER — PASS
-     Hook: attack/own-turn hooks
 060. Aquaman [aquaman] — AQUARIUM — PASS
-     Hook: attack/own-turn hooks
 061. Noelle Silva [noelle-silva] — Tsunami Water — PASS
-     Hook: attack + reactive/support hooks
 062. Weather Report [weather-report] — BUBBLE CONTROL — PASS
-     Hook: attack/own-turn hooks
 063. Piccolo [piccolo] — AURA FARMER — PASS
-     Hook: attack/own-turn hooks
 064. Peashooter [peashooter] — Plant — PASS
-     Hook: attack/own-turn hooks
 065. Hutao [hutao] — Fire Burst — PASS
-     Hook: attack/own-turn hooks
 066. Escanor [weather-solar-deity] — SUNNY — PASS
-     Hook: attack/own-turn hooks
 067. Builderman [builderman] — DEVELOPER — PASS
-     Hook: attack + reactive/support hooks
 068. Aatrox [aatrox] — WORLD ENDER — PASS
-     Hook: attack/own-turn hooks
 069. Griffith [weather-eclipse-harvester] — ECLIPSED — PASS
-     Hook: attack + reactive/support hooks
 070. Dante Limbus [dante-limbus] — M@!L%#TH — PASS
-     Hook: attack + reactive/support hooks
 071. Adult Gon [adult-gon] — END!!! — PASS
-     Hook: attack/own-turn hooks
 072. Rukia [rukia] — Freeze — PASS
-     Hook: attack/own-turn hooks
 073. Ice Admiral [ice-admiral] — Ice Age — PASS
-     Hook: attack/own-turn hooks
 074. Esdeath [weather-frost-sovereign] — Absolute Zero — PASS
-     Hook: attack/own-turn hooks
 075. Toshiro [toshiro] — Absolute Zero — PASS
-     Hook: attack + reactive/support hooks
 076. Android 21 [android-21] — Sweet Destruction — PASS
-     Hook: attack + reactive/support hooks
 077. Yuta Okkotsu [yuta-okkotsu] — Cursed Love — PASS
-     Hook: attack + reactive/support hooks
 078. Luffy Nightmare [luffy-nightmare] — ENHANCE — PASS
-     Hook: attack + reactive/support hooks
 079. Igris [weather-shadow-monarch] — SHADOW KNIGHT — PASS
-     Hook: attack + reactive/support hooks
 080. Cid Atomic [cid-shadow] — I AM ATMOIC !!! — PASS
-     Hook: attack/own-turn hooks
 081. Enderman [enderman] — PEARL — PASS
-     Hook: attack + reactive/support hooks
 082. Homura Akemi [homura-akemi] — Time Manipulation — PASS
-     Hook: attack + reactive/support hooks
 083. Kamen Rider Decade [kr-decade] — Rider Card — PASS
-     Hook: attack + reactive/support hooks
 084. Uchiha Sasuke [uchiha-sasuke] — Storm Susano — PASS
-     Hook: attack + reactive/support hooks
 085. Light Admiral [light-admiral] — Light Speed — PASS
-     Hook: attack + reactive/support hooks
 086. Gojo Young [gojo-young] — Infinity — PASS
-     Hook: attack + reactive/support hooks
 087. The First Human [weather-heavenly-seraph] — Ascension — PASS
-     Hook: attack + reactive/support hooks
 088. Sailor Moon [sailor-moon] — Moon Manipulation — PASS
-     Hook: attack + reactive/support hooks
 089. Jin Mori [jin-mori] — 72 Magic Spell — PASS
-     Hook: attack + reactive/support hooks
 090. Wish [wish] — Heavenly Blessing — PASS
-     Hook: attack + reactive/support hooks
 091. Uchiha Shisui [weather-tsukuyomi-eye] — TSUKUYOMI — PASS
-     Hook: attack + reactive/support hooks
 092. Diavolo [diavolo] — EPITAH — PASS
-     Hook: attack + reactive/support hooks
 093. Kaguya [kaguya] — Dimensional Domain — PASS
-     Hook: attack + reactive/support hooks
 094. Vasto Lord [weather-reaper-hollow] — Last Breath — PASS
-     Hook: attack + reactive/support hooks
 095. Subaru [subaru] — Return By Death — PASS
-     Hook: attack + reactive/support hooks
 096. Dio Brando [dio-brando] — WGRYYYY — PASS
-     Hook: attack/own-turn hooks
 097. Malevolent King [weather-malevolent-king] — Malevolent Kitchen — PASS
-     Hook: attack/own-turn hooks
 098. Doflamingo [doflamingo] — STRING ARMY — PASS
-     Hook: attack + reactive/support hooks
 099. Hakari Jackpot [hakari-jackpot] — JACKPOT — PASS
-     Hook: attack + reactive/support hooks
 100. Mahoraga [mahoraga] — ADAPTION — PASS
-     Hook: attack + reactive/support hooks
 101. Equinox [tower-champion-normal] — Emotional Meter — PASS
-     Hook: attack/own-turn hooks
 102. Aqua [tower-champion-raining] — Useless — PASS
-     Hook: attack + reactive/support hooks
 103. Ice King [tower-champion-snowing] — Ice Manipulation — PASS
-     Hook: attack + reactive/support hooks
 104. Charizard Mega X [tower-champion-sunny] — Solar Claw — PASS
-     Hook: attack/own-turn hooks
 105. Majin Buu [tower-champion-sugar] — Candy Eater — PASS
-     Hook: attack + reactive/support hooks
 106. Aizen Beyond [tower-champion-reaper] — Illusion Shattering Flower — PASS
-     Hook: attack + reactive/support hooks
 107. Wonder Of You [tower-champion-eclipse] — Calamity — PASS
-     Hook: attack + reactive/support hooks
 108. Thukuna [tower-champion-malevolent] — Malevolent Kitchen — PASS
-     Hook: attack + reactive/support hooks
 109. Naruto x Sasuke [tower-champion-tsukuyomi] — Datebayo — PASS
-     Hook: attack + reactive/support hooks
 110. The Judgement [tower-champion-heavenly] — Divine Light — PASS
-     Hook: attack + reactive/support hooks
 111. Kamen Rider Dark Decade [tower-champion-shadow] — Dark Aurora — PASS
-     Hook: attack + reactive/support hooks
 112. Mihawk [raid-secret-mihawk] — Hawkeye — PASS
-     Hook: attack + reactive/support hooks
 113. Ace [raid-secret-ace] — Mera Mera — PASS
-     Hook: attack + reactive/support hooks
 114. Marco [raid-secret-marco] — Phoenix Inferno — PASS
-     Hook: attack + reactive/support hooks
 115. Funny Valentine [funny-valentine] — D4C — PASS
-     Hook: attack + reactive/support hooks
 116. Dio The World [dio-the-world] — The World — PASS
-     Hook: attack/own-turn hooks
 117. Joseph Joestar [joseph-joestar] — Secret Techniques — PASS
-     Hook: attack + reactive/support hooks
 118. Jolyne Joestar [jolyne-joestar] — Stone Free — PASS
-     Hook: attack + reactive/support hooks
 119. Tohth [tohth] — OinGo BoinGo — PASS
-     Hook: attack + reactive/support hooks
 120. Emmu [emmu] — Sleep Demon Art — PASS
-     Hook: attack + reactive/support hooks
 121. Josuke [josuke] — Crazy Diamond — PASS
-     Hook: attack + reactive/support hooks
 122. Akaza [akaza] — Destructive Demon Art — PASS
-     Hook: attack + reactive/support hooks
 123. Awakened Doflamingo [awakened-doflamingo] — Ito Ito — PASS
-     Hook: attack + reactive/support hooks
 124. Prime Garp [prime-garp] — Galaxy Impact — PASS
-     Hook: attack + reactive/support hooks
 125. Alucard [boss-event-alucard] — Bird of Hermes — PASS
-     Hook: attack + reactive/support hooks
 126. Madara Lubu [madara-lubu] — Divine Steed — PASS
-     Hook: attack + reactive/support hooks
 127. Sung Jin Woo [sung-jin-woo] — Systems Stats — PASS
-     Hook: attack + reactive/support hooks
 128. Frieren [frieren] — Endless Mana — PASS
-     Hook: attack + reactive/support hooks
 129. Alexander Anderson [alexander-anderson] — Pray to God — PASS
-     Hook: attack + reactive/support hooks
 130. Julius [julius] — Time Grimoire — PASS
-     Hook: attack + reactive/support hooks
 131. Speed Wizard [speed-wizard] — Godspeed — PASS
-     Hook: attack + reactive/support hooks
 132. Lucius Zogratis [boss-event-lucius] — All Grimoire — PASS
-     Hook: attack + reactive/support hooks
 133. Sea Goddess Valkyrie [sea-goddess-valkyrie] — Ultimate Tsunami — PASS
-     Hook: attack + reactive/support hooks
 134. Yuno Spirit [yuno-spirit] — Spirit Wind Grimoire — PASS
-     Hook: attack + reactive/support hooks
 135. Yuno Spirit Demonic [tower-champion-lucky] — Anti Spirit Grimoire — PASS
-     Hook: attack + reactive/support hooks
 136. Xtreme Chan [tower-champion-wind] — The Fuuto Wind — PASS
-     Hook: attack + reactive/support hooks
 137. Star Plantinum Requiem [tower-champion-bizare] — SPR — PASS
-     Hook: attack + reactive/support hooks
 138. Shadow The World Requiem [tower-champion-shadow-200] — STWR — PASS
-     Hook: attack + reactive/support hooks
 139. Reagan Ridley [tower-champion-normal-200] — Mad Scientist — PASS
-     Hook: attack + reactive/support hooks
 140. Shirou [shirou] — Rose Shield — PASS
-     Hook: attack + reactive/support hooks
 141. Kiritsu [kiritsu] — Hitman — PASS
-     Hook: attack/own-turn hooks
 142. Mash [mash] — Shield — PASS
-     Hook: attack + reactive/support hooks
 143. Gilgamesh [gilgamesh] — King of Heros — PASS
-     Hook: attack + reactive/support hooks
 144. Cu Chalinn [cu-chalinn] — Gae Blog — PASS
-     Hook: attack/own-turn hooks
 145. Saber Knight [saber-knight] — EXCALIBURH — PASS
-     Hook: attack + reactive/support hooks
 146. Iskandar [iskandar] — Ionian Hetairoi — PASS
-     Hook: attack + reactive/support hooks
 147. Medea [medea] — Rule Breaker — PASS
-     Hook: attack + reactive/support hooks
 148. Merlin [merlin] — Noble Phantasm — PASS
-     Hook: attack + reactive/support hooks
 149. Gilgamesh Chan [tower-champion-heavenly-200] — Enuma English — PASS
-     Hook: attack + reactive/support hooks
 150. The Legion [the-legion] — Frenzy — PASS
-     Hook: attack/own-turn hooks
 151. The Clown [the-clown] — Potion — PASS
-     Hook: own-turn gated pool/form/counter
 152. The Oni [the-oni] — Cursed Blood — PASS
-     Hook: attack/own-turn hooks
 153. Jason 13th [jason-13th] — Ki ki ma ma — PASS
-     Hook: attack + reactive/support hooks
 154. Freddy Krueger [freddy-krueger] — Nightmare — PASS
-     Hook: attack + reactive/support hooks
 155. Myers [myers] — Stalking — PASS
-     Hook: attack + reactive/support hooks
 156. Gojo Revice [gojo-revice] — Gomen Amanai — PASS
-     Hook: attack + reactive/support hooks
 157. Geto Young [geto-young] — Summon Technique — PASS
-     Hook: attack + reactive/support hooks
 158. Toji [toji] — Heavenly Restriction — PASS
-     Hook: own-turn gated pool/form/counter
 159. Jogo [jogo] — Inferno Domain — PASS
-     Hook: attack + reactive/support hooks
 160. True Mahito [true-mahito] — Heni Satsu Rei Tai — PASS
-     Hook: attack + reactive/support hooks
 161. Todo [todo] — Besto Friendo — PASS
-     Hook: attack + reactive/support hooks
 162. Dagon [dagon] — Water Manipulation — PASS
-     Hook: attack + reactive/support hooks
 163. Choso [choso] — Blood Technique — PASS
-     Hook: attack + reactive/support hooks
 164. Haruta [haruta] — Coward — PASS
-     Hook: attack + reactive/support hooks
 165. Mechamaru [mechamaru] — Puppet Manipulation — PASS
-     Hook: attack + reactive/support hooks
 166. Hanami [hanami] — Flower Field — PASS
-     Hook: attack + reactive/support hooks
 167. Sukuna Shibuya [sukuna-shibuya] — FUGA x Domain — PASS
-     Hook: attack + reactive/support hooks
 168. Goku SSJ3 [goku-ssj3] — Dragon Combo — PASS
-     Hook: attack + reactive/support hooks
 169. Vegeta SSJ2 [vegeta-ssj2] — Saiyan Prince — PASS
-     Hook: attack + reactive/support hooks
 170. Broly [broly] — LEGENDARY SUPER SAIYAN — PASS
-     Hook: attack + reactive/support hooks
 171. Ultimate Gohan [ultimate-gohan] — MASENKOO — PASS
-     Hook: attack + reactive/support hooks
 172. Golden Frieza [golden-frieza] — Supernova — PASS
-     Hook: attack + reactive/support hooks
 173. Pennywise [pennywise] — The Deadlights — PASS
-     Hook: attack + reactive/support hooks
 174. Florentino [tower-champion-raining-200] — Flower Dance — PASS
-     Hook: attack/own-turn hooks
 175. Kafka [tower-champion-sugar-200] — Manipulator — PASS
-     Hook: attack + reactive/support hooks
 176. Escanor The Indomitable [tower-champion-sunny-200] — Ultimate Divine Lance — PASS
-     Hook: attack + reactive/support hooks
 177. Yhwach Omniscience [tower-champion-reaper-200] — Auswahlen — PASS
-     Hook: attack + reactive/support hooks
 178. Ragna [boss-event-ragna] — Dragon Slayer — PASS
-     Hook: attack + reactive/support hooks
 179. Woltekamui [woltekamui] — Godlike Speed — PASS
-     Hook: attack + reactive/support hooks
 180. Kagurabachi [kagurabachi] — Enten — PASS
-     Hook: own-turn gated pool/form/counter
 181. The Mourner [the-mourner] — The Solemn Lament — PASS
-     Hook: own-turn gated pool/form/counter
 182. Itachi Awakened [itachi-awakened] — Mangekyou Awakening — PASS
-     Hook: own-turn gated pool/form/counter
 183. Konan [konan] — Paper Genkai — PASS
-     Hook: attack + reactive/support hooks
 184. Kisame Hoshigaki [kisame-hoshigaki] — Samehada — PASS
-     Hook: attack/own-turn hooks
 185. Deidara [deidara] — Clay Genkai — PASS
-     Hook: attack + reactive/support hooks
 186. Sasori [sasori] — Puppet Genkai — PASS
-     Hook: attack + reactive/support hooks
 187. Kakuzu [kakuzu] — Grudge Fear — PASS
-     Hook: attack + reactive/support hooks
 188. Hidan [hidan] — Undead Genkai — PASS
-     Hook: attack/own-turn hooks
 189. Zetsu [zetsu] — White / Black — PASS
-     Hook: attack + reactive/support hooks
 190. Orochimaru [orochimaru] — Snake Genkai — PASS
-     Hook: attack + reactive/support hooks
 191. Pain [pain] — Rinnegan — PASS
-     Hook: own-turn gated pool/form/counter
 192. Dumb Titan [dumb-titan] — Stomp — PASS
-     Hook: attack/own-turn hooks
 193. War Hammer Titan [war-hammer-titan] — Crystal Heart — PASS
-     Hook: own-turn gated pool/form/counter
 194. Jaw Titan [jaw-titan] — Iron Jaw — PASS
-     Hook: attack + reactive/support hooks
 195. Armored Titan [armored-titan] — Titan Shield — PASS
-     Hook: attack + reactive/support hooks
 196. Eren [eren-rumbling] — Titan Wrath — PASS
-     Hook: attack + reactive/support hooks
 197. Beast Titan [beast-titan] — Rock Throw — PASS
-     Hook: attack + reactive/support hooks
 198. Michael Kaiser [michael-kaiser] — Predator Instinct — PASS
-     Hook: own-turn gated pool/form/counter
 199. Isagi Yoichi [isagi-yoichi] — Metavision — PASS
-     Hook: attack + reactive/support hooks
 200. Don Lorenzo [don-lorenzo] — Ace Eater — PASS
-     Hook: own-turn gated pool/form/counter
+201. Meliodas [meliodas] — Hellblaze — PASS
+202. Ban [ban] — Snatch — PASS
+203. Diane [diane] — Envy Creation — PASS
+204. King Harlequin [king-harlequin] — Disaster — PASS
+205. Gowther [gowther] — Puppet Invasion — PASS
+206. Escanor The One [escanor-the-one] — The One — PASS

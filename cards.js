@@ -1417,7 +1417,7 @@ const CARDS = [
 // Champions retain the existing reward IDs/receipts; exact level-1 Normal specs.
 const TOWER_REWARD_CARDS = [
   {"id": "tower-champion-normal", "element": "Electric", "image": "assets/cards/equinox.png", "towerType": "normal", "unlockRequirement": "tower_floor_100_normal", "sourceId": "starter-common", "name": "Equinox", category: ["VideoGame", "Alternative", "Brutal"], "chance": 2500025, "requiredWeather": "Normal", "nativeWeather": null, "stats": {"hp": 27700, "atk": 6780}, "passive": {"name": "Emotional Meter", "description": "Start at 50% positive / 50% negative. Primary attacks shift 10–20% toward positive; incoming hits shift 10–20% toward negative.\n100% positive: living team gains +100% max HP and +25% ATK; meter locks.\n100% negative: hit all enemies for x25 current ATK, then die permanently; cannot revive or be cloned."}},
-  {"id": "tower-champion-raining", "element": "Water", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", category: ["Supporter", "Magician", "Unhuman"], "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 63700, "atk": 566}, "passive": {"name": "Useless", "description": "Before battle, choose +50% team max HP (once/team) or +50% eligible VNĐ/EXP/Reward Bonus. Reward choice excludes Tower Coins, potion chances and Time Trial payouts.\nEach allied turn with another active attacker: heal it for 10% max HP and grant +2.2% current ATK, once/turn."}},
+  {"id": "tower-champion-raining", "element": "Water", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", category: ["Supporter", "Magician", "Unhuman"], "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 63700, "atk": 566}, "passive": {"name": "Useless", "description": "Before battle, choose +50% team max HP (once/team) or +50% eligible VNĐ/EXP/Reward Bonus. Reward choice also boosts standard drop quantities, including Tower Coins, Trial Shards and materials; it does not change drop chances, fixed EXP Trial conversion or reward-free PvP.\nEach allied turn with another active attacker: heal it for 10% max HP and grant +2.2% current ATK, once/turn."}},
   {"id": "tower-champion-snowing", "element": "Water", "image": "assets/cards/iceking.png", "towerType": "snowing", "unlockRequirement": "tower_floor_100_snowing", "sourceId": "toshiro", "name": "Ice King", category: ["AntiVillian", "Magician", "Human", "Alternative"], "chance": 1058000, "requiredWeather": "Snowing", "nativeWeather": "snowing", "stats": {"hp": 15700, "atk": 6010}, "passive": {"name": "Ice Manipulation", "description": "When hit: 20% chance to Freeze the attacker for 2 turns. Deal +50% damage to frozen targets.\nFirst eligible fatal hit: revive at full HP for 5 combat turns, then die permanently. No teammate revival.\nOn permanent death: 58% chance to give a living teammate Ice King Crown (10% chance to Freeze targets for 3 turns)."}},
   {"id": "tower-champion-sunny", "element": "Fire", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", category: ["Unhuman", "Brutal", "Alternative"], "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 14000, "atk": 5350}, "passive": {"name": "Solar Claw", "description": "33% base crit chance. First damaging crit applies Burn for 3 turns (33% current ATK/turn).\nLater crits deal x3 attack damage before the normal crit multiplier. They do not reapply this Burn. No free follow-up or guaranteed crit."}},
   {"id": "tower-champion-sugar", "element": "Electric", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"], "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 17200, "atk": 4210}, "passive": {"name": "Candy Eater", "description": "Each primary attack gains 1–3 candies; only the current form applies.\n0–10: +25% damage; +1 extra candy/attack.\n11–25: +50% max HP; when hit, spend 1 candy to heal 3% max HP.\n26–50: damaging attacks summon a Ghost (HP = damage dealt; ATK = 10% current ATK).\n51–75: 76% dodge; a dodge skips the next attack, grants 5 candies and heals 7.6% max HP.\n76–99: every 3rd attack also hits up to 3 random enemies for 50% ATK.\n100: hit all enemies each attack; spend 1 candy/attack until 0. Then return to Form 1 and self-Stun for 5 turns; no candy gain or transformation during reversion.\nGenerated units cannot summon Ghosts."}},
@@ -3422,6 +3422,159 @@ CARDS.push(...[
     "description": "Intercept 40% of damage that would reach an ally after their shield/defenses. Only one Lorenzo intercepts each hit; redirected damage cannot redirect again. Each incoming attack hit grants 1 Zombie (max 10).\nREGENERATION: On each own turn, heal the ally with the lowest current HP for 3% of Lorenzo max HP per Zombie. Does not spend stacks or Lorenzo HP.\nCOUNTER STRIKE: At 10 Zombie, the next own attack deals 50% of all intercepted damage since battle start to every enemy, then resets Zombie to 0. The accumulated intercepted total is retained."
   }
 }
+]);
+CARDS.push(...[
+  {
+    "id": "meliodas",
+    "name": "Meliodas",
+    "element": "Dark",
+    "rarity": "Mythic",
+    "chance": 0,
+    "requiredWeather": null,
+    "category": [
+      "Protagonist",
+      "Unhuman",
+      "Hero",
+      "AntiVillian",
+      "Swordman",
+      "Sins"
+    ],
+    "stats": {
+      "hp": 118000,
+      "atk": 45100
+    },
+    "image": "assets/cards/meliodas.png",
+    "passive": {
+      "name": "Hellblaze",
+      "description": "When attacked by a Magician, 50% chance to negate the attack and counter for 150% of its damage. Counter/redirect damage cannot recursively counter. While on the team, allied Black Flame kills bypass fatal survival and revival. +50% Crit Damage and +10% Crit Chance per other Sins teammate (excluding self)."
+    },
+    "bossEventOnly": true
+  },
+  {
+    "id": "ban",
+    "name": "Ban",
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 20000000,
+    "requiredWeather": "Eclipse",
+    "category": [
+      "Villian",
+      "AntiHero",
+      "Sins",
+      "Brutal",
+      "PureEvil",
+      "Unhuman"
+    ],
+    "stats": {
+      "hp": 74900,
+      "atk": 18300
+    },
+    "image": "assets/cards/ban.png",
+    "passive": {
+      "name": "Snatch",
+      "description": "While Ban is alive, all Burn, Black Flame, Bleed and Poison ticks deal 125% damage (one global aura, no duplicate stacking). Each attack steals up to 10 percentage points from one active percentage buff on its target. The source loses that portion; Ban keeps it for 3 own turns, and it never returns when his stolen buff expires."
+    }
+  },
+  {
+    "id": "diane",
+    "name": "Diane",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 19999999,
+    "requiredWeather": "Lucky",
+    "category": [
+      "Titan",
+      "Sins",
+      "Brutal",
+      "Magician",
+      "Supporter",
+      "Human"
+    ],
+    "stats": {
+      "hp": 63700,
+      "atk": 15600
+    },
+    "image": "assets/cards/diane.png",
+    "passive": {
+      "name": "Envy Creation",
+      "description": "When starting in the lead slot, create one clone of an eligible Nature teammate/enemy each battle turn. Each original entity can be cloned once; generated/uncloneable units cannot be copied. Clones retain the target passive and have 50% of Diane's HP/ATK. Maximum 3 active/3 created clones. Allied clones gain +10% base HP/ATK while Diane is alive at creation. Nature attacks against Electric deal x4 instead of x3."
+    }
+  },
+  {
+    "id": "king-harlequin",
+    "name": "King Harlequin",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 27000000,
+    "requiredWeather": "Wind",
+    "category": [
+      "Unhuman",
+      "Sins",
+      "Magician",
+      "Swordman",
+      "Hero"
+    ],
+    "stats": {
+      "hp": 106000,
+      "atk": 6500
+    },
+    "image": "assets/cards/kingharlequin.png",
+    "passive": {
+      "name": "Disaster",
+      "description": "Negate a fatal hit on a teammate and absorb 25% of that hit's damage, up to 3 times per match. Attacks against an enemy never attacked this match add 10% of that enemy's Max HP as damage. Starting in the lead slot grants teammates shields equal to 150% of King's Max HP. While King is above 50% HP, enemy shield gains are reduced by 25%."
+    }
+  },
+  {
+    "id": "gowther",
+    "name": "Gowther",
+    "element": "Holy",
+    "rarity": "Secret",
+    "chance": 26000000,
+    "requiredWeather": "Sugar",
+    "category": [
+      "Magician",
+      "Sins",
+      "Unhuman",
+      "AntiVillian",
+      "Hero",
+      "Mastermind"
+    ],
+    "stats": {
+      "hp": 83200,
+      "atk": 20300
+    },
+    "image": "assets/cards/gowther.png",
+    "passive": {
+      "name": "Puppet Invasion",
+      "description": "Each attack has a 20% chance to Hypnotize for 2 turns (80% chance to attack a teammate); successful application grants 1 Lust. With Lust, incoming attacks receive 50% damage reduction and consume 1 Lust after damage is calculated. At 4+ Lust, gain 50% dodge. Dodged attacks do not consume Lust."
+    }
+  },
+  {
+    "id": "escanor-the-one",
+    "name": "Escanor The One",
+    "element": "Fire",
+    "rarity": "Mythic",
+    "chance": 0,
+    "requiredWeather": null,
+    "category": [
+      "Sins",
+      "Hero",
+      "Human",
+      "Brutal",
+      "Captain"
+    ],
+    "stats": {
+      "hp": 24300,
+      "atk": 9300
+    },
+    "image": "assets/cards/escanortheone.png",
+    "passive": {
+      "name": "The One",
+      "description": "Gain 1 SunShine on each own turn (max 12); external healing and ally buffs cannot affect this card. At 12, enter The One for 5 own turns: +150% ATK, immune to Stun, Freeze and ATK debuffs; attacks against Frozen or Water targets deal x1.5 and cleanse Freeze; attacks instantly break enemy shields. A fatal hit in The One revives at 50% Max HP and clears mode/SunShine; can recur after charging again. Outside The One, if an attack leaves a target's shield intact, apply Burn for 2 turns (50% ATK/turn) and blast up to two nearby enemies for the damage of that attack."
+    },
+    "evolutionOnly": true,
+    "evolvesFrom": "weather-solar-deity"
+  }
 ]);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
