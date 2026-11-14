@@ -4930,3 +4930,5 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 
 .cloud-email-form{display:grid;gap:12px;padding:16px;border:1px solid rgba(89,225,210,.25);border-radius:12px;background:rgba(8,20,32,.65)}
 .cloud-email-form input{width:100%;min-height:44px;box-sizing:border-box}
+
+.details-chip.ability-hindered{color:#ffcc8c;background:#382817}.details-chip.ability-summon{color:#d0a7ff;background:#2c1b43}

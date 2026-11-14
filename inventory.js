@@ -96,7 +96,7 @@
   function getItem(id, at = Date.now()) {
     if (!safeId(id) || !hasOwn(data.items, id)) return null;
     const entry = data.items[id];
-    return { ...entry, metadata: { ...entry.metadata }, ...POTIONS[id], quantity: entry.quantity, until: data.buffs[id] || 0, remaining: Math.max(0, (data.buffs[id] || 0) - at), pausedRemaining: data.paused[id] || 0, usable: hasOwn(POTIONS, id) };
+    return { ...entry, ...(entry.type==='portal'&&host.PortalRules?{image:host.PortalRules.image(entry)}:{}), metadata: { ...entry.metadata }, ...POTIONS[id], quantity: entry.quantity, until: data.buffs[id] || 0, remaining: Math.max(0, (data.buffs[id] || 0) - at), pausedRemaining: data.paused[id] || 0, usable: hasOwn(POTIONS, id) };
   }
   function list() { return Object.keys(data.items).map(id => getItem(id)); }
   // Pure HUD snapshot: expired Super timers can be resolved without writing a save in Sandbox.

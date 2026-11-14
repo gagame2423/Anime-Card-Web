@@ -2,7 +2,7 @@
 (function(host){
  'use strict';
  let bridge={},current=null,currentVariant='',ui=null;
- const ABILITIES=[['Bleed',/\bbleed(?:ing)?\b/i],['Heal',/\bheal(?:s|ing|ed)?\b/i],['Stun',/\bstun(?:s|ned)?\b/i],['Freeze',/\bfreez(?:e|es|ing)\b|\bfrozen\b/i],['Follow Up',/follow[ -]?up/i],['Shield',/\bshield(?:s|ed)?\b/i]];
+ const ABILITIES=[['Bleed',/\bbleed(?:ing)?\b/i],['Heal',/\bheal(?:s|ing|ed)?\b/i],['Stun',/\bstun(?:s|ned)?\b/i],['Freeze',/\bfreez(?:e|es|ing)\b|\bfrozen\b/i],['Follow Up',/follow[ -]?up/i],['Shield',/\bshield(?:s|ed)?\b/i],['Hindered',/\bhind(?:ered|red)\b/i],['Summon',/\bsummon(?:s|ed|ing)?\b|\bclone(?:s|d)?\b/i]];
  const tags=card=>ABILITIES.filter(([,pattern])=>pattern.test(card?.passive?.description||'')).map(([name])=>name);
  const el=id=>host.document.getElementById(id);
  function mount(){if(ui)return true;ui={select:el('previewMutationSelect'),evolve:el('previewEvolveButton'),lock:el('previewLockButton'),equip:el('previewEquipButton'),slot:el('previewRelicSlot'),categories:el('previewCategories'),tags:el('previewAbilityTags'),picker:el('cardRelicPicker'),list:el('cardRelicList'),status:el('cardRelicStatus')};if(Object.values(ui).some(v=>!v)){ui=null;return false;}

@@ -14,7 +14,7 @@
  function rotation(at=Date.now()){
   const week=getISOWeekAndYear(at),seed=week.year*100+week.week,rng=random(seed);
   // Thêm category từ tuần mới, không đổi featured category giữa tuần đang chạy.
-  const categories=week.startMs<CATEGORY_EXPANSION_UTC?legacyCategories:host.CategorySystem.TYPES;
+  const categories=week.startMs<CATEGORY_EXPANSION_UTC?legacyCategories.filter(c=>!['Bleach','Gunner'].includes(c)):host.CategorySystem.TYPES;
   return{...week,seed,category:categories[Math.floor(rng()*categories.length)],element:host.ElementSystem.TYPES[Math.floor(rng()*host.ElementSystem.TYPES.length)]};
  }
  function orbRange(wave){const n=Math.max(1,Math.floor(wave));return{min:Math.floor(1+(n-1)*(7/99)),max:Math.floor(2+(n-1)*(8/99))};}

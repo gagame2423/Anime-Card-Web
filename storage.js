@@ -20,7 +20,8 @@
     const potion=host.InventorySystem.POTIONS[item.id];
     if(potion){fallback.className='potion-bottle'+(host.InventorySystem.SUPER_BASE[item.id]?' is-super':'');fallback.dataset.potionStat=potion.stat;fallback.textContent='';}
     root.append(fallback);
-    if(item.image){const img=make('img');img.src=item.image;img.alt=item.name;img.loading='lazy';img.addEventListener('load',()=>{fallback.hidden=true;},{once:true});img.addEventListener('error',()=>img.remove(),{once:true});root.append(img);}
+    const image=item.type==='portal'?host.PortalRules.image(item):item.image;
+    if(image){const img=make('img');img.src=image;img.alt=item.name;img.loading='lazy';img.addEventListener('load',()=>{fallback.hidden=true;},{once:true});img.addEventListener('error',()=>img.remove(),{once:true});root.append(img);}
     return root;
   }
   function sources(id){
@@ -48,7 +49,7 @@
       for(const row of pool){const card=host.ALL_CARDS.find(card=>card.id===row.cardId);result.push(`${card?.name||row.cardId}: weight ${row.weight} → ${(row.chance*100).toFixed(4)}%.`);}
       if(!pool.some(row=>row.cardId==='tower-champion-heavenly'))result.push('The Judgement locked: complete Heavenly Tower Floor 100. Eligible weights are normalized.');
     }
-    if(host.PortalsSystem?.get(id))result.push('Normal Time Trial room clear: 20% Tier 1. Portal victory: 50% upgrade through Tier 5. Tier 5 clear: 1% Secret Portal. Five defeats destroy this item. Party: Tier 4, Tier 5 or Secret only.');
+    const portal=host.PortalsSystem?.get(id);if(portal)result.push((portal.type==='slime'?'Every 5 Normal/Material room wins: 80% Tier 1–2; EXP Trial excluded.':'Normal Time Trial room clear: 20% Tier 1.')+' Portal victory: 50% upgrade through Tier 5. Tier 5 clear: 1% Secret Portal. Five defeats destroy this item. Party: Tier 4, Tier 5 or Secret only.');
     if(id==='slime_dessert')result.push('Slime Portal: 1–5 at Tier 1, 12–24 at Tier 5 / Secret. Feed for 3,000 base EXP or evolve Lv.100 Rimuru (81,208).');
     if(id==='senzu_bean')result.push('Namek Portal victory: 1–3 at Tier 1, 10–20 at Tier 5 / Secret. Feed for 2,500 base EXP or evolve Lv.100+ Gohan (8,500) / Frieza (7,690).');
     if(id==='star_orb')result.push('Infinity Mode: clear waves for 1–2 Orbs at Wave 1 up to 8–10 at Wave 100. Personal weekly reward: highest wave × 100 Star Orbs, claimed automatically on local startup; Google sync is optional.');

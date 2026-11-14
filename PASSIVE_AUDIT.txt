@@ -1,139 +1,137 @@
-PASSIVE AUDIT — TENSURA UPDATE
-Ngày: 14/11/2026
+PASSIVE AUDIT — BLEACH / HUECO RIFT UPDATE
+Ngày: 14/11/2026 • Build 20261114-bleach-1
 
-Runtime checks: 211 card definitions, isolated seeded engine (seed 8789), tối đa 18 turns.
-Fixture dùng HP lớn / ATK 1,000; không thay stats của game. Kiểm tra finite HP/ATK,
-turn tiến, không negative stun timer, không leaked activeAttacker, không exception.
+bleach_passives.js được đăng ký trước passives.js trong startup/index.html.
+Entry → own-turn context → beforeAttack / counted attack → primary/custom damage →
+status / fatal / kill → afterAttack / follow-up chain → end-turn / lease cleanup.
+Sử dụng RNG được cấp từ deterministic engine, không có real-time timer/listener riêng.
+Primary-only Yamamoto technique draws; mode duration tính own turn, kể cả suppressed.
+Urahara reconstruction và South expiry dùng battle turnCount.
 
-210 Index-passive copy / execute / lease-cleanup cases (2 own turns mỗi case).
-49 focused Tensura assertions; 67 content/Portal/food/evolution/save assertions.
-Edge cases: The One borrowed mode expires, Black Flame cannot be cleansed,
-isolation survives enemy self-revival and ignores a Crow moving to frontline,
-Soul passive immunity. 100 continuous Infinity transitions; 21 fresh Tower matches.
-Stable runtime view identity: 100,000 repeated reads/writes with mixed Sins/Tower hooks.
+217 isolated native card scenarios: seed 8789, tối đa 18 turns; finite HP/ATK,
+turn tiến, timer không âm, không leaked activeAttacker hoặc exception.
+216 Index copy / execute / scoped lease cleanup cases (2 own turns mỗi case).
+76 focused Bleach combat assertions; 82 content/weather/drop/evolution/icon assertions.
+13 copy/mode/summon/runtime edge checks; 100,000 cached runtime reads/writes.
+100 continuous Infinity transitions giữ player state; 21 fresh Tower matches.
+67 Sins regression; 67 Tensura system assertions; 52 event/evolution/reward checks.
+Standard drops x6; Spooky 50 waves giữ special quantity 1.
+PvP mixed Bleach teams: 39 steps / 3 seeds, snapshots giống nhau, không storage writes.
+Desktop 1440px / mobile 390px: shared Portal selector, icon tile/sidebar/inspector,
+8 turns; Hueco UI/receipt/reload recovery; evolution write-failure rollback.
 
-Regression: 67 Sins assertions; 52 event/evolution/Infinity/reward checks,
-1,000 Boss rotations; normal drops x6; Spooky 50 waves with special quantities = 1.
-Determinism: 120 Sins PvP steps + 84 Tensura steps across 3 seeds mỗi suite;
-snapshots identical, no localStorage writes or rewards.
-Desktop/mobile: optional account form, standard Portal selector/start, entry callbacks,
-8 combat turns; no horizontal overflow or battle log/stack exceptions.
-Firebase SDK mocked: linking both directions preserves UID, password token accepted,
-credential-conflict recovery, registration, password reset, logout/local play.
-Live OAuth/email and deployed Firestore permissions still require post-deploy testing.
+Bleach cases bao gồm Hakka cap/Freeze/follow-on Hindered, Ulquiorra 3/5/10 chain,
+50/100 Vista transformations, shield capacity/restoration/expiry/tag isolation,
+Yamamoto non-repeat pool/South lifespan/Corpse/Burn kills/permanent death/new-entry
+Scorched burn, Starrk decaying follow-ups/Wolf cap/dodge/barrage, Urahara
+Bleed conversion/cooldown/extra damage/Bankai team heal/cleanse, Arrancar AoE.
+Black Flame vẫn uncleansable; Ulquiorra không cleanse stat debuff. Native Yamamoto,
+Wolves và expired South không clone/revive. Dead generated Wolves/South retire khỏi
+queue. Yuuki copy swap loại scoped form bonuses/shield/summons/effects cũ.
 
-Hook order: match start / entry → own turn context → beforeAttack / onAttack →
-central damage / status / fatal / kill → afterAttack → end-turn / cleanup.
-Tensura does not register DOM listeners or real-time timers per card/copy.
-Uncleanseable Black Flame stays in the shared protected DoT registry.
-Borrowed effects use private runtime views and scoped stat leases; old leases expire.
-New floor attempts create fresh entities; Infinity retains player runtime and clears
-stale enemy references / duel participants when replacing the enemy wave.
+Limits: seeded scenarios không bao quát mọi tổ hợp 217 cards, relic, mutation,
+weather hoặc borrowed passive. Artwork và cross-network Party cần post-deploy checks.
 
-Limits: seeded scenarios are not an exhaustive proof of every 211-card team, Relic,
-mutation, weather, borrowed-passive combination, device, network or Firebase project.
-No blanket “100% bug-free” or “zero lag on every device” claim is made.
-
-PASS — seeded native passive scenarios:
-001. Naruto Kid [starter-common] — First Strike — PASS
-002. Normal Demon [normal-demon] — Lifesteal — PASS
-003. Sasuke Kid [sasuke-kid] — Chidori — PASS
-004. Powerless Guy [deku-mc] — What can i get you sir — PASS
-005. Ichigo Young [starter-rare] — Afterimage — PASS
-006. Gon Kid [gon-kid] — Rock — PASS
-007. Tanjiro [tanjiro] — Rock — PASS
-008. Luffy Kid [starter-epic] — GOMU NO MU NO PISTOL — PASS
-009. Six Seven [six-seven] — SIX SEVEN — PASS
-010. Kaneki [kaneki-ghoul] — GHOUL — PASS
-011. The Trapper [the-trapper] — Trap — PASS
-012. Nezuko [nezuko] — Bleed — PASS
-013. Buggy [buggy] — Chop Chop — PASS
-014. Bounty Hunter [bounty-hunter] — BOUNTY — PASS
-015. Jotaro Kujo [jotaro-kujo] — Ora Ora — PASS
-016. Hakari [hakari] — Lucky Train — PASS
-017. Saber [saber] — EXCALIBUR!!! — PASS
-018. Jonathan Joestar [jonathan-joestar] — HAMONNN — PASS
-019. Son Goku [starter-legendary] — Kamehameha — PASS
-020. Vegeta [vegeta] — Super Vegeta — PASS
-021. Kakashi [kakashi] — Kamui — PASS
-022. Kamen Rider Kuuga [kr-kuuga] — KUUGA — PASS
-023. Bulma [bulma] — WISH — PASS
-024. Denji [denji] — POCHITA — PASS
-025. Uchiha Itachi [uchiha-itachi] — Amaterasu — PASS
-026. Madness Doctor [madness-doctor] — Madness — PASS
-027. Erza [erza] — MAGIC ARMOR — PASS
-028. Yuji Itadori [yuji-itadori] — BLACK FLASH — PASS
-029. Guts [guts] — OUTRAGE — PASS
-030. Polnareff [polnareff] — SILVER CHARIOT — PASS
-031. The Flash [the-flash] — FLASH — PASS
-032. Rimuru [rimuru] — SLIME — PASS
-033. The Truth [starter-secret] — Omniscience — PASS
-034. Viltrumite [viltrumite] — PUNCH — PASS
-035. Mahito [mahito] — Idle Transfiguration — PASS
-036. BlackBeard [blackbeard] — Liberation — PASS
-037. Garp [garp] — Fist of Love — PASS
-038. Erwin [erwin] — CAPTAIN — PASS
-039. Boa Hancock [boa-hancock] — Mero Mero — PASS
-040. Senku [senku] — Chemistry — PASS
-041. Grimmjaw [grimmjaw] — Gran Rey Cero — PASS
-042. Reigen [reigen] — Scam — PASS
-043. Kamen Rider Kabuto [kamen-rider-kabuto] — CLOCK UP — PASS
-044. Meruem [meruem] — Aura Synthesis — PASS
-045. Frieza [frieza] — Telekinesis — PASS
-046. Adam Francis [adam-francis] — Champion of Light — PASS
-047. Katakuri [katakuri] — MOCHI — PASS
-048. WhiteBeard [whitebeard] — Quake Hermit — PASS
-049. Doppio [doppio] — FROG — PASS
-050. Shanks [shanks] — HAKI — PASS
-051. Metal Cooler [metal-cooler] — CLONE — PASS
-052. Gohan [gohan] — MASENKO — PASS
-053. Yuno [yuno] — Zephyr Bow — PASS
-054. Asta [asta] — ANTI MAGIC — PASS
-055. Demon Asta [asta-demon] — ANTI MAGIC BOOK — PASS
-056. Nami [nami] — Greedy — PASS
-057. Giyu Tomioka [giyu-tomioka] — Dead Calm — PASS
-058. Sea Beast [sea-beast] — Big Fish — PASS
-059. Arlong [arlong] — ZAWATER — PASS
-060. Aquaman [aquaman] — AQUARIUM — PASS
-061. Noelle Silva [noelle-silva] — Tsunami Water — PASS
-062. Weather Report [weather-report] — BUBBLE CONTROL — PASS
-063. Piccolo [piccolo] — AURA FARMER — PASS
-064. Peashooter [peashooter] — Plant — PASS
-065. Hutao [hutao] — Fire Burst — PASS
-066. Escanor [weather-solar-deity] — SUNNY — PASS
-067. Builderman [builderman] — DEVELOPER — PASS
-068. Aatrox [aatrox] — WORLD ENDER — PASS
-069. Griffith [weather-eclipse-harvester] — ECLIPSED — PASS
-070. Dante Limbus [dante-limbus] — M@!L%#TH — PASS
-071. Adult Gon [adult-gon] — END!!! — PASS
-072. Rukia [rukia] — Freeze — PASS
-073. Ice Admiral [ice-admiral] — Ice Age — PASS
-074. Esdeath [weather-frost-sovereign] — Absolute Zero — PASS
-075. Toshiro [toshiro] — Absolute Zero — PASS
-076. Android 21 [android-21] — Sweet Destruction — PASS
-077. Yuta Okkotsu [yuta-okkotsu] — Cursed Love — PASS
-078. Luffy Nightmare [luffy-nightmare] — ENHANCE — PASS
-079. Igris [weather-shadow-monarch] — SHADOW KNIGHT — PASS
-080. Cid Atomic [cid-shadow] — I AM ATMOIC !!! — PASS
-081. Enderman [enderman] — PEARL — PASS
-082. Homura Akemi [homura-akemi] — Time Manipulation — PASS
-083. Kamen Rider Decade [kr-decade] — Rider Card — PASS
-084. Uchiha Sasuke [uchiha-sasuke] — Storm Susano — PASS
-085. Light Admiral [light-admiral] — Light Speed — PASS
-086. Gojo Young [gojo-young] — Infinity — PASS
-087. The First Human [weather-heavenly-seraph] — Ascension — PASS
-088. Sailor Moon [sailor-moon] — Moon Manipulation — PASS
-089. Jin Mori [jin-mori] — 72 Magic Spell — PASS
-090. Wish [wish] — Heavenly Blessing — PASS
-091. Uchiha Shisui [weather-tsukuyomi-eye] — TSUKUYOMI — PASS
-092. Diavolo [diavolo] — EPITAH — PASS
-093. Kaguya [kaguya] — Dimensional Domain — PASS
-094. Vasto Lord [weather-reaper-hollow] — Last Breath — PASS
-095. Subaru [subaru] — Return By Death — PASS
-096. Dio Brando [dio-brando] — WGRYYYY — PASS
-097. Malevolent King [weather-malevolent-king] — Malevolent Kitchen — PASS
-098. Doflamingo [doflamingo] — STRING ARMY — PASS
-099. Hakari Jackpot [hakari-jackpot] — JACKPOT — PASS
+CARD REGISTRY / RUNTIME RESULTS
+1. Naruto Kid [starter-common] — First Strike — PASS
+2. Normal Demon [normal-demon] — Lifesteal — PASS
+3. Sasuke Kid [sasuke-kid] — Chidori — PASS
+4. Powerless Guy [deku-mc] — What can i get you sir — PASS
+5. Ichigo Young [starter-rare] — Afterimage — PASS
+6. Gon Kid [gon-kid] — Rock — PASS
+7. Tanjiro [tanjiro] — Rock — PASS
+8. Luffy Kid [starter-epic] — GOMU NO MU NO PISTOL — PASS
+9. Six Seven [six-seven] — SIX SEVEN — PASS
+10. Kaneki [kaneki-ghoul] — GHOUL — PASS
+11. The Trapper [the-trapper] — Trap — PASS
+12. Nezuko [nezuko] — Bleed — PASS
+13. Buggy [buggy] — Chop Chop — PASS
+14. Bounty Hunter [bounty-hunter] — BOUNTY — PASS
+15. Jotaro Kujo [jotaro-kujo] — Ora Ora — PASS
+16. Hakari [hakari] — Lucky Train — PASS
+17. Saber [saber] — EXCALIBUR!!! — PASS
+18. Jonathan Joestar [jonathan-joestar] — HAMONNN — PASS
+19. Son Goku [starter-legendary] — Kamehameha — PASS
+20. Vegeta [vegeta] — Super Vegeta — PASS
+21. Kakashi [kakashi] — Kamui — PASS
+22. Kamen Rider Kuuga [kr-kuuga] — KUUGA — PASS
+23. Bulma [bulma] — WISH — PASS
+24. Denji [denji] — POCHITA — PASS
+25. Uchiha Itachi [uchiha-itachi] — Amaterasu — PASS
+26. Madness Doctor [madness-doctor] — Madness — PASS
+27. Erza [erza] — MAGIC ARMOR — PASS
+28. Yuji Itadori [yuji-itadori] — BLACK FLASH — PASS
+29. Guts [guts] — OUTRAGE — PASS
+30. Polnareff [polnareff] — SILVER CHARIOT — PASS
+31. The Flash [the-flash] — FLASH — PASS
+32. Rimuru [rimuru] — SLIME — PASS
+33. The Truth [starter-secret] — Omniscience — PASS
+34. Viltrumite [viltrumite] — PUNCH — PASS
+35. Mahito [mahito] — Idle Transfiguration — PASS
+36. BlackBeard [blackbeard] — Liberation — PASS
+37. Garp [garp] — Fist of Love — PASS
+38. Erwin [erwin] — CAPTAIN — PASS
+39. Boa Hancock [boa-hancock] — Mero Mero — PASS
+40. Senku [senku] — Chemistry — PASS
+41. Grimmjaw [grimmjaw] — Gran Rey Cero — PASS
+42. Reigen [reigen] — Scam — PASS
+43. Kamen Rider Kabuto [kamen-rider-kabuto] — CLOCK UP — PASS
+44. Meruem [meruem] — Aura Synthesis — PASS
+45. Frieza [frieza] — Telekinesis — PASS
+46. Adam Francis [adam-francis] — Champion of Light — PASS
+47. Katakuri [katakuri] — MOCHI — PASS
+48. WhiteBeard [whitebeard] — Quake Hermit — PASS
+49. Doppio [doppio] — FROG — PASS
+50. Shanks [shanks] — HAKI — PASS
+51. Metal Cooler [metal-cooler] — CLONE — PASS
+52. Gohan [gohan] — MASENKO — PASS
+53. Yuno [yuno] — Zephyr Bow — PASS
+54. Asta [asta] — ANTI MAGIC — PASS
+55. Demon Asta [asta-demon] — ANTI MAGIC BOOK — PASS
+56. Nami [nami] — Greedy — PASS
+57. Giyu Tomioka [giyu-tomioka] — Dead Calm — PASS
+58. Sea Beast [sea-beast] — Big Fish — PASS
+59. Arlong [arlong] — ZAWATER — PASS
+60. Aquaman [aquaman] — AQUARIUM — PASS
+61. Noelle Silva [noelle-silva] — Tsunami Water — PASS
+62. Weather Report [weather-report] — BUBBLE CONTROL — PASS
+63. Piccolo [piccolo] — AURA FARMER — PASS
+64. Peashooter [peashooter] — Plant — PASS
+65. Hutao [hutao] — Fire Burst — PASS
+66. Escanor [weather-solar-deity] — SUNNY — PASS
+67. Builderman [builderman] — DEVELOPER — PASS
+68. Aatrox [aatrox] — WORLD ENDER — PASS
+69. Griffith [weather-eclipse-harvester] — ECLIPSED — PASS
+70. Dante Limbus [dante-limbus] — M@!L%#TH — PASS
+71. Adult Gon [adult-gon] — END!!! — PASS
+72. Rukia [rukia] — Freeze — PASS
+73. Ice Admiral [ice-admiral] — Ice Age — PASS
+74. Esdeath [weather-frost-sovereign] — Absolute Zero — PASS
+75. Toshiro [toshiro] — Absolute Zero — PASS
+76. Android 21 [android-21] — Sweet Destruction — PASS
+77. Yuta Okkotsu [yuta-okkotsu] — Cursed Love — PASS
+78. Luffy Nightmare [luffy-nightmare] — ENHANCE — PASS
+79. Igris [weather-shadow-monarch] — SHADOW KNIGHT — PASS
+80. Cid Atomic [cid-shadow] — I AM ATMOIC !!! — PASS
+81. Enderman [enderman] — PEARL — PASS
+82. Homura Akemi [homura-akemi] — Time Manipulation — PASS
+83. Kamen Rider Decade [kr-decade] — Rider Card — PASS
+84. Uchiha Sasuke [uchiha-sasuke] — Storm Susano — PASS
+85. Light Admiral [light-admiral] — Light Speed — PASS
+86. Gojo Young [gojo-young] — Infinity — PASS
+87. The First Human [weather-heavenly-seraph] — Ascension — PASS
+88. Sailor Moon [sailor-moon] — Moon Manipulation — PASS
+89. Jin Mori [jin-mori] — 72 Magic Spell — PASS
+90. Wish [wish] — Heavenly Blessing — PASS
+91. Uchiha Shisui [weather-tsukuyomi-eye] — TSUKUYOMI — PASS
+92. Diavolo [diavolo] — EPITAH — PASS
+93. Kaguya [kaguya] — Dimensional Domain — PASS
+94. Vasto Lord [weather-reaper-hollow] — Last Breath — PASS
+95. Subaru [subaru] — Return By Death — PASS
+96. Dio Brando [dio-brando] — WGRYYYY — PASS
+97. Malevolent King [weather-malevolent-king] — Malevolent Kitchen — PASS
+98. Doflamingo [doflamingo] — STRING ARMY — PASS
+99. Hakari Jackpot [hakari-jackpot] — JACKPOT — PASS
 100. Mahoraga [mahoraga] — ADAPTION — PASS
 101. Equinox [tower-champion-normal] — Emotional Meter — PASS
 102. Aqua [tower-champion-raining] — Useless — PASS
@@ -246,5 +244,11 @@ PASS — seeded native passive scenarios:
 209. Diablo [diablo] — Immortal Spirit — PASS
 210. Benimaru Jura [benimaru-jura] — Shimmering Flame — PASS
 211. Yuuki Kagurazaka [yuuki-kagurazaka] — Mammon Creator — PASS
+212. Rukia Bankai [rukia-bankai] — Hakka no Togame — PASS
+213. Ulquiorra [ulquiorra] — Resurrección Segunda Etapa — PASS
+214. Yamamoto [yamamoto] — Zanka No Tachi — PASS
+215. Coyote Starrk [coyote-starrk] — Cero Metralleta — PASS
+216. Kisuke Urahara [kisuke-urahara] — Zanpakutō Benihime — PASS
+217. Normal Arrancar [normal-arrancar] — Cero — PASS
 
 Idle own-turn guards: itachi-awakened, kagurabachi, the-mourner, war-hammer-titan, pain, toji, the-clown, raid-secret-mihawk, weather-report, toshiro, builderman, awakened-doflamingo

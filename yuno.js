@@ -7,12 +7,12 @@
     const bounded=value=>Math.max(0,Math.min(LIMIT,Math.floor(Number(value)||0)));
     const state=(unit,key=id(unit))=>api.passiveRuntimeFor(unit,key).yuno ||= {entered:false,absorbed:0};
     const layerTotal=unit=>(runtime(unit).yunoShields||[]).reduce((sum,layer)=>Math.min(LIMIT,sum+layer.amount),0);
-    function addLayer(unit,amount,expiresAt=null) {
+    function addLayer(unit,amount,expiresAt=null,tag=null) {
       const value=bounded(api.shieldAmount?api.shieldAmount(unit,amount):amount); if(!unit||!alive(unit)||!value)return;
       const r=runtime(unit),before=r.shield,layers=r.yunoShields ||= [];
-      const existing=layers.find(layer=>layer.expiresAt===expiresAt);
+      const existing=layers.find(layer=>layer.expiresAt===expiresAt&&(layer.tag??null)===tag);
       if(existing)existing.amount=Math.min(LIMIT,existing.amount+value);
-      else layers.push({amount:value,expiresAt});
+      else layers.push({amount:value,expiresAt,...(tag?{tag}:{})});
       if(api.writeShield)api.writeShield(unit,()=>{r.shield=Math.min(LIMIT,r.shield+value);});else r.shield=Math.min(LIMIT,r.shield+value);
       api.onShield?.(unit,before);
       if(!r.shieldKind)r.shieldKind='wind';

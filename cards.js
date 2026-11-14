@@ -3701,6 +3701,163 @@ CARDS.push(
     }
   }
 );
+CARDS.push(
+  {
+    "id": "rukia-bankai",
+    "name": "Rukia Bankai",
+    "chance": 0,
+    "evolutionOnly": true,
+    "evolvesFrom": "rukia",
+    "element": "Water",
+    "rarity": "Mythic",
+    "category": [
+      "Unhuman",
+      "Swordman",
+      "Bleach",
+      "Hero",
+      "AntiVillian"
+    ],
+    "stats": {
+      "hp": 23700,
+      "atk": 5800
+    },
+    "image": "assets/cards/rukiabankai.png",
+    "passive": {
+      "name": "Hakka no Togame",
+      "description": "Entry: 0 Hakka (cap 100). Every 2 attacks: 60% chance to Freeze for 2 turns; a successful Freeze grants 10 Hakka. Attacking a Frozen enemy grants 3–5 Hakka and deals +30% damage. At 100 Hakka: Freeze all enemies for 5 turns, deal 500% ATK to all, then reset Hakka; when that Freeze ends, Hinder for 2 turns. Immune to Freeze; an enemy Freeze attempt grants +50% base ATK and +25% base HP, stacking additively."
+    },
+    "requiredWeather": null
+  },
+  {
+    "id": "ulquiorra",
+    "name": "Ulquiorra",
+    "chance": 0,
+    "riftOnly": true,
+    "element": "Nature",
+    "rarity": "Secret",
+    "category": [
+      "Unhuman",
+      "Swordman",
+      "Bleach",
+      "Villian",
+      "AntiHero",
+      "Brutal",
+      "Magician"
+    ],
+    "stats": {
+      "hp": 130000,
+      "atk": 49800
+    },
+    "image": "assets/cards/ulquiorra.png",
+    "passive": {
+      "name": "Resurrección Segunda Etapa",
+      "description": "Every attack: 75% chance to chain follow-ups (30% ATK; up to 3); each grants 1 Vista (cap 100). At 50 Vista: Murciélago for 10 own turns, +50% base ATK, chain cap 5, every 2 attacks blast 3 enemies for 70% ATK. At 100 Vista: consume 100, Resurrección for 15 own turns, +100% base ATK, shield for 9 own turns equal to 50% of total enemy max HP (cap 10x own max HP). Chain cap 10, follow-ups deal 50% ATK and gain no Vista; each heals 0.3% max HP and restores shield by 3% max HP. While shielded, cleanse normal statuses; stat debuffs and uncleansable Black Flame remain."
+    },
+    "requiredWeather": null
+  },
+  {
+    "id": "yamamoto",
+    "name": "Yamamoto",
+    "chance": 150000000,
+    "requiredWeather": "Reaper",
+    "element": "Fire",
+    "rarity": "Secret",
+    "category": [
+      "Captain",
+      "Unhuman",
+      "Swordman",
+      "Bleach",
+      "Hero",
+      "AntiVillian",
+      "Brutal"
+    ],
+    "stats": {
+      "hp": 93900,
+      "atk": 35900
+    },
+    "image": "assets/cards/yamamoto.png",
+    "passive": {
+      "name": "Zanka No Tachi",
+      "description": "Each primary attack draws an unused direction, refilling after all 4. EAST: destroy the target shield, or deal 150% ATK. WEST: Burn 2 turns (80% ATK/turn); self gains Burn immunity for the next own turn. SOUTH: summon a random dead enemy with its passive and 30% of Yamamoto stats at the front for 3 battle turns; if none eligible, +30% base ATK/HP. NORTH: against Burn, deal 10% target current HP and lose 15% own current HP; otherwise Burn all enemies 2 turns (120% ATK/turn). Kills grant 1 Corpse, or 5 for own Burn kills. Death: all enemies take 10% ATK per Corpse. Cannot revive or be cloned. After death, new enemy entries receive Burn 5 turns (10% ATK/turn)."
+    }
+  },
+  {
+    "id": "coyote-starrk",
+    "name": "Coyote Starrk",
+    "chance": 180000000,
+    "requiredWeather": "Reaper",
+    "element": "Water",
+    "rarity": "Secret",
+    "category": [
+      "Swordman",
+      "Bleach",
+      "Villian",
+      "AntiHero",
+      "Brutal",
+      "Magician",
+      "Gunner"
+    ],
+    "stats": {
+      "hp": 123000,
+      "atk": 46900
+    },
+    "image": "assets/cards/coyotestarrk.png",
+    "passive": {
+      "name": "Cero Metralleta",
+      "description": "Each primary attack randomly uses Left or Right Gun. LEFT: basic strike, then 50% follow-up chance; successive follow-ups lose 10 percentage points and gain 10 percentage points of ATK damage (starts at 50% ATK). RIGHT: 150% ATK and Hindered next turn; all living Wolves assist. Every 2 attacks summon a Wolf at the back (10% stats, no passive; active cap 10). Wolves cannot revive or be cloned. From the 7th attack onward, follow-ups blast all enemies for 30% Starrk ATK. 24% dodge; a successful dodge makes the next Left Gun initial follow-up chance 75%."
+    }
+  },
+  {
+    "id": "kisuke-urahara",
+    "name": "Kisuke Urahara",
+    "chance": 250000000,
+    "requiredWeather": "Reaper",
+    "element": "Nature",
+    "rarity": "Secret",
+    "category": [
+      "Supporter",
+      "Bleach",
+      "Hero",
+      "AntiVillian",
+      "Unhuman",
+      "Magician",
+      "Swordman"
+    ],
+    "stats": {
+      "hp": 315000,
+      "atk": 19200
+    },
+    "image": "assets/cards/kisukeurahara.png",
+    "passive": {
+      "name": "Zanpakutō Benihime",
+      "description": "Every 3 attacks: Bleed 1 turn for 50% ATK. Against Bleed, add 10% ATK damage ignoring shield and damage reduction. Blood Shield Reconstruction: cleanse an allied Bleed and convert all remaining Bleed damage into shield (3 battle-turn cooldown). While alive, allied Bleed gains 25% of Urahara ATK per tick. On the 10th attack, Kannonbiraki for 5 own turns: attacks heal all living allies for 30% damage dealt; cleanse normal statuses on the team. Uncleansable Black Flame remains."
+    }
+  },
+  {
+    "id": "normal-arrancar",
+    "name": "Normal Arrancar",
+    "chance": 1250,
+    "requiredWeather": "Reaper",
+    "element": "Dark",
+    "rarity": "Common",
+    "category": [
+      "Unhuman",
+      "Bleach",
+      "Brutal",
+      "PureEvil",
+      "Swordman"
+    ],
+    "stats": {
+      "hp": 1680,
+      "atk": 410
+    },
+    "image": "assets/cards/normalarrancar.png",
+    "passive": {
+      "name": "Cero",
+      "description": "Every 7 attacks: blast all enemies for 20% ATK."
+    }
+  }
+);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

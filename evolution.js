@@ -3,6 +3,7 @@
   'use strict';
   const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
   const RECIPES = Object.freeze([
+    Object.freeze({id:'rukia-bankai',baseId:'rukia',itemId:'hakka_earing',level:100,resultLevel:1,name:'Rukia Bankai'}),
     Object.freeze({id:'rimuru-demon-lord',baseId:'rimuru',itemId:'slime_dessert',itemCount:81208,level:100,resultLevel:1,name:'Rimuru Demon Lord'}),
     Object.freeze({id:'escanor-the-one',baseId:'weather-solar-deity',itemId:'pride_sun',level:100,resultLevel:1,name:'Escanor The One'}),
     Object.freeze({id:'itachi-awakened',baseId:'uchiha-itachi',itemId:'mangekyo_eye',level:100,resultLevel:1,name:'Itachi Awakened'}),
@@ -18,6 +19,7 @@
     Object.freeze({ id:'prime-garp', baseId:'garp', itemId:'cannon_ball', level:100,resultLevel:1, name:'Prime Garp' })
   ]);
   const MATERIALS = Object.freeze([
+    ...host.MaterialSystem.SPECIAL_ITEMS,
     Object.freeze({id:'pride_sun',name:'Pride Sun',type:'material',icon:'☀',image:'assets/items/psun.png',tier:'mythic',description:'Evolve a Lv.100 Escanor into Escanor The One, preserving mutations. Pride Boss Event: 0.01%–3% by difficulty.'}),
     Object.freeze({id:'mangekyo_eye',name:'Mangekyo Eye',type:'material',icon:'◉',image:'assets/items/eeye.png',tier:'secret',description:'Evolve Lv.100 Uchiha Itachi into Lv.100 Itachi Awakened, keeping mutations. Akatsuki Raid: 0.03%–3% by difficulty.'}),
     Object.freeze({id:'mahito_puppet',name:'Mahito Puppet',type:'material',icon:'♟',image:'assets/items/mpuppet.png',tier:'secret',description:'Evolve Lv.100+ Mahito (any mutation) into True Mahito. Shibuya Raid Shop: 10,500 Shibuya Coins.'}),

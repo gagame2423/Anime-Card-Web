@@ -5,7 +5,10 @@
  const BASE=Object.freeze([{id:'tower-champion-sugar',hp:10000,atk:1420},{id:'android-21',hp:20000,atk:3000},{id:'golden-frieza',hp:55000,atk:5500},{id:'broly',hp:100000,atk:12450}].map(Object.freeze));
  const ELEMENTS=Object.freeze(['Fire','Water','Nature','Electric','Dark','Holy']),CATEGORIES=Object.freeze(['DragonWarrior','Hero']);
  const TYPES=Object.freeze({namek:Object.freeze({name:'Namek Portal',image:'assets/items/nportals.png',categories:CATEGORIES,maxBonus:100,food:'senzu_bean',foodName:'Senzu Beans',card:'broly',cardName:'Broly',base:BASE}),slime:Object.freeze({name:'Slime Portal',image:'assets/items/slportal.png',categories:['Swordman','Isekai','Magician','Hero'],maxBonus:200,food:'slime_dessert',foodName:'Slime Dessert',card:'yuuki-kagurazaka',cardName:'Yuuki Kagurazaka',base:[{id:'diablo',hp:20000,atk:1500},{id:'benimaru-jura',hp:35000,atk:4000},{id:'veldora',hp:70000,atk:7500},{id:'rimuru-demon-lord',hp:200000,atk:17500}]})});
- const definition=p=>TYPES[typeof p==='string'?p:p?.type]||TYPES.namek;
+ function typeOf(value){const type=typeof value==='string'?value:value?.metadata?.portal?.type||value?.portal?.type||value?.type;if(Object.hasOwn(TYPES,type))return type;return /^portal_slime_/.test(value?.id||'')||/^Slime Portal\b/i.test(value?.name||'')?'slime':'namek';}
+ const definition=p=>TYPES[typeOf(p)];
+ const image=value=>definition(value).image;
+ function renderIcon(node,value){if(!node)return;node.hidden=false;node.src=image(value);node.alt=definition(value).name;}
  const clone=value=>JSON.parse(JSON.stringify(value));
  const tierName=tier=>tier==='secret'?'Secret':'Tier '+tier;
  const pick=(rows,random)=>rows[Math.min(rows.length-1,Math.floor(random()*rows.length))];
@@ -42,5 +45,5 @@
   function digest(){return host.OnlineUtils.stable({turn:battle.turn,count:battle.turnCount||0,winner:battle.portalWinner||'',kills,teams:[battle.playerTeam,battle.enemyTeam].map(line=>line.map(u=>({id:u.card.id,hp:u.hp,maxHp:u.maxHp,atk:u.atk,dead:Boolean(u.defeated),shield:u.passiveState?.shield||0,attacks:u.passiveState?.ownAttackCount||0,status:[u.passiveState?.stunTurns||0,u.passiveState?.freezeTurns||0]})))});}
   return Object.freeze({battle,engine,kills,step,digest});
  }
- host.PortalRules=Object.freeze({MULTIPLIERS,BASE,ELEMENTS,CATEGORIES,TYPES,definition,integer,tierName,validPortal,create,item,beanRange,slots,unit,enemies,generator,createCombat});
+ host.PortalRules=Object.freeze({MULTIPLIERS,BASE,ELEMENTS,CATEGORIES,TYPES,definition,typeOf,image,renderIcon,integer,tierName,validPortal,create,item,beanRange,slots,unit,enemies,generator,createCombat});
 })(window);

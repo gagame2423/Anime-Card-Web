@@ -2237,7 +2237,7 @@ function renderCollection() {
         meta.appendChild(requirement);
       }
       if(card?.riftOnly){
-        const requirement=document.createElement('span');requirement.className='weather-requirement active';requirement.textContent='Rumbling Rift exclusive • Never in normal RNG';meta.appendChild(requirement);
+        const requirement=document.createElement('span');requirement.className='weather-requirement active';requirement.textContent=window.RiftSystem.cardSource(card.id)+' exclusive • Never in normal RNG';meta.appendChild(requirement);
       } else if(card?.bossEventOnly){
         const requirement=document.createElement('span');requirement.className='weather-requirement active';requirement.textContent=getBossEventCardSource(card)+' exclusive • Never in normal RNG';meta.appendChild(requirement);
       } else if (card?.raidOnly) {
@@ -2552,7 +2552,7 @@ function renderPreview() {
     ? previewMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")
     : "Normal Variant";
   els.previewCollectedCount.textContent = `x${getOwnedCardCount(card.id).toLocaleString("en-US")} total`;
-  els.previewRequirement.textContent = card.riftOnly ? 'Rumbling Rift exclusive • Never available in normal RNG' : card.bossEventOnly ? `${getBossEventCardSource(card)} exclusive • Never available in normal RNG` : card.raidOnly ? `${card.id==='pain'?'Akatsuki':['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Once per card • Never available in normal RNG` : card.unlockRequirement
+  els.previewRequirement.textContent = card.riftOnly ? window.RiftSystem.cardSource(card.id)+' exclusive • Never available in normal RNG' : card.bossEventOnly ? `${getBossEventCardSource(card)} exclusive • Never available in normal RNG` : card.raidOnly ? `${card.id==='pain'?'Akatsuki':['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Once per card • Never available in normal RNG` : card.unlockRequirement
     ? `${card.questOnly ? 'Complete Quest Cards in the utility menu' : window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement} • Permanently unlocked in the standard pool`
     : card.requiredWeather ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}` : 'Available in the standard pool';
 
@@ -3314,7 +3314,7 @@ function renderBattleModePicker() {
   renderTowerControls();
   renderTimeTrialControls(); renderRaidControls(); renderBossEventControls(); renderSpookyControls(); window.RiftSystem.renderControls(isRiftBattle()); renderAutoContinueBattleToggle();
   if (els.battleStartButton) {
-    els.battleStartButton.textContent = isRiftBattle()?'Enter Rumbling Rift • 5 cards':isSpookyBattle()?`Start Spooky Wave ${window.SpookySystem.snapshot().wave}`:isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • ${window.RaidSystem.TYPES[getRaidType()].keyId?"1 Key":"Free entry"}` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start ${getBattleMode()==='material-time-trial'?'Material Trial •':'Time Trial'} Room ${window.TimeTrialSystem.currentRoom(getBattleMode())}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
+    els.battleStartButton.textContent = isRiftBattle()?'Enter '+window.RiftSystem.definition(window.RiftSystem.rotation().type).name+' • 5 cards':isSpookyBattle()?`Start Spooky Wave ${window.SpookySystem.snapshot().wave}`:isBossEventBattle() ? `Challenge ${window.BossEventSystem.TYPES[getBossEventType()].name} • 5 cards` : isRaidBattle() ? `Enter ${window.RaidSystem.TYPES[getRaidType()].name} • ${window.RaidSystem.TYPES[getRaidType()].keyId?"1 Key":"Free entry"}` : isTimeTrialBattle() ? window.TimeTrialSystem.isExp(getBattleMode()) ? 'Start EXP Time Trial • 1 Ticket' : `Start ${getBattleMode()==='material-time-trial'?'Material Trial •':'Time Trial'} Room ${window.TimeTrialSystem.currentRoom(getBattleMode())}` : isTowerBattle() ? `Climb Tower Floor ${window.TowerSystem?.nextFloor(getTowerWeatherMode()) || 1}` : isOneVsOneBattle() ? 'Start 1v1 Battle' : 'Start 4v4 Battle';
   }
 }
 
@@ -4306,11 +4306,11 @@ function finishRiftBattle(won){
   clearAutoContinueBattleTimer();clearBattleTurnTimer();clearBattleAnimationTimers();
   battleState.finished=true;battleState.isBattling=false;battleState.outcome=summary.won?'victory':'defeat';
   const card=summary.card?getCardById(summary.card.cardId):null,mutation=summary.card?.mutationIds.map(id=>MUTATION_BY_ID[id].name).join(' + '),relic=summary.relic;
-  setViewText('riftSummary',`Rumbling Rift • Rift Shards +${summary.shards}\n${card?`${mutation?'['+mutation+'] ':''}${card.name} x1\n`:''}${relic?`${relic.name} · ${relic.metadata.relic.rarity}${relic.metadata.relic.unique?' · UNIQUE':''}\n`:''}${summary.guaranteed?'Guaranteed special drop\n':''}${summary.error||''}`);
+  setViewText('riftSummary',`${window.RiftSystem.definition(summary.type||battleState.rift.type).name} • Rift Shards +${summary.shards}\n${card?`${mutation?'['+mutation+'] ':''}${card.name} x1\n`:''}${relic?`${relic.name} · ${relic.metadata.relic.rarity}${relic.metadata.relic.unique?' · UNIQUE':''}\n`:''}${summary.item?`${window.InventorySystem.getItem(summary.item.id)?.name||summary.item.id} x1\n`:''}${summary.guaranteed?'Guaranteed special drop\n':''}${summary.error||''}`);
   document.getElementById('riftSummary').classList.remove('hidden');document.getElementById('riftResultShopButton').classList.remove('hidden');
   els.battleResultTitle.textContent=summary.won?'RIFT CLEARED':'RIFT ATTEMPT ENDED';els.battleResultText.textContent=summary.error||(summary.won?'Rewards saved to Storage.':'Your cards are preserved.');els.battleResultPower.textContent=getBattleModeLabel();
   setViewText('battleResultBaseLabel','Rift Shards');setViewText('battleResultTimeLabel','Enemies');setViewText('battleResultLevelLabel','Special drops');
-  els.battleResultBaseValue.textContent=String(summary.shards);els.battleResultTimeBonus.textContent='5';els.battleResultLevelDiff.textContent=summary.guaranteed?'Guaranteed':'Eren 0.5% • O.D.M. 5%';
+  els.battleResultBaseValue.textContent=String(summary.shards);els.battleResultTimeBonus.textContent='5';els.battleResultLevelDiff.textContent=summary.guaranteed?'Guaranteed':window.RiftSystem.dropText(summary.type||battleState.rift.type);
   els.battleResultCash.textContent='0 VNĐ';els.battleResultExp.textContent='0 EXP';els.battleResultDropRate.textContent='0%';els.battleResultLossStatus.textContent='NONE';
   refreshAchievements();updateStats();renderCollection();renderPotionInventory();window.RiftSystem.renderControls(true);
   els.battleArena.classList.add('hidden');setBattleModalLock(false);els.battleVictory.classList.remove('hidden','battle-result--neutral','battle-result--victory','battle-result--defeat');els.battleVictory.classList.add(summary.won?'battle-result--victory':'battle-result--defeat');els.battleVictory.setAttribute('aria-hidden','false');
@@ -6028,6 +6028,7 @@ window.PortalsSystem.configure({
 
 let portalSelectorHome=null,portalSavedBattle=null,portalSelectorHidden=[];
 function renderPortalStandardSelector(size,reset,locked){
+ const portal=window.PortalsSystem.selected;if(portal)window.PortalRules.renderIcon(document.getElementById('portalInspectorImage'),portal);
  const node=els.battleSetup,root=document.getElementById('portalStandardSelector');if(!node||!root||size<1)return;
  if(!portalSelectorHome){portalSelectorHome={parent:node.parentNode,next:node.nextSibling};portalSavedBattle=battleState;battleState={mode:'4v4',setup:{team:[],activeIndex:0},finished:true};arenaDeckKey='';root.append(node);
  for(const id of ['battleModePicker','teamLoadouts']){const n=document.getElementById(id);if(n){portalSelectorHidden.push([n,n.classList.contains('hidden')]);n.classList.add('hidden');}}}
