@@ -4927,3 +4927,6 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 .mutation-colossal{--mutation-color:#784f50;--mutation-glow:#4a4143;}
 #riftControls .battle-auto-continue{justify-self:start;}
 #riftAvailability{color:#a6f6df;}
+
+.cloud-email-form{display:grid;gap:12px;padding:16px;border:1px solid rgba(89,225,210,.25);border-radius:12px;background:rgba(8,20,32,.65)}
+.cloud-email-form input{width:100%;min-height:44px;box-sizing:border-box}

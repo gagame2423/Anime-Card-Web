@@ -14,7 +14,7 @@
   const uncloneable=u=>forbidden(u,NO_CLONE),noLife=u=>forbidden(u,NO_LIFE),noExternalRevive=u=>forbidden(u,NO_CLONE);
   const protectedBurns=new WeakMap();
   function rememberBurn(u,effect){let set=protectedBurns.get(u);if(!set){set=new Set();protectedBurns.set(u,set);}set.add(effect);}
-  function restoreBurn(u){const saved=protectedBurns.get(u);if(!saved)return;const r=runtime(u);for(const effect of saved){if(effect.turns<=0)saved.delete(effect);else if(!r.burn.includes(effect))r.burn.push(effect);}if(!saved.size)protectedBurns.delete(u);}
+  function restoreBurn(u){const saved=protectedBurns.get(u);if(!saved)return;const r=runtime(u);for(const effect of saved){if(effect.turns<=0||effect.yuukiLease?.expired)saved.delete(effect);else if(!r.burn.includes(effect))r.burn.push(effect);}if(!saved.size)protectedBurns.delete(u);}
   function cleanse(u,complete=false){const r=runtime(u);r.akatsukiPoison=[];r.akatsukiVoodoo=[];r.akatsukiMiss=null;r.akatsukiHypnosis=null;r.akatsukiHealBlock=0;if(complete){protectedBurns.delete(u);r.burn=[];r.bleed=[];r.akatsukiPaper=0;}else restoreBurn(u);}
   function clearBuffs(u){for(const id of IDS){const c=api.passiveRuntimeFor(u,id)?.akatsuki;if(c){c.healBuffs=[];c.yata=false;}}}
   function hasClone(u){return api.passiveIds(u).some(id=>cloneSkills.has(id));}

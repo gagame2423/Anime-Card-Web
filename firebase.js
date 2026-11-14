@@ -1,4 +1,4 @@
-/* Local-first profile and optional Google Cloud sync. Auth never controls gameplay. */
+/* Local-first profile and optional linked Firebase Cloud sync. Auth never controls gameplay. */
 (function(host){
  'use strict';
  const CONFIG=Object.freeze({apiKey:'AIzaSyBmfGuGndLjYHNMNXchhtR0xAT0vH3tYzM',authDomain:'anime-card-web.firebaseapp.com',projectId:'anime-card-web',storageBucket:'anime-card-web.firebasestorage.app',messagingSenderId:'213612619343',appId:'1:213612619343:web:276b1ee7f432a0e37c2c3a',measurementId:'G-69PXX2Z7L3'});
@@ -7,7 +7,8 @@
  const object=v=>Boolean(v&&typeof v==='object'&&!Array.isArray(v)),el=id=>doc?.getElementById(id);
  let bridge={},configured=false,auth=null,db=null,account=null,verified=false,enabled=false,sdkReady=false,initializing=null,identityJob=null,identityTarget=null,epoch=0;
  let busy=false,restoring=false,popupBusy=false,disconnecting=false,capturing=false,dirty=0,timer=null,lastWrite=0,pendingRevision=0,watch=null,recoveryBlocked=false;
- let status='Local save active. Google sync is optional.';
+ let pendingCredential=null;
+ let status='Local save active. Account sync is optional.';
  function localProfile(){
   try{const saved=JSON.parse(host.localStorage.getItem(PROFILE_KEY)||'null');if(saved?.version===1&&/^local_[a-zA-Z0-9_-]{8,80}$/.test(saved.uid)&&typeof saved.name==='string'&&saved.name.length>0)return saved;}catch(_){}
   let id;try{id=U.token();}catch(_){id=Date.now().toString(36)+Math.random().toString(36).slice(2);}
@@ -26,15 +27,20 @@
  // Old auth handoff/logout flags must never clear or replace a local profile.
  try{host.sessionStorage.removeItem(BOOT_KEY);host.sessionStorage.removeItem('anime_card_rng_logout_intent_v1');}catch(_){}
  function hasGoogle(user){return Boolean(user&&!user.isAnonymous&&user.providerData?.some(p=>p.providerId==='google.com'));}
- function canUseCloud(){return verified&&hasGoogle(account)&&account.uid===auth?.currentUser?.uid&&host.navigator.onLine!==false;}
+ function supportedUser(user){return Boolean(user&&!user.isAnonymous&&user.providerData?.some(p=>['google.com','password'].includes(p.providerId)));}
+ function canUseCloud(){return verified&&supportedUser(account)&&account.uid===auth?.currentUser?.uid&&host.navigator.onLine!==false;}
  function cloudReady(){return enabled&&canUseCloud()&&!recoveryBlocked;}
  function current(ticket,uid){return ticket===epoch&&canUseCloud()&&account.uid===uid&&!disconnecting;}
  function clearTimer(){if(timer!==null)host.clearTimeout(timer);timer=null;}
  function stopWatch(){watch?.();watch=null;pendingRevision=0;}
  function update(message){
-  if(message)status=message;U.text(el('cloudStatus'),status);U.text(el('cloudAccountName'),hasGoogle(account)?account.displayName||account.email||'Google account':profile.name);
+  if(message)status=message;U.text(el('cloudStatus'),status);U.text(el('cloudAccountName'),supportedUser(account)?account.displayName||account.email||'Cloud account':profile.name);
   U.text(el('cloudUid'),'UID: '+(account?.uid||profile.uid));U.text(el('cloudSyncIndicator'),busy||restoring?'Syncing':cloudReady()?(meta.dirty?'Local · sync pending':'Local + Cloud saved'):'Local saved');
-  if(el('cloudGoogleButton'))el('cloudGoogleButton').disabled=Boolean(initializing)||popupBusy||disconnecting;
+  if(el('cloudGoogleButton')){el('cloudGoogleButton').disabled=Boolean(initializing)||popupBusy||disconnecting||hasGoogle(account);el('cloudGoogleButton').textContent=hasGoogle(account)?'Google linked ✓':account?'Link Google account':'Sign in with Google';}
+  U.text(el('cloudProviders'),account?'Linked: '+account.providerData.filter(p=>['google.com','password'].includes(p.providerId)).map(p=>p.providerId==='password'?'Email / Password':'Google').join(' + '):'Sign in or create an account. Existing Google users: sign in with Google, then set a password here.');
+  const passwordLinked=account?.providerData?.some(p=>p.providerId==='password');
+  for(const id of ['cloudEmailLogin','cloudEmailRegister','cloudEmailLink','cloudPasswordReset'])if(el(id)){el(id).disabled=popupBusy||disconnecting||restoring;el(id).hidden=id==='cloudEmailLink'?!account||passwordLinked:id==='cloudPasswordReset'?false:Boolean(account);}
+  if(el('cloudEmail')&&account?.email){el('cloudEmail').value=account.email;el('cloudEmail').readOnly=true;}else if(el('cloudEmail'))el('cloudEmail').readOnly=false;
   if(el('cloudSyncButton'))el('cloudSyncButton').disabled=busy||restoring||!canUseCloud();
   if(el('cloudLogoutButton')){el('cloudLogoutButton').hidden=!account;el('cloudLogoutButton').disabled=restoring||disconnecting;}
   if(el('cloudReloadButton')){el('cloudReloadButton').hidden=!canUseCloud();el('cloudReloadButton').disabled=busy||restoring||bridge.canRestore?.()!==true;}
@@ -42,7 +48,7 @@
  }
  function friendly(error){const code=String(error?.code||'');if(code.includes('unauthorized-domain'))return 'Add this site to Firebase Authentication Authorized domains. Local play is available.';if(code.includes('popup-blocked'))return 'Allow popups to connect Google. Local play continues.';if(code.includes('popup-closed')||code.includes('cancelled-popup'))return 'Google sign-in cancelled. Local progress is unchanged.';if(code.includes('permission-denied'))return 'Cloud access denied. Local progress is kept on this device.';return(error?.message||'Cloud sync unavailable.')+' Local play continues.';}
  function pauseCloud(message){enabled=false;clearTimer();stopWatch();update(message||'Cloud sync paused. Local progress is safe.');}
- async function verifyToken(user){if(!hasGoogle(user)||typeof user.getIdTokenResult!=='function')throw Error('Google is optional; this session cannot sync.');const token=await U.timeout(user.getIdTokenResult(),15000,'Cloud authentication timed out.');if((token.signInProvider||token.claims?.firebase?.sign_in_provider)!=='google.com'||!Number.isFinite(Date.parse(token.expirationTime))||Date.parse(token.expirationTime)<=Date.now())throw Error('Cloud session expired.');return true;}
+ async function verifyToken(user){if(!supportedUser(user)||typeof user.getIdTokenResult!=='function')throw Error('This session cannot sync.');const token=await U.timeout(user.getIdTokenResult(),15000,'Cloud authentication timed out.');if(!['google.com','password'].includes(token.signInProvider||token.claims?.firebase?.sign_in_provider)||!Number.isFinite(Date.parse(token.expirationTime))||Date.parse(token.expirationTime)<=Date.now())throw Error('Cloud session expired.');return true;}
  function schedule(delay){if(timer!==null||!cloudReady()||!meta.autoSync)return;timer=host.setTimeout(()=>{timer=null;void flush();},delay??Math.max(1500,INTERVAL-(Date.now()-lastWrite)));}
  function markDirty(){if(!configured||capturing)return;dirty++;meta.dirty=true;saveMeta();schedule();}
  function capture(){capturing=true;try{return Promise.resolve(bridge.capture());}finally{capturing=false;}}
@@ -85,29 +91,77 @@
  },error=>pauseCloud(friendly(error)));}
  async function observeUser(user){
   const target=user?.uid||null;if(identityJob&&identityTarget===target)return identityJob;
-  const ticket=++epoch;identityTarget=target;enabled=false;verified=false;clearTimer();stopWatch();account=hasGoogle(user)?user:null;
-  if(!account){update('Local save active. Google sync is optional.');return;}
+  const ticket=++epoch;identityTarget=target;enabled=false;verified=false;clearTimer();stopWatch();account=supportedUser(user)?user:null;
+  if(!account){update('Local save active. Account sync is optional.');return;}
   let tokenReady=false;
   const job=(async()=>{try{
    if(host.navigator.onLine===false){update('Offline · local progress is active.');return;}await verifyToken(user);if(ticket!==epoch||auth.currentUser?.uid!==user.uid)return;verified=true;tokenReady=true;host.dispatchEvent(new host.CustomEvent('cloud-session-ready'));
    if(!configured)return;const remote=await readRemote(user.uid);if(!current(ticket,user.uid))return;
-   if(!remote){meta={...meta,uid:user.uid,revision:0,digest:'',dirty:true,autoSync:true};saveMeta();enabled=true;update('Google connected · backing up this local profile');await flush(true);return;}
+   if(!remote){meta={...meta,uid:user.uid,revision:0,digest:'',dirty:true,autoSync:true};saveMeta();enabled=true;update('Account connected · backing up this local profile');await flush(true);return;}
    if(!validRemote(remote))throw Error('Cloud save is invalid; local progress is unchanged.');
-   if(meta.uid===user.uid&&meta.revision===remote.revision&&meta.digest===remote.digest){enabled=true;meta.autoSync=true;saveMeta();listen(user.uid);update('Google connected · local-first sync enabled');if(meta.dirty)schedule(1500);}
-   else update('Google connected. A Cloud copy is available; local progress stays active. Choose Upload Local Save or Load Cloud Save.');
+   if(meta.uid===user.uid&&meta.revision===remote.revision&&meta.digest===remote.digest){enabled=true;meta.autoSync=true;saveMeta();listen(user.uid);update('Account connected · local-first sync enabled');if(meta.dirty)schedule(1500);}
+   else update('Account connected. A Cloud copy is available; local progress stays active. Choose Upload Local Save or Load Cloud Save.');
   }catch(error){if(ticket===epoch){if(!tokenReady)verified=false;pauseCloud(friendly(error));}}finally{if(ticket===epoch)update();}})();
   identityJob=job;try{await job;}finally{if(identityJob===job){identityJob=null;identityTarget=null;}}
  }
  async function initialize(){
   if(auth&&sdkReady)return auth;if(initializing)return initializing;
   initializing=(async()=>{await U.loadSdk('firebaseAppCdn',()=>Boolean(host.firebase?.initializeApp));await U.loadSdk('firebaseAuthCdn',()=>Boolean(host.firebase?.auth));await U.loadSdk('firebaseFirestoreCdn',()=>Boolean(host.firebase?.firestore));const app=host.firebase.apps?.find(a=>a.name==='anime-card-cloud')||host.firebase.initializeApp(CONFIG,'anime-card-cloud');auth=app.auth();db=app.firestore();
-   await U.timeout(auth.setPersistence(host.firebase.auth.Auth.Persistence.LOCAL),15000,'Google storage is unavailable.');auth.onAuthStateChanged(user=>{if(!disconnecting)void observeUser(user);},error=>pauseCloud(friendly(error)));
+   await U.timeout(auth.setPersistence(host.firebase.auth.Auth.Persistence.LOCAL),15000,'Account storage is unavailable.');auth.onAuthStateChanged(user=>{if(!disconnecting)void observeUser(user);},error=>pauseCloud(friendly(error)));
    auth.onIdTokenChanged?.(user=>{if(disconnecting)return;if(!user||user.uid!==account?.uid||!verified){void observeUser(user);return;}const ticket=epoch;void verifyToken(user).then(()=>{if(ticket===epoch){verified=true;if(!enabled)void observeUser(user);}}).catch(error=>{if(ticket===epoch){verified=false;pauseCloud(friendly(error));}});},error=>pauseCloud(friendly(error)));sdkReady=true;return auth;
-  })();update('Connecting optional Google sync…');try{return await initializing;}catch(error){sdkReady=false;pauseCloud(friendly(error));throw error;}finally{initializing=null;update();}
+  })();update('Connecting optional account sync…');try{return await initializing;}catch(error){sdkReady=false;pauseCloud(friendly(error));throw error;}finally{initializing=null;update();}
  }
  function start(){update();if(meta.autoSync&&meta.uid&&host.navigator.onLine!==false)return initialize().catch(()=>null);return Promise.resolve(null);}
- async function google(){if(popupBusy||restoring||disconnecting)return;popupBusy=true;update('Opening optional Google sign-in…');try{const sdk=await initialize(),provider=new host.firebase.auth.GoogleAuthProvider();provider.setCustomParameters({prompt:'select_account'});const result=await sdk.signInWithPopup(provider);meta.autoSync=true;saveMeta();await observeUser(result.user);}catch(error){update(friendly(error));}finally{popupBusy=false;update();}}
- async function retry(){try{await initialize();if(!hasGoogle(auth.currentUser)){update('Local save active. Use Sign in with Google only if you want Cloud sync.');return false;}if(!verified)await observeUser(auth.currentUser);return await flush(true,true);}catch(error){update(friendly(error));return false;}}
+ async function completeLink(user){
+  if(!pendingCredential)return;
+  if((user.email||'').toLowerCase()!==pendingCredential.email.toLowerCase())throw Error('Sign in to the original account with the matching email to finish linking.');
+  const uid=user.uid;
+  const result=await user.linkWithCredential(pendingCredential.credential);
+  if(result.user.uid!==uid)throw Error('Account identity changed unexpectedly.');
+  pendingCredential=null;
+ }
+ function authError(error){
+  const code=String(error?.code||'');
+  if(code==='auth/account-exists-with-different-credential'&&error.credential&&error.email){pendingCredential={email:error.email,credential:error.credential};if(el('cloudEmail'))el('cloudEmail').value=error.email;return 'This email already has an account. Sign in with its existing password, then Google will be linked to the same UID. Local save unchanged.';}
+  if(['auth/credential-already-in-use','auth/email-already-in-use'].includes(code))return 'This email or Google login already belongs to an account. Sign in to that original account first, then link the other method in this panel. No account or cloud save was replaced.';
+  if(['auth/invalid-credential','auth/wrong-password','auth/user-not-found'].includes(code))return 'Email or password is incorrect. If you used Google before, sign in with Google and use Set Email & Password.';
+  if(code==='auth/operation-not-allowed')return 'Enable Email/Password in Firebase Console → Authentication → Sign-in method.';
+  if(code==='auth/requires-recent-login')return 'Please sign out and sign back in, then retry linking. Local progress stays safe.';
+  if(code==='auth/weak-password')return 'Choose a stronger password that meets the Firebase password policy (at least 6 characters).';
+  if(code==='auth/invalid-email')return 'Enter a valid email address.';
+  if(code==='auth/too-many-requests')return 'Too many attempts. Please wait before trying again.';
+  return friendly(error);
+ }
+ async function google(){
+  if(popupBusy||restoring||disconnecting)return;popupBusy=true;update('Opening Google sign-in…');
+  try{const sdk=await initialize(),provider=new host.firebase.auth.GoogleAuthProvider();provider.setCustomParameters({prompt:'select_account'});
+   const before=sdk.currentUser,link=supportedUser(before)&&!hasGoogle(before);
+   const result=link?await before.linkWithPopup(provider):await sdk.signInWithPopup(provider);
+   if(link&&result.user.uid!==before.uid)throw Error('Account identity changed unexpectedly.');
+   await completeLink(result.user);meta.autoSync=true;saveMeta();await observeUser(result.user);update(link?'Google linked to this UID. Both sign-in methods share the same cloud save.':status);
+  }catch(error){update(authError(error));}finally{popupBusy=false;update();}
+ }
+ function emailValues(){const email=el('cloudEmail')?.value.trim()||'',password=el('cloudPassword')?.value||'';if(!email||!password)throw Error('Enter your email and password.');return{email,password};}
+ async function emailAction(mode){
+  if(popupBusy||restoring||disconnecting)return false;popupBusy=true;update('Connecting account…');
+  try{const values=emailValues(),sdk=await initialize();let result;
+   if(mode==='link'){
+    const user=sdk.currentUser;if(!supportedUser(user))throw Error('Sign in to the original account first.');
+    if(values.email.toLowerCase()!==(user.email||'').toLowerCase())throw Error('Use this account’s email when setting a password.');
+    const credential=host.firebase.auth.EmailAuthProvider.credential(values.email,values.password),uid=user.uid;
+    try{result=await user.linkWithCredential(credential);}catch(error){if(error.code!=='auth/requires-recent-login'||!hasGoogle(user))throw error;await user.reauthenticateWithPopup(new host.firebase.auth.GoogleAuthProvider());result=await user.linkWithCredential(credential);}
+    if(result.user.uid!==uid)throw Error('Account identity changed unexpectedly.');
+   }else{
+    if(supportedUser(sdk.currentUser))throw Error('Use account linking while signed in.');
+    if(mode==='register'&&pendingCredential)throw Error('Sign in to the existing account to finish linking Google.');
+    result=mode==='register'?await sdk.createUserWithEmailAndPassword(values.email,values.password):await sdk.signInWithEmailAndPassword(values.email,values.password);
+    await completeLink(result.user);
+   }
+   meta.autoSync=true;saveMeta();await observeUser(result.user);if(mode==='link')update('Email & Password linked. Your UID and cloud save are unchanged.');return true;
+  }catch(error){update(authError(error));return false;}finally{if(el('cloudPassword'))el('cloudPassword').value='';popupBusy=false;update();}
+ }
+ async function passwordReset(){if(popupBusy||disconnecting)return;popupBusy=true;try{const sdk=await initialize(),email=el('cloudEmail')?.value.trim();if(!email)throw Error('Enter your email first.');await sdk.sendPasswordResetEmail(email);update('Password reset requested. Check the inbox for this account.');}catch(error){update(authError(error));}finally{popupBusy=false;update();}}
+ async function retry(){try{await initialize();if(!supportedUser(auth.currentUser)){update('Local save active. Use Google or Email sign-in if you want Cloud sync.');return false;}if(!verified)await observeUser(auth.currentUser);return await flush(true,true);}catch(error){update(friendly(error));return false;}}
  async function backupLocal(payload){
   if(!host.indexedDB)throw Error('Local backup storage is unavailable; local progress was not replaced.');
   await new Promise((resolve,reject)=>{const request=host.indexedDB.open('anime_card_rng_cloud_recovery',1);request.onupgradeneeded=()=>request.result.createObjectStore('backups');request.onerror=()=>reject(request.error);request.onsuccess=()=>{const database=request.result,tx=database.transaction('backups','readwrite');tx.objectStore('backups').put({payload,uid:meta.uid,at:Date.now()},'before-cloud-restore');tx.oncomplete=()=>{database.close();resolve();};tx.onerror=tx.onabort=()=>{database.close();reject(tx.error||Error('Unable to preserve local backup.'));};};});
@@ -119,16 +173,16 @@
   try{const remote=await readRemote(uid);if(!remote)throw Error('No Cloud copy exists.');const payload=await remotePayload(uid,remote);if(!safe())throw Error('Local progress or account changed. Nothing was replaced.');const local=await capture();await backupLocal(local.payload);if(!safe())throw Error('Local progress changed. Nothing was replaced.');const nextMeta={...meta,uid,revision:remote.revision,digest:remote.digest,dirty:false,autoSync:true};await bridge.apply(payload,{meta:nextMeta,manual:true,canApply:safe});meta=nextMeta;saveMeta();enabled=true;return true;}
   catch(error){update(friendly(error));return false;}finally{restoring=false;update();}
  }
- async function logout(){if(disconnecting||restoring)return;disconnecting=true;epoch++;verified=false;enabled=false;clearTimer();stopWatch();meta.autoSync=false;saveMeta();try{await auth?.signOut();account=null;update('Google disconnected. Local progress and gameplay are unchanged.');}catch(error){update(friendly(error));}finally{disconnecting=false;update();}}
+ async function logout(){if(disconnecting||restoring)return;disconnecting=true;pendingCredential=null;if(el('cloudPassword'))el('cloudPassword').value='';epoch++;verified=false;enabled=false;clearTimer();stopWatch();meta.autoSync=false;saveMeta();try{await auth?.signOut();account=null;update('Account disconnected. Local progress and gameplay are unchanged.');}catch(error){update(friendly(error));}finally{disconnecting=false;update();}}
  function localRows(){return[{uid:(account||guest).uid,displayName:(meta.displayName||account?.displayName||profile.name).slice(0,40),...(bridge.summary?.()||{totalRolls:0,strongestPower:0,timeTrialRoom:0,uniqueCards:0})}];}
  async function leaderboardView(metric='totalRolls'){
   if(!['totalRolls','strongestPower','timeTrialRoom'].includes(metric))throw Error('Unknown leaderboard.');if(!canUseCloud())return{rows:localRows(),localOnly:true};
   try{const result=await U.timeout(db.collection('leaderboards').orderBy(metric,'desc').limit(50).get({source:'server'}));return{rows:result.docs.map(d=>d.data()),localOnly:false};}catch(error){update(friendly(error));return{rows:localRows(),localOnly:true};}
  }
  function afterActivity(){update();if(meta.dirty)schedule(1500);}
- function mount(){el('cloudLoginOpenButton')?.addEventListener('click',()=>{bridge.open?.('cloudAccountModal');update();});el('cloudGoogleButton')?.addEventListener('click',google);el('cloudSyncButton')?.addEventListener('click',retry);el('cloudLogoutButton')?.addEventListener('click',logout);el('cloudReloadButton')?.addEventListener('click',loadCloud);el('cloudDisplayName')?.addEventListener('change',event=>{meta.displayName=event.target.value.trim().slice(0,40);markDirty();update();});update();}
+ function mount(){el('cloudLoginOpenButton')?.addEventListener('click',()=>{bridge.open?.('cloudAccountModal');update();});el('cloudGoogleButton')?.addEventListener('click',google);for(const [id,mode]of [['cloudEmailRegister','register'],['cloudEmailLink','link']])el(id)?.addEventListener('click',()=>emailAction(mode));el('cloudPasswordReset')?.addEventListener('click',passwordReset);el('cloudEmailForm')?.addEventListener('submit',event=>{event.preventDefault();void emailAction(account?'link':'login');});el('cloudSyncButton')?.addEventListener('click',retry);el('cloudLogoutButton')?.addEventListener('click',logout);el('cloudReloadButton')?.addEventListener('click',loadCloud);el('cloudDisplayName')?.addEventListener('change',event=>{meta.displayName=event.target.value.trim().slice(0,40);markDirty();update();});update();}
  host.addEventListener('online',()=>{if(meta.autoSync&&meta.uid)void initialize().then(()=>{if(auth.currentUser)void observeUser(auth.currentUser);}).catch(()=>{});else update('Online · local save active.');});
  host.addEventListener('offline',()=>pauseCloud('Offline · gameplay and local saving continue.'));
  host.addEventListener('storage',event=>{if(event.key===META_KEY&&event.newValue){try{const other=JSON.parse(event.newValue);if(other.uid!==meta.uid||other.revision!==meta.revision||other.digest!==meta.digest)pauseCloud('Another tab synced this profile. This tab keeps its local gameplay active.');}catch(_){}}});
- host.CloudSaveSystem=Object.freeze({CONFIG,META_KEY,RESTORE_KEY,BOOT_KEY,PROFILE_KEY,recovered,markDirty,start,initialize,retry,flush,google,logout,loadCloud,leaderboardView,leaderboard:async metric=>(await leaderboardView(metric)).rows,afterActivity,blockForRecovery(message){recoveryBlocked=true;pauseCloud(message);},get googleVerified(){return canUseCloud();},get cloudReady(){return cloudReady();},get ready(){return cloudReady();},get firestore(){return canUseCloud()?db:null;},get activeUser(){return account||guest;},get publicName(){return(meta.displayName||account?.displayName||profile.name).trim().slice(0,40);},get playAllowed(){return !host.GameStartup?.failed;},get blocking(){return false;},get recoveryBlocked(){return recoveryBlocked;},get status(){return status;},configure(options){bridge=options||{};configured=true;mount();}});
+ host.CloudSaveSystem=Object.freeze({CONFIG,META_KEY,RESTORE_KEY,BOOT_KEY,PROFILE_KEY,recovered,markDirty,start,initialize,retry,flush,google,emailAction,passwordReset,logout,loadCloud,leaderboardView,leaderboard:async metric=>(await leaderboardView(metric)).rows,afterActivity,blockForRecovery(message){recoveryBlocked=true;pauseCloud(message);},get authVerified(){return canUseCloud();},get googleVerified(){return canUseCloud();},get cloudReady(){return cloudReady();},get ready(){return cloudReady();},get firestore(){return canUseCloud()?db:null;},get activeUser(){return account||guest;},get publicName(){return(meta.displayName||account?.displayName||profile.name).trim().slice(0,40);},get playAllowed(){return !host.GameStartup?.failed;},get blocking(){return false;},get recoveryBlocked(){return recoveryBlocked;},get status(){return status;},configure(options){bridge=options||{};configured=true;mount();}});
 })(window);

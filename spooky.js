@@ -157,7 +157,7 @@
     const completedRun=won&&run.wave===50,range=coinRange(run.wave),coins=won?scaledCoins(roll(range.min,range.max,random),run.choices,random,battle):0;
     const items=[],cards=[];
     // Special-drop rolls belong only to a successful final-wave clear.
-    if(completedRun){const bonus=seasonalMultiplier();if(unit(random)<.05*bonus)items.push({id:EQUIPMENT,quantity:host.InventorySystem.scaleDrop(1,random,battle)});if(unit(random)<.01*bonus)cards.push({cardId:'myers',mutationIds:mutationIds()});if(unit(random)<.01*bonus)items.push({id:'machete',quantity:host.InventorySystem.scaleDrop(1,random,battle)});}
+    if(completedRun){const bonus=seasonalMultiplier();if(unit(random)<.05*bonus)items.push({id:EQUIPMENT,quantity:1});if(unit(random)<.01*bonus)cards.push({cardId:'myers',mutationIds:mutationIds()});if(unit(random)<.01*bonus)items.push({id:'machete',quantity:1});}
     const nextRun=!won||completedRun?freshRun(data.run.season):{...data.run,wave:run.wave+1};
     const result=queue(won?'wave':'loss',{attemptId:run.id,coinsDelta:coins,items,cards,completedRun,nextRun,summary:{won,wave:run.wave,killCoins:data.activeAttempt.killCoins,nextWave:nextRun.wave}});
     run.completed=true;notify();return result;

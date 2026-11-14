@@ -100,7 +100,7 @@
     if(!won){const before=data.activeAttempt;data.activeAttempt=null;if(!persist()){data.activeAttempt=before;throw Error('Không thể lưu kết quả Boss Event.');}run.completed=true;return {won:false,type:run.type,difficulty:run.difficulty,coins:0,card:null,dropMultiplier:1};}
     const range=coinRange(run.difficulty),baseCoins=range.min+Math.floor(randomUnit(random)*(range.max-range.min+1));
     data.pendingReward={...data.activeAttempt,baseCoins,dropMultiplier:host.InventorySystem.getDropMultiplier(battle),coins:host.InventorySystem.scaleDrop(baseCoins,random,battle),card:rollCard(run.difficulty,random,run.type)};
-    if(TYPES[run.type].itemId)data.pendingReward.item=randomUnit(random)<itemChance(run.difficulty,run.type)?{id:TYPES[run.type].itemId,quantity:host.InventorySystem.scaleDrop(1,random,battle)}:null;
+    if(TYPES[run.type].itemId)data.pendingReward.item=randomUnit(random)<itemChance(run.difficulty,run.type)?{id:TYPES[run.type].itemId,quantity:1}:null;
     if(!persist()){data.pendingReward=null;throw Error('Không thể lưu phần thưởng Boss Event.');}
     const result=commitPending();run.completed=true;return result;
   }

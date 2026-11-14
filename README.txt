@@ -1,167 +1,168 @@
-ANIME CARD RNG — PRIDE BOSS EVENT & SEVEN SINS
-Bản cập nhật: 12/11/2026
+ANIME CARD RNG — TENSURA / LINKED ACCOUNT UPDATE
+Ngày phát hành: 14/11/2026 · Cache: 20261114-tensura-1
 
-TÍNH NĂNG MỚI
-- Thêm Pride Boss Event vào pool Boss Event luân phiên 12 giờ hiện có.
-  Vẫn mở trực tiếp event đang hoạt động, không yêu cầu Weather, không lặp
-  event liền trước. Shop dùng Pride Coins, có Quantity và 5 potion chuẩn.
-- Boss Escanor The One, Difficulty 1: HP 400.000 / ATK 20.000.
-  Scale giữ công thức Boss Event: stat * (1 + (difficulty - 1) * 0,075).
-- Hai special drop độc lập, chỉ roll khi thắng:
-  + Meliodas: 0,01% tại D1 → 1% tại D1000.
-  + Pride Sun: 0,01% tại D1 → 3% tại D1000.
-  + rate(d) = minRate + (maxRate - minRate) * (d - 1) / 999.
-- Meliodas gọi đúng rollMutations() của banner: Weather đang chạy, modifier
-  mutation Equipment và trần 2 mutation. Không ép mutation theo event.
-- Pride Sun thuộc Material, ảnh assets/items/psun.png. Dùng 1 Pride Sun và
-  1 bản Escanor Lv.100 để evolve trong Card Details > Evolve.
-- Thêm 6 thẻ (Sins, Titan, Mastermind… dùng category đã có):
-  Meliodas: Mythic / Dark / 1 in 0 / HP 118.000 / ATK 45.100.
-  Ban: Secret / Fire / Eclipse / 1 in 20.000.000 / HP 74.900 / ATK 18.300.
-  Diane: Secret / Nature / Lucky / 1 in 19.999.999 / HP 63.700 / ATK 15.600.
-  King Harlequin: Secret / Nature / Wind / 1 in 27.000.000 /
-    HP 106.000 / ATK 6.500.
-  Gowther: Secret / Holy / Sugar / 1 in 26.000.000 / HP 83.200 / ATK 20.300.
-  Escanor The One: Mythic / Fire / 1 in 0 / HP 24.300 / ATK 9.300.
-  Escanor The One đã sửa odds thành 0 theo đính chính, chỉ nhận bằng evolve.
-  Meliodas chỉ rơi từ Pride; cả hai không vào pool roll thường.
+CÀI ĐẶT
+- Gói chỉ chứa source code cần thiết, README.txt và PASSIVE_AUDIT.txt.
+- Giải nén vào thư mục game hiện tại, ghi đè các file trùng tên. Giữ nguyên assets/ đang có.
+- Không có assets/, hình ảnh, âm thanh, sprites, backup, test script hay log trong ZIP.
+- Deploy source lên GitHub Pages; sau khi upload đầy đủ, Ctrl+F5 trên cả hai máy chơi.
 
-PASSIVE VÀ CÁCH XỬ LÝ
-- Meliodas / Hellblaze: 50% chặn đòn của Magician và phản 150% sát thương
-  của đòn đó; counter/redirect không phản lặp. +50% Crit Damage cộng thẳng
-  vào hệ số crit, +10 điểm % Crit Chance mỗi Sins teammate, không tính mình.
-  Hiệu ứng đội của Meliodas tính theo roster, gồm đồng đội đã ngã xuống.
-  Black Flame của đội khi kết liễu sẽ bỏ qua fatal survival/revival; khiên
-  và miễn nhiễm vẫn hoạt động trước bước kết liễu.
-- Ban / Snatch: một aura toàn trận x1,25 cho Burn/Black Flame/Bleed/Poison
-  khi Ban còn sống; nhiều Ban không nhân aura nối tiếp. Poison vẫn không
-  được tự kết liễu. Mỗi attack lấy từ 1 buff phần trăm đang dương của địch.
-  Theo lựa chọn đã chốt: lấy 10 ĐIỂM PHẦN TRĂM, không phải 10% số hiện tại:
-  +50% HP → +40% HP; Ban nhận +10% HP. Nếu buff còn ít hơn 10 điểm thì lấy
-  phần còn lại. Buff trên Ban hết sau 3 lượt riêng tiếp theo; không trả lại
-  cho địch. HP/ATK dùng key riêng trong ledger; crit/dodge/DR giữ timer riêng.
-- Diane / Envy Creation: chỉ khi bắt đầu ở slot 1 mới tạo clone mỗi lượt
-  battle; chọn Nature teammate/enemy còn sống, mỗi entity gốc một lần.
-  Không sao chép generated/uncloneable units. Giữ cap riêng 3 active / 3 lần
-  tạo để không sinh clone vô hạn. Clone lấy 50% HP/ATK Diane, giữ passive gốc
-  và kế thừa Relic qua bộ admission chung. Clone của đội được +10% chỉ số gốc
-  lúc tạo khi Diane sống; buff cộng theo base. Nature đấu Electric dùng x4.
-- King Harlequin / Disaster: chặn fatal hit cho teammate tối đa 3 lần, tự
-  chịu 25% sát thương; không chuyển vòng giữa nhiều King. Địch chưa từng bị
-  tấn công nhận thêm 10% Max HP vào đòn đầu. Lead King cấp khiên đội bằng
-  150% Max HP. Khi King trên 50% HP, khiên địch mới nhận giảm 25%; xử lý cả
-  shield layer lẫn legacy shield, không giảm lặp cùng một lần cấp.
-- Gowther / Puppet Invasion: 20% Hypnotize 2 lượt của mục tiêu; mỗi lần
-  áp dụng thành công được 1 Lust. Hypnotize có 80% đánh teammate nếu còn
-  teammate hợp lệ. Có Lust: giảm 50% damage trước khi trừ 1 stack khi trúng
-  attack; DoT không tiêu Lust. Từ 4 Lust: 50% dodge. Dodge không tiêu stack;
-  status/passive immunity được tôn trọng, không cộng Lust khi bị chặn.
-- Escanor The One / The One: 1 SunShine mỗi lượt riêng, 12 stack kích hoạt
-  mode trong 5 lượt riêng (tính cả lượt kích hoạt). +150% ATK theo base;
-  chống Stun/Freeze/ATK debuff và tẩy ATK debuff cũ khi vào mode.
-  Không nhận HP/ATK/crit/DR/shield buff từ đồng đội và không được external
-  heal; level, mutation và Relic gốc vẫn dùng bình thường.
-  Đánh Frozen hoặc Water: x1,5 một lần và tẩy Freeze. Mode phá khiên trước
-  damage. Fatal hit trong mode: tự revive 50% Max HP, xóa mode/SunShine;
-  có thể nạp lại và revive tiếp, không đặt cap. Ngoài mode, nếu khiên còn
-  sau hit: Burn 2 lượt, 50% ATK/lượt, blast tối đa 2 địch kề mục tiêu bằng
-  lượng damage vừa gây (tính cả phần đã đánh vào khiên).
+FIREBASE AUTH — GOOGLE + EMAIL/PASSWORD, MỘT UID
+- Login vẫn tùy chọn. Local save khởi động ngay; mất mạng/đăng xuất không khóa game.
+- Login → Email: đăng nhập, đăng ký hoặc Reset Password.
+- Người đang dùng Google: đăng nhập Google trước, rồi Set Email & Password bằng cùng email.
+  Dùng EmailAuthProvider.credential + linkWithCredential; không tạo UID thứ hai.
+- Người đang dùng Email/Password: đăng nhập trước, rồi Link Google account (linkWithPopup).
+- Cả hai cách dùng cùng users/{uid}, recovery và global leaderboard; không đổi key save.
+- auth/account-exists-with-different-credential: giữ Google credential tạm trong RAM,
+  yêu cầu đăng nhập mật khẩu của tài khoản gốc cùng email, sau đó link vào UID đó.
+  Không lưu password/OAuth token trong localStorage hoặc log.
+- Nếu credential đã thuộc một UID khác, hiển thị hướng dẫn dùng tài khoản gốc;
+  không xóa, tự gộp hai cloud save khác UID hoặc ghi đè tiến trình của tài khoản khác.
+- Yêu cầu recent login khi link password: reauthenticate bằng Google rồi thử lại.
 
-CÂN BẰNG & SỬA LỖI
-- Cho phép evolve lặp tất cả recipe khi còn bản gốc Lv.100 và nguyên liệu.
-  Không khóa vì đã có target hoặc receipt evolve cũ. Mỗi lần dùng đúng
-  1 base copy và nguyên liệu; cộng copy/variant target thay vì ghi đè.
-  Giữ mutation. Target mới bắt đầu Lv.1; target đã có giữ level/EXP dùng
-  chung hiện tại. Journal lỗi ghi sẽ phục hồi cả thẻ và nguyên liệu.
-- Infinity không khóa đội theo category nữa. Chọn 4 ID khác nhau từ toàn bộ
-  thẻ đã sở hữu; featured weekly category được x3 HP và x3 ATK đúng một lần.
-  Grid/slot preview có bonus và badge WEEKLY x3; thẻ ngoài category giữ stat
-  bình thường. Enemy element, wave scaling, continuous HP/buffs, weekly
-  leaderboard và weekly reset reward không đổi.
-- Penalty: cache goal_field và các miếng vá HUD/bóng vào 1 canvas tĩnh rồi
-  vẽ 1 lần/frame. Không dựng lại nền/đo clientWidth/clientHeight mỗi frame;
-  ResizeObserver/resize chỉ đổi backing store khi kích thước thay đổi.
-  Giữ rAF dt thực và timing/input chính xác của bản trước.
-- Theo lựa chọn đã chốt: keeper phủ 3 ô gần nhau (ô chọn + 2 ô lân cận).
-  Chung một coverage map cho save check và animation. Saved ball kết thúc
-  ở tay keeper; cú sút vượt keeper hiện động tác lỡ đà, không đi xuyên tay
-  trong khi bị gọi là goal. Shoot/Curve vẫn có thể vượt keeper khi timing tốt.
-- Drop quantities nhận cả permanent multiplier và bonus đội từ Nami,
-  Hakari Jackpot, lựa chọn Rewards của Aqua. Ví dụ: x2 * x2 * x1,5 = x6,
-  rồi nhân permanent drop multiplier. Áp dụng một lần, có stochastic rounding.
-  Bao gồm potion/keys/Bread, Tower/Raid/Boss coins, Trial shards, Material
-  Time Trial, Spooky coins/items, Rift shards, Portal beans và Infinity wave orbs.
-  Không đổi xác suất special card hoặc nhân bản reward dạng card/Relic/Portal
-  instance. Không
-  cấp thưởng PvP. Không đổi fixed EXP Time Trial conversion; reward choice
-  của Aqua đã cập nhật mô tả eligibility. Shop/mua/evolve không dùng bonus đội.
-- HP/ATK của toàn bộ 200 thẻ cũ giữ nguyên. Không đổi stat/scaling địch các
-  mode cũ; Tower/Trial/Raid/Spooky chỉ thêm context cho quantity reward.
+THAO TÁC FIREBASE CẦN LÀM
+1. Firebase Console → Authentication → Sign-in method: bật Email/Password và Google.
+2. Giữ chính sách một tài khoản cho mỗi email; kiểm tra Authorized domains của GitHub Pages.
+3. Deploy firestore.rules mới: cho phép google.com và password, vẫn buộc request.auth.uid
+   khớp document owner. Không mở quyền anonymous/public write.
+4. Kiểm tra thật: Google login → đặt password → logout → Email login; UID phải giống nhau.
+   Sau đó thử chiều Email → Link Google. UI có Upload Local Save / Load Cloud Save như trước.
+- Không đổi Firebase project, TURN/STUN, quy tắc PvP không thưởng hoặc local-first startup.
+- Tài liệu Firebase chính thức:
+  https://firebase.google.com/docs/auth/web/account-linking
+  https://firebase.google.com/docs/auth/web/password-auth
 
-KIỂM TRA
-- Syntax: toàn bộ 84 browser JS + test Node, JSON và 89 local HTML references.
-- 43 Node checks cho timing/save/keeper, gồm 5.000 shot RNG và nhiều FPS.
-- 67 kiểm tra combat Sins: counter/crit/Black Flame, Snatch/expiry, clone cap,
-  King shields/rescue, Lust timing/immunity, The One duration/buff/revive.
-- 52 kiểm tra event/evolution/rewards/Infinity và 1.000 cửa sổ rotation:
-  mutation banner thật, double mutation, nhận reward một lần, repeat evolve
-  giữ level/EXP, target mới Lv.1, correct odds Escanor The One = 0.
-- Kiểm tra quantity x6 ở Material Trial, potion/keys/Bread, Tower, Raid,
-  Normal Trial và Rift; validator nhận pending reward đã scale.
-- 206 fixture combat có seed không lỗi runtime; 12 idle phase guards.
-  PvP với thẻ mới: 120 bước / 3 seed, snapshot hai engine khớp và không ghi
-  reward/save. Chưa kiểm tra hai máy qua WAN hoặc mọi tổ hợp clone/passive.
-- Full Spooky 50 wave: không special drop trước Wave 50, item quantity x6,
-  Myers một bản và save hợp lệ. Kiểm tra lỗi ghi evolve khôi phục thẻ/vật phẩm;
-  mobile Pride mở trực tiếp, shop/Quantity và cả hai drop preview hoạt động.
-- Desktop 1440px/mobile 390px: mixed-category Infinity vào Arena chuẩn,
-  featured bonus, Penalty input/exit; CPU throttle x4 vẫn vẽ đúng 1 nền cache
-  mỗi frame và không đọc layout canvas mỗi frame. Không suy diễn thành cam
-  kết FPS trên mọi thiết bị. PASSIVE_AUDIT.txt ghi phạm vi 206 thẻ.
+5 THẺ TENSURA
+- Rimuru Demon Lord: Mythic, Dark, 1 in 0, HP 160,000 / ATK 39,100.
+  Chỉ tiến hóa Rimuru Lv.100 + 81,208 Slime Dessert. Lần mở mới bắt đầu Lv.1;
+  tiến hóa lặp giữ progress đã có của dạng đích và giữ mutation của bản gốc.
+  Sage tăng 1–10 mỗi attack; ngưỡng strict >3 / >10 / >40 theo yêu cầu.
+  Không cleanse Black Flame. Fatal execution một lần mỗi trận, sau shield/immunity,
+  trước các hiệu ứng survive/revive. Shift theo ElementSystem và trở lại Dark khi
+  mục tiêu được hạ hoặc rời wave; không sửa element trong card database.
+- Veldora: Secret, Electric, Raining only, 1 in 86,000,000; HP 91,300 / ATK 34,900.
+  Entry shockwave, Stun heal, mỗi 3 attack Stun rồi suppress passive ở lượt kế tiếp.
+- Diablo: Secret, Dark, Eclipse only, 1 in 54,000,000; HP 120,000 / ATK 29,400.
+  Hypnosis bỏ một lượt. Hồi 3% khi bị Water hoặc element đang bất lợi đánh vào.
+  Lead duel khóa hai unit gốc; teammate không buff/heal/intercept/assist.
+  Self-heal/self-buff vẫn được phép. Survive/revive của chính duelist không kết thúc duel.
+  Duel kết thúc khi một duelist thực sự bị hạ; entry của reserve được chờ rồi chạy một lần.
+  Summon chen frontline không chiếm lượt của duelist và không gây soft-lock.
+- Benimaru Jura: Secret, Fire, Sunny only, 1 in 95,000,000; HP 112,000 / ATK 42,700.
+  Mỗi 2 primary attacks kiểm tra chain 44%; secondary follow-up có Relic bonuses,
+  mỗi hit 30% ATK; tối đa 24 follow-ups để chặn vòng lặp vô hạn.
+  Follow-up thứ hai Burn 2 lượt, hit tiếp vào mục tiêu đang Burn thêm Black Flame.
+  Từ primary attack thứ 10, Burn còn hiệu lực từ Benimaru chặn shield/positive buffs.
+  Follow-ups không tự mở thêm một primary action hoặc đẩy nhanh counter primary.
+- Yuuki Kagurazaka: Secret, Holy, 1 in 0; HP 126,000 / ATK 30,900.
+  Chỉ Secret Slime Portal; card drop dùng mutation generator chuẩn, tối đa 2 mutation.
+  1,000 Soul Energy lúc đầu, +100/kill; >500 survive, >1,500 immune passive damage.
+  Mỗi 3 primary attacks đổi một extra passive từ Card Index, tốn 50 Energy.
+  Siphon mỗi attack tốn 1; Magician hit tốn 5 và nhận 50% damage, physical x1.25.
+  Copy dùng state riêng, không có listener/interval riêng; lease cleanup loại copy cũ,
+  stat ledger tạm, các DoT/summons thuộc lease và tham chiếu runtime khi swap/death.
+- Category registry thêm Isekai và Draconic. Infinity giữ featured category của tuần
+  hiện tại; hai category mới tham gia rotation từ tuần bắt đầu 16/11/2026 UTC. Stats của 206 thẻ trước update giữ nguyên.
 
-HƯỚNG DẪN SỬ DỤNG
-- Giải nén source, giữ assets đang có. Cache tag: 20261112-pride-1.
-  Push GitHub rồi Ctrl+F5; không cần reset save hoặc backend mới.
-- Thêm artwork tương ứng nếu assets triển khai chưa có:
-  assets/items/psun.png
-  assets/cards/meliodas.png
-  assets/cards/ban.png
-  assets/cards/diane.png
-  assets/cards/kingharlequin.png
-  assets/cards/gowther.png
-  assets/cards/escanortheone.png
-  Gói giữ nguyên 3 sprite Penalty đã cung cấp; không tự tạo ảnh thẻ thay.
-- Test độc lập: node tests/penalty_timing.test.cjs. Không tạo Excel.
+SLIME DESSERT / SLIME PORTAL
+- Slime Dessert: EXP Food, 3,000 EXP × EXP Multiplier; cũng là nguyên liệu evolution.
+- Mỗi 5 phòng THỰC SỰ thắng trong Normal + Material Time Trial, cộng dồn giữa hai mode:
+  kiểm tra 80% nhận một Slime Portal; Tier 1 hoặc Tier 2 chia đều.
+- Theo xác nhận: EXP Time Trial KHÔNG drop Slime Portal, KHÔNG tăng counter này.
+  Skip Room, defeat, sandbox và cùng receipt đã nhận không tăng/drop thêm.
+- Namek Portal vẫn 20% mỗi phòng Normal; không ảnh hưởng bởi counter Slime.
+- Slime Portal nằm trong Storage → Portals, dùng selector và Battle Arena chuẩn.
+- Tier scaling: 1 / 4 / 8.4 / 16 / 40 / 200 (Secret).
+- Tier 1 enemies: Diablo 20,000/1,500; Benimaru 35,000/4,000;
+  Veldora 70,000/7,500; Rimuru Demon Lord 200,000/17,500 (HP/ATK).
+- 6 enemy elements; buff một category Swordman/Isekai/Magician/Hero từ +50% đến +200%.
+- Dessert ranges: T1 1–5; T2 4–10; T3 7–15; T4 9–19; T5/Secret 12–24.
+- Dùng luật Portal hiện có: 5 attempts, 2 giây/lượt, Party chỉ T4/T5/Secret,
+  host cap 10/ngày UTC, slot allocation 2/2 hoặc 2/1/1 hoặc 1/1/1/1,
+  guest 50%, MVP 4-player x3 food; Secret card Solo 100% / Party 10%.
+- Secret Portal bị tiêu thụ sau một victory. Auto Continue chỉ lấy đúng TYPE và TIER,
+  không dùng nhầm Namek cho Slime hoặc đốt Secret/higher tier khi thiếu item cùng tier.
+
+DROP MULTIPLIERS
+- Normal quantities vẫn scale: coins/shards, Bread/EXP Food và materials thông thường;
+  Hakari/Nami/Aqua reward aura và bonus profile vẫn áp dụng đúng battle context.
+- Special item drops luôn quantity 1: Pride Sun, Gojo Eye, Mangekyo Eye, Excalibur Sword,
+  Cursed Finger, Wave 50 Machete/Headless item; không nhân tỷ lệ hoặc số lượng.
+- Portal items, Secret Portals, special cards và Relic instances không nhân Drop Multiplier.
+  Secret card không bị MVP duplicate. Halloween chance x2 vẫn là seasonal rule riêng.
+- Các rare-drop probabilities gốc giữ nguyên. Pending receipt hợp lệ từ save cũ vẫn được
+  phục hồi; không xóa pending reward khi nâng version.
+
+BATTLE BUG FIX / PERFORMANCE
+- Sửa recursion giữa runtime proxy Sins/Tower 200: mỗi view chỉ compose một lần,
+  WeakMap giữ identity ổn định; không chồng wrapper mỗi lần render/đọc state.
+- Portal combat cung cấp battle/runtime trước onEntry và giữ getters an toàn lúc init;
+  sửa lỗi Cannot read properties of undefined (reading battle) trong log callback.
+- Infinity giữ player HP/buffs/counters, dọn reference enemy đã rời wave và isolation cũ.
+  Tower entry vẫn tạo unit mới từng trận, không tái dùng status của tầng trước.
+- Deterministic hooks trong tensura_passives.js, dùng RNG của battle, không Math.random
+  riêng trong passives; không thêm timers/DOM listeners cho từng copied passive.
+- Benimaru tích hợp Enten follow-up bonus; basic follow-up không nhận special damage bonus.
+- Không đổi công thức/scaling enemy modes khác, level cap, EXP Trial conversion,
+  weather/mutation math, combat speed potions, Penalty Kick hoặc cấu hình online.
+
+ASSET PATHS ĐƯỢC CODE THAM CHIẾU (KHÔNG KÈM FILE)
+- assets/cards/rimurudemonlord.png
+- assets/cards/veldora.png
+- assets/cards/diablo.png
+- assets/cards/benimarujura.png
+- assets/cards/yuukikagurazaka.png
+- assets/items/slimedessert.png
+- assets/items/slportal.png
+Dùng đúng tên/case trên với artwork đang có của bạn, hoặc sửa image field nếu tên khác.
+
+VERIFICATION
+- node --check cho toàn bộ 85 JS modules; 90 local HTML references có đủ code file.
+- 49 focused Tensura combat checks; strict thresholds, execution, shift, immunity,
+  delayed suppression, isolation, follow-up guard và copy swaps.
+- 67 content/Portal/food/evolution/save checks; EXP exclusion, receipts và repeat evolution.
+- 211 seeded passive scenarios (18 turns), 210 copy/execute/cleanup scenarios (2 own turns).
+- Edge checks: copied The One cleanup, Black Flame, isolation qua revive và Crow summon,
+  Soul passive immunity; 100 Infinity transitions và 21 fresh mixed-passive Tower matches.
+- Regression Sins: 67 checks; event/evolution/Infinity/reward suite: 52;
+  1,000 non-repeat Boss rotation windows; standard quantity x6; Spooky 50 waves.
+- PvP deterministic snapshots: existing Sins teams 120 steps và Tensura teams 84 steps,
+  mỗi loại 3 seeds; không thay localStorage hoặc phát thưởng.
+- Auth mock SDK: Google→password, Email→Google, same UID, collision recovery,
+  reset, logout và token provider password được phép Cloud sync.
+- UI 1440px / 390px: Login form, shared Portal selector/start/logs, 8 turns,
+  không overflow ngang hoặc stack/log exceptions; evolution storage-failure rollback.
+- Đây là các scenario kiểm chứng, không phải chứng minh mọi tổ hợp 211 passive/Relic/mutation.
+  OAuth/email thật và cross-network WebRTC cần kiểm tra sau khi deploy cấu hình Firebase.
 
 Modified Files Note
-- sins_passives.js (mới): toàn bộ state/hook Sins, timer, summon và guard.
-- cards.js: 6 thẻ, odds Escanor The One = 0, mô tả reward Aqua.
-- boss_event.js: Pride, boss/drop khác ID, hai lượt special độc lập, reward context.
-- evolution.js: Pride Sun/recipe, bỏ lock, level preview/result.
-- app.js: repeat evolution cộng copies/giữ progress, Pride preview và reward bridges.
-- combat_stats.js: guard tùy chọn cho stat ledger, không đổi base công thức.
-- companions.js: admission cap Diane và hook clone creation.
-- passives.js: tích hợp Sins, status/counter/DoT/shield/fatal/crit, reward multiplier.
-- yuno.js: shield layers dùng cùng quy tắc King/anti-buff Escanor.
-- infinity.js: owned-card pool, featured previews và wave reward context.
-- infinity_combat.js: x3 HP/ATK featured khi tạo battle, chỉ một lần.
-- infinity_view.js: HUD weekly bonus.
-- infinity.css: badge x3, bỏ icon khóa.
-- inventory.js: battle-aware quantity scaling và giới hạn validator tương ứng.
-- materials.js: quantity context, giữ nguyên độc lập chance/element/drop receipt.
-- timetrial.js: quantity context cho shards.
-- tower.js: quantity context cho coins.
-- raid.js: context cho coins/items/keys; giữ RNG/card rates/scaling.
-- spooky.js: context cho coin/items và pending validator tương ứng.
-- rift.js: context và pending validator cho shard quantity.
-- portals.js: context cho beans/items; giữ guest/MVP factors.
-- portal_combat.js: truyền battle vào bước settlement.
-- exp_food.js: quantity context cho Bread, chống reward PvP.
-- penalty_game.js: cache coverage 3 ô và save check.
-- penalty_sprites.js: tọa độ tay/catch pose để render đúng kết quả save.
-- penalty_view.js: cache nền, resize/rAF, animation tay bắt bóng.
-- index.html: script Sins, bonus banner và cache tag.
-- startup.js: dependency Sins.
-- tests/penalty_timing.test.cjs: kiểm tra coverage/reach và upgrade progression.
-- PASSIVE_AUDIT.txt: báo cáo hiện tại 206 thẻ.
-- README.txt: changelog riêng bản này, file tham chiếu và kiểm tra.
+- akatsuki_passives.js
+- app.js
+- boss_event.js
+- cards.js
+- category.js
+- combat_stats.js
+- evolution.js
+- exp_food.js
+- firebase.js
+- firestore.rules
+- index.html
+- infinity_cloud.js
+- infinity_rules.js
+- passives.js
+- portal_combat.js
+- portal_rules.js
+- portals.js
+- portals_party.js
+- raid.js
+- relics.js
+- sins_passives.js
+- spooky.js
+- startup.js
+- storage.js
+- styles.css
+- tensura_passives.js
+- tower_200_passives.js
+- README.txt
+- PASSIVE_AUDIT.txt

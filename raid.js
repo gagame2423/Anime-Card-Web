@@ -177,7 +177,7 @@
     data.pendingReward = { ...data.activeAttempt, baseCoins, dropMultiplier: host.InventorySystem.getDropMultiplier(battle), coins: host.InventorySystem.scaleDrop(baseCoins, random, battle), secret: run.type==='marine_fort'?rollSecret(run.difficulty, random):null };
     if(run.type==='akatsuki')data.pendingReward.cards=randomUnit(random)<akatsukiChances(run.difficulty).pain?[{cardId:'pain',raidReceipt:run.id,mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)}]:[];
     if(run.type==='shibuya')data.pendingReward.cards=rollShibuyaCards(run.difficulty,random);
-    if(rewardItemId(run.type))data.pendingReward.item=randomUnit(random)<(run.type==='akatsuki'?akatsukiChances(run.difficulty).mangekyo_eye:run.type==='shibuya'?shibuyaChances(run.difficulty).equipment_cursed_finger:excaliburChance(run.difficulty))?{id:rewardItemId(run.type),quantity:host.InventorySystem.scaleDrop(1,random,battle)}:null;
+    if(rewardItemId(run.type))data.pendingReward.item=randomUnit(random)<(run.type==='akatsuki'?akatsukiChances(run.difficulty).mangekyo_eye:run.type==='shibuya'?shibuyaChances(run.difficulty).equipment_cursed_finger:excaliburChance(run.difficulty))?{id:rewardItemId(run.type),quantity:1}:null;
     if (!persist()) { data.pendingReward = null; throw new Error('Không thể lưu phần thưởng Raid.'); }
     const result = commitPending(); run.completed = true; return result;
   }

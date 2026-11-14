@@ -1,20 +1,40 @@
-PASSIVE AUDIT — PRIDE / SINS UPDATE
-Ngày: 12/11/2026
+PASSIVE AUDIT — TENSURA UPDATE
+Ngày: 14/11/2026
 
-Phạm vi: 206 card definitions, runtime độc lập, seed 8789, tối đa 18 lượt.
-Fixture dùng HP lớn và ATK 1.000 để giữ trận đủ dài; không đổi stats game.
-Xác nhận lượt tiến, actor được dọn, stats hữu hạn, timer không âm, không exception.
-12 idle phase guards: itachi-awakened, kagurabachi, the-mourner, war-hammer-titan, pain, toji, the-clown, raid-secret-mihawk, weather-report, toshiro, builderman, awakened-doflamingo.
+Runtime checks: 211 card definitions, isolated seeded engine (seed 8789), tối đa 18 turns.
+Fixture dùng HP lớn / ATK 1,000; không thay stats của game. Kiểm tra finite HP/ATK,
+turn tiến, không negative stun timer, không leaked activeAttacker, không exception.
 
-Kiểm tra sâu: 67 Sins combat assertions; 52 event/evolution/Infinity/reward checks;
-1.000 rotation windows; 43 timing/save/keeper checks; multi-mode quantity x6;
-desktop/mobile và renderer cache ở CPU throttle x4. Snapshot PvP khớp 120 bước/3 seed.
-Không bao phủ mọi đội hình, mutation, Relic, borrowed passive hoặc WAN thực tế.
-Own-turn timers/form được giữ tách khỏi support/entry/on-hit/death và global DoT.
-Meliodas/Escanor The One: chance = 0. Stats của 200 thẻ trước update không đổi.
+210 Index-passive copy / execute / lease-cleanup cases (2 own turns mỗi case).
+49 focused Tensura assertions; 67 content/Portal/food/evolution/save assertions.
+Edge cases: The One borrowed mode expires, Black Flame cannot be cleansed,
+isolation survives enemy self-revival and ignores a Crow moving to frontline,
+Soul passive immunity. 100 continuous Infinity transitions; 21 fresh Tower matches.
+Stable runtime view identity: 100,000 repeated reads/writes with mixed Sins/Tower hooks.
 
-Danh sách PASS trong fixture có seed:
+Regression: 67 Sins assertions; 52 event/evolution/Infinity/reward checks,
+1,000 Boss rotations; normal drops x6; Spooky 50 waves with special quantities = 1.
+Determinism: 120 Sins PvP steps + 84 Tensura steps across 3 seeds mỗi suite;
+snapshots identical, no localStorage writes or rewards.
+Desktop/mobile: optional account form, standard Portal selector/start, entry callbacks,
+8 combat turns; no horizontal overflow or battle log/stack exceptions.
+Firebase SDK mocked: linking both directions preserves UID, password token accepted,
+credential-conflict recovery, registration, password reset, logout/local play.
+Live OAuth/email and deployed Firestore permissions still require post-deploy testing.
 
+Hook order: match start / entry → own turn context → beforeAttack / onAttack →
+central damage / status / fatal / kill → afterAttack → end-turn / cleanup.
+Tensura does not register DOM listeners or real-time timers per card/copy.
+Uncleanseable Black Flame stays in the shared protected DoT registry.
+Borrowed effects use private runtime views and scoped stat leases; old leases expire.
+New floor attempts create fresh entities; Infinity retains player runtime and clears
+stale enemy references / duel participants when replacing the enemy wave.
+
+Limits: seeded scenarios are not an exhaustive proof of every 211-card team, Relic,
+mutation, weather, borrowed-passive combination, device, network or Firebase project.
+No blanket “100% bug-free” or “zero lag on every device” claim is made.
+
+PASS — seeded native passive scenarios:
 001. Naruto Kid [starter-common] — First Strike — PASS
 002. Normal Demon [normal-demon] — Lifesteal — PASS
 003. Sasuke Kid [sasuke-kid] — Chidori — PASS
@@ -221,3 +241,10 @@ Danh sách PASS trong fixture có seed:
 204. King Harlequin [king-harlequin] — Disaster — PASS
 205. Gowther [gowther] — Puppet Invasion — PASS
 206. Escanor The One [escanor-the-one] — The One — PASS
+207. Rimuru Demon Lord [rimuru-demon-lord] — Universal Predator — PASS
+208. Veldora [veldora] — Storm Dragon — PASS
+209. Diablo [diablo] — Immortal Spirit — PASS
+210. Benimaru Jura [benimaru-jura] — Shimmering Flame — PASS
+211. Yuuki Kagurazaka [yuuki-kagurazaka] — Mammon Creator — PASS
+
+Idle own-turn guards: itachi-awakened, kagurabachi, the-mourner, war-hammer-titan, pain, toji, the-clown, raid-secret-mihawk, weather-report, toshiro, builderman, awakened-doflamingo

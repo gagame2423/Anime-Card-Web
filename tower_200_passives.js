@@ -6,7 +6,7 @@
   const [FLORENTINO,KAFKA,ESCANOR,YHWACH]=IDS,{has,alive,all,allies,enemies,atk,random,runtime}=api;
   const state=(u,key)=>api.passiveRuntimeFor(u,key).tower200 ||= {attacks:0,immuneUntil:-1,immunityReady:0,webReady:0};
   const turn=bs=>Number(bs?.turnCount)||0;
-  const deaths=new WeakMap(),kills=new WeakMap(),observers=new WeakMap();
+  const deaths=new WeakMap(),kills=new WeakMap(),observers=new WeakMap(),observed=new WeakSet();
   const negative=new Set(['stunTurns','freezeTurns','snailTurns','weakenAttackTurns','weakenAttackPct','noDodgeTurns','noDodgeAgainstUnit','hypnosisTurns','incomingVulnerabilityTurns','incomingVulnerabilityPct','passiveSuppressionTurns','passiveSuppressedUntilDeath','passiveDisabled','hindredTurns','deadlightsFearTurn','deadlightsHypnosis','shibuyaHypnosis','heresy']);
   function enabled(bs){if(!bs)return false;if(typeof bs.tower200Enabled!=='boolean')bs.tower200Enabled=all(bs).some(u=>IDS.some(key=>has(u,key)));return bs.tower200Enabled;}
   function entry(bs,u){if(IDS.some(key=>has(u,key)))bs.tower200Enabled=true;}
@@ -18,16 +18,16 @@
   }
   // Observe legacy direct debuff assignments as well as the shared status API.
   function observe(bs,u,r){
-   if(!enabled(bs))return r;
+   if(!r||observed.has(r))return r;
    let record=observers.get(r);if(record?.unit===u)return record.proxy;
-   const proxy=new Proxy(r,{get(target,key){const value=target[key];return key==='champion'&&value?observe(bs,u,value):value;},set(target,key,value){
+   const proxy=new Proxy(r,{get(target,key){const value=target[key];return key==='champion'&&value?observe(bs,u,value):value;},set(target,key,value){bs=api.currentBattle?.()||bs;
     const old=target[key],afflicted=negative.has(key)&&Boolean(value)&&(key==='deadlightsFearTurn'?value!==old:typeof value==='number'?value>Number(old||0):value!==old);
     if(afflicted&&blocked(bs,u,key))return true;
     target[key]=value;
     if(afflicted)statusApplied(bs,u,value?.source||api.currentSource?.()||bs.tower200Actor);
     return true;
    }});
-   observers.set(r,{unit:u,proxy});return proxy;
+   observers.set(r,{unit:u,proxy});observed.add(proxy);return proxy;
   }
   function dotFactor(bs,source,kind){return kind==='burn'&&enabled(bs)&&source&&allies(bs,source,false).some(u=>has(u,ESCANOR))?2:1;}
   let webRunning=false;

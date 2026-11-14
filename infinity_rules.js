@@ -1,7 +1,8 @@
 /* Quy tắc Infinity thuần trình duyệt, dùng tuần ISO theo UTC. */
 (function(host){
  'use strict';
- const DAY=86400000,WEEK=7*DAY;
+ const DAY=86400000,WEEK=7*DAY,CATEGORY_EXPANSION_UTC=Date.UTC(2026,10,16);
+ const legacyCategories=Object.freeze(host.CategorySystem.TYPES.filter(c=>!['Isekai','Draconic'].includes(c)));
  function getISOWeekAndYear(at=Date.now()){
   const d=new Date(at);if(!Number.isFinite(d.getTime()))throw Error('Invalid UTC date.');
   const day=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())),weekday=day.getUTCDay()||7;
@@ -12,7 +13,9 @@
  function random(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296;};}
  function rotation(at=Date.now()){
   const week=getISOWeekAndYear(at),seed=week.year*100+week.week,rng=random(seed);
-  return{...week,seed,category:host.CategorySystem.TYPES[Math.floor(rng()*host.CategorySystem.TYPES.length)],element:host.ElementSystem.TYPES[Math.floor(rng()*host.ElementSystem.TYPES.length)]};
+  // Thêm category từ tuần mới, không đổi featured category giữa tuần đang chạy.
+  const categories=week.startMs<CATEGORY_EXPANSION_UTC?legacyCategories:host.CategorySystem.TYPES;
+  return{...week,seed,category:categories[Math.floor(rng()*categories.length)],element:host.ElementSystem.TYPES[Math.floor(rng()*host.ElementSystem.TYPES.length)]};
  }
  function orbRange(wave){const n=Math.max(1,Math.floor(wave));return{min:Math.floor(1+(n-1)*(7/99)),max:Math.floor(2+(n-1)*(8/99))};}
  host.InfinityRules=Object.freeze({DAY,WEEK,getISOWeekAndYear,getISOWeek:getISOWeekAndYear,random,rotation,orbRange});

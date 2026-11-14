@@ -3,6 +3,7 @@
  'use strict';
  const KEY='anime_card_rng_food_v1',MAIN_KEY='anime_card_rng_save_v1',MAX=Number.MAX_SAFE_INTEGER;
  const FOODS=Object.freeze([
+  Object.freeze({id:'slime_dessert',name:'Slime Dessert',type:'exp_food',tier:'mythic',icon:'🍮',image:'assets/items/slimedessert.png',baseExp:3000,description:'3,000 base EXP × your EXP Multiplier. Slime Portal reward; 81,208 evolve Lv.100 Rimuru into Rimuru Demon Lord.'}),
   Object.freeze({id:'ramen_bowl',name:'Ramen Bowl',type:'exp_food',tier:'rare',icon:'🍜',image:'assets/items/ramenb.png',baseExp:10000,description:'10,000 base EXP × your EXP Multiplier. Akatsuki Raid Shop: 10 Akatsuki Coins.'}),
   Object.freeze({id:'senzu_bean',name:'Senzu Bean',type:'exp_food',tier:'epic',icon:'🫘',image:'assets/items/sbean.png',baseExp:2500,description:'2,500 base EXP × your EXP Multiplier. Namek Portal rewards; also used to evolve Gohan and Frieza.'}),
   Object.freeze({id:'star_orb',name:'Star Orb',type:'exp_food',tier:'epic',icon:'🌟',image:'assets/items/starorb.png',baseExp:1000,description:'1,000 base EXP × your EXP Multiplier. Infinity wave clears and personal weekly rewards.'}),

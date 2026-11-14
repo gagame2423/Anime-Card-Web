@@ -3576,6 +3576,131 @@ CARDS.push(...[
     "evolvesFrom": "weather-solar-deity"
   }
 ]);
+CARDS.push(
+  {
+    "id": "rimuru-demon-lord",
+    "name": "Rimuru Demon Lord",
+    "element": "Dark",
+    "rarity": "Mythic",
+    "chance": 0,
+    "requiredWeather": null,
+    "evolutionOnly": true,
+    "evolvesFrom": "rimuru",
+    "category": [
+      "Protagonist",
+      "Isekai",
+      "Magician",
+      "Swordman",
+      "Hero"
+    ],
+    "stats": {
+      "hp": 160000,
+      "atk": 39100
+    },
+    "image": "assets/cards/rimurudemonlord.png",
+    "passive": {
+      "name": "Universal Predator",
+      "description": "Every attack: gain 1–10 Sage (uncapped). When attacked with >3 Sage: spend 3 to heal 1% max HP. On a cleansable status with >10 Sage: spend 10 and cleanse it; Black Flame cannot be cleansed. Once per match, a fatal hit bypasses all survival/revives. With >40 Sage against a neutral/disadvantageous element: spend 40, shift to its counter; return to Dark after killing that target."
+    }
+  },
+  {
+    "id": "veldora",
+    "name": "Veldora",
+    "element": "Electric",
+    "rarity": "Secret",
+    "chance": 86000000,
+    "requiredWeather": "Raining",
+    "category": [
+      "Draconic",
+      "Isekai",
+      "Hero",
+      "Brutal",
+      "AntiVillian"
+    ],
+    "stats": {
+      "hp": 91300,
+      "atk": 34900
+    },
+    "image": "assets/cards/veldora.png",
+    "passive": {
+      "name": "Storm Dragon",
+      "description": "On entry: strike every enemy with lower ATK for 200% ATK. A turn lost to Stun heals 15% max HP. Every 3 attacks: Stun the target for its next turn, then suppress its passive for the following turn."
+    }
+  },
+  {
+    "id": "diablo",
+    "name": "Diablo",
+    "element": "Dark",
+    "rarity": "Secret",
+    "chance": 54000000,
+    "requiredWeather": "Eclipse",
+    "category": [
+      "Unhuman",
+      "Isekai",
+      "Hero",
+      "Supporter"
+    ],
+    "stats": {
+      "hp": 120000,
+      "atk": 29400
+    },
+    "image": "assets/cards/diablo.png",
+    "passive": {
+      "name": "Immortal Spirit",
+      "description": "Every attack: 10% chance to hypnotize the enemy, skipping its next turn. When attacked by Water or an element weak against Diablo: heal 3% max HP. Lead entry, once per match: isolate Diablo and the opposing lead in a 1v1 duel; neither can receive external buffs, healing, intercepts or assistance. Isolation ends when either duelist falls."
+    }
+  },
+  {
+    "id": "benimaru-jura",
+    "name": "Benimaru Jura",
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 95000000,
+    "requiredWeather": "Sunny",
+    "category": [
+      "Captain",
+      "Isekai",
+      "Magician",
+      "Hero",
+      "Swordman"
+    ],
+    "stats": {
+      "hp": 112000,
+      "atk": 42700
+    },
+    "image": "assets/cards/benimarujura.png",
+    "passive": {
+      "name": "Shimmering Flame",
+      "description": "Every 2 primary attacks: 44% chance to start a recursive follow-up chain (30% ATK per hit, 44% continuation, safety cap 24). The 2nd follow-up inflicts Burn 2 turns (30% ATK/turn). A further follow-up against a burning target adds uncleansable Black Flame 1 turn (20% ATK). After 10 primary attacks, enemies burning from this card cannot gain shields or positive buffs until that Burn ends."
+    }
+  },
+  {
+    "id": "yuuki-kagurazaka",
+    "name": "Yuuki Kagurazaka",
+    "element": "Holy",
+    "rarity": "Secret",
+    "chance": 0,
+    "requiredWeather": null,
+    "portalOnly": true,
+    "category": [
+      "Villian",
+      "AntiHero",
+      "Magician",
+      "Brutal",
+      "Mastermind",
+      "Isekai"
+    ],
+    "stats": {
+      "hp": 126000,
+      "atk": 30900
+    },
+    "image": "assets/cards/yuukikagurazaka.png",
+    "passive": {
+      "name": "Mammon Creator",
+      "description": "Start with 1,000 Soul Energy; +100 per kill. Every 3 primary attacks, spend 50 to replace the temporary extra passive with a random Card Index passive (old runtime effects cleaned up). Every attack spends 1 to heal 0.5% max HP. Fatal hit with >500 Energy: spend 500, survive and heal 33% max HP. With >1,500 Energy: immune to passive damage. Incoming Magician attacks: spend 5, take 50% damage; other attacks deal 125% damage."
+    }
+  }
+);
 Object.freeze(CARDS);
 const ALL_CARDS = CARDS;
 

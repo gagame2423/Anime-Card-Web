@@ -1,8 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function googleUser() { return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com'; }
-    function owner(uid) { return googleUser() && request.auth.uid == uid; }
+    function accountUser() { return request.auth != null && request.auth.token.firebase.sign_in_provider in ['google.com', 'password']; }
+    function owner(uid) { return accountUser() && request.auth.uid == uid; }
     function summary(s) {
       return s.keys().hasOnly(['totalRolls','strongestPower','timeTrialRoom','uniqueCards','displayName'])
         && s.totalRolls is int && s.totalRolls >= 0 && s.totalRolls <= 9007199254740991
@@ -43,8 +43,8 @@ service cloud.firestore {
       }
     }
     match /leaderboards/{uid} {
-      allow get: if googleUser();
-      allow list: if googleUser() && request.query.limit != null && request.query.limit <= 50;
+      allow get: if accountUser();
+      allow list: if accountUser() && request.query.limit != null && request.query.limit <= 50;
       allow delete: if owner(uid);
       allow create, update: if owner(uid)
         && request.resource.data.keys().hasOnly(['uid','displayName','totalRolls','strongestPower','timeTrialRoom','uniqueCards','revision','updatedAt'])
@@ -65,11 +65,11 @@ service cloud.firestore {
           && row.updatedAt == request.time;
       }
       function validWeek() { return week.matches('^[0-9]{4}_W(0[1-9]|[1-4][0-9]|5[0-3])$'); }
-      allow get: if googleUser();
+      allow get: if accountUser();
       allow list, delete: if false;
-      allow create: if googleUser() && validWeek()
+      allow create: if accountUser() && validWeek()
         && request.resource.data.keys().hasOnly([request.auth.uid]) && validEntry(request.resource.data);
-      allow update: if googleUser() && validWeek() && validEntry(request.resource.data)
+      allow update: if accountUser() && validWeek() && validEntry(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([request.auth.uid])
         && (!(request.auth.uid in resource.data)
           || request.resource.data[request.auth.uid].highestWave >= resource.data[request.auth.uid].highestWave);

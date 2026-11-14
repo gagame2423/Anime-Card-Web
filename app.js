@@ -4544,7 +4544,7 @@ function finishTimeTrialBattle(won, reason = '') {
     appendBattleLog(error.message, 'defeat');
   }
   if (!summary) return;
-  if(summary.reason!=='save-error'){window.PortalsSystem.dropTimeTrial(battleState,summary.won);summary.akatsukiKey=window.RaidSystem.claimTimeTrialKey(battleState,summary.won);}
+  if(summary.reason!=='save-error'){summary.portalDropped=window.PortalsSystem.dropTimeTrial(battleState,summary.won);summary.akatsukiKey=window.RaidSystem.claimTimeTrialKey(battleState,summary.won);}
   if (summary.reason !== 'save-error') { battleState.questResultWon = summary.won; recordQuestBattleCompletion(battleState); }
   clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
   battleState.finished = true; battleState.isBattling = false;
@@ -4554,6 +4554,7 @@ function finishTimeTrialBattle(won, reason = '') {
   body.textContent = summary.material?`Material Room ${summary.room} ${summary.won?'Cleared':'Failed'}\n${Object.entries(summary.materials||{}).map(([id,n])=>(window.InventorySystem.getItem(id)?.name||id)+' +'+n).join('\n')||'No materials dropped.'}\nNo Shards • No EXP • No VNĐ\n${summary.won?'Next Material Room: '+summary.nextRoom:'Material progress reset to Room 1'}`:summary.exp
     ? `Total Damage Dealt: ${(summary.totalDamage||0).toLocaleString('en-US')}\nConverted EXP Earned: +${(summary.convertedExperience||0).toLocaleString('en-US')} EXP\nApplied: +${summary.experience.toLocaleString('en-US')} EXP • ${summary.levelUps} level-ups • Level 100 cap respected\nDPS: ${Math.floor(summary.dps||0).toLocaleString('en-US')} • Best: ${Math.floor(summary.bestDps||trial.bestDps).toLocaleString('en-US')}${summary.newDpsRecord?'\n★ NEW HIGHEST DPS RECORD!':''}\nNo global EXP multiplier • No VNĐ or Shards`
     : `Room ${summary.room} ${summary.won ? 'Cleared' : 'Failed'}\nTime Trial Shards: +${summary.shards} • Drop x${window.InventorySystem.getDropMultiplier(battleState).toFixed(2)}\n${summary.won ? `Next: Room ${summary.nextRoom}` : 'Progress reset to Room 1'}\nNo EXP • No VNĐ • Victory: 1–3 Bread`;
+  if(summary.portalDropped)body.textContent+='\nPortal item received — open Storage → Portals.';
   if(summary.akatsukiKey?.quantity)body.textContent+=`\nAkatsuki Raid Key +${summary.akatsukiKey.quantity}`;
   body.classList.remove('hidden');body.classList.toggle('is-new-dps-record',Boolean(summary.exp&&summary.newDpsRecord));
   document.getElementById('timeTrialResultShopButton')?.classList.remove('hidden');

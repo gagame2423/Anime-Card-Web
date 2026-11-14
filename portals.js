@@ -2,9 +2,9 @@
 (function(host){
  'use strict';
  const KEY='anime_card_rng_portals_v1',MAIN='anime_card_rng_save_v1',R=host.PortalRules,U=host.OnlineUtils;
- const clone=value=>JSON.parse(JSON.stringify(value)),fresh=()=>({version:1,playerId:U.token(),portals:{},daily:{day:'',hosted:0},active:null,receipts:{trial:'',result:''},pending:null});
+ const clone=value=>JSON.parse(JSON.stringify(value)),fresh=()=>({version:1,playerId:U.token(),portals:{},daily:{day:'',hosted:0},active:null,trialClears:0,receipts:{trial:'',result:''},pending:null});
  const safeId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(id)&&!['__proto__','constructor','prototype'].includes(id);
- function validSave(value){return Boolean(value&&value.version===1&&safeId(value.playerId)&&value.portals&&typeof value.portals==='object'&&!Array.isArray(value.portals)&&Object.entries(value.portals).every(([id,p])=>safeId(id)&&p?.id===id&&R.validPortal(p))&&value.daily&&typeof value.daily.day==='string'&&Number.isInteger(value.daily.hosted)&&value.daily.hosted>=0&&value.daily.hosted<=10&&value.pending===null&&value.receipts&&['trial','result'].every(key=>value.receipts[key]===''||safeId(value.receipts[key]))&&(value.active===null||value.active&&safeId(value.active.id)&&typeof value.active.host==='boolean'&&typeof value.active.portalId==='string'&&Number.isSafeInteger(value.active.startedAt)&&R.validPortal(value.active.portal)));}
+ function validSave(value){return Boolean(value&&value.version===1&&safeId(value.playerId)&&value.portals&&typeof value.portals==='object'&&!Array.isArray(value.portals)&&Object.entries(value.portals).every(([id,p])=>safeId(id)&&p?.id===id&&R.validPortal(p))&&value.daily&&typeof value.daily.day==='string'&&Number.isInteger(value.daily.hosted)&&value.daily.hosted>=0&&value.daily.hosted<=10&&(value.trialClears===undefined||Number.isSafeInteger(value.trialClears)&&value.trialClears>=0&&value.trialClears<5)&&value.pending===null&&value.receipts&&['trial','result'].every(key=>value.receipts[key]===''||safeId(value.receipts[key]))&&(value.active===null||value.active&&safeId(value.active.id)&&typeof value.active.host==='boolean'&&typeof value.active.portalId==='string'&&Number.isSafeInteger(value.active.startedAt)&&R.validPortal(value.active.portal)));}
  let data,blocked=false,bridge={},ui=null,selectedPortal=null,selection=[],activeSlot=0,page=0,searchTimer=null,statusMessage='',setup=false,startingSolo=false;
  function read(){let saved;try{saved=JSON.parse(host.localStorage.getItem(KEY)||'null');if(saved?.pending){const journal=saved.pending;if(typeof journal.portalBefore!=='string'||typeof journal.itemsBefore!=='string'||typeof journal.mainBefore!=='string'||!validSave(JSON.parse(journal.portalBefore)))throw Error('Invalid Portal recovery.');host.localStorage.setItem(host.InventorySystem.KEY,journal.itemsBefore);host.localStorage.setItem(MAIN,journal.mainBefore);host.localStorage.setItem(KEY,journal.portalBefore);host.InventorySystem.reload();saved=JSON.parse(journal.portalBefore);}
   if(saved&&!validSave(saved))throw Error('Invalid Portal save.');return saved||fresh();}catch(error){blocked=true;host.GameStartup?.report('portal-storage','Portal save recovery is required; progress has been preserved.',error);return null;}}
@@ -19,15 +19,20 @@
  function inventory(){if(!host.InventorySystem.flush())throw Error('Unable to save Storage.');return JSON.parse(host.localStorage.getItem(host.InventorySystem.KEY));}
  function syncItem(items,p){items.items[p.id]=R.item(p);}
  function removeItem(items,id){delete items.items[id];}
- function newPortal(next,items,tier=1,random=Math.random){const p=R.create('portal_namek_'+U.token(10),tier,random);next.portals[p.id]=p;syncItem(items,p);return p;}
+ function newPortal(next,items,tier=1,random=Math.random,type='namek'){const p=R.create('portal_'+type+'_'+U.token(10),tier,random,type);next.portals[p.id]=p;syncItem(items,p);return p;}
  function lose(next,items,id){const p=next.portals[id];if(!p)return;if(--p.attempts===0){delete next.portals[id];removeItem(items,id);}else syncItem(items,p);}
  function recoverInterrupted(){if(!data?.active)return;try{const next=clone(data),items=inventory();if(next.active.host)lose(next,items,next.active.portalId);next.active=null;if(!transact(next,items))blocked=true;}catch(error){blocked=true;}}
  recoverInterrupted();if(data&&!blocked)persist();
  function dropTimeTrial(battle,won,random=Math.random){
-  if(!won||battle?.mode!=='time-trial'||battle.sandbox||!battle.trial?.id||blocked)return false;
+  if(!won||!['time-trial','material-time-trial'].includes(battle?.mode)||battle.sandbox||!battle.trial?.id||battle.trial.completed!==true||blocked)return false;
   const receipt=battle.trial.id;if(data.receipts.trial===receipt)return false;
   const next=clone(data);next.receipts.trial=receipt;
-  try{const items=inventory(),p=random()<.20?newPortal(next,items,1,random):null;if(!transact(next,items))throw Error('Portal drop could not be saved.');if(p)bridge.notify?.('Namek Portal Tier 1 received! Open Storage → Portals.');return Boolean(p);}catch(error){host.console.warn(error.message);return false;}
+  try{const items=inventory(),drops=[];
+   if(battle.mode==='time-trial'&&random()<.20)drops.push(newPortal(next,items,1,random));
+   next.trialClears=((next.trialClears||0)+1)%5;
+   if(next.trialClears===0&&random()<.80)drops.push(newPortal(next,items,R.integer(1,2,random),random,'slime'));
+   if(!transact(next,items))throw Error('Portal drop could not be saved.');
+   for(const p of drops)bridge.notify?.(R.definition(p).name+' '+R.tierName(p.tier)+' received! Open Storage → Portals.');return drops.length>0;}catch(error){host.console.warn(error.message);return false;}
  }
  function daily(){const day=new Date().toISOString().slice(0,10);return data.daily.day===day?{...data.daily}:{day,hosted:0};}
  function begin(id,portal,party=false,isHost=true,consumeOnEntry=false){
@@ -46,16 +51,17 @@
   if(data.receipts.result===result.id)return null;
   const attempt=data.active,next=clone(data),portal=attempt.host?(attempt.consumedOnEntry?attempt.portal:next.portals[attempt.portalId]):(attempt.portal||result.portal);
   if(!R.validPortal(portal))throw Error('Portal attempt no longer exists.');
-  const summary={won:Boolean(result.won),beans:0,card:null,secretPortal:false,upgraded:false,remaining:portal.attempts,mvp:Boolean(result.mvp),guest:!attempt.host,consumed:Boolean(attempt.consumedOnEntry),consumedOnEntry:Boolean(attempt.consumedOnEntry)};
+  const def=R.definition(portal);
+  const summary={foodId:def.food,foodName:def.foodName,portalType:portal.type,won:Boolean(result.won),beans:0,card:null,secretPortal:false,upgraded:false,remaining:portal.attempts,mvp:Boolean(result.mvp),guest:!attempt.host,consumed:Boolean(attempt.consumedOnEntry),consumedOnEntry:Boolean(attempt.consumedOnEntry)};
   const items=inventory();let main=null;
   if(result.won){
-   const range=R.beanRange(portal.tier),base=R.integer(range.min,range.max,random),factor=(attempt.host?1:.5)*(result.mvp?3:1)*host.InventorySystem.getDropMultiplier(result.battle),exact=base*factor;
+   const range=R.beanRange(portal.tier,portal.type),base=R.integer(range.min,range.max,random),factor=(attempt.host?1:.5)*(result.mvp?3:1)*host.InventorySystem.getDropMultiplier(result.battle),exact=base*factor;
    summary.beans=Math.floor(exact)+(random()<exact%1?1:0);
-   items.items.senzu_bean.quantity=Math.min(Number.MAX_SAFE_INTEGER,items.items.senzu_bean.quantity+summary.beans);
+   items.items[def.food].quantity=Math.min(Number.MAX_SAFE_INTEGER,items.items[def.food].quantity+summary.beans);
    if(portal.tier==='secret'&&random()<(result.party ? .10 : 1)){
-    const mutationIds=bridge.rollMutations?.()||[];main=bridge.prepareCard?.('broly',mutationIds);if(!main)throw Error('Unable to prepare Broly reward.');summary.card='Broly';summary.mutationIds=mutationIds.map(m=>typeof m==='string'?m:m.id);summary.cardLabel=summary.mutationIds.map(id=>host.MUTATION_BY_ID[id]?.name||id).concat('Broly').join(' · ');
+    const mutationIds=bridge.rollMutations?.()||[];main=bridge.prepareCard?.(def.card,mutationIds);if(!main)throw Error('Unable to prepare Portal card reward.');summary.card=def.cardName;summary.mutationIds=mutationIds.map(m=>typeof m==='string'?m:m.id);summary.cardLabel=summary.mutationIds.map(id=>host.MUTATION_BY_ID[id]?.name||id).concat(def.cardName).join(' · ');
    }
-   if(portal.tier===5&&random()<.01){const exactPortals=factor,copies=Math.floor(exactPortals)+(random()<exactPortals%1?1:0);for(let i=0;i<copies;i++)newPortal(next,items,'secret',random);summary.secretPortal=copies;}
+   if(portal.tier===5&&random()<.01){newPortal(next,items,'secret',random,portal.type);summary.secretPortal=1;}
    if(attempt.consumedOnEntry){
     summary.remaining=0;
     if(portal.tier!=='secret'&&portal.tier<5&&random()<.5){const upgraded=clone(portal);upgraded.tier++;next.portals[upgraded.id]=upgraded;syncItem(items,upgraded);summary.upgraded=true;}
@@ -86,9 +92,9 @@
  function resetSelection(){bridge.selector?.(quota(),true);renderPicker();}
  function renderPicker(){if(!setup||host.PortalCombatView?.active)return;bridge.selector?.(quota(),false,Boolean(host.PortalParty?.locked));ui.ready.disabled=!host.PortalParty?.canReady;text('portalReady',host.PortalParty?.locked?'✓ Ready / Waiting':'Lock In / Ready');}
  function inspector(portal){
-  selectedPortal=clone(portal);text('portalTitle','Namek Portal · '+R.tierName(portal.tier));text('portalModifiers',`Enemy Element: ${portal.element} · ${portal.category} player cards: +${portal.bonus}% HP/ATK · Enemy scaling x${R.MULTIPLIERS[portal.tier]}`);
+  selectedPortal=clone(portal);text('portalTitle',R.definition(portal).name+' · '+R.tierName(portal.tier));text('portalModifiers',`Enemy Element: ${portal.element} · ${portal.category} player cards: +${portal.bonus}% HP/ATK · Enemy scaling x${R.MULTIPLIERS[portal.tier]}`);
   text('portalAttempts',`${portal.attempts} / 5 attempts · 2s turns · Speed Battle Potion ignored`);
-  const range=R.beanRange(portal.tier);text('portalRewards',`${range.min}–${range.max} Senzu Beans per clear${portal.tier==='secret'?' · Broly: Solo 100% / Party 10%':''} · Tier 1–4: 50% upgrade · Tier 5: 1% Secret Portal`);
+  const range=R.beanRange(portal.tier,portal.type);text('portalRewards',`${range.min}–${range.max} ${R.definition(portal).foodName} per clear${portal.tier==='secret'?` · ${R.definition(portal).cardName}: Solo 100% / Party 10%`:''} · Tier 1–4: 50% upgrade · Tier 5: 1% Secret Portal`);
   ui.party.disabled=![4,5,'secret'].includes(portal.tier)||daily().hosted>=10;ui.party.title='Tier 4, Tier 5 or Secret; maximum 10 hosted starts/day (UTC).';ui.solo.disabled=false;
  }
  function open(id){if(!mount()||blocked||!bridge.canEnter?.()||!data.portals[id])return false;setup=true;selectedPortal=clone(data.portals[id]);bridge.onEnter?.();bridge.open?.('portalModal');inspector(selectedPortal);ui.room.hidden=true;ui.builder.hidden=true;ui.choices.hidden=false;message('Inspect modifiers, then choose Solo or Party.');return true;}
@@ -96,7 +102,7 @@
  function partyChanged(info){if(info.portal)inspector(info.portal);ui.choices.hidden=true;ui.room.hidden=false;ui.builder.hidden=!info.connected;ui.ready.hidden=false;ui.hostStart.hidden=!info.isHost;ui.hostStart.disabled=!info.canStart;ui.create.disabled=info.busy||info.hasPeer;ui.join.disabled=info.busy||info.hasPeer;ui.size.disabled=info.hasPeer;ui.code.disabled=info.hasPeer;text('portalRoomCode',info.room||'No room');text('portalMembers',info.members.map((p,i)=>`${p.name}: ${R.slots(info.size,i)} cards ${p.ready?'✓ Ready':''}`).join(' · '));renderPicker();if(info.message)message(info.message);}
  function solo(){if(!ui||!selectedPortal)return;ui.choices.hidden=true;ui.room.hidden=true;ui.builder.hidden=false;ui.ready.hidden=true;resetSelection();message('Choose four unique owned cards, then Start Portal.');}
  // Exact tier comparison deliberately keeps Secret separate from numeric tiers.
- function sameTierPortal(tier){return Object.values(data?.portals||{}).find(p=>p.tier===tier&&host.InventorySystem.quantity(p.id)>0)||null;}
+ function sameTierPortal(tier,type=selectedPortal?.type){return Object.values(data?.portals||{}).find(p=>p.tier===tier&&p.type===type&&host.InventorySystem.quantity(p.id)>0)||null;}
  function returnMain(note='No Portal of the same Tier remains. Auto Continue stopped.'){
   host.PortalCombatView.stopAuto();host.PortalCombatView.release();host.PortalParty?.exit();
   const current=data.portals[selectedPortal?.id];
@@ -112,7 +118,7 @@
  }
  function startSolo(consumeOnEntry=false){if(startingSolo||data?.active||host.PortalCombatView?.active)return false;startingSolo=true;const button=el('battleStartButton');if(button)button.disabled=true;try{if(!selectedPortal||!data.portals[selectedPortal.id])throw Error('Portal item unavailable.');const id='portal_run_'+U.token(10),players=getWires().map(w=>R.unit(w,data.playerId));begin(id,selectedPortal,false,true,consumeOnEntry);host.PortalCombatView.start({id,portal:selectedPortal,players,seed:R.integer(1,0xffffffff),party:false,weather:bridge.weather?.()||[]});return true;}catch(error){returnMain(error.message);return false;}finally{startingSolo=false;if(!host.PortalCombatView?.active&&setup)renderPicker();}}
  function exit(){if(!setup&&!host.PortalCombatView?.active)return;host.PortalParty?.exit();host.PortalCombatView?.release();if(data?.active){try{abort();}catch(error){message(error.message);return false;}}setup=false;selection=[];selectedPortal=null;el('portalModal')?.classList.add('hidden');bridge.onExit?.();return true;}
- function showSummary(summary){const lines=[summary.won?'PORTAL CLEARED':'PORTAL ATTEMPT LOST',`Senzu Beans +${summary.beans}${summary.guest?' · Guest 50%':''}${summary.mvp?' · MVP x3':''}`,summary.card?(summary.cardLabel||'Broly')+' received!':'',summary.upgraded?'Portal upgraded to the next Tier.':'',summary.secretPortal?`${summary.secretPortal} Secret Namek Portal received!`:'',summary.consumed?(summary.consumedOnEntry?'Portal consumed for Auto Continue.':'Secret Portal consumed after victory.'):summary.won?'The Portal item is retained.':summary.remaining?`${summary.remaining} / 5 attempts remain.`:'Portal destroyed after 5 losses.'].filter(Boolean);text('portalCombatResult',lines.join('\n'));}
+ function showSummary(summary){const lines=[summary.won?'PORTAL CLEARED':'PORTAL ATTEMPT LOST',`${summary.foodName||'Senzu Beans'} +${summary.beans}${summary.guest?' · Guest 50%':''}${summary.mvp?' · MVP x3':''}`,summary.card?(summary.cardLabel||'Broly')+' received!':'',summary.upgraded?'Portal upgraded to the next Tier.':'',summary.secretPortal?`${summary.secretPortal} Secret ${R.definition(summary.portalType).name} received!`:'',summary.consumed?(summary.consumedOnEntry?'Portal consumed for Auto Continue.':'Secret Portal consumed after victory.'):summary.won?'The Portal item is retained.':summary.remaining?`${summary.remaining} / 5 attempts remain.`:'Portal destroyed after 5 losses.'].filter(Boolean);text('portalCombatResult',lines.join('\n'));}
  // Commit an intentional touch once even if the selected slot changes layout.
  function bindTouch(root){
   let touch=null,last=null;

@@ -26,9 +26,9 @@
   }
   function writeShield(u,fn){shieldWriting.add(u);try{return fn();}finally{shieldWriting.delete(u);}}
   function observe(bs,u,view){
-   if(!view||observed.has(view)||!has(u,ESC)&&!active(bs,KING).length)return view;
+   if(!view||observed.has(view))return view;
    if(proxies.has(view))return proxies.get(view);
-   const proxy=new Proxy(view,{set(target,key,value){
+   const proxy=new Proxy(view,{set(target,key,value){bs=api.currentBattle?.()||bs;
     const before=Number(target[key])||0;
     if(key==='shield'&&!shieldWriting.has(u)&&Number(value)>before)value=before+shieldAmount(bs,u,Number(value)-before);
     if(has(u,ESC)){

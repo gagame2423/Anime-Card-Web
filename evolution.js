@@ -3,6 +3,7 @@
   'use strict';
   const KEY = 'anime_card_rng_evolution_v1', MAIN_KEY = 'anime_card_rng_save_v1';
   const RECIPES = Object.freeze([
+    Object.freeze({id:'rimuru-demon-lord',baseId:'rimuru',itemId:'slime_dessert',itemCount:81208,level:100,resultLevel:1,name:'Rimuru Demon Lord'}),
     Object.freeze({id:'escanor-the-one',baseId:'weather-solar-deity',itemId:'pride_sun',level:100,resultLevel:1,name:'Escanor The One'}),
     Object.freeze({id:'itachi-awakened',baseId:'uchiha-itachi',itemId:'mangekyo_eye',level:100,resultLevel:1,name:'Itachi Awakened'}),
     Object.freeze({id:'ultimate-gohan',baseId:'gohan',itemId:'senzu_bean',itemCount:8500,level:100,resultLevel:1,name:'Ultimate Gohan'}),

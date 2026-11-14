@@ -2,8 +2,8 @@
 (function(host){
  'use strict';
  const MAX_WAVE=Math.floor(Number.MAX_SAFE_INTEGER/100),U=host.OnlineUtils;
- function available(){return Boolean(host.CloudSaveSystem.googleVerified&&host.CloudSaveSystem.firestore);}
- function localResult(message='Sign in with Google to view the global weekly leaderboard.'){const week=host.InfinityRules.rotation();return{week,localOnly:true,localBest:host.InfinitySystem.getBest(week.id),rows:[],message};}
+ function available(){return Boolean(host.CloudSaveSystem.authVerified&&host.CloudSaveSystem.firestore);}
+ function localResult(message='Sign in to view the global weekly leaderboard.'){const week=host.InfinityRules.rotation();return{week,localOnly:true,localBest:host.InfinitySystem.getBest(week.id),rows:[],message};}
  async function submit(input){
   const cloud=host.CloudSaveSystem,week=host.InfinityRules.rotation();if(input.weekId!==week.id||input.category!==week.category||!Number.isSafeInteger(input.highestWave)||input.highestWave<1||input.highestWave>MAX_WAVE)throw Error('Invalid wave or expired UTC week.');
   if(!available())return{week,highestWave:Math.max(input.highestWave,host.InfinitySystem.getBest(week.id)),localOnly:true};
