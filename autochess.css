@@ -98,3 +98,66 @@
 #autochessModal:not(.ac-compact) .ac-offer-cost{font-size:9px;line-height:11px}
 
 #autochessModal.ac-rotated .ac-inspector{max-height:calc(var(--ac-landscape-height) * .4)}
+
+/* Instant trait inspection and match-only overlays; bounded by the same viewport. */
+#autochessModal .ac-unit-card{position:relative}
+#autochessModal .ac-token.ac-trait-match .ac-token-portrait{outline:2px solid #ffdf8c;box-shadow:0 0 0 3px #d8e8aa35,0 0 20px #f4cf6d99}
+#autochessModal .ac-unit-card.ac-trait-match{outline:1px solid #b8dab1;outline-offset:-2px;box-shadow:inset 0 0 14px #bdebc43d}
+#autochessModal .ac-floating-trait{position:absolute;z-index:9;left:50%;top:-13px;transform:translateX(-50%);max-width:150%;padding:2px 4px;border:1px solid #d4c17d;border-radius:4px;background:#172c21;color:#ffe6a1;font-size:8px;font-weight:800;line-height:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+#autochessModal .ac-unit-card .ac-floating-trait{top:1px;font-size:6px;line-height:8px;padding:0 2px;max-width:95%;opacity:.9}
+#autochessModal .ac-trait-peek{position:absolute;z-index:45;left:calc(clamp(145px,13vw,190px) + 30px);top:calc(var(--ac-header-size) + 20px);width:min(340px,50%);max-height:200px;border:1px solid #b7ac70;border-radius:9px;padding:9px;background:#0a2023f5;box-shadow:0 8px 30px #0009;pointer-events:none;overflow:hidden}
+#autochessModal .ac-trait-peek header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px;font-size:11px;color:#f3d798}
+#autochessModal .ac-trait-peek header span{font-size:8px;color:#a9c9b6}
+#autochessModal .ac-trait-peek>div{display:flex;gap:5px;flex-wrap:wrap}
+#autochessModal .ac-trait-peek figure{width:38px;height:49px;margin:0;position:relative;overflow:hidden;border:1px solid #5a7f6b;border-radius:4px;background:#163232}
+#autochessModal .ac-trait-peek figure>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+#autochessModal .ac-trait-peek figcaption{position:absolute;bottom:9px;left:0;right:0;background:#061716e8;font-size:6px;line-height:9px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;z-index:2;padding:0 2px}
+#autochessModal .ac-trait-peek figure>small{position:absolute;bottom:0;left:0;right:0;font-size:6px;line-height:9px;text-align:center;background:#203a2e;z-index:2}
+#autochessModal.ac-drawers .ac-trait-peek{left:165px;top:calc(var(--ac-header-size) + 10px)}
+#autochessModal .ac-dialog-layer{position:absolute;inset:0;z-index:120;display:grid;place-items:center;min-width:0;min-height:0;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:#020a10da;backdrop-filter:blur(5px);overflow:hidden;box-sizing:border-box}
+#autochessModal .ac-dialog-panel{position:relative;width:min(880px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;border:1px solid #b4a975;border-radius:14px;padding:24px;background:radial-gradient(ellipse at top left,#29453b,#0d2025 70%);box-shadow:0 12px 80px #000b;color:#c0d8ca;scrollbar-width:thin;scrollbar-color:#7e987b #10262a}
+#autochessModal .ac-dialog-panel h2{font:600 28px/1.2 Georgia,serif;color:#f3dfad;margin:8px 35px 12px 0}
+#autochessModal .ac-dialog-panel h3{font-size:12px;letter-spacing:.3px;color:#d7dfbc;margin:20px 0 10px}
+#autochessModal .ac-dialog-panel p{font-size:12px;line-height:1.65;color:#abc8b9;margin:8px 0 14px}
+#autochessModal .ac-dialog-x{position:absolute;right:12px;top:12px;z-index:4}
+#autochessModal .ac-dialog-actions{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+#autochessModal .ac-dialog-actions button{padding:10px 16px;min-height:38px;font-size:12px}
+#autochessModal .ac-danger{background:linear-gradient(#74383b,#49272d);border-color:#ce8a83;color:#ffe5cc;font-weight:800}
+#autochessModal .ac-forfeit-panel{width:min(510px,100%)}
+#autochessModal .ac-synergy-count{font-weight:800;color:#e3d896!important}
+#autochessModal .ac-tier-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#autochessModal .ac-tier-detail{--tier-color:#997b60;border:1px solid #526558;background:#0b1f2380;border-radius:8px;padding:12px;min-width:0;opacity:.75}
+#autochessModal .ac-tier-detail.tier-2{--tier-color:#c0d7db}#autochessModal .ac-tier-detail.tier-3{--tier-color:#eac56b}#autochessModal .ac-tier-detail.tier-4{--tier-color:#c6a5ff}
+#autochessModal .ac-tier-detail header{display:flex;justify-content:space-between;align-items:center;gap:6px;color:var(--tier-color);font-size:12px}
+#autochessModal .ac-tier-detail header span{font-size:8px;letter-spacing:.5px}
+#autochessModal .ac-tier-detail>small{display:block;margin:6px 0;color:#91b8a4;font-size:10px}
+#autochessModal .ac-tier-detail ul{margin:7px 0 0;padding-left:16px;font-size:11px;line-height:1.6}
+#autochessModal .ac-tier-detail.is-current{opacity:1;border-color:var(--tier-color);box-shadow:inset 0 0 25px #c9ddad13,0 0 0 1px var(--tier-color)}
+#autochessModal .ac-synergy-note{font-size:10px!important;color:#819d91!important}
+#autochessModal .ac-synergy-roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
+#autochessModal .ac-synergy-roster figure{height:101px;min-width:0;margin:0;position:relative;background:#122e30;border:1px solid #4b7861;border-radius:6px;overflow:hidden}
+#autochessModal .ac-synergy-roster figure>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 25%;z-index:1}
+#autochessModal .ac-synergy-roster figcaption{position:absolute;bottom:16px;left:0;right:0;z-index:2;background:#092021e8;font-size:9px;line-height:14px;padding:3px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#autochessModal .ac-synergy-roster figure>small{position:absolute;bottom:0;left:0;right:0;z-index:2;background:#264032;color:#c5d9ad;font-size:8px;text-align:center;line-height:16px}
+#autochessModal .ac-summary-panel{width:min(670px,100%)}
+#autochessModal .ac-reward-breakdown{border:1px solid #53735d;border-radius:8px;overflow:hidden;margin:18px 0}
+#autochessModal .ac-reward-line{display:grid;grid-template-columns:100px minmax(0,1fr) auto;gap:10px;align-items:center;padding:13px 14px;background:#102927a6;border-bottom:1px solid #425e4e70}
+#autochessModal .ac-reward-line:last-child{border:0}#autochessModal .ac-reward-line>strong{font-size:12px;color:#e2d5a7}#autochessModal .ac-reward-line>span{font-size:12px;color:#bbd9c4}#autochessModal .ac-reward-line small{display:block;color:#779c89;font-size:9px;margin-top:3px}#autochessModal .ac-reward-line>b{font-size:17px;color:#e4ce8a;white-space:nowrap}
+#autochessModal .ac-summary-standings{font-size:11px;border-top:1px solid #42604e;padding-top:10px}#autochessModal .ac-summary-standings summary{cursor:pointer;color:#a7c8b4}#autochessModal #acFinalStandings{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}#autochessModal #acFinalStandings span{font-size:10px;padding:5px 8px;border:1px solid #415b4c;border-radius:4px}
+#autochessModal.ac-compact .ac-dialog-layer{padding:8px max(8px,env(safe-area-inset-right)) 8px max(8px,env(safe-area-inset-left))}
+#autochessModal.ac-compact .ac-dialog-panel{padding:15px;max-height:100%;border-radius:10px}
+#autochessModal.ac-compact .ac-dialog-panel h2{font-size:21px;margin-top:3px;margin-bottom:7px}
+#autochessModal.ac-compact .ac-dialog-panel p{font-size:11px;margin:6px 0 9px}
+#autochessModal.ac-compact .ac-dialog-actions{margin-top:10px;gap:6px}#autochessModal.ac-compact .ac-dialog-actions button{padding:7px 10px;min-height:32px;font-size:11px}
+#autochessModal.ac-compact .ac-reward-breakdown{margin:10px 0}#autochessModal.ac-compact .ac-reward-line{padding:7px 10px;grid-template-columns:85px minmax(0,1fr) auto;gap:7px}#autochessModal.ac-compact .ac-reward-line>b{font-size:15px}#autochessModal.ac-compact .ac-reward-line small{margin-top:1px;font-size:8px}
+#autochessModal.ac-compact .ac-tier-detail{padding:8px}#autochessModal.ac-compact .ac-tier-detail ul{font-size:10px}
+#autochessModal.ac-rotated .ac-dialog-layer{inset:auto;left:50%;top:50%;width:var(--ac-landscape-width);height:var(--ac-landscape-height);max-height:none;transform:translate(-50%,-50%) rotate(90deg);transform-origin:center}
+@media(max-width:560px) and (orientation:portrait){#autochessModal:not(.ac-rotated) .ac-tier-grid{grid-template-columns:1fr}#autochessModal:not(.ac-rotated) .ac-reward-line{grid-template-columns:75px minmax(0,1fr);gap:5px}#autochessModal:not(.ac-rotated) .ac-reward-line>b{grid-column:2}}
+
+#autochessModal :is(.ac-summary-panel,.ac-synergy-panel){display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#autochessModal .ac-summary-heading,#autochessModal .ac-summary-panel>.ac-dialog-actions{flex-shrink:0}
+#autochessModal :is(.ac-summary-body,#acSynergyContent){min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#7e987b #10262a;padding-right:4px}
+
+#autochessModal .ac-reward-line>span{overflow-wrap:anywhere}
+
+#autochessModal button{touch-action:manipulation}

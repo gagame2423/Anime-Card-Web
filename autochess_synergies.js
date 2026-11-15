@@ -58,6 +58,59 @@
  const native=u=>u?.card||host.AutoChessSystem.card(u);
  function analyze(units){const counts=new Map(),seen=new Set();for(const u of units||[]){const c=native(u);if(!c||seen.has(c.id))continue;seen.add(c.id);for(const id of [c.element,...(c.category||[])])counts.set(id,(counts.get(id)||0)+1);}return DEFINITIONS.map(d=>{const count=counts.get(d.id)||0,tier=THRESHOLDS.filter(n=>count>=n).length;return{...d,count,tier,tierName:TIERS[tier],next:THRESHOLDS[tier]||8};}).sort((a,b)=>b.tier-a.tier||b.count-a.count||a.id.localeCompare(b.id));}
  function tooltip(row){const bonuses=Object.entries(row.bonus).map(([k,n])=>k+': '+(k==='mana'?n:n*100).toFixed(1)+(k==='mana'?' Energy':'%')+' per tier').join(' · ');return row.name+' · '+THRESHOLDS.join(' / ')+' distinct cards\n'+row.text+'\n'+bonuses+'\nCurrent: '+row.tierName+' ('+row.count+' units). Duplicate characters do not count twice.';}
+ const statNames={atk:'ATK',hp:'max HP',speed:'attack speed',vamp:'omnivamp',reflect:'damage reflection',reduction:'damage reduction',trueDamage:'damage converted to True Damage',regen:'max HP regeneration / second',crit:'critical chance',dodge:'dodge chance',shield:'Shield strength',mana:'Energy per attack',dot:'DoT damage'};
+ const pct=value=>Number((value*100).toFixed(3))+'%';
+ function matches(unit,id){const d=byId.get(ALIASES[id]||id),c=native(unit);return Boolean(d&&c&&(d.type==='element'?c.element===d.id:c.category?.includes(d.id)));}
+ function roster(units,id){return(units||[]).filter(u=>matches(u,id));}
+ function tierDetails(id,tier){
+  const d=byId.get(ALIASES[id]||id);if(!d||tier<1||tier>4)return null;
+  const n=tier,power=d.power*n,a=pct(power),hp=pct(power),extra=[];
+  switch(d.proc){
+   case'ember':extra.push('Each damaging attack adds Burn for 3 own turns: '+a+' ATK per tick, capped at 2% of the target max HP per application.');break;
+   case'tide':extra.push('Every 4 seconds, each ally heals '+hp+' of its max HP.');break;
+   case'roots':break;
+   case'lightning':extra.push('Every third attack chains '+a+' ATK lightning to '+Math.min(5,n+1)+' nearest enemies.');break;
+   case'execution':extra.push('Against enemies below 40% HP, deal '+a+' of the triggering damage as bonus damage.');break;
+   case'purify':extra.push('Every 5 seconds, cleanse normal debuffs from allies. Uncleanseable effects remain.');break;
+   case'rescue':extra.push('Every third attack shields the lowest-HP ally for '+hp+' of the caster max HP.');break;
+   case'plunder':extra.push('A PvP victory grants +'+Math.min(3,n)+' match Gold (once per team).');break;
+   case'duelist':extra.push('With no adjacent ally, deal '+a+' of the triggering damage as bonus damage.');break;
+   case'reprisal':extra.push('Every fourth attack grants a '+pct(.035*n)+' max HP Shield and deals '+a+' ATK bonus damage ignoring damage reduction.');break;
+   case'growth':extra.push('Every fourth attack adds '+a+' ATK for this fight, up to 10 growth stacks ('+pct(power*10)+' ATK).');break;
+   case'frenzy':extra.push('Gain up to '+a+' attack speed, proportional to missing HP; below 50% HP, each attack heals '+a+' ATK.');break;
+   case'combo':extra.push('Every fifth attack deals a '+pct(power*1.5)+' ATK bonus combo hit.');break;
+   case'stand':extra.push('Every fourth attack deals '+a+' ATK to the nearest other enemy (primary target if alone).');break;
+   case'domain':extra.push('Every fourth attack deals '+a+' ATK to up to 3 enemies nearest the target and Hinders them for 1 turn.');break;
+   case'oath':extra.push('Start with a '+pct(.08*n)+' max HP Shield. Every sixth attack grants another '+hp+' max HP Shield.');break;
+   case'broadside':case'ricochet':extra.push('Every third attack hits up to 2 other nearest enemies for '+a+' ATK each.');break;
+   case'ki':extra.push('At 100 Energy, deal '+a+' ATK to up to 3 nearest enemies.');break;
+   case'annihilate':extra.push('Every sixth attack hits the enemy with most current HP for '+hp+' of the largest enemy max HP, capped at 300% ATK.');break;
+   case'ambush':extra.push('First attack deals '+a+' ATK bonus damage. Every fourth attack adds Bleed for 2 turns at '+pct(power*.5)+' ATK per turn.');break;
+   case'adapt':extra.push('Every fifth attack heals '+hp+' max HP and adds '+hp+' max HP for this fight, up to 5 adaptations.');break;
+   case'resolve':extra.push('Every attack grants '+(2*n)+' Energy to adjacent allies. Every fourth attack heals the lowest-HP ally for '+hp+' of the caster max HP.');break;
+   case'command':case'formation':extra.push('Every '+(d.proc==='command'?'third':'fifth')+' attack shields self and adjacent allies for '+hp+' of the caster max HP.');break;
+   case'sunder':extra.push('Every third attack deals '+a+' ATK bonus damage and reduces enemy ATK by '+pct(Math.min(.25,power))+' for 2 turns.');break;
+   case'corrupt':extra.push('Every fourth attack adds Burn for 3 turns at '+a+' ATK per turn.');break;
+   case'breathing':extra.push('Every third attack against a target above 50% HP deals '+a+' ATK bonus damage and Bleed for 2 turns at '+pct(power*.5)+' ATK per turn.');break;
+   case'sin':extra.push('Against a Burned, Bleeding or Frozen enemy, deal '+a+' of triggering damage as bonus damage. Every fifth attack heals '+a+' ATK.');break;
+   case'echo':extra.push('Every fourth attack deals '+a+' ATK bonus damage ignoring damage reduction.');break;
+   case'cleave':extra.push('Every third attack deals '+a+' ATK to enemies adjacent to the primary target.');break;
+   case'mend':extra.push('Every third attack heals the lowest-HP ally for '+a+' ATK and shields that ally for '+pct(power*.25)+' ATK.');break;
+   case'nova':extra.push('At 100 Energy, deal '+a+' ATK to the primary target and its adjacent allies.');break;
+   case'harvest':extra.push('Against enemies below 30% HP, deal '+a+' of the triggering damage as bonus damage.');break;
+   case'mark':extra.push('Every fourth attack deals '+a+' ATK ignoring Shields and Hinders the target for 1 turn.');break;
+   case'stomp':extra.push('Every fourth attack deals '+a+' ATK to adjacent enemies and grants a '+pct(.02*n)+' max HP Shield.');break;
+   case'giantfall':extra.push('Every third attack adds '+hp+' of target max HP as damage (double against Titans), capped at 200% ATK.');break;
+   case'pack':extra.push('Deal +'+a+' of triggering damage per adjacent living ally, up to 3 allies.');break;
+   case'scheme':extra.push('Every fourth attack reduces target ATK by '+pct(Math.min(.25,power))+' for 2 turns and suppresses its passive for 1 turn.');break;
+   case'direct':extra.push('Every third attack deals '+a+' ATK ignoring damage reduction and grants '+(3*n)+' Energy to adjacent allies.');break;
+   case'secondlife':extra.push('Once per fight below 25% HP, heal '+pct(.1*n)+' max HP. Every fifth attack grants '+(5*n)+' Energy.');break;
+   case'roar':extra.push('Every fifth attack deals '+a+' ATK to up to 3 nearest enemies and Stuns them for 1 turn.');break;
+   case'reiatsu':extra.push('Every fourth attack deals '+a+' ATK to up to 2 nearest enemies and shields self for '+a+' ATK.');break;
+  }
+  return{tier,name:TIERS[tier],threshold:THRESHOLDS[tier-1],scope:d.type==='element'?'All allies':'Matching '+d.name+' units',stats:Object.entries(d.bonus).map(([key,value])=>'+'+(key==='mana'?value*n:pct(value*n))+' '+(statNames[key]||key)),effects:extra};
+ }
+ function details(id,units=[]){const d=byId.get(ALIASES[id]||id);if(!d)return null;const row=analyze(units.filter(u=>u.board!==null)).find(r=>r.id===d.id);return{...row,deployed:roster(units.filter(u=>u.board!==null),d.id),bench:roster(units.filter(u=>u.board===null),d.id),pool:[...host.AutoChessSystem.pools.flat()].filter(c=>matches({card:c},d.id)),tiers:THRESHOLDS.map((_,i)=>tierDetails(d.id,i+1))};}
  function bonuses(rows,u){const b={atk:0,hp:0,speed:0,vamp:0,reflect:0,reduction:0,trueDamage:0,regen:0,crit:0,dodge:0,shield:0,mana:0,dot:0},c=native(u);for(const row of rows)if(row.tier&&(row.type==='element'||c?.category?.includes(row.id)))for(const[k,v]of Object.entries(row.bonus))b[k]=(b[k]||0)+v*row.tier;for(const[k,cap]of Object.entries({atk:.8,hp:1.2,speed:.9,vamp:.35,reflect:.25,reduction:.4,trueDamage:.4,dodge:.3,crit:.4,regen:.04,dot:.8}))b[k]=Math.min(cap,b[k]);return b;}
  function create(battle,api){
   const rows={player:analyze(battle.playerTeam.filter(u=>!u.isSummoned&&!u.isClone&&!u.companionOwner)),enemy:analyze(battle.enemyTeam.filter(u=>!u.isSummoned&&!u.isClone&&!u.companionOwner))},states=new WeakMap();
@@ -125,5 +178,5 @@
   function speed(u){const s=state(u);let n=s.bonuses.speed;for(const r of active(u))if(r.proc==='frenzy')n+=r.power*r.tier*(1-u.hp/u.maxHp);return Math.min(1.5,n);}
   return{rows,start,attack,damage,hurt,second,speed,bonuses:u=>state(u).bonuses};
  }
- host.AutoChessSynergies=Object.freeze({DEFINITIONS,ALIASES,THRESHOLDS,TIERS,analyze,bonuses,tooltip,create,definition:id=>byId.get(ALIASES[id]||id)});
+ host.AutoChessSynergies=Object.freeze({DEFINITIONS,ALIASES,THRESHOLDS,TIERS,analyze,bonuses,tooltip,matches,roster,tierDetails,details,create,definition:id=>byId.get(ALIASES[id]||id)});
 })(window);

@@ -89,6 +89,7 @@ const defaultState = {
   }
 };
 
+const AUTO_CHESS_REWARD_SAVE=Symbol('autochess-placement-reward');
 let isImportingSave = false;
 let state = loadState();
 syncOwnershipRecords();
@@ -1054,8 +1055,9 @@ function loadState() {
   }
 }
 
-function saveState(canonicalOwnership = false, progressChanged = true) {
-  if (window.ShopBulkSystem?.blocked || window.InfinitySystem?.blocked || isImportingSave || isSimulationActive() || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked) return false;
+function saveState(canonicalOwnership = false, progressChanged = true, context = null) {
+  const simulationBlocked=isSimulationActive()&&!(context===AUTO_CHESS_REWARD_SAVE&&window.AutoChessView?.active&&!window.SandboxSystem?.active&&!window.PvPSystem?.active);
+  if (window.ShopBulkSystem?.blocked || window.InfinitySystem?.blocked || isImportingSave || simulationBlocked || window.EquipmentSystem?.blocked || window.ExpFoodSystem?.blocked) return false;
   try {
     // Rolls already update all three canonical ownership stores together.
     if (!canonicalOwnership) syncOwnershipRecords();
@@ -1070,8 +1072,8 @@ function saveState(canonicalOwnership = false, progressChanged = true) {
 
 // Stable public persistence aliases. Both paths use the same canonical ID
 // sanitizer so future UI code cannot bypass the repaired save/load flow.
-function saveGame() {
-  saveState();
+function saveGame(context = null) {
+  return saveState(false,true,context);
 }
 
 function loadGame() {
@@ -6056,6 +6058,7 @@ window.IndexFilterSystem.configure({onApply:()=>{collectionNeedsRefresh=false;re
 // Auto Chess owns its lobby/Gold/units and only commits a completed placement reward.
 function openAutoChess(){
   if(window.PenaltyView?.active||!canPlayPenalty())return;
+  saveGame();
   if(window.AutoChessView.open({requestLandscape:true}))document.getElementById('battleModal')?.classList.add('hidden');
 }
 document.getElementById('autochessOpenButton')?.addEventListener('click',openAutoChess);
@@ -6064,10 +6067,23 @@ window.AutoChessView.configure({
  name:()=>window.CloudSaveSystem?.publicName||'You',
  onEnter:()=>{clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();saveState();},
  onExit:()=>{document.getElementById('battleModal')?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.afterActivity();resumeGameRuntime();updateStats();},
+ rewardQuote:rank=>window.AutoChessSystem.reward(rank,{vnd:getCoinMultiplier(true,'autochess'),drop:window.InventorySystem.getDropMultiplier()}),
  reward:(match,rewards)=>{
-  if(!match.finished||!window.AutoChessSystem.validate(match)||!match.players.every(p=>p.rank!==null))return false;
-  const grants=Object.entries(rewards).filter(([,quantity])=>quantity>0).map(([id,quantity])=>({id,quantity}));
-  const ok=window.InventorySystem.transactOnce('ac_'+match.id,'complete',grants);
-  if(ok){updateStats();renderPotionInventory();window.CloudSaveSystem.markDirty();}return ok;
+  const chess=window.AutoChessSystem;
+  if(!match.finished||!chess.validate(match)||!chess.validReward(rewards,chess.get(match).rank))return false;
+  // Inventory grants/receipt share one write. A failed main-save write can retry safely.
+  const grants=[{id:'star_orb',quantity:rewards.orbs.total},...(rewards.gems?[{id:'gems',quantity:rewards.gems}]:[])];
+  const receipt='autochess_'+match.id,accountPaid=state.achievementRewardReceipts?.[receipt]===true;
+  if(!accountPaid&&(state.currency>Number.MAX_SAFE_INTEGER-rewards.vnd.total||state.experience>Number.MAX_SAFE_INTEGER-rewards.exp))return false;
+  let itemsPaid=false;try{itemsPaid=JSON.parse(localStorage.getItem(window.InventorySystem.KEY)||'null')?.receipts?.['ac_'+match.id]==='placement_v2';}catch(_){return false;}
+  if(!itemsPaid&&grants.some(row=>window.InventorySystem.quantity(row.id)>Number.MAX_SAFE_INTEGER-row.quantity))return false;
+  if(!window.InventorySystem.transactOnce('ac_'+match.id,'placement_v2',grants))return false;
+  if(accountPaid)return true;
+  const before=JSON.parse(JSON.stringify(state));
+  state.currency=Math.min(Number.MAX_SAFE_INTEGER,state.currency+rewards.vnd.total);
+  state.experience=Math.min(Number.MAX_SAFE_INTEGER,state.experience+rewards.exp);
+  state.achievementRewardReceipts ||= {};state.achievementRewardReceipts[receipt]=true;
+  if(!saveGame(AUTO_CHESS_REWARD_SAVE)){state=before;return false;}
+  updateStats();renderPotionInventory();window.CloudSaveSystem.markDirty();return true;
  }
 });

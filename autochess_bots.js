@@ -62,8 +62,8 @@
   }
   const eliminated=[...changes.values()].filter(v=>!v.p.hp).sort((a,b)=>b.damage-a.damage||a.p.id.localeCompare(b.p.id));let rank=s.players.filter(p=>p.rank===null).length;for(const v of eliminated)v.p.rank=rank--;
   const living=C.alive(s);if(living.length<=1){if(living[0])living[0].rank=1;else{const survivor=s.players.find(p=>p.rank===1);if(survivor)survivor.hp=1;}s.finished=true;s.phase='complete';}else{s.phase='results';s.remaining=C.RULES.resultSeconds;}
-  s.lastResults=results;s.revision++;return s;
+  s.lastResults=results;C.finalize(s);s.revision++;return s;
  }
- const reward=rank=>({silver_ore:Math.max(2,(9-rank)*4),calcite:Math.max(1,(9-rank)*2),gold_ore:rank<=4?(5-rank)*2:0});
+ const reward=(rank,multipliers)=>C.reward(rank,multipliers);
  host.AutoChessBots=Object.freeze({PERSONALITIES,initialize,profile,score,arrange,equip,plan,draft,pair,settle,reward,ranged});
 })(window);

@@ -85,8 +85,43 @@
    default:throw Error('Unknown Auto Chess action.');
   }s.revision++;return s;
  }
+ // Placement rewards are quoted once, then persisted before account crediting.
+ const PLACEMENT_REWARDS=Object.freeze([
+  [25000000,150,500,2500],[15000000,100,300,1800],[9000000,60,200,1200],
+  [5000000,40,120,800],[2500000,20,60,500],[750000,10,0,200],
+  [750000,10,0,200],[750000,10,0,200]
+ ].map(Object.freeze));
+ const scaled=(base,multiplier)=>Math.min(Number.MAX_SAFE_INTEGER,Math.floor(base*multiplier));
+ function reward(rank,multipliers={}){
+  if(!int(rank,1,8))throw Error('Invalid placement.');
+  const [vnd,orbs,gems,exp]=PLACEMENT_REWARDS[rank-1];
+  const factor=value=>Number.isFinite(Number(value))&&Number(value)>=1?Math.min(Number.MAX_SAFE_INTEGER,Number(value)):1;
+  const money=factor(multipliers.vnd),drop=factor(multipliers.drop);
+  return{version:1,rank,vnd:{base:vnd,multiplier:money,total:scaled(vnd,money)},orbs:{base:orbs,multiplier:drop,total:scaled(orbs,drop)},gems,exp};
+ }
+ function validReward(value,rank=value?.rank){
+  if(!value||value.version!==1||!int(rank,1,8)||value.rank!==rank)return false;
+  for(const key of ['vnd','orbs'])if(!value[key]||!Number.isFinite(value[key].multiplier)||value[key].multiplier<1||value[key].multiplier>Number.MAX_SAFE_INTEGER)return false;
+  const expected=reward(rank,{vnd:value.vnd.multiplier,drop:value.orbs.multiplier});
+  return value.gems===expected.gems&&value.exp===expected.exp&&['vnd','orbs'].every(key=>['base','multiplier','total'].every(field=>value[key][field]===expected[key][field]));
+ }
+ function finalize(s,reason=null){
+  const p=get(s);if(!p)return false;
+  if(reason==='forfeit'&&!s.finished&&p.hp>0){p.rank=alive(s).length||1;p.hp=0;}
+  const champion=p.rank===1||alive(s).length===1&&alive(s)[0]===p;
+  if(!s.finished&&p.hp>0&&!champion)return false;
+  if(p.rank===null)p.rank=champion?1:Math.min(8,alive(s).length+1);
+  const changed=!s.finished||s.phase!=='complete'||s.remaining!==0||!s.finishReason;
+  s.finishReason ||= reason==='forfeit'?'forfeit':p.rank===1?'victory':'eliminated';
+  s.finished=true;s.phase='complete';s.remaining=0;if(changed)s.revision++;
+  return true;
+ }
+ function clear(){try{host.localStorage.removeItem(KEY);return host.localStorage.getItem(KEY)===null;}catch(_){return false;}}
  function validate(s){
   if(!s||s.version!==1||typeof s.id!=='string'||!/^chess_[a-z0-9]+_[a-z0-9]+$/.test(s.id)||typeof s.finished!=='boolean'||typeof s.paid!=='boolean'||!Number.isFinite(s.remaining)||s.remaining<0||s.remaining>35||!int(s.seed,1,4294967295)||!int(s.rng,1,4294967295)||!int(s.serial,0,1e7)||!int(s.stage,1,100)||!int(s.round,1,s.stage===1?4:6)||!['planning','carousel','combat','results','complete'].includes(s.phase)||!Array.isArray(s.players)||s.players.length!==8)return false;
+  if(s.finishReason!==undefined&&!['victory','eliminated','forfeit'].includes(s.finishReason))return false;
+  if(s.reward!==undefined&&!validReward(s.reward,get(s)?.rank))return false;
+  if(s.finished&&get(s)?.rank===null||s.paid&&!s.finished)return false;
   const ids=new Set(),unitIds=new Set(),relicIds=new Set();
   for(const p of s.players){if(!['human','bot0','bot1','bot2','bot3','bot4','bot5','bot6'].includes(p.id)||typeof p.name!=='string'||p.name.length>40||typeof p.bot!=='boolean'||!(p.rank===null||int(p.rank,1,8))||ids.has(p.id)||!int(p.hp,0,100)||!int(p.gold,0,100000)||!int(p.level,1,9)||!int(p.xp,0,100)||!Array.isArray(p.units)||p.units.length>100||!Array.isArray(p.relics)||p.relics.length!==10||!Array.isArray(p.loot)||p.loot.length>100||!Array.isArray(p.shop)||p.shop.length!==5||p.shop.some(id=>id!==null&&!card(id)))return false;ids.add(p.id);const tiles=new Set(),bench=new Set();
    const checkRelic=r=>{if(!r)return true;if(typeof r.uid!=='string'||relicIds.has(r.uid)||!host.RelicSystem.validRoll(r.roll))return false;relicIds.add(r.uid);return true;};
@@ -96,5 +131,5 @@
  }
  function save(s){try{if(!validate(s))throw Error('Invalid Auto Chess checkpoint.');host.localStorage.setItem(KEY,JSON.stringify(s));return true;}catch(_){return false;}}
  function load(){try{const s=JSON.parse(host.localStorage.getItem(KEY)||'null');return validate(s)?s:null;}catch(_){return null;}}
- host.AutoChessSystem=Object.freeze({KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,income,levelUp,buy,move,sell,fuse,autoFuse,equip,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,apply,validate,save,load});
+ host.AutoChessSystem=Object.freeze({KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,income,levelUp,buy,move,sell,fuse,autoFuse,equip,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,apply,PLACEMENT_REWARDS,reward,validReward,finalize,clear,validate,save,load});
 })(window);

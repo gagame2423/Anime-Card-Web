@@ -63,7 +63,7 @@
  // It imports only source modules, owns no browser storage and dies on Save & Exit.
  function createWorkerPool(){
   const modules=['cards','category','elements','grimoire','yuno','requiem','reagan','fate','spooky_passives','gomen','shibuya','companions','combat_stats','dragon_skills','relic_combat','tower_200_passives','ragna_passives','mourner','akatsuki_passives','enten','titan_passives','turn_phase','baller_passives','tensura_passives','sins_passives','bleach_passives','passives','relics','autochess','autochess_synergies','autochess_bots','autochess_combat'];
-  const urls=modules.map(name=>new URL(name+'.js?v=20261115-autochess-1',host.document.baseURI).href);
+  const urls=modules.map(name=>new URL(name+'.js?v=20261115-autochess-match-ux-1',host.document.baseURI).href);
   const bootstrap=`self.window=self;self.InventorySystem={registerItem(){}};self.OnlineUtils={stable:JSON.stringify};self.localStorage={getItem(){return null},setItem(){throw Error('Combat workers cannot write storage')}};\nimportScripts(...${JSON.stringify(urls)});\nconst fights=new Map();\nfunction visual(u){const r=u.passiveState||{},c=u.card,g=u.grid;return {card:{id:c.id,name:c.name,element:c.element,rarity:c.rarity,image:c.image,category:c.category||[],passive:{name:c.passive?.name||'No Passive'}},hp:u.hp,maxHp:u.maxHp,atk:u.atk,defeated:u.defeated,isClone:u.isClone,isSummoned:u.isSummoned,relic:u.relic||null,grid:g?{uid:g.uid,serial:g.serial,side:g.side,x:g.x,y:g.y,mana:g.mana}:null,passiveState:{shield:r.shield||0,freezeTurns:r.freezeTurns||0,stunTurns:r.stunTurns||0,burn:r.burn?.length?[{}]:[],bleed:r.bleed?.length?[{}]:[],bleach:r.bleach?{hakka:r.bleach.hakka,vista:r.bleach.vista}:null,tensura:r.tensura?{sage:r.tensura.sage}:null}};}\nfunction publish(id,row){const f=row.fight,events=f.events.filter(e=>e.id>row.event);if(events.length)row.event=events.at(-1).id;postMessage({id,type:'frame',done:f.done,time:f.time,remaining:f.remaining,outcome:f.outcome(),playerTeam:f.battle.playerTeam.map(visual),enemyTeam:f.battle.enemyTeam.map(visual),events});}\nonmessage=event=>{const m=event.data;try{if(m.type==='init'){const row={fight:AutoChessCombat.create(m.a,m.b,m.seed,m.options),event:0};fights.set(m.id,row);publish(m.id,row);}else if(m.type==='step'){const row=fights.get(m.id);if(row){row.fight.step(m.dt);publish(m.id,row);}}else if(m.type==='dispose'){fights.get(m.id)?.fight.dispose();fights.delete(m.id);}}catch(e){postMessage({id:m.id,type:'error',message:e.message});}};postMessage({type:'ready'});`;
   const url=host.URL.createObjectURL(new Blob([bootstrap],{type:'application/javascript'})),worker=new Worker(url),listeners=new Map();let next=0,closed=false,failed=false;
   worker.onmessage=e=>{if(e.data.type==='ready'){host.URL.revokeObjectURL(url);return;}listeners.get(e.data.id)?.(e.data);};
@@ -81,9 +81,9 @@
  }
 
  function createSession(initial,options={}){
-  let state=clone(initial),jobs=[],current=null,disposed=false,speed=1,saveClock=0,botClock=0,pool=null;
+  let state=clone(initial),jobs=[],current=null,disposed=false,speed=1,saveClock=0,botClock=0,pool=null,claiming=false;
   function error(e){options.onError?.(e.message||String(e));}
-  function checkpoint(){if(!C.save(state)){error('Unable to save Auto Chess. Free browser storage before continuing.');return false;}return true;}
+  function checkpoint(){if(disposed)return false;if(!C.save(state)){error('Unable to save Auto Chess. Free browser storage before continuing.');return false;}return true;}
   function change(fn){if(disposed)return false;const previous=clone(state);try{fn();if(!C.save(state))throw Error('Unable to save this action; nothing was consumed.');options.onChange?.();return true;}catch(e){state=previous;error(e);return false;}}
   function disposeJobs(){for(const job of jobs)job.combat?.dispose();jobs=[];current=null;}
   function descriptors(){const kind=C.roundKind(state);if(['creep','boss'].includes(kind))return C.alive(state).map(p=>({a:p.id,b:'creeps',ghost:true,creep:true,boss:kind==='boss'}));return state.pairs;}
@@ -91,12 +91,28 @@
   function startCombat(){if(!change(()=>{for(const p of C.alive(state).filter(p=>p.bot))B.plan(state,p,24);if(C.roundKind(state)==='pvp')B.pair(state);state.phase='combat';state.remaining=0;state.revision++;}))return;prepareCombat();}
   function ready(){if(disposed||state.finished)return;switch(state.phase){case'carousel':if(C.get(state).hp>0&&!state.carousel.some(u=>u.claimedBy==='human')){error('Choose your carousel card first.');return;}change(()=>{for(const p of state.draftOrder.map(id=>C.get(state,id)).filter(p=>p.hp>0))if(!state.carousel.some(u=>u.claimedBy===p.id)){state.draftWave=4;B.draft(state,p);}C.advance(state);});break;case'planning':startCombat();break;case'results':change(()=>C.advance(state));break;}}
   function dispatch(action){return change(()=>C.apply(state,'human',action));}
-  function claim(){if(!state.finished)return false;if(state.paid)return true;const reward=B.reward(C.get(state).rank||8);try{if(options.onReward?.(state,reward)!==true)throw Error('Materials could not be saved. Retry Claim.');return change(()=>{state.paid=true;state.revision++;});}catch(e){error(e);return false;}}
-  function tick(dt){if(disposed||!(dt>0))return;dt=Math.min(.5,dt);saveClock+=dt;
+  function quoteReward(){if(!state.reward)state.reward=options.rewardQuote?.(C.get(state).rank)||C.reward(C.get(state).rank);if(!C.validReward(state.reward,C.get(state).rank))throw Error('Invalid placement reward.');}
+  function stopFights(){disposeJobs();pool?.dispose();pool=null;}
+  function claim(){
+   if(disposed||!state.finished)return false;if(state.paid)return true;if(claiming)return false;
+   claiming=true;
+   try{
+    if(!state.reward&&!change(quoteReward))return false;
+    if(options.onReward?.(state,C.clone(state.reward))!==true)throw Error('Rewards remain pending. Retry saving before leaving.');
+    return change(()=>{state.paid=true;state.revision++;});
+   }catch(e){error(e);return false;}finally{claiming=false;}
+  }
+  function terminal(){const p=C.get(state),living=C.alive(state);return state.finished||p.hp<=0||p.rank===1||living.length===1&&living[0].id==='human';}
+  function finish(reason=null){
+   if(disposed||!terminal()&&reason!=='forfeit')return false;
+   if(!change(()=>{if(!C.finalize(state,reason))throw Error('The match is still active.');quoteReward();}))return false;
+   stopFights();return claim();
+  }
+  function tick(dt){if(disposed||state.finished||!(dt>0))return;if(terminal()){finish();return;}dt=Math.min(.5,dt);saveClock+=dt;
    if(state.phase==='combat'){
     for(const job of jobs){if(!job.combat){const args=[C.get(state,job.a),C.get(state,job.b),job.seed,{creep:job.creep,boss:job.boss,stage:state.stage}];if(options.worker&&host.Worker&&/^https?:$/.test(host.location.protocol)&&!pool?.failed){try{pool ||= createWorkerPool();job.combat=remoteCombat(pool,...args);}catch(_){job.combat=create(...args);}}else job.combat=create(...args);if(job.a==='human'||job.b==='human')current=job.combat;break;}}
     for(const job of jobs)if(job.combat&&!job.result){job.combat.step(dt*speed);job.combat.interpolate(dt);if(job.combat.done)job.result={a:job.a,b:job.b,ghost:job.ghost,...job.combat.outcome()};}
-    if(jobs.length&&jobs.every(j=>j.result)){const results=jobs.map(j=>j.result);if(change(()=>B.settle(state,results))){disposeJobs();if(state.finished)claim();}}
+    if(jobs.length&&jobs.every(j=>j.result)){const results=jobs.map(j=>j.result);if(change(()=>{B.settle(state,results);if(C.finalize(state))quoteReward();})){disposeJobs();if(state.finished){stopFights();claim();}}}
    }else if(state.phase!=='complete'){
     state.remaining=Math.max(0,state.remaining-dt);botClock+=dt;
     if(state.phase==='carousel'){
@@ -110,8 +126,8 @@
    }
    if(saveClock>=1){saveClock=0;checkpoint();}
   }
-  if(state.phase==='combat')prepareCombat();else checkpoint();
-  return{get state(){return state;},get speed(){return speed;},set speed(v){speed=[1,2,3].includes(v)?v:1;},get workerCount(){return pool&&!pool.failed?1:0;},get combat(){return current||jobs.find(j=>j.combat)?.combat;},dispatch,ready,tick,claim,checkpoint,opponentLabel(id){const job=jobs.find(j=>j.a===id||!j.ghost&&j.b===id);if(!job)return C.roundKind(state)==='carousel'?'A card and Relic for every tactician':C.roundKind(state)==='boss'?'Neutral Boss Round':'Planning · '+C.roundKind(state).toUpperCase();return 'VS '+(job.creep?'Arcane Guardians':C.get(state,job.a===id?job.b:job.a)?.name)+(job.ghost?' · Echo':'');},combatFor(id){return jobs.find(j=>j.a===id||!j.ghost&&j.b===id)?.combat||null;},dispose(){if(disposed)return;disposed=true;disposeJobs();pool?.dispose();pool=null;}};
+  if(terminal())finish();else if(state.phase==='combat')prepareCombat();else checkpoint();
+  return{get state(){return state;},get speed(){return speed;},set speed(v){speed=[1,2,3].includes(v)?v:1;},get workerCount(){return pool&&!pool.failed?1:0;},get combat(){return current||jobs.find(j=>j.combat)?.combat;},dispatch,ready,tick,claim,forfeit:()=>finish('forfeit'),checkpoint,opponentLabel(id){const job=jobs.find(j=>j.a===id||!j.ghost&&j.b===id);if(!job)return C.roundKind(state)==='carousel'?'A card and Relic for every tactician':C.roundKind(state)==='boss'?'Neutral Boss Round':'Planning · '+C.roundKind(state).toUpperCase();return 'VS '+(job.creep?'Arcane Guardians':C.get(state,job.a===id?job.b:job.a)?.name)+(job.ghost?' · Echo':'');},combatFor(id){return jobs.find(j=>j.a===id||!j.ghost&&j.b===id)?.combat||null;},dispose(){if(disposed)return;disposed=true;disposeJobs();pool?.dispose();pool=null;}};
  }
  host.AutoChessCombat=Object.freeze({STEP,LIMIT,stats,makeUnit,creeps,create,createSession,createWorkerPool,remoteCombat});
 })(window);
