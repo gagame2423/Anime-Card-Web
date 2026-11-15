@@ -92,7 +92,7 @@
    for(const owner of all(bs))if(owner!==u&&has(owner,'sasori')&&state(owner,'sasori').puppet===u){const skills=api.passiveIds(u,true);releasePuppet(owner);if(alive(owner))puppet(bs,owner,skills);}
    if(has(u,'konan'))for(const enemy of enemies(bs,u))paper(enemy,5+Math.floor(random()*21),u);
    if(has(u,'deidara'))for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*5,{specialAttack:true});
-   if(u.akatsukiCrow)for(const enemy of enemies(bs,u).slice(0,2))api.hit(bs,u,enemy,atk(u)*2,{specialAttack:true});
+   if(u.akatsukiCrow)for(const enemy of enemies(bs,u).filter(v=>bs.mode!=='auto-chess'||!u.grid||v.grid&&Math.max(Math.abs(v.grid.x-u.grid.x),Math.abs(v.grid.y-u.grid.y))<=1).slice(0,2))api.hit(bs,u,enemy,atk(u)*2,{specialAttack:true});
    if(has(u,'sasori')){const victim=state(u,'sasori').puppet;releasePuppet(u);if(alive(victim))api.forceDeath(bs,u,victim);}
   }
   function advancePain(bs,u){
@@ -115,7 +115,7 @@
    if(mode==='Deva'){if(!api.ownTurn(bs,u,options))return {...out,skipped:true,charging:true};c.charge=(c.charge||0)+1;if(c.charge<3)return {...out,skipped:true,charging:true};for(const enemy of [...enemies(bs,u)])hitResult(bs,u,enemy,2,special,out);c.charge=0;return out;}
    hitResult(bs,u,target,1,{...options,specialAttack:false},out);
    if(mode==='Preta')api.heal(u,out.damage*.25,'Preta Path',bs,u);
-   if(mode==='Animal'&&alive(u)&&random()<api.followChance(bs,u,.50)){const line=team(bs,u),behind=line.slice(line.indexOf(u)+1).find(alive),enemy=alive(target)?target:enemies(bs,u)[0];if(behind&&enemy)api.assist(bs,behind,enemy,atk(behind),u);}
+   if(mode==='Animal'&&alive(u)&&random()<api.followChance(bs,u,.50)){const line=team(bs,u),behind=bs.mode==='auto-chess'&&u.grid?line.filter(v=>v!==u&&alive(v)&&v.grid&&(line===bs.playerTeam?v.grid.y>u.grid.y:v.grid.y<u.grid.y)).sort((a,b)=>Math.max(Math.abs(a.grid.x-u.grid.x),Math.abs(a.grid.y-u.grid.y))-Math.max(Math.abs(b.grid.x-u.grid.x),Math.abs(b.grid.y-u.grid.y)))[0]:line.slice(line.indexOf(u)+1).find(alive),enemy=alive(target)?target:enemies(bs,u)[0];if(behind&&enemy)api.assist(bs,behind,enemy,atk(behind),u);}
    if(out.hit&&alive(target)&&api.allowed(target,u)){
     if(mode==='Human'&&random()<.20)runtime(target).akatsukiHypnosis={turns:1,applied:bs.turnCount,owner:u};
     if(mode==='Naraka'&&random()<.25){api.disable(target,1,bs,u);for(const ally of allies(bs,u))api.heal(ally,u.maxHp*.10,'Naraka Path',bs,u);}
@@ -133,7 +133,7 @@
    if(move===3)for(const enemy of [...enemies(bs,u)]){const before=out.damage;hit(enemy,.50);if(out.damage>before&&alive(enemy)&&api.allowed(enemy,u))runtime(enemy).akatsukiMiss={turns:2,applied:bs.turnCount};}
    if(move===4){hit(target,1.2);for(const enemy of shuffle(enemies(bs,u).filter(v=>v!==target)).slice(0,3))hit(enemy,.3);}
    if(move===5){const shielded=runtime(target).shield>0;hit(target,.5);if(alive(target)){if(shielded)hit(target,.70,{ignoreShield:true});else api.status(target,'stunTurns',2,u);}}
-   if(move===6){const line=enemies(bs,u),at=line.indexOf(target),nearest=[line[at-1],line[at+1]].filter(Boolean);hit(target,1.8);for(const enemy of nearest)hit(enemy,.40);}
+   if(move===6){const line=enemies(bs,u),at=line.indexOf(target),nearest=bs.mode==='auto-chess'&&target.grid?line.filter(v=>v!==target&&v.grid).sort((a,b)=>Math.max(Math.abs(a.grid.x-target.grid.x),Math.abs(a.grid.y-target.grid.y))-Math.max(Math.abs(b.grid.x-target.grid.x),Math.abs(b.grid.y-target.grid.y))).slice(0,2):[line[at-1],line[at+1]].filter(Boolean);hit(target,1.8);for(const enemy of nearest)hit(enemy,.40);}
    if(move===7){c.izanamiUsed=true;hit(target,2);if(alive(target)){api.disable(target,3,bs,u);stopHealing(target,3,bs);if(alive(u)){u.hp=Math.max(1,u.hp-u.maxHp*.20);refresh(u);}}else api.heal(u,u.maxHp*.20,'Izanami',bs,u);}
    if(move===8){const clone=api.summon(bs,u,'crow',.30,.40,'Crow Clone');if(clone){clone.akatsukiCrow=true;clone.akatsukiCrowOwner=u;}out.hit=true;}
    if(move===9){const last=c.lastEnemyAttack||0;if(last>0){const shot=api.primary(bs,u,target,last*.60,{...special,specialAttack:false,noCritical:true,akatsukiRawDamage:true,grimoireReflection:true,akatsukiReflect:true});out.hit=shot.hit;out.damage=shot.damage||0;out.killed=shot.killed;}else log('[PASSIVE] Sharingan Copy: no prior enemy attack.','passive');}

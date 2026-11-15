@@ -234,7 +234,7 @@
   }
 
   function canCreateCompanion(unit) {
-    return Boolean(unit && !isGeneratedUnit(unit));
+    return Boolean(unit && !isGeneratedUnit(unit) && !(activeCombat?.mode==='auto-chess'&&allUnits(activeCombat).filter(isAlive).length>=48));
   }
 
   function aliveUnits(team) {
@@ -255,12 +255,14 @@
 
   function alliesOf(battleState, unit, includeSelf = true) {
     const team = teamOf(battleState, unit);
-    const result=aliveUnits(team).filter(candidate => includeSelf || candidate !== unit);return tensura?tensura.allies(battleState,unit,result):result;
+    const result=aliveUnits(team).filter(candidate => includeSelf || candidate !== unit);if(battleState?.mode==='auto-chess')result.sort((a,b)=>tacticalDistance(unit,a)-tacticalDistance(unit,b));return tensura?tensura.allies(battleState,unit,result):result;
   }
 
   function enemiesOf(battleState, unit) {
-    const result=aliveUnits(enemyTeamOf(battleState, unit));return tensura?tensura.opponents(battleState,unit,result):result;
+    const result=aliveUnits(enemyTeamOf(battleState, unit));if(battleState?.mode==='auto-chess')result.sort((a,b)=>tacticalDistance(unit,a)-tacticalDistance(unit,b));return tensura?tensura.opponents(battleState,unit,result):result;
   }
+
+  function tacticalDistance(a,b){return a?.grid&&b?.grid?Math.max(Math.abs(a.grid.x-b.grid.x),Math.abs(a.grid.y-b.grid.y)):99;}
 
   function firstLiving(team, preferredIndex = 0) {
     if (!Array.isArray(team) || !team.length) return null;
@@ -1207,7 +1209,7 @@
   });
 
   const yuno = window.createYunoSkills({
-    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,shieldAmount:(u,n)=>tensura?.allowGain(activeCombat,u,n)===false?0:sins?sins.shieldAmount(activeCombat,u,n):n,writeShield:(u,fn)=>sins?sins.writeShield(u,fn):fn(),onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
+    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,shieldAmount:(u,n)=>tensura?.allowGain(activeCombat,u,n)===false?0:(sins?sins.shieldAmount(activeCombat,u,n):n)*(activeCombat?.mode==='auto-chess'?1+(u.grid?.traits?.shield||0):1),writeShield:(u,fn)=>sins?sins.writeShield(u,fn):fn(),onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
     all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,enemyTeam:enemyTeamOf,
     atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,log:safeLog,
     indices:ensureCurrentIndices,hit:(...args)=>champions.hit(...args)
@@ -1569,6 +1571,7 @@
     if (delta <= 0) return 0;
     unit.hp = Math.min(Math.max(1, Number(unit.maxHp) || 1), before + delta);
     const gained = unit.hp - before;
+    if((state||activeCombat)?.mode==='auto-chess'&&gained>0)(state||activeCombat).tactical?.onHeal?.(unit,gained);
     if (gained > 0) {
       if (state && before < (Number(unit.maxHp) || 1) * 0.60 && unit.hp >= (Number(unit.maxHp) || 1) * 0.60) {
         // Real support owner only. Previously any healed ally could impersonate
@@ -1715,7 +1718,7 @@
     const runtime = ensureRuntime(attacker);
     let chance = (champions.id(attacker) === 'sunny' ? .33 : BASE_CRIT_CHANCE) + (Number(runtime.critChanceBonus) || 0);
     let multiplier = BASE_CRIT_MULTIPLIER + (Number(runtime.critDamageBonus) || 0);
-    const relicCrit=relic.crit(attacker);chance+=relicCrit.chance;multiplier+=relicCrit.damage;
+    const relicCrit=relic.crit(attacker);if(activeCombat?.mode==='auto-chess')chance+=attacker.grid?.traits?.crit||0;chance+=relicCrit.chance;multiplier+=relicCrit.damage;
     const sinsCrit=sins.crit(activeCombat,attacker);chance+=sinsCrit.chance;multiplier+=sinsCrit.damage;
     const fateCrit=fate.crit(activeCombat,attacker),shibuyaCrit=shibuya.crit(attacker);chance+=fateCrit.chance+shibuyaCrit.chance+dragon.crit(activeCombat,attacker);multiplier+=fateCrit.multiplier+shibuyaCrit.multiplier;
     if (runtime.nextAttackCritGuaranteed) chance = 1;
@@ -1748,7 +1751,7 @@
     }
     chance = Math.max(chance, champions.dodgeChance(unit), raidSecrets.dodgeChance(unit), expansion.dodgeChance(unit), questSkills.isMadara(unit) ? .10 : 0, grimoire.dodgeChance(unit),yuno.dodgeChance(unit),fate.dodgeChance(unit),spooky.dodgeChance(unit),ragna.dodgeChance(unit),akatsuki.dodgeChance(unit));
     chance = Math.max(chance,bleach.dodge(unit));
-    chance += relic.dodge(unit,chance)+enten.dodgeBonus(unit)+sins.dodge(unit);
+    chance += relic.dodge(unit,chance)+enten.dodgeBonus(unit)+sins.dodge(unit)+(activeCombat?.mode==='auto-chess'?unit.grid?.traits?.dodge||0:0);
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0) + spooky.eventBonus(activeCombat,unit,'dodge');
     if (getEffectivePassiveCardId(unit) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0 || runtime.noDodgeAgainstUnit) chance = 0;
@@ -1829,7 +1832,7 @@
     }
     chance = Math.max(chance, champions.dodgeChance(target), raidSecrets.dodgeChance(target), expansion.dodgeChance(target), questSkills.isMadara(target) ? .10 : 0, grimoire.dodgeChance(target),yuno.dodgeChance(target),fate.dodgeChance(target),spooky.dodgeChance(target),ragna.dodgeChance(target),akatsuki.dodgeChance(target));
     chance = Math.max(chance,bleach.dodge(target));
-    chance += relic.dodge(target,chance)+enten.dodgeBonus(target)+sins.dodge(target);
+    chance += relic.dodge(target,chance)+enten.dodgeBonus(target)+sins.dodge(target)+(battleState?.mode==='auto-chess'?target.grid?.traits?.dodge||0:0);
     chance += Math.max(0, Number(runtime.postReviveDodgeBonus) || 0) + spooky.eventBonus(battleState,target,'dodge');
     if (getEffectivePassiveCardId(target) === 'arlong') chance = Math.max(chance, 0.24);
     if (runtime.noDodgeTurns > 0) chance = 0;
@@ -1853,7 +1856,7 @@
       const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
       const remaining = [];
       for (const effect of list) {
-        const dmg = !tensura.effectAllowed(battleState,effect.source,unit)||tensura.passiveImmune(unit,{dot:true})?0:Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : tower200.dotFactor(battleState,effect?.source,kind))) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)*ragna.dotFactor(unit,kind)*mourner.incoming(unit)*mourner.outgoing(effect?.source)*sins.dotFactor(battleState)*(1-sins.reduction(unit))));
+        const dmg = !tensura.effectAllowed(battleState,effect.source,unit)||tensura.passiveImmune(unit,{dot:true})?0:Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (battleState?.mode==='auto-chess'?1+(effect?.source?.grid?.traits?.dot||0):1) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : tower200.dotFactor(battleState,effect?.source,kind))) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)*ragna.dotFactor(unit,kind)*mourner.incoming(unit)*mourner.outgoing(effect?.source)*sins.dotFactor(battleState)*(1-sins.reduction(unit))));
         if (dmg > 0 && isAlive(unit)) {
           const before = unit.hp;
           let absorbed = absorbShieldDamage(unit, dmg, battleState, effect.source);
@@ -1873,6 +1876,7 @@
           baller.damaged(battleState,unit,effect.source,actualDamage);
           questSkills.damaged(battleState, unit, actualDamage);
           runtime.lastDamageTaken = actualDamage;
+          if(battleState.mode==='auto-chess')battleState.tactical?.onDamage?.(effect.source,unit,actualDamage,{dot:true},{damage:actualDamage});
           safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} takes ${actualDamage.toLocaleString('en-US')} ${kind.toUpperCase()} damage.`, 'status');
           if (unit.hp <= 0) {
             unit.defeated = true;
@@ -2070,7 +2074,7 @@
     if (amount > 0 && raidSecrets.block(battleState, attacker, target, meta)) return { damage: 0, killed: false, raidBlocked: true };
     if (!(gomen.isGojo(target)&&meta.passiveAttack) && !grimoire.dodgeChance(target) && !yuno.dodgeChance(target) && questSkills.passiveDodge(battleState, target, attacker, meta)) return { damage: 0, killed: false, dodged: true };
     if (grimoire.reflect(battleState, attacker, target, amount, meta)) return {damage:0,killed:false,reflected:true};
-    if (meta.passiveAttack && !meta.dodgeChecked && (grimoire.dodgeChance(target)||yuno.dodgeChance(target)||fate.dodgeChance(target)||spooky.dodgeChance(target)||spooky.eventBonus(battleState,target,'dodge')||relic.hasDodge(target)||ragna.dodgeChance(target)||enten.dodgeBonus(target)||sins.dodge(target)||bleach.dodge(target)||akatsuki.dodgeChance(target)) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
+    if (meta.passiveAttack && !meta.dodgeChecked && (grimoire.dodgeChance(target)||yuno.dodgeChance(target)||fate.dodgeChance(target)||spooky.dodgeChance(target)||spooky.eventBonus(battleState,target,'dodge')||relic.hasDodge(target)||ragna.dodgeChance(target)||enten.dodgeBonus(target)||sins.dodge(target)||bleach.dodge(target)||akatsuki.dodgeChance(target)||(battleState?.mode==='auto-chess'&&target.grid?.traits?.dodge)) && Math.random() < getDodgeChance(target,attacker,battleState,meta)) { onDodge(battleState,target,attacker); return {damage:0,killed:false,dodged:true}; }
     const targetRuntime = ensureRuntime(target);
     targetRuntime.lastAttacker=attacker;
     const fatalityDeferred = meta.mournerUnreducedDamage>0 || hasPassive(attacker,'the-mourner') || mourner.incoming(target)!==1 || relic.attackMultiplier(attacker,meta)!==1 || deferFatality(battleState, target) || yuno.offensive(attacker,target)!==1 || tower200.offensive(battleState,attacker,target)!==1;
@@ -2104,12 +2108,17 @@
     if(!meta.akatsukiRawDamage)remaining *= (meta.yunoDamageApplied?1:yuno.offensive(source,target)) * yuno.defensive(source,target) * (meta.entenReflect?1:tower200.offensive(battleState,source,target));
     const shielded = !meta.ignoreShield && remaining > 0 && targetRuntime.shield > 0;
     if(remaining>0){mourner.hitTaken(battleState,target,meta);recordCombatHit(source,meta);gomen.incoming(battleState,source,target,meta);baller.incoming(battleState,target,source,meta);}
+    let tacticalTrueShare=0;
+    if(battleState?.mode==='auto-chess'&&meta.autochessTrueDamage>0&&!meta.dot){
+      const part=meta.autochessTrueDamage,normal=remaining*(1-part),pure=remaining*part/Math.max(.01,window.ElementSystem.multiplier(source,target));
+      remaining=normal+pure;tacticalTrueShare=remaining>0?pure/remaining:0;
+    }
     const reduction = meta.ignoreReduction ? 0 : clamp(
-      sins.reduction(target)+baller.reduction(battleState,source,target,meta) + titan.reduction(target) -akatsuki.paperReduction(target) + shibuya.reduction(target) + spooky.reduction(battleState,target) + reagan.reduction(target) + requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
+      (battleState?.mode==='auto-chess'?target.grid?.traits?.reduction||0:0)+sins.reduction(target)+baller.reduction(battleState,source,target,meta) + titan.reduction(target) -akatsuki.paperReduction(target) + shibuya.reduction(target) + spooky.reduction(battleState,target) + reagan.reduction(target) + requiem.reduction(battleState,target) + Number(targetRuntime.damageReductionPct) + (Number(targetRuntime.raidHakiReduction) || 0) + expansion.reduction(target) +
       (hasPassive(target,'aquaman') && host.isWeatherActive?.('Raining') ? 0.50 : 0),
       0,
       0.95
-    )*(1-clamp(meta.ignoreReductionFraction));
+    )*(1-clamp(meta.ignoreReductionFraction))*(1-tacticalTrueShare);
     // Phần sát thương xuyên giảm sát thương vẫn cùng một đòn: khiên chặn cả đòn.
     const unreduced=Math.max(0,Number(meta.mournerUnreducedDamage)||0);
     if(unreduced)remaining=remaining*(1-reduction)+unreduced;
@@ -3915,7 +3924,7 @@
     if (!battleState || battleState.finished) return { ended: true, winner: null };
 
     ensureCurrentIndices(battleState);
-    battleState.turnCount = Math.max(0, Number(battleState.turnCount ?? battleState.turnCounter) || 0) + 1;
+    battleState.turnCount = battleState.mode==='auto-chess'?Math.max(Number(battleState.turnCount)||0,Math.floor((battleState.tactical?.time||0)/1.35)+1):Math.max(0, Number(battleState.turnCount ?? battleState.turnCounter) || 0) + 1;
     battleState.turnCounter = battleState.turnCount;
 
     const attacker = battleState.turn === 'player'
@@ -4669,6 +4678,37 @@
   {const original=champions.death;champions.death=function(bs,u,...args){const dead=!isAlive(u),serial=revivalReceipts.get(u)||0,fatal=fatalReceipts.get(u)||0;if(dead&&bleach.forbidden(u))u.championPermanentDeath=true;const result=original(bs,u,...args);if(dead&&!isAlive(u))bleach.died(bs,u);if(dead&&isAlive(u)){if(serial===(revivalReceipts.get(u)||0))recordRevival(bs,u);if(fatal===(fatalReceipts.get(u)||0))recordFatal(bs,u);}return result;};}
   {const original=damageUnit;damageUnit=function(bs,attacker,target,amount,meta={}){const before=target?.hp||0,serial=fatalReceipts.get(target)||0,result=original(bs,attacker,target,amount,meta);if(before>0&&isAlive(target)&&(result.preventedFatality||result.marcoRescued)&&serial===(fatalReceipts.get(target)||0))recordFatal(bs,target);return result;};}
 
+  // Auto Chess uses the complete native event pipeline with an explicitly chosen actor.
+  // Effects are combat-local and run through the same immunity/fatal/kill hooks.
+  {const original=damageUnit;damageUnit=function(bs,source,target,amount,meta={}){
+    if(bs?.mode!=='auto-chess')return original(bs,source,target,amount,meta);
+    const truePart=source?.grid?.traits?.trueDamage||0;
+    meta={...meta,autochessTrueDamage:Math.max(0,Math.min(.4,truePart))};
+    if(bs.tactical?.overtime)amount*=bs.tactical.overtime;
+    const out=original(bs,source,target,amount,meta);
+    bs.tactical?.onDamage?.(source,target,out.damage||0,meta,out);return out;
+  };}
+  function tacticalEffect(bs,source,target,type,amount=0,options={}){
+    if(bs?.mode!=='auto-chess'||!target)return null;activeCombat=bs;
+    const previous=statusSource;statusSource=source;
+    try{switch(type){
+      case'hit':return champions.hit(bs,source,target,amount,{...options,passiveAttack:true,specialAttack:true});
+      case'heal':return heal(target,amount,'Trait',bs,source);
+      case'dot':return addDot(target,options.kind,options.turns,amount,source,{autochessSynergy:true});
+      case'status':return setStatus(target,options.key,amount,source);
+      case'shield':return yuno.addLayer(target,Math.max(0,amount));
+      case'buff':combatStats.set(target,options.stat,options.key,amount,options.fill);return refreshUnitDisplay(target);
+      case'cleanse':for(const key of ['stunTurns','freezeTurns','hindredTurns','snailTurns','passiveSuppressionTurns'])ensureRuntime(target)[key]=0;for(const key of ['burn','bleed'])ensureRuntime(target)[key]=ensureRuntime(target)[key].filter(e=>e.uncleansable);return;
+    }}finally{statusSource=previous;}
+  }
+  function resolveTacticalTurn(bs,actor,target){
+    if(bs?.mode!=='auto-chess'||!isAlive(actor)||!isAlive(target)||tensura.inactive(bs,actor))return {skipped:true};activeCombat=bs;
+    const own=bs.playerTeam.includes(actor)?'player':'enemy',line=own==='player'?bs.playerTeam:bs.enemyTeam,opposite=own==='player'?bs.enemyTeam:bs.playerTeam;
+    if(!line.includes(actor)||!opposite.includes(target))return {skipped:true};
+    bs.turn=own;bs[own==='player'?'playerIndex':'enemyIndex']=line.indexOf(actor);bs[own==='player'?'enemyIndex':'playerIndex']=opposite.indexOf(target);
+    return resolveTurn(bs);
+  }
+
   return Object.freeze({
     createIsolated: options => createPassiveRuntime(options),
     BASE_CRIT_CHANCE,
@@ -4700,6 +4740,8 @@
         refreshUnitDisplay(unit);
       }
 
+      if(battleState.mode==='auto-chess')host.prepareTactical?.(battleState);
+
       for (const unit of [...(battleState.playerTeam || []), ...(battleState.enemyTeam || [])]) {
         if (!isAlive(unit)) continue;
         runOnEntry(battleState, unit);
@@ -4727,6 +4769,9 @@
       ensureCurrentIndices(battleState);
     },
     resolveTurn,
+    resolveTacticalTurn,
+    tacticalEffect,
+    tacticalTargets:(bs,u)=>enemiesOf(bs,u),
     performAttack,
     resolveTrialCompanions(bs,advanceEnemy) {
       if(bs?.mode!=='exp-time-trial'||!bs.trial||bs.finished)return;

@@ -1,36 +1,40 @@
-PASSIVE AUDIT — BLEACH / HUECO RIFT UPDATE
-Ngày: 14/11/2026 • Build 20261114-bleach-1
+PASSIVE AUDIT — AUTO CHESS UPDATE
+Ngày: 15/11/2026 • Build: 20261115-autochess-1
 
-bleach_passives.js được đăng ký trước passives.js trong startup/index.html.
-Entry → own-turn context → beforeAttack / counted attack → primary/custom damage →
-status / fatal / kill → afterAttack / follow-up chain → end-turn / lease cleanup.
-Sử dụng RNG được cấp từ deterministic engine, không có real-time timer/listener riêng.
-Primary-only Yamamoto technique draws; mode duration tính own turn, kể cả suppressed.
-Urahara reconstruction và South expiry dùng battle turnCount.
+autochess.js → synergies → bots → view → tactical combat được triển khai theo
+năm phase yêu cầu; module load order đặt combat trước view và app cuối cùng.
+Không thêm card hoặc sửa native card definitions của roster 217 thẻ.
 
-217 isolated native card scenarios: seed 8789, tối đa 18 turns; finite HP/ATK,
-turn tiến, timer không âm, không leaked activeAttacker hoặc exception.
-216 Index copy / execute / scoped lease cleanup cases (2 own turns mỗi case).
-76 focused Bleach combat assertions; 82 content/weather/drop/evolution/icon assertions.
-13 copy/mode/summon/runtime edge checks; 100,000 cached runtime reads/writes.
-100 continuous Infinity transitions giữ player state; 21 fresh Tower matches.
-67 Sins regression; 67 Tensura system assertions; 52 event/evolution/reward checks.
-Standard drops x6; Spooky 50 waves giữ special quantity 1.
-PvP mixed Bleach teams: 39 steps / 3 seeds, snapshots giống nhau, không storage writes.
-Desktop 1440px / mobile 390px: shared Portal selector, icon tile/sidebar/inspector,
-8 turns; Hueco UI/receipt/reload recovery; evolution write-failure rollback.
+Tactical pipeline:
+- Normalize battle-local stats, attach match Relic copy, prepare native ledger.
+- Snapshot 43 synergies; apply start buffs trước entry effects.
+- Grid scheduler chọn actor/nearest enemy, giữ native own-turn phase context.
+- Movement/range → native status control → native attack/counter/follow-ups.
+- Central damage → shield/DR/true damage → fatal/revive/kill → trait procs.
+- Own-turn expiry và global turn clock riêng (1.35 giây); native immunity giữ nguyên.
+- Summon admission/grid sync; hết fight dispose isolated runtime.
+- Một Worker/lobby chạy native engine, gửi visual state; RAF chỉ render/interpolate.
+  Worker không có localStorage. Save & Exit terminate Worker và revoke Blob URL.
 
-Bleach cases bao gồm Hakka cap/Freeze/follow-on Hindered, Ulquiorra 3/5/10 chain,
-50/100 Vista transformations, shield capacity/restoration/expiry/tag isolation,
-Yamamoto non-repeat pool/South lifespan/Corpse/Burn kills/permanent death/new-entry
-Scorched burn, Starrk decaying follow-ups/Wolf cap/dodge/barrage, Urahara
-Bleed conversion/cooldown/extra damage/Bankai team heal/cleanse, Arrancar AoE.
-Black Flame vẫn uncleansable; Ulquiorra không cleanse stat debuff. Native Yamamoto,
-Wolves và expired South không clone/revive. Dead generated Wolves/South retire khỏi
-queue. Yuuki copy swap loại scoped form bonuses/shield/summons/effects cũ.
+Verification:
+- 217 native card grid scenarios (tối đa 40 simulated seconds mỗi case).
+- Ba full seeded lobbies có 8 placement duy nhất; reward một lần/match.
+- Native/Worker fight cùng seed: cùng winner/survivors/time.
+- 20 model/economy/fusion/rollback/reload/odd-lobby assertions.
+- 15,000 fusion trials: Supporter 75/80/85% theo 1/2/3 nguyên liệu Supporter.
+- Holy true damage bypass elemental/DR tương ứng; duplicate card không tăng trait;
+  Unique Potara cho cả hai đội bằng match-local Relics.
+- Actual account material receipt: duplicate Claim/checkpoint replay không tăng thêm.
+- UI desktop/portrait/landscape; pointer placement/sell, anvil, relic tap/fusion,
+  equipped Relic return, worker/RAF/token/FX cleanup qua nhiều open/exit cycles.
+- Regression Bleach 76 checks, Sins 67; PvP 39 deterministic steps/3 seeds;
+  Infinity 100 transitions và Tower 21 fresh matches. Không reward writes từ simulations.
 
-Limits: seeded scenarios không bao quát mọi tổ hợp 217 cards, relic, mutation,
-weather hoặc borrowed passive. Artwork và cross-network Party cần post-deploy checks.
+Limits: scenario coverage không chứng minh mọi team, mutation, copied passive,
+relic combination hoặc mọi browser/device đạt 60 FPS. Native passive caps và
+mode-only hard cap 48 living units bảo vệ grid khỏi summon recursion.
+Các kết quả runtime trong danh sách dưới đây là native grid smoke scenarios;
+không được hiểu là kiểm chứng toàn bộ nhánh passive của từng thẻ.
 
 CARD REGISTRY / RUNTIME RESULTS
 1. Naruto Kid [starter-common] — First Strike — PASS

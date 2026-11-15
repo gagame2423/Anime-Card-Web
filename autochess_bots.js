@@ -1,0 +1,69 @@
+/* Phase 3: seven economy-driven opponents, fair pairings and simultaneous standings. */
+(function(host){
+ 'use strict';
+ const C=host.AutoChessSystem,S=host.AutoChessSynergies;
+ const PERSONALITIES=Object.freeze([
+  {name:'Mika Vale',style:'Interest Keeper',trait:'Human',save:40,rerolls:0,xp:1},
+  {name:'Rook Ashfall',style:'Aggressive Reroller',trait:'Brutal',save:8,rerolls:3,xp:0},
+  {name:'Sera Moon',style:'Synergy Scholar',trait:'Magician',save:20,rerolls:2,xp:1},
+  {name:'Kai Storm',style:'Tempo Captain',trait:'Electric',save:12,rerolls:1,xp:2},
+  {name:'Nox Hollow',style:'Dark Specialist',trait:'Bleach',save:20,rerolls:2,xp:1},
+  {name:'Luna Wren',style:'Support Curator',trait:'Supporter',save:25,rerolls:1,xp:1},
+  {name:'Atlas Thorn',style:'Frontline Builder',trait:'Titan',save:15,rerolls:1,xp:2}
+ ].map(Object.freeze));
+ const ranged=c=>(c?.category||[]).some(x=>['Gunner','Magician','Supporter'].includes(x));
+ function initialize(s){for(const[p,i]of s.players.filter(p=>p.bot).map((p,i)=>[p,i])){p.name=PERSONALITIES[i].name;p.personality=i;p.botActions=0;p.botRound='';}return s;}
+ function profile(p){return PERSONALITIES[p.personality??0];}
+ function score(p,id){const c=C.card(id),r=C.RARITIES.indexOf(c.rarity),d=profile(p),units=C.deployed(p),tags=[c.element,...c.category];let synergy=0;for(const tag of tags){const n=new Set(units.filter(u=>u.cardId!==id&&[C.card(u).element,...C.card(u).category].includes(tag)).map(u=>u.cardId)).size;synergy+=n%2===1?1.4:n*.15;}return 2+r*2+synergy+(tags.includes(d.trait)?3:0)+(c.category.includes('Supporter')&&!units.some(u=>C.card(u).category.includes('Supporter'))?1.5:0);}
+ function arrange(s,p){
+  const selected=[],candidates=p.units.slice();for(let i=0;i<p.level&&candidates.length;i++){const proxy={...p,units:selected.map(u=>({...u,board:0}))};candidates.sort((a,b)=>score(proxy,b.cardId)-score(proxy,a.cardId)||a.uid.localeCompare(b.uid));selected.push(candidates.shift());}
+  const front=[3,2,4,1,5,0,6,10,9,11,8,12,7,13],back=[24,23,25,22,26,21,27,17,16,18,15,19,14,20],used=new Set();
+  for(const u of selected){const cells=ranged(C.card(u))?back:front,cell=cells.find(i=>!used.has(i))??Array.from({length:28},(_,i)=>i).find(i=>!used.has(i));u.board=cell;u.bench=null;u.reserve=false;used.add(cell);}
+  let bench=0;for(const u of p.units.filter(u=>!selected.includes(u))){u.board=null;u.bench=bench<9?bench++:null;u.reserve=u.bench===null;}C.drain(p);
+ }
+ function equip(s,p){
+  // Compress the stash before selecting carries; never use permanent Relic instances.
+  for(let guard=0;guard<10;guard++){const pair=p.relics.filter(Boolean).find(r=>!r.roll.unique&&p.relics.some(x=>x&&x!==r&&!x.roll.unique&&x.roll.rarity===r.roll.rarity));if(!pair)break;const other=p.relics.find(x=>x&&x!==pair&&!x.roll.unique&&x.roll.rarity===pair.roll.rarity);C.fuseRelics(s,p,pair.uid,other.uid);}
+  const carries=C.deployed(p).slice().sort((a,b)=>C.tier(b)-C.tier(a)||a.uid.localeCompare(b.uid));
+  for(const u of carries){if(u.relic)continue;const r=p.relics.filter(Boolean).sort((a,b)=>relicScore(b,u)-relicScore(a,u))[0];if(r)C.equip(p,r.uid,u.uid);}
+ }
+ function relicScore(r,u){const d=host.RelicSystem.DEFINITIONS.find(x=>x.kind===r.roll.kind),c=C.card(u),matches=d.category?c.category.includes(d.category):c.element===r.roll.element;return(matches?4:0)+(['common','rare','legendary'].indexOf(r.roll.rarity)+1)+(r.roll.unique?4:0);}
+ function plan(s,p,budget=3){
+  if(!p.bot||p.hp<=0||s.phase!=='planning')return false;const key=C.label(s),d=profile(p);if(p.botRound!==key){p.botRound=key;p.botActions=0;p.botRerolls=0;p.botXp=0;}
+  for(let step=0;step<budget&&p.botActions<24;step++,p.botActions++){
+   arrange(s,p);
+   const target=Math.min(9,Math.max(2,s.stage+2)),floor=p.hp<35?0:d.save;
+   if(p.level<target&&p.botXp<d.xp+1&&p.gold>=4+(p.level<3?0:floor)){C.apply(s,p.id,{type:'xp'});p.botXp++;continue;}
+   const offers=p.shop.map((id,index)=>({id,index,value:id?score(p,id):-1})).filter(o=>o.id&&C.COSTS[C.RARITIES.indexOf(C.card(o.id).rarity)]<=p.gold).sort((a,b)=>b.value-a.value||a.index-b.index);
+   const slots=C.freeBench(p)>=0,filled=C.deployed(p).length>=p.level;
+   if(offers.length&&slots&&(p.gold>floor||!filled||s.stage===1)){C.buy(s,p,offers[0].index);C.autoFuse(s,p);continue;}
+   if(!slots){const rows=p.units.filter(u=>u.board===null&&!u.keep);const groups=C.RARITIES.slice(0,5).map((_,i)=>rows.filter(u=>C.tier(u)===i)).find(a=>a.length>=3);if(groups){C.fuse(s,p,groups.slice(0,3).map(u=>u.uid));continue;}if(offers[0]&&rows.length){rows.sort((a,b)=>score(p,a.cardId)-score(p,b.cardId));if(offers[0].value>score(p,rows[0].cardId)+1){C.sell(p,rows[0].uid);continue;}}}
+   if(p.botRerolls<d.rerolls&&p.gold>=floor+2&&filled){C.apply(s,p.id,{type:'refresh'});p.botRerolls++;continue;}break;
+  }
+  arrange(s,p);equip(s,p);return p.botActions<24;
+ }
+ function draft(s,p){if(!C.released(s,p.id)||s.carousel.some(u=>u.claimedBy===p.id))return null;const options=s.carousel.filter(u=>!u.claimedBy);options.sort((a,b)=>score(p,b.cardId)+relicScore(b.relic,b)-score(p,a.cardId)-relicScore(a.relic,a)||a.uid.localeCompare(b.uid));if(options[0]){const u=C.draft(s,p,options[0].uid);arrange(s,p);return u;}return null;}
+ function pair(s){
+  const living=C.alive(s).slice();for(let i=living.length-1;i>0;i--){const j=Math.floor(C.random(s)*(i+1));[living[i],living[j]]=[living[j],living[i]];}
+  let ghost=null;if(living.length%2){const a=living.pop(),options=C.alive(s).filter(p=>p!==a),b=options.sort((x,y)=>(x.history.at(-1)===a.id)-(y.history.at(-1)===a.id)||x.hp-y.hp||x.id.localeCompare(y.id))[0];ghost={a:a.id,b:b.id,ghost:true};}
+  function search(list,chosen=[],penalty=0){if(!list.length)return{chosen,penalty};const a=list[0];let best=null;for(let i=1;i<list.length;i++){const b=list[i],n=(a.history.at(-1)===b.id?8:0)+(a.history.slice(-3).includes(b.id)?2:0),r=search(list.filter(p=>p!==a&&p!==b),[...chosen,{a:a.id,b:b.id,ghost:false}],penalty+n);if(!best||r.penalty<best.penalty)best=r;}return best;}
+  s.pairs=search(living).chosen;if(ghost)s.pairs.push(ghost);return s.pairs;
+ }
+ function settle(s,results){
+  if(s.phase!=='combat')throw Error('This round is already resolved.');const creep=['creep','boss'].includes(C.roundKind(s)),tacticianDamage=2+s.stage*2+(s.stage>=6?(s.stage-5)*3:0),changes=new Map();
+  for(const r of results){const a=C.get(s,r.a),b=C.get(s,r.b);if(!a||a.hp<=0)continue;
+   const record=(p,won,survivors,opponent)=>{const loss=won?0:tacticianDamage+Math.min(15,survivors);changes.set(p.id,{p,won,damage:loss,opponent});};
+   if(creep)record(a,r.winner==='player',r.enemySurvivors,'creeps');
+   else{record(a,r.winner==='player',r.enemySurvivors,b.id);if(!r.ghost)record(b,r.winner==='enemy',r.playerSurvivors,a.id);}
+  }
+  for(const{p,won,damage,opponent}of changes.values()){
+   p.hp=Math.max(0,p.hp-damage);C.income(s,p,won,creep);if(!creep){p.history.push(opponent);p.history=p.history.slice(-3);if(won&&S.analyze(C.deployed(p)).some(r=>r.id==='Villian'&&r.tier))p.gold+=Math.min(3,S.analyze(C.deployed(p)).find(r=>r.id==='Villian').tier);}
+   if(creep&&won){C.stash(p,C.relic(s,s.stage>=5?'legendary':s.stage>=3?'rare':'common'));p.gold+=s.stage;}
+  }
+  const eliminated=[...changes.values()].filter(v=>!v.p.hp).sort((a,b)=>b.damage-a.damage||a.p.id.localeCompare(b.p.id));let rank=s.players.filter(p=>p.rank===null).length;for(const v of eliminated)v.p.rank=rank--;
+  const living=C.alive(s);if(living.length<=1){if(living[0])living[0].rank=1;else{const survivor=s.players.find(p=>p.rank===1);if(survivor)survivor.hp=1;}s.finished=true;s.phase='complete';}else{s.phase='results';s.remaining=C.RULES.resultSeconds;}
+  s.lastResults=results;s.revision++;return s;
+ }
+ const reward=rank=>({silver_ore:Math.max(2,(9-rank)*4),calcite:Math.max(1,(9-rank)*2),gold_ore:rank<=4?(5-rank)*2:0});
+ host.AutoChessBots=Object.freeze({PERSONALITIES,initialize,profile,score,arrange,equip,plan,draft,pair,settle,reward,ranged});
+})(window);

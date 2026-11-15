@@ -9,7 +9,7 @@
 // 5) LocalStorage persists game state and recovers elapsed real time.
 // ============================================================
 
-function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active);}
+function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active||window.AutoChessView?.active);}
 function gameInputLocked(){return Boolean(window.PenaltyView?.active)||isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed);}
 
 const STORAGE_KEY = "anime_card_rng_save_v1";
@@ -5156,6 +5156,8 @@ function setBattleModalLock(active) {
 }
 
 function openModal(id) {
+  if(id==='autochessModal'){openAutoChess();return;}
+  if(window.AutoChessView?.active)return;
   if(id==='penaltyModal'){openPenalty();return;}
   if(window.PenaltyView?.active)return;
   if(window.PortalsSystem?.active&&!['portalModal','arenaMutationModal','passiveDetailModal','elementChartModal'].includes(id))return;
@@ -5270,6 +5272,7 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if(id==='autochessModal'){window.AutoChessView.close();return;}
   if(id==='penaltyModal'){window.PenaltyView.close();return;}
   if(id==='relicFusionModal'&&window.RelicFusionSystem?.dialogOpen){window.RelicFusionSystem.closeDialog();return;}
   if(id==='inventoryModal'&&window.RelicFusionSystem?.active)window.RelicFusionSystem.cancel();
@@ -5665,6 +5668,7 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
 });
 
 document.addEventListener("keydown", event => {
+  if(window.AutoChessView?.active)return;
   if (event.key !== "Escape") return;
   closeVariantMenu();
   if (isBattleMatchActive()) {
@@ -6048,3 +6052,22 @@ window.CardDetailsSystem.configure({
 });
 
 window.IndexFilterSystem.configure({onApply:()=>{collectionNeedsRefresh=false;renderCollection();}});
+
+// Auto Chess owns its lobby/Gold/units and only commits a completed placement reward.
+function openAutoChess(){
+  if(window.PenaltyView?.active||!canPlayPenalty())return;
+  if(window.AutoChessView.open({requestLandscape:true}))document.getElementById('battleModal')?.classList.add('hidden');
+}
+document.getElementById('autochessOpenButton')?.addEventListener('click',openAutoChess);
+window.AutoChessView.configure({
+ canOpen:()=>!window.PenaltyView?.active&&canPlayPenalty(),
+ name:()=>window.CloudSaveSystem?.publicName||'You',
+ onEnter:()=>{clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();saveState();},
+ onExit:()=>{document.getElementById('battleModal')?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.afterActivity();resumeGameRuntime();updateStats();},
+ reward:(match,rewards)=>{
+  if(!match.finished||!window.AutoChessSystem.validate(match)||!match.players.every(p=>p.rank!==null))return false;
+  const grants=Object.entries(rewards).filter(([,quantity])=>quantity>0).map(([id,quantity])=>({id,quantity}));
+  const ok=window.InventorySystem.transactOnce('ac_'+match.id,'complete',grants);
+  if(ok){updateStats();renderPotionInventory();window.CloudSaveSystem.markDirty();}return ok;
+ }
+});

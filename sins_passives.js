@@ -118,7 +118,7 @@
    if(has(u,ESC)&&!options.sinsOne&&options.sinsShieldBefore>0&&runtime(target).shield>0&&!options.sinsSplash){
     api.dot(target,'burn',2,api.atk(u)*.50,u);
     const damage=Math.max(0,out.damage||0)+Math.max(0,options.sinsShieldBefore-runtime(target).shield),line=enemies(bs,u),index=line.indexOf(target);
-    const nearby=[line[index-1],line[index+1]].filter(Boolean);
+    const nearby=bs.mode==='auto-chess'&&target.grid?line.filter(v=>v!==target&&v.grid&&Math.max(Math.abs(v.grid.x-target.grid.x),Math.abs(v.grid.y-target.grid.y))<=1).slice(0,2):[line[index-1],line[index+1]].filter(Boolean);
     for(const enemy of nearby)if(alive(u))api.take(bs,u,enemy,damage,{passiveAttack:true,specialAttack:true,sinsSplash:true,elementApplied:true,akatsukiRawDamage:true});
    }
   }
