@@ -27,7 +27,7 @@
  function roundKind(s){return s.round===1&&s.stage===1||s.stage>1&&s.round===4?'carousel':s.stage===1&&[2,3].includes(s.round)?'creep':s.stage>1&&s.round===6?'boss':'pvp';}
  function label(s){return s.stage+'-'+s.round;}
  function alive(s){return s.players.filter(p=>p.hp>0&&p.rank===null);}
- function get(s,id='human'){host.AutoChessTelemetry?.ensure(s);return s.players.find(p=>p.id===id);}
+ function get(s,id=s.localPlayerId||'human'){host.AutoChessTelemetry?.ensure(s);return s.players.find(p=>p.id===id);}
  function deployed(p){return p.units.filter(u=>u.board!==null);}
  function economyRound(s,p){const key=label(s);if(p.econ?.round!==key)p.econ={round:key,bonus:0,card:0,freeRefresh:host.AutoChessAugments?.effects(p).freeRefresh||0};return p.econ;}
  function earn(p,n){const amount=Math.max(0,Math.min(100000-p.gold,Math.floor(Number(n)||0)));p.gold+=amount;host.AutoChessTelemetry?.economy(p,'totalGoldEarned',amount);return amount;}
@@ -144,6 +144,8 @@
  function clear(){try{host.localStorage.removeItem(KEY);return host.localStorage.getItem(KEY)===null;}catch(_){return false;}}
  function validate(s){
   if(!s||s.version!==1||typeof s.id!=='string'||!/^chess_[a-z0-9]+_[a-z0-9]+$/.test(s.id)||typeof s.finished!=='boolean'||typeof s.paid!=='boolean'||!Number.isFinite(s.remaining)||s.remaining<0||s.remaining>35||!int(s.seed,1,4294967295)||!int(s.rng,1,4294967295)||!int(s.serial,0,1e7)||!int(s.stage,1,100)||!int(s.round,1,s.stage===1?4:6)||!['planning','carousel','augment','combat','results','complete'].includes(s.phase)||!Array.isArray(s.players)||s.players.length!==8)return false;
+  if(s.localPlayerId!==undefined&&!s.players.some(p=>p.id===s.localPlayerId))return false;
+  if(s.live!==undefined){const l=s.live;if(!l||l.version!==1||!Array.isArray(l.humans)||l.humans.length<2||l.humans.length>8||new Set(l.humans.map(h=>h?.id)).size!==l.humans.length||new Set(l.humans.map(h=>h?.uid)).size!==l.humans.length||l.humans.some(h=>!h||!s.players.some(p=>p.id===h.id)||typeof h.uid!=='string'||!h.uid.length||h.uid.length>128||typeof h.connected!=='boolean')||l.owner!==l.humans[0].uid||!l.humans.some(h=>h.id===(s.localPlayerId||'human'))||typeof l.locked!=='boolean'||!l.ready||typeof l.ready!=='object'||Array.isArray(l.ready)||Object.entries(l.ready).some(([id,value])=>!l.humans.some(h=>h.id===id)||typeof value!=='boolean')||s.hybrid?.humanPlayers!==l.humans.length)return false;}
   if(s.finishReason!==undefined&&!['victory','eliminated','forfeit'].includes(s.finishReason))return false;
   if(s.reward!==undefined&&!validReward(s.reward,get(s)?.rank))return false;
   if(s.finished&&get(s)?.rank===null||s.paid&&!s.finished)return false;

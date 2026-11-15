@@ -1,61 +1,35 @@
-PASSIVE AUDIT — AUTO CHESS: RANKED, OVERTIME & HYBRID RUN SAFETY
-Ngày: 15/11/2026 • Build: 20261115-autochess-ranked-1
+PASSIVE AUDIT — AUTO CHESS: LIVE TRANSPORT ADAPTER
+Ngày: 16/11/2026 • Build: 20261116-autochess-live-1
 
-SCOPE / RETAINED ARCHITECTURE
-- All 217 canonical card/category definitions are unchanged from the Augments patch.
-- Shared descriptor registry and idempotent passive factories remain in place.
-  No new layered Proxy/Reflect.set wrappers or global per-unit listeners added.
-- damageUnit/hit source/depth guards and the 64-dispatch action budget remain.
-  Combat units, copied skills, Relics and telemetry stay match-local.
-- Worker uses separate runtime modules. Native and Worker use the same seeded
-  scheduler and ordered combat hooks, including the new overtime factors.
+SCOPE
+- All 217 cards and all passive scripts are unchanged from the Ranked patch.
+- No new Proxy, Reflect.set trap, per-card timer or passive listener added.
+- Live builds use the existing isolated tactical engine and canonical unit/
+  Relic definitions. Both viewers use the exact manifest orientation and seed.
+- Host owns all economy intents and round settlement; guest visual simulations
+  cannot write standings or permanent inventory. Local seat selects own rewards.
+- Supporter, overtime factors, fair timeout and action recursion guards retained.
+- New Peer listener/fragment/clock state belongs to a disposable match session.
+  Disconnect removes a human from Ready/lock gates and transfers that seat to AI.
 
-CURRENT CHANGES
-- Supporter tiers: +3/6/9/12 Energy, mend every 7/6/5/5 attacks, heal
-  20/40/60/100% ATK and shield 0/0/10/20% ATK on the same pre-heal lowest-HP ally.
-- 60-second timeout; overtime damage/sustain linear from x1.5/x0.5 at 30s to
-  x2.5/x0.2 at 45s. Heal and direct/layered Shield gains scale exactly once.
-- Timeout compares remaining team HP fraction, then actual damage dealt; exact
-  equality draws, with zero tactician damage and no false loss/streak increment.
-- High-rank bot policies are separate; 120 low-rank decisions compared exactly
-  with the old bot implementation, excluding names and added rank metadata.
-- Ghost units/Relics are rebuilt from validated canonical definitions and a bounded
-  compact replay schema. No runtime/passive state crosses recorded rounds.
-- Multi-human local hybrid runs retain dead human Spectator until final survivor;
-  no early rewards/forfeit. Solo elimination still finalizes immediately.
-- Stage 100-6 safety cap resolves remaining standings instead of invalid Stage 101.
-- New Elo reward receipts use the existing main/item save retry boundaries. New
-  matches grant no Player EXP; frozen legacy pending rewards remain compatible.
+CURRENT VERIFICATION
+- Targeted Supporter 4 tiers, overtime 30/45/60s and fair timeout/draw passed.
+- 120 baseline low-rank AI decisions matched; high-rank team/Relic/Augment checks.
+- Two-client live commands, lock-in and deterministic PvP fixture passed;
+  host broadcasts identical final ranks and one-shot rewards to both clients.
+- Eight-client fixture: final Champion/placements identical; eliminated humans
+  spectate; 8 separate reward awards and 8 cloud query/write pairs, one per UID.
+- Guest viewport UI, live Ready/scouting and rich Relic inspection regressions.
+- Completed guest checkpoint: offline pending reward retry, correct local Elo/
+  promotion, no Player EXP, idempotent item/main receipts and clean exit.
+- Existing native/Worker deterministic regression retained (see README scope).
 
-RUNTIME VERIFICATION FOR THIS PATCH
-- 217/217 high-HP card scenarios ran up to 40 simulated seconds, followed by
-  fatal-hit probes and repeated status/shield writes: no exceptions.
-- Four mixed 9v9 copy/reflect/summon fixtures repeated with the same seed: equal
-  outcome and released guards. Normal battle-mode regression also passed.
-- Reloading passive/helper scripts did not stack wrappers.
-- Native/Worker outcome and telemetry matched; streaming and worker disposal passed.
-- Full seeded Iron, Platinum and Challenger lobbies ended with valid telemetry,
-  unique placements and one reward. Group run continued after human elimination.
-- Exact Supporter proc/heal/shield, overtime points, real 60-second timeout and
-  symmetric draw fixtures passed. Run cap resolves tied survivors deterministically.
-- Elo tier/division bounds, 500 consecutive wins to 3300, demotion, promotions,
-  retry after main/item save failures and old-checkpoint replay passed.
-- 120 baseline low-rank decisions matched. Mid/high draft, lineup, Relic assignment,
-  smart Augments and state invariants passed, with no bonus resource cheats.
-- PeerJS eight-client simulation, ninth-client rejection, shared seed, cleanup;
-  cloud cache/query/write adapter, own-UID guards and 598-stage codec tested.
-- Desktop/mobile geometry, portrait fallback, Spectator/scout, rank HUD/VFX,
-  cached leaderboard and My Augments flow checked. See README for exact scope.
-
-COVERAGE LIMITS
-These are targeted runtime regressions, not proof of every mutation/copy/trait/
-Relic branch. Damage counts actual HP loss; healing/Shield count actual gains.
-Hybrid invite runs are independent local tournaments using replay/AI opponents,
-not synchronized live PvP. Solo exit standings for living bots remain provisional;
-group summaries wait for the local final survivor. Replay/Elo data is client-reported.
-Cloud adapter/Peer tests were mocked; production Firebase rules/index deployment,
-real NAT connectivity and physical mobile FPS were not tested or deployed here.
-No assets or media are included. Full configuration and application steps: README.
+COVERAGE
+The 217-card registry below records the endurance audit of the preceding patch;
+no new 217-card sweep is claimed here. Current changes are networking/view adapters.
+Peer/backend tests use mocks; production NAT, host migration and physical-device
+FPS are outside verified scope. A lost host pauses guests rather than fabricating
+results. Runtime combinations are not an exhaustive proof of every passive branch.
 
 CARD REGISTRY / RUNTIME RESULTS (updated categories)
 1. Naruto Kid [starter-common] — First Strike — PASS
