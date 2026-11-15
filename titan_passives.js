@@ -1,7 +1,10 @@
 /* Titan skills use the shared combat renderer, damage pipeline and summon caps. */
 (function(host){
  'use strict';
+ if(host.createTitanSkills?.__titan_passivesWrapped)return;
+ const instances=new WeakMap();
  host.createTitanSkills=function(api){
+  if(instances.has(api))return instances.get(api);
   const IDS=Object.freeze(['dumb-titan','war-hammer-titan','jaw-titan','armored-titan','eren-rumbling','beast-titan']);
   const {runtime,has,alive,all,allies,enemies,team,atk,random,refresh}=api;
   const state=(u,id)=>api.passiveRuntimeFor(u,id).titan ||= {entered:false,attacks:0,rocks:0};
@@ -87,6 +90,7 @@
   const outgoing=u=>u&&has(u,'jaw-titan')&&(runtime(u).stunTurns>0||runtime(u).titanStunPenalty===.70)?.70:1;
   function endTurn(u){if(u)runtime(u).titanStunPenalty=1;}
   function badges(u){const rows=[];if(has(u,'beast-titan'))rows.push({icon:'◆',label:'ROCK '+state(u,'beast-titan').rocks,tone:'passive',category:'passive'});if(linked(u))rows.push({icon:'◆',label:'CRYSTAL · 60% DR',tone:'buff',category:'buff'});return rows;}
-  return {IDS,state,entry,counted,turn,fatal,died,killed,attack,shieldGranted,shieldBroken,jawTurn,endTurn,outgoing,badges,hasLife:u=>linked(u)||has(u,'eren-rumbling'),reduction:u=>linked(u)?.60:0};
+  const skills={IDS,state,entry,counted,turn,fatal,died,killed,attack,shieldGranted,shieldBroken,jawTurn,endTurn,outgoing,badges,hasLife:u=>linked(u)||has(u,'eren-rumbling'),reduction:u=>linked(u)?.60:0};instances.set(api,skills);return skills;
  };
+host.createTitanSkills.__titan_passivesWrapped=true;
 })(window);

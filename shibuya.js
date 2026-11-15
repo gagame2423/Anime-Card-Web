@@ -1,6 +1,7 @@
 /* Shibuya combat hooks. Battle-local state only; no saves, rewards or quest writes. */
 (function(host){
   'use strict';
+ if(host.createShibuyaSkills?.__shibuyaWrapped)return;
   host.createShibuyaSkills=function(api){
     const IDS=Object.freeze(['jogo','true-mahito','todo','dagon','choso','haruta','mechamaru','hanami','sukuna-shibuya','shibuya-shark','shibuya-whales','shibuya-fish']);
     const {has,alive,all,allies,enemies,team,runtime,atk,random,refresh}=api;
@@ -98,7 +99,7 @@
         if(c.doubleStreak>=2&&!c.trueForm){c.trueForm=true;api.atkBonus(u,1);api.shield(u,u.maxHp);}
         if(c.trueForm&&!options.isFollowUp&&!c.chaining){
           c.chaining=true;
-          try{let count=0,chance=.24;while(alive(u)&&has(u,'true-mahito')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,chance,count>0)){
+          try{let count=0,chance=.24;let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,'true-mahito')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,chance,count>0))){
             const next=alive(target)?target:enemies(bs,u)[0];api.countFollow(bs,u,next);const shot=api.primary(bs,u,next,atk(u)*.15,{isFollowUp:true,passiveAttack:true});
             count++;if(shot.hit)chance=Math.min(.72,chance+.12);if(shot.skipped)break;
           }}finally{c.chaining=false;}
@@ -147,4 +148,7 @@
     function describe(u,copy){return u.shibuyaPuppet?{name:copy.name+' + Puppet',description:copy.description+'\n\nPuppet: Immune to Stun/Freeze. Every attack heals 2% max HP.'}:copy;}
     return {IDS,state,entry,counted,prepare,attack,after,followBonus,canProtect,protect,immune,immuneStatus,dot,damaged,fatal,kill,death,startTurn,endTurn,hypnosisTarget,reduction,crit,badges,describe};
   };
+ const originalFactory=host.createShibuyaSkills,cachedFactories=new WeakMap();
+ host.createShibuyaSkills=function(api,...rest){if(api&&cachedFactories.has(api))return cachedFactories.get(api);const skills=originalFactory.call(this,api,...rest);if(api&&typeof api==='object')cachedFactories.set(api,skills);return skills;};
+ host.createShibuyaSkills.__shibuyaWrapped=true;
 })(window);

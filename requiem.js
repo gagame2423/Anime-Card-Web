@@ -1,6 +1,7 @@
 /* Wind / Bizare / Shadow Tower skills. Runtime only; isolated per battle engine. */
 (function(host){
  'use strict';
+ if(host.createRequiemSkills?.__requiemWrapped)return;
  host.createRequiemSkills=function(api){
   const WIND='tower-champion-wind',SPR='tower-champion-bizare',STWR='tower-champion-shadow-200';
   const {runtime,id,has,alive,allies,enemies,team,atk,random,hit,status,dot,refresh,log}=api;
@@ -79,7 +80,7 @@
    const result=options.grimoireInitialResult || api.attack(bs,u,target,{...options,requiemChain:true});
    if(result.skipped||result.outOfTurn||options.isFollowUp)return result;
    let count=0;
-   while(alive(u)&&has(u,SPR)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.33,count>0)){
+   let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,SPR)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.33,count>0))){
     target=alive(target)?target:api.enemyFront(bs,u);
     const next=api.attack(bs,u,target,{...options,isFollowUp:true,requiemChain:true,chainDepth:0});if(next.skipped||next.outOfTurn)break;count++;
    }
@@ -92,4 +93,7 @@
   function death(bs,u){if(alive(u))return;if((api.rawId(u)===STWR||has(u,STWR))&&!state(u,STWR).deathUsed){state(u,STWR).deathUsed=true;u.championPermanentDeath=true;for(const enemy of enemies(bs,u))status(enemy,'stunTurns',5,u);}}
   return {WIND,SPR,STWR,checkLastStand:bs=>{for(const u of api.all(bs))if(alive(u))lastStanding(bs,u);},turn,cleanse,afflicted,prepare,after,chain,taken,reduction,fatal,kill,death,multiplier:u=>has(u,WIND)&&state(u,WIND).lastStand?1.5:1};
  };
+ const originalFactory=host.createRequiemSkills,cachedFactories=new WeakMap();
+ host.createRequiemSkills=function(api,...rest){if(api&&cachedFactories.has(api))return cachedFactories.get(api);const skills=originalFactory.call(this,api,...rest);if(api&&typeof api==='object')cachedFactories.set(api,skills);return skills;};
+ host.createRequiemSkills.__requiemWrapped=true;
 })(window);

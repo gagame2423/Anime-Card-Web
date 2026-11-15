@@ -1,7 +1,10 @@
 /* Halloween skills and Hindred. Runtime-only; safe in isolated Sandbox engines. */
 (function(host){
   'use strict';
-  host.createSpookySkills=function(api){
+  if(host.createSpookySkills?.__spooky_passivesWrapped)return;
+ const instances=new WeakMap();
+ host.createSpookySkills=function(api){
+  if(instances.has(api))return instances.get(api);
     const IDS=Object.freeze(['pennywise','the-legion','the-clown','the-oni','jason-13th','freddy-krueger','myers']),LIMIT=Number.MAX_VALUE/1024;
     const {runtime,has,id,alive,all,allies,enemies,team,atk,random,hit,status,dot,heal,refresh,log}=api;
     const state=(unit,key)=>api.passiveRuntimeFor(unit,key).spooky ||= {attacks:0,entered:false,stalkAtk:0,stalkHp:0,hpAdded:0};
@@ -113,7 +116,7 @@
         const c=state(unit,key);if(key==='the-legion'&&c.attacks%4!==0)return first;
         if(key==='the-clown'&&c.mode!=='haste')return first;
         const threshold=Math.max(1,enemies(bs,unit).length);let count=0,burst=false;
-        while(alive(unit)&&has(unit,key)&&canFollow(unit)&&enemies(bs,unit).length&&random()<api.followChance(bs,unit,key==='the-legion'?.44:.33,count>0)){
+        let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(unit)&&has(unit,key)&&canFollow(unit)&&enemies(bs,unit).length&&random()<api.followChance(bs,unit,key==='the-legion'?.44:.33,count>0))){
           if(key==='the-clown'&&c.mode!=='haste')break;
           target=alive(target)?target:enemies(bs,unit)[0];count++;
           const shot=api.attack(bs,unit,target,{isFollowUp:true,passiveAttack:true,damageMultiplier:key==='the-legion'?.44:.66,chainDepth:0,spookyChainToken:token,grimoireDriver:options.grimoireDriver});
@@ -145,7 +148,8 @@
       for(const unit of all(bs))if(alive(unit)&&unit.spookyMyersDoomed){const c=unit.spookyDoomState;if(c?.doom>0&&(bs.turnCount||0)>c.doomStarted&&--c.doom===0){unit.championPermanentDeath=true;unit.hp=0;unit.defeated=true;api.death(bs,unit);refresh(unit);}}
     }
     function badges(unit){const r=runtime(unit),list=[];if(r.deadlightsFearTurn!==undefined&&api.currentBattle()?.turnCount===r.deadlightsFearTurn)list.push({icon:'◉',label:'FEAR · 15% MISS',tone:'debuff',category:'status'});if(r.deadlightsHypnosis?.turns>0)list.push({icon:'◈',label:'HYPNOTIZED '+r.deadlightsHypnosis.turns+'t',tone:'debuff',category:'status'});if(has(unit,'pennywise'))list.push({icon:'◉',label:'DEADLIGHTS '+(state(unit,'pennywise').domain||0)+'t · REVIVES '+(state(unit,'pennywise').revives||0)+'/5',tone:'passive'});if(r.hindredTurns>0)list.push({icon:'⛓',label:`HINDRED ${r.hindredTurns}t`,tone:'debuff',category:'status'});if(unit.spookyMyersDoomed)list.push({icon:'☠',label:`DOOM ${unit.spookyDoomState?.doom||0}t`,tone:'debuff',category:'status'});if(has(unit,'the-clown'))list.push({icon:'♧',label:(state(unit,'the-clown').mode||'').toUpperCase(),tone:'passive',category:'passive'});return list;}
-    return {IDS,state,attackTarget,hypnosisTarget,misses,revive,canFollow,hinder,entry,startTurn,counted,atkFactor,replacement,after,canChain:unit=>Boolean(chainKey(unit)),chain,linked,dodge,killed,death,defeated,onHit,endTurn,badges,eventBonus,
-      hpBonus:unit=>has(unit,'myers')?state(unit,'myers').stalkHp:0,dodgeChance:unit=>has(unit,'freddy-krueger')?.33:0,reduction:(bs,unit)=>(runtime(unit).spookyFrogTurns>0?.50:0)+eventBonus(bs,unit,'reduction')};
+    const skills={IDS,state,attackTarget,hypnosisTarget,misses,revive,canFollow,hinder,entry,startTurn,counted,atkFactor,replacement,after,canChain:unit=>Boolean(chainKey(unit)),chain,linked,dodge,killed,death,defeated,onHit,endTurn,badges,eventBonus,
+      hpBonus:unit=>has(unit,'myers')?state(unit,'myers').stalkHp:0,dodgeChance:unit=>has(unit,'freddy-krueger')?.33:0,reduction:(bs,unit)=>(runtime(unit).spookyFrogTurns>0?.50:0)+eventBonus(bs,unit,'reduction')};instances.set(api,skills);return skills;
   };
+host.createSpookySkills.__spooky_passivesWrapped=true;
 })(window);

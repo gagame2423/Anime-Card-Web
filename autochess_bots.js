@@ -14,7 +14,7 @@
  const ranged=c=>(c?.category||[]).some(x=>['Gunner','Magician','Supporter'].includes(x));
  function initialize(s){for(const[p,i]of s.players.filter(p=>p.bot).map((p,i)=>[p,i])){p.name=PERSONALITIES[i].name;p.personality=i;p.botActions=0;p.botRound='';}return s;}
  function profile(p){return PERSONALITIES[p.personality??0];}
- function score(p,id){const c=C.card(id),r=C.RARITIES.indexOf(c.rarity),d=profile(p),units=C.deployed(p),tags=[c.element,...c.category];let synergy=0;for(const tag of tags){const n=new Set(units.filter(u=>u.cardId!==id&&[C.card(u).element,...C.card(u).category].includes(tag)).map(u=>u.cardId)).size;synergy+=n%2===1?1.4:n*.15;}return 2+r*2+synergy+(tags.includes(d.trait)?3:0)+(c.category.includes('Supporter')&&!units.some(u=>C.card(u).category.includes('Supporter'))?1.5:0);}
+ function score(p,id){const c=C.card(id),r=C.RARITIES.indexOf(c.rarity),d=profile(p),units=C.deployed(p),tags=[c.element,...c.category];let synergy=0;for(const tag of tags){const n=(host.AutoChessAugments?.traits(p)?.[tag]||0)+new Set(units.filter(u=>u.cardId!==id&&[C.card(u).element,...C.card(u).category].includes(tag)).map(u=>u.cardId)).size;synergy+=n%2===1?1.4:n*.15;}return 2+r*2+synergy+(tags.includes(d.trait)?3:0)+(c.category.includes('Supporter')&&!units.some(u=>C.card(u).category.includes('Supporter'))?1.5:0);}
  function arrange(s,p){
   const selected=[],candidates=p.units.slice();for(let i=0;i<p.level&&candidates.length;i++){const proxy={...p,units:selected.map(u=>({...u,board:0}))};candidates.sort((a,b)=>score(proxy,b.cardId)-score(proxy,a.cardId)||a.uid.localeCompare(b.uid));selected.push(candidates.shift());}
   const front=[3,2,4,1,5,0,6,10,9,11,8,12,7,13],back=[24,23,25,22,26,21,27,17,16,18,15,19,14,20],used=new Set();
@@ -33,12 +33,12 @@
   for(let step=0;step<budget&&p.botActions<24;step++,p.botActions++){
    arrange(s,p);
    const target=Math.min(9,Math.max(2,s.stage+2)),floor=p.hp<35?0:d.save;
-   if(p.level<target&&p.botXp<d.xp+1&&p.gold>=4+(p.level<3?0:floor)){C.apply(s,p.id,{type:'xp'});p.botXp++;continue;}
+   if(p.level<target&&p.botXp<d.xp+1&&p.gold>=C.xpCost(p)+(p.level<3?0:floor)){C.apply(s,p.id,{type:'xp'});p.botXp++;continue;}
    const offers=p.shop.map((id,index)=>({id,index,value:id?score(p,id):-1})).filter(o=>o.id&&C.COSTS[C.RARITIES.indexOf(C.card(o.id).rarity)]<=p.gold).sort((a,b)=>b.value-a.value||a.index-b.index);
    const slots=C.freeBench(p)>=0,filled=C.deployed(p).length>=p.level;
    if(offers.length&&slots&&(p.gold>floor||!filled||s.stage===1)){C.buy(s,p,offers[0].index);C.autoFuse(s,p);continue;}
    if(!slots){const rows=p.units.filter(u=>u.board===null&&!u.keep);const groups=C.RARITIES.slice(0,5).map((_,i)=>rows.filter(u=>C.tier(u)===i)).find(a=>a.length>=3);if(groups){C.fuse(s,p,groups.slice(0,3).map(u=>u.uid));continue;}if(offers[0]&&rows.length){rows.sort((a,b)=>score(p,a.cardId)-score(p,b.cardId));if(offers[0].value>score(p,rows[0].cardId)+1){C.sell(p,rows[0].uid);continue;}}}
-   if(p.botRerolls<d.rerolls&&p.gold>=floor+2&&filled){C.apply(s,p.id,{type:'refresh'});p.botRerolls++;continue;}break;
+   if((p.econ.freeRefresh>0||p.botRerolls<d.rerolls)&&(p.econ.freeRefresh>0||p.gold>=floor+2)&&filled){const free=p.econ.freeRefresh>0;C.apply(s,p.id,{type:'refresh'});if(!free)p.botRerolls++;continue;}break;
   }
   arrange(s,p);equip(s,p);return p.botActions<24;
  }
@@ -52,15 +52,20 @@
  function settle(s,results){
   if(s.phase!=='combat')throw Error('This round is already resolved.');const creep=['creep','boss'].includes(C.roundKind(s)),tacticianDamage=2+s.stage*2+(s.stage>=6?(s.stage-5)*3:0),changes=new Map();
   for(const r of results){const a=C.get(s,r.a),b=C.get(s,r.b);if(!a||a.hp<=0)continue;
-   const record=(p,won,survivors,opponent)=>{const loss=won?0:tacticianDamage+Math.min(15,survivors);changes.set(p.id,{p,won,damage:loss,opponent});};
+   const record=(p,won,survivors,opponent)=>{const loss=won?0:tacticianDamage+Math.min(15,survivors);changes.set(p.id,{p,won,damage:loss,opponent,beforeHp:p.hp});};
    if(creep)record(a,r.winner==='player',r.enemySurvivors,'creeps');
    else{record(a,r.winner==='player',r.enemySurvivors,b.id);if(!r.ghost)record(b,r.winner==='enemy',r.playerSurvivors,a.id);}
   }
+  for(const r of results){const a=C.get(s,r.a),b=C.get(s,r.b);if(a)host.AutoChessTelemetry?.commit(s,a,r.metrics?.player,C.label(s));if(!creep&&!r.ghost&&b)host.AutoChessTelemetry?.commit(s,b,r.metrics?.enemy,C.label(s));}
   for(const{p,won,damage,opponent}of changes.values()){
-   p.hp=Math.max(0,p.hp-damage);C.income(s,p,won,creep);if(!creep){p.history.push(opponent);p.history=p.history.slice(-3);if(won&&S.analyze(C.deployed(p)).some(r=>r.id==='Villian'&&r.tier))p.gold+=Math.min(3,S.analyze(C.deployed(p)).find(r=>r.id==='Villian').tier);}
-   if(creep&&won){C.stash(p,C.relic(s,s.stage>=5?'legendary':s.stage>=3?'rare':'common'));p.gold+=s.stage;}
+   const r=results.find(r=>r.a===p.id||!r.ghost&&r.b===p.id),side=r?.a===p.id?'player':'enemy',other=changes.get(opponent),dealt=!creep&&!r?.ghost&&other?Math.min(other.beforeHp,other.damage):0;
+   host.AutoChessTelemetry?.recordResult(s,p,won,dealt);
+   p.hp=Math.max(0,p.hp-damage);C.income(s,p,won,creep);
+   const moneyPassive=C.deployed(p).some(u=>/(nami|bounty-hunter)/.test(u.cardId));C.bonus(s,p,(r?.metrics?.[side]?.cardGold||0)+(won&&moneyPassive?1:0),'card');
+   if(!creep){p.history.push(opponent);p.history=p.history.slice(-3);const trait=S.analyze(C.deployed(p),host.AutoChessAugments?.traits(p)).find(r=>r.id==='Villian'&&r.tier);if(won&&trait)C.bonus(s,p,Math.min(3,trait.tier),'synergy');}
+   if(creep){C.creepRelics(s,p);if(won)C.bonus(s,p,Math.min(3,s.stage),'creep');}
   }
-  const eliminated=[...changes.values()].filter(v=>!v.p.hp).sort((a,b)=>b.damage-a.damage||a.p.id.localeCompare(b.p.id));let rank=s.players.filter(p=>p.rank===null).length;for(const v of eliminated)v.p.rank=rank--;
+  const eliminated=[...changes.values()].filter(v=>!v.p.hp).sort((a,b)=>b.damage-a.damage||a.p.id.localeCompare(b.p.id));let rank=s.players.filter(p=>p.rank===null).length;for(const v of eliminated){v.p.rank=rank--;host.AutoChessTelemetry?.snapshot(s,v.p);}
   const living=C.alive(s);if(living.length<=1){if(living[0])living[0].rank=1;else{const survivor=s.players.find(p=>p.rank===1);if(survivor)survivor.hp=1;}s.finished=true;s.phase='complete';}else{s.phase='results';s.remaining=C.RULES.resultSeconds;}
   s.lastResults=results;C.finalize(s);s.revision++;return s;
  }

@@ -1,12 +1,15 @@
 /* Floor 200 skills: battle-local counters, additive bonuses and status hooks. */
 (function(host){
  'use strict';
+ if(host.createTower200Skills?.__tower_200_passivesWrapped)return;
+ const instances=new WeakMap();
  host.createTower200Skills=function(api){
+  if(instances.has(api))return instances.get(api);
   const IDS=Object.freeze(['tower-champion-raining-200','tower-champion-sugar-200','tower-champion-sunny-200','tower-champion-reaper-200']);
   const [FLORENTINO,KAFKA,ESCANOR,YHWACH]=IDS,{has,alive,all,allies,enemies,atk,random,runtime}=api;
   const state=(u,key)=>api.passiveRuntimeFor(u,key).tower200 ||= {attacks:0,immuneUntil:-1,immunityReady:0,webReady:0};
   const turn=bs=>Number(bs?.turnCount)||0;
-  const deaths=new WeakMap(),kills=new WeakMap(),observers=new WeakMap(),observed=new WeakSet();
+  const deaths=new WeakMap(),kills=new WeakMap();
   const negative=new Set(['stunTurns','freezeTurns','snailTurns','weakenAttackTurns','weakenAttackPct','noDodgeTurns','noDodgeAgainstUnit','hypnosisTurns','incomingVulnerabilityTurns','incomingVulnerabilityPct','passiveSuppressionTurns','passiveSuppressedUntilDeath','passiveDisabled','hindredTurns','deadlightsFearTurn','deadlightsHypnosis','shibuyaHypnosis','heresy']);
   function enabled(bs){if(!bs)return false;if(typeof bs.tower200Enabled!=='boolean')bs.tower200Enabled=all(bs).some(u=>IDS.some(key=>has(u,key)));return bs.tower200Enabled;}
   function entry(bs,u){if(IDS.some(key=>has(u,key)))bs.tower200Enabled=true;}
@@ -17,18 +20,11 @@
    return false;
   }
   // Observe legacy direct debuff assignments as well as the shared status API.
-  function observe(bs,u,r){
-   if(!r||observed.has(r))return r;
-   let record=observers.get(r);if(record?.unit===u)return record.proxy;
-   const proxy=new Proxy(r,{get(target,key){const value=target[key];return key==='champion'&&value?observe(bs,u,value):value;},set(target,key,value){bs=api.currentBattle?.()||bs;
-    const old=target[key],afflicted=negative.has(key)&&Boolean(value)&&(key==='deadlightsFearTurn'?value!==old:typeof value==='number'?value>Number(old||0):value!==old);
-    if(afflicted&&blocked(bs,u,key))return true;
-    target[key]=value;
-    if(afflicted)statusApplied(bs,u,value?.source||api.currentSource?.()||bs.tower200Actor);
-    return true;
-   }});
-   observers.set(r,{unit:u,proxy});observed.add(proxy);return proxy;
-  }
+  function observe(bs,u,r){return api.observeRuntime(bs,u,r,'tower200',[...negative,'champion'],(target,key,value)=>{
+    const current=api.currentBattle?.()||bs,old=target[key],afflicted=negative.has(key)&&Boolean(value)&&(key==='deadlightsFearTurn'?value!==old:typeof value==='number'?value>Number(old||0):value!==old);
+    if(afflicted&&blocked(current,u,key))return{block:true};
+    return{value,after:afflicted?()=>statusApplied(current,u,value?.source||api.currentSource?.()||current?.tower200Actor):null};
+  },(target,key,value)=>key==='champion'&&value?observe(bs,u,value):value);}
   function dotFactor(bs,source,kind){return kind==='burn'&&enabled(bs)&&source&&allies(bs,source,false).some(u=>has(u,ESCANOR))?2:1;}
   let webRunning=false;
   function statusApplied(bs,target,source){
@@ -75,6 +71,7 @@
   function killed(bs,victim){if(!enabled(bs)||alive(victim)||!once(kills,bs,victim))return;for(const owner of all(bs))if(alive(owner)&&has(owner,YHWACH)&&api.team(bs,owner)!==api.team(bs,victim))api.addAtk(owner,.10);}
   function died(bs,victim){if(!enabled(bs)||alive(victim)||!once(deaths,bs,victim))return;for(const owner of allies(bs,victim,false))if(has(owner,YHWACH)){api.flat(owner,'hp',Math.max(0,victim.maxHp)*.10);api.flat(owner,'atk',Math.max(0,victim.atk)*.10);}}
   function startTurn(bs,actor){if(enabled(bs))bs.tower200Actor=actor;}
-  return {IDS,entry,counted,replacement,after,offensive,bled,killed,died,blocked,statusApplied,dotFactor,observe,startTurn,enabled};
+  const skills={IDS,entry,counted,replacement,after,offensive,bled,killed,died,blocked,statusApplied,dotFactor,observe,startTurn,enabled};instances.set(api,skills);return skills;
  };
+host.createTower200Skills.__tower_200_passivesWrapped=true;
 })(window);

@@ -69,7 +69,7 @@ const CARDS = [
   {
     id: "starter-rare",
     element: "Holy",
-    name: "Ichigo Young", category: ["Protagonist", "Hero", "Human", "Swordman", "Reaper"],
+    name: "Ichigo Young", category: ["Protagonist", "Hero", "Human", "Swordman", "Reaper", "Bleach"],
     rarity: "Rare",
     chance: 10,
     requiredWeather: null,
@@ -153,7 +153,7 @@ const CARDS = [
   {
     id: "the-trapper",
     element: "Dark",
-    name: "The Trapper", category: ["Villian", "VideoGame", "Brutal", "Hunter"],
+    name: "The Trapper", category: ["Villian", "VideoGame", "Brutal", "Hunter", "Human"],
     rarity: "Epic",
     chance: 100,
     requiredWeather: null,
@@ -181,7 +181,7 @@ const CARDS = [
   {
     id: "buggy",
     element: "Water",
-    name: "Buggy", category: ["Pirate", "Human", "AntiVillian", "Supporter"],
+    name: "Buggy", category: ["Pirate", "Human", "AntiVillian", "Supporter", "Captain"],
     rarity: "Epic",
     chance: 234,
     requiredWeather: null,
@@ -251,7 +251,7 @@ const CARDS = [
   {
     id: "jonathan-joestar",
     element: "Electric",
-    name: "Jonathan Joestar", category: ["JoJo", "Protagonist", "Hero", "Human"],
+    name: "Jonathan Joestar", category: ["JoJo", "Protagonist", "Hero", "Human", "Swordman"],
     rarity: "Epic",
     chance: 900,
     requiredWeather: null,
@@ -321,7 +321,7 @@ const CARDS = [
   {
     id: "bulma",
     element: "Nature",
-    name: "Bulma", category: ["Supporter", "Human", "Alternative"],
+    name: "Bulma", category: ["Supporter", "Human", "Alternative", "Mastermind", "DragonWarrior"],
     rarity: "Legendary",
     chance: 3080,
     requiredWeather: null,
@@ -349,7 +349,7 @@ const CARDS = [
   {
     id: "uchiha-itachi",
     element: "Fire",
-    name: "Uchiha Itachi", category: ["Ninja", "Human", "AntiHero", "Brutal"],
+    name: "Uchiha Itachi", category: ["Ninja", "Human", "AntiHero", "Brutal", "Mastermind"],
     rarity: "Legendary",
     chance: 5500,
     requiredWeather: null,
@@ -363,7 +363,7 @@ const CARDS = [
   {
     id: "madness-doctor",
     element: "Electric",
-    name: "Madness Doctor", category: ["Villian", "Brutal", "Alternative"],
+    name: "Madness Doctor", category: ["Villian", "Brutal", "Alternative", "Mastermind"],
     rarity: "Legendary",
     chance: 10101,
     requiredWeather: null,
@@ -419,7 +419,7 @@ const CARDS = [
   {
     id: "polnareff",
     element: "Nature",
-    name: "Polnareff", category: ["JoJo", "Supporter", "Human", "Swordman"],
+    name: "Polnareff", category: ["JoJo", "Supporter", "Human", "Swordman", "Hero"],
     rarity: "Secret",
     chance: 36000,
     requiredWeather: null,
@@ -447,7 +447,7 @@ const CARDS = [
   {
     id: "rimuru",
     element: "Water",
-    name: "Rimuru", category: ["Protagonist", "Unhuman", "Magician", "Supporter"],
+    name: "Rimuru", category: ["Protagonist", "Unhuman", "Magician", "Supporter", "Isekai"],
     rarity: "Secret",
     chance: 81208,
     requiredWeather: null,
@@ -517,7 +517,7 @@ const CARDS = [
   {
     id: "garp",
     element: "Nature",
-    name: "Garp", category: ["Human", "Captain", "Hero", "Brutal"],
+    name: "Garp", category: ["Human", "Captain", "Hero", "Brutal", "Army"],
     rarity: "Legendary",
     chance: 38922,
     requiredWeather: null,
@@ -531,7 +531,7 @@ const CARDS = [
   {
     id: "erwin",
     element: "Fire",
-    name: "Erwin", category: ["Captain", "Human", "Army", "Hero"],
+    name: "Erwin", category: ["Captain", "Human", "Army", "Hero", "TitanSlayer"],
     rarity: "Legendary",
     chance: 77550,
     requiredWeather: null,
@@ -559,7 +559,7 @@ const CARDS = [
   {
     id: "senku",
     element: "Nature",
-    name: "Senku", category: ["Human", "Supporter", "Alternative"],
+    name: "Senku", category: ["Human", "Supporter", "Alternative", "Mastermind"],
     rarity: "Rare",
     chance: 550,
     requiredWeather: null,
@@ -573,7 +573,7 @@ const CARDS = [
   {
     id: "grimmjaw",
     element: "Water",
-    name: "Grimmjaw", category: ["Unhuman", "AntiVillian", "Brutal", "Reaper"],
+    name: "Grimmjaw", category: ["Unhuman", "AntiVillian", "Brutal", "Reaper", "Bleach"],
     rarity: "Legendary",
     chance: 65000,
     requiredWeather: "Reaper",
@@ -587,7 +587,7 @@ const CARDS = [
   {
     id: "reigen",
     element: "Water",
-    name: "Reigen", category: ["Human", "Supporter", "Alternative"],
+    name: "Reigen", category: ["Human", "Supporter", "Alternative", "Mastermind"],
     rarity: "Mythic",
     chance: 500000,
     requiredWeather: null,
@@ -615,7 +615,7 @@ const CARDS = [
   {
     id: "meruem",
     element: "Nature",
-    name: "Meruem", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"],
+    name: "Meruem", category: ["Villian", "Unhuman", "Brutal", "AntiVillian", "Mastermind"],
     rarity: "Mythic",
     chance: 740000,
     requiredWeather: null,
@@ -896,7 +896,7 @@ const CARDS = [
   {
     id: "peashooter",
     element: "Nature",
-    name: "Peashooter", category: ["VideoGame", "Supporter", "Alternative"],
+    name: "Peashooter", category: ["VideoGame", "Supporter", "Alternative", "Unhuman"],
     rarity: "Common",
     chance: 100,
     requiredWeather: "Sunny",
@@ -966,7 +966,7 @@ const CARDS = [
   {
     id: "weather-eclipse-harvester",
     element: "Dark",
-    name: "Griffith", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"],
+    name: "Griffith", category: ["Villian", "Unhuman", "Brutal", "AntiVillian", "Berserk", "Swordman"],
     rarity: "Mythic",
     chance: 8000,
     requiredWeather: "Eclipse",
@@ -1008,7 +1008,7 @@ const CARDS = [
   {
     id: "rukia",
     element: "Water",
-    name: "Rukia", category: ["Reaper", "Swordman", "Supporter", "Human", "Hero"],
+    name: "Rukia", category: ["Reaper", "Swordman", "Supporter", "Human", "Hero", "Bleach"],
     rarity: "Legendary",
     chance: 1350,
     requiredWeather: "Snowing",
@@ -1036,7 +1036,7 @@ const CARDS = [
   {
     id: "weather-frost-sovereign",
     element: "Water",
-    name: "Esdeath", category: ["Villian", "Human", "Magician", "Brutal", "PureEvil"],
+    name: "Esdeath", category: ["Villian", "Human", "Magician", "Brutal", "PureEvil", "Captain", "Army", "Swordman"],
     rarity: "Mythic",
     chance: 12000,
     requiredWeather: "Snowing",
@@ -1050,7 +1050,7 @@ const CARDS = [
   {
     id: "toshiro",
     element: "Water",
-    name: "Toshiro", category: ["Reaper", "Swordman", "Human", "Hero"],
+    name: "Toshiro", category: ["Reaper", "Swordman", "Human", "Hero", "Bleach", "Captain"],
     rarity: "Mythic",
     chance: 26000,
     requiredWeather: "Snowing",
@@ -1064,7 +1064,7 @@ const CARDS = [
   {
     id: "android-21",
     element: "Electric",
-    name: "Android 21", category: ["AntiVillian", "Unhuman", "Magician", "Brutal"],
+    name: "Android 21", category: ["AntiVillian", "Unhuman", "Magician", "Brutal", "VideoGame", "DragonWarrior"],
     rarity: "Mythic",
     chance: 150000,
     requiredWeather: "Sugar",
@@ -1078,7 +1078,7 @@ const CARDS = [
   {
     id: "yuta-okkotsu",
     element: "Holy",
-    name: "Yuta Okkotsu", category: ["Jujutsu", "Protagonist", "Human", "Swordman"],
+    name: "Yuta Okkotsu", category: ["Jujutsu", "Protagonist", "Human", "Swordman", "Hero"],
     rarity: "Mythic",
     chance: 191022,
     requiredWeather: "Sugar",
@@ -1093,7 +1093,7 @@ const CARDS = [
   {
     id: "luffy-nightmare",
     element: "Dark",
-    name: "Luffy Nightmare", category: ["Pirate", "Protagonist", "Brutal", "Berserk", "Unhuman"],
+    name: "Luffy Nightmare", category: ["Pirate", "Protagonist", "Brutal", "Berserk", "Unhuman", "Captain"],
     rarity: "Mythic",
     chance: 9300,
     requiredWeather: "Shadow",
@@ -1121,7 +1121,7 @@ const CARDS = [
   {
     id: "cid-shadow",
     element: "Dark",
-    name: "Cid Atomic", category: ["Protagonist", "Swordman", "Human", "Magician"],
+    name: "Cid Atomic", category: ["Protagonist", "Swordman", "Human", "Magician", "Isekai"],
     rarity: "Mythic",
     chance: 30000,
     requiredWeather: "Shadow",
@@ -1205,7 +1205,7 @@ const CARDS = [
   {
     id: "gojo-young",
     element: "Electric",
-    name: "Gojo Young", category: ["Jujutsu", "Hero", "Human", "Brutal"],
+    name: "Gojo Young", category: ["Jujutsu", "Hero", "Human", "Brutal", "Magician"],
     rarity: "Secret",
     chance: 8888,
     requiredWeather: "Heavenly",
@@ -1289,7 +1289,7 @@ const CARDS = [
   {
     id: "diavolo",
     element: "Dark",
-    name: "Diavolo", category: ["JoJo", "Villian", "Human", "Brutal"],
+    name: "Diavolo", category: ["JoJo", "Villian", "Human", "Brutal", "Mastermind"],
     rarity: "Secret",
     chance: 600000,
     requiredWeather: "Tsukuyomi",
@@ -1317,7 +1317,7 @@ const CARDS = [
   {
     id: "weather-reaper-hollow",
     element: "Fire",
-    name: "Vasto Lord", category: ["Unhuman", "Villian", "Brutal", "Reaper"],
+    name: "Vasto Lord", category: ["Unhuman", "Villian", "Brutal", "Reaper", "Bleach"],
     rarity: "Mythic",
     chance: 22000,
     requiredWeather: "Reaper",
@@ -1331,7 +1331,7 @@ const CARDS = [
   {
     id: "subaru",
     element: "Dark",
-    name: "Subaru", category: ["Protagonist", "Human", "Supporter", "Alternative"],
+    name: "Subaru", category: ["Protagonist", "Human", "Supporter", "Alternative", "Isekai"],
     rarity: "Mythic",
     chance: 53090,
     requiredWeather: "Reaper",
@@ -1359,7 +1359,7 @@ const CARDS = [
   {
     id: "weather-malevolent-king",
     element: "Fire",
-    name: "Malevolent King", category: ["Villian", "Unhuman", "PureEvil", "Brutal", "Army", "Magician"],
+    name: "Malevolent King", category: ["Villian", "Unhuman", "PureEvil", "Brutal", "Army", "Magician", "Jujutsu"],
     rarity: "Secret",
     chance: 45000,
     requiredWeather: "Malevolent",
@@ -1373,7 +1373,7 @@ const CARDS = [
   {
     id: "doflamingo",
     element: "Nature",
-    name: "Doflamingo", category: ["Pirate", "Villian", "Human", "Brutal", "Captain"],
+    name: "Doflamingo", category: ["Pirate", "Villian", "Human", "Brutal", "Captain", "Mastermind"],
     rarity: "Secret",
     chance: 60220,
     requiredWeather: "Malevolent",
@@ -1417,11 +1417,11 @@ const CARDS = [
 // Champions retain the existing reward IDs/receipts; exact level-1 Normal specs.
 const TOWER_REWARD_CARDS = [
   {"id": "tower-champion-normal", "element": "Electric", "image": "assets/cards/equinox.png", "towerType": "normal", "unlockRequirement": "tower_floor_100_normal", "sourceId": "starter-common", "name": "Equinox", category: ["VideoGame", "Alternative", "Brutal"], "chance": 2500025, "requiredWeather": "Normal", "nativeWeather": null, "stats": {"hp": 27700, "atk": 6780}, "passive": {"name": "Emotional Meter", "description": "Start at 50% positive / 50% negative. Primary attacks shift 10–20% toward positive; incoming hits shift 10–20% toward negative.\n100% positive: living team gains +100% max HP and +25% ATK; meter locks.\n100% negative: hit all enemies for x25 current ATK, then die permanently; cannot revive or be cloned."}},
-  {"id": "tower-champion-raining", "element": "Water", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", category: ["Supporter", "Magician", "Unhuman"], "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 63700, "atk": 566}, "passive": {"name": "Useless", "description": "Before battle, choose +50% team max HP (once/team) or +50% eligible VNĐ/EXP/Reward Bonus. Reward choice also boosts standard drop quantities, including Tower Coins, Trial Shards and materials; it does not change drop chances, fixed EXP Trial conversion or reward-free PvP.\nEach allied turn with another active attacker: heal it for 10% max HP and grant +2.2% current ATK, once/turn."}},
+  {"id": "tower-champion-raining", "element": "Water", "image": "assets/cards/aqua.png", "towerType": "raining", "unlockRequirement": "tower_floor_100_raining", "sourceId": "aquaman", "name": "Aqua", category: ["Supporter", "Magician", "Unhuman", "Isekai"], "chance": 2222222, "requiredWeather": "Raining", "nativeWeather": "raining", "stats": {"hp": 63700, "atk": 566}, "passive": {"name": "Useless", "description": "Before battle, choose +50% team max HP (once/team) or +50% eligible VNĐ/EXP/Reward Bonus. Reward choice also boosts standard drop quantities, including Tower Coins, Trial Shards and materials; it does not change drop chances, fixed EXP Trial conversion or reward-free PvP.\nEach allied turn with another active attacker: heal it for 10% max HP and grant +2.2% current ATK, once/turn."}},
   {"id": "tower-champion-snowing", "element": "Water", "image": "assets/cards/iceking.png", "towerType": "snowing", "unlockRequirement": "tower_floor_100_snowing", "sourceId": "toshiro", "name": "Ice King", category: ["AntiVillian", "Magician", "Human", "Alternative"], "chance": 1058000, "requiredWeather": "Snowing", "nativeWeather": "snowing", "stats": {"hp": 15700, "atk": 6010}, "passive": {"name": "Ice Manipulation", "description": "When hit: 20% chance to Freeze the attacker for 2 turns. Deal +50% damage to frozen targets.\nFirst eligible fatal hit: revive at full HP for 5 combat turns, then die permanently. No teammate revival.\nOn permanent death: 58% chance to give a living teammate Ice King Crown (10% chance to Freeze targets for 3 turns)."}},
-  {"id": "tower-champion-sunny", "element": "Fire", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", category: ["Unhuman", "Brutal", "Alternative"], "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 14000, "atk": 5350}, "passive": {"name": "Solar Claw", "description": "33% base crit chance. First damaging crit applies Burn for 3 turns (33% current ATK/turn).\nLater crits deal x3 attack damage before the normal crit multiplier. They do not reapply this Burn. No free follow-up or guaranteed crit."}},
-  {"id": "tower-champion-sugar", "element": "Electric", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", category: ["Villian", "Unhuman", "Brutal", "AntiVillian"], "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 17200, "atk": 4210}, "passive": {"name": "Candy Eater", "description": "Each primary attack gains 1–3 candies; only the current form applies.\n0–10: +25% damage; +1 extra candy/attack.\n11–25: +50% max HP; when hit, spend 1 candy to heal 3% max HP.\n26–50: damaging attacks summon a Ghost (HP = damage dealt; ATK = 10% current ATK).\n51–75: 76% dodge; a dodge skips the next attack, grants 5 candies and heals 7.6% max HP.\n76–99: every 3rd attack also hits up to 3 random enemies for 50% ATK.\n100: hit all enemies each attack; spend 1 candy/attack until 0. Then return to Form 1 and self-Stun for 5 turns; no candy gain or transformation during reversion.\nGenerated units cannot summon Ghosts."}},
-  {"id": "tower-champion-reaper", "element": "Holy", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", category: ["Villian", "Reaper", "Unhuman", "Brutal", "PureEvil"], "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 31500, "atk": 12000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every 2nd primary attack: hit all enemies for 60% of each target’s current ATK.\nWhen damaged: 6% chance to counter for 50% damage received; counters cannot loop.\nFirst eligible fatal hit: revive at full HP, gain +100% current ATK permanently. Cannot be cloned or revived by teammates."}},
+  {"id": "tower-champion-sunny", "element": "Fire", "image": "assets/cards/charizardx.png", "towerType": "sunny", "unlockRequirement": "tower_floor_100_sunny", "sourceId": "weather-solar-deity", "name": "Charizard Mega X", category: ["Unhuman", "Brutal", "Alternative", "VideoGame", "Draconic"], "chance": 634000, "requiredWeather": "Sunny", "nativeWeather": "sunny", "stats": {"hp": 14000, "atk": 5350}, "passive": {"name": "Solar Claw", "description": "33% base crit chance. First damaging crit applies Burn for 3 turns (33% current ATK/turn).\nLater crits deal x3 attack damage before the normal crit multiplier. They do not reapply this Burn. No free follow-up or guaranteed crit."}},
+  {"id": "tower-champion-sugar", "element": "Electric", "image": "assets/cards/buu.png", "towerType": "sugar", "unlockRequirement": "tower_floor_100_sugar", "sourceId": "android-21", "name": "Majin Buu", category: ["Villian", "Unhuman", "Brutal", "AntiVillian", "DragonWarrior"], "chance": 760000, "requiredWeather": "Sugar", "nativeWeather": "sugar", "stats": {"hp": 17200, "atk": 4210}, "passive": {"name": "Candy Eater", "description": "Each primary attack gains 1–3 candies; only the current form applies.\n0–10: +25% damage; +1 extra candy/attack.\n11–25: +50% max HP; when hit, spend 1 candy to heal 3% max HP.\n26–50: damaging attacks summon a Ghost (HP = damage dealt; ATK = 10% current ATK).\n51–75: 76% dodge; a dodge skips the next attack, grants 5 candies and heals 7.6% max HP.\n76–99: every 3rd attack also hits up to 3 random enemies for 50% ATK.\n100: hit all enemies each attack; spend 1 candy/attack until 0. Then return to Form 1 and self-Stun for 5 turns; no candy gain or transformation during reversion.\nGenerated units cannot summon Ghosts."}},
+  {"id": "tower-champion-reaper", "element": "Holy", "image": "assets/cards/aizenbeyond.png", "towerType": "reaper", "unlockRequirement": "tower_floor_100_reaper", "sourceId": "weather-reaper-hollow", "name": "Aizen Beyond", category: ["Villian", "Reaper", "Unhuman", "Brutal", "PureEvil", "Bleach", "Swordman", "Captain", "Mastermind"], "chance": 6000000, "requiredWeather": "Reaper", "nativeWeather": "reaper", "stats": {"hp": 31500, "atk": 12000}, "passive": {"name": "Illusion Shattering Flower", "description": "Every 2nd primary attack: hit all enemies for 60% of each target’s current ATK.\nWhen damaged: 6% chance to counter for 50% damage received; counters cannot loop.\nFirst eligible fatal hit: revive at full HP, gain +100% current ATK permanently. Cannot be cloned or revived by teammates."}},
   {"id": "tower-champion-eclipse", "element": "Dark", "image": "assets/cards/wou.png", "towerType": "eclipse", "unlockRequirement": "tower_floor_100_eclipse", "sourceId": "weather-eclipse-harvester", "name": "Wonder Of You", category: ["JoJo", "Supporter", "Magician", "Alternative"], "chance": 8000000, "requiredWeather": "Eclipse", "nativeWeather": "eclipse", "stats": {"hp": 97100, "atk": 863}, "passive": {"name": "Calamity", "description": "Protect a random living teammate; choose another if it dies. No position swap.\nAfter that ally’s shields/reduction, split remaining damage 50%/50%; absorb the shared half, with an 8% chance to reflect it instead. No recursive redirection.\nProtected ally’s kill: heal 80% max HP. Death while protecting: 8% chance to execute the attacker; normal immunity/survival rules apply."}},
   {"id": "tower-champion-malevolent", "element": "Fire", "image": "assets/cards/thukuna.png", "towerType": "malevolent", "unlockRequirement": "tower_floor_100_malevolent", "sourceId": "weather-malevolent-king", "name": "Thukuna", category: ["Jujutsu", "Villian", "Unhuman", "Brutal", "PureEvil"], "chance": 666999, "requiredWeather": "Malevolent", "nativeWeather": "malevolent", "stats": {"hp": 14300, "atk": 5460}, "passive": {"name": "Malevolent Kitchen", "description": "After 5 primary attacks, hit all living enemies for 25% current ATK at the start of every combat turn while alive.\nWhen hit and surviving: 66% chance to heal 6% max HP and gain +9% current ATK. ATK bonuses stack for the match."}},
   {"id": "tower-champion-tsukuyomi", "element": "Nature", "image": "assets/cards/narutosasuke.png", "towerType": "tsukuyomi", "unlockRequirement": "tower_floor_100_tsukuyomi", "sourceId": "weather-tsukuyomi-eye", "name": "Naruto x Sasuke", category: ["Ninja", "Protagonist", "Hero", "Human", "Brutal"], "chance": 2000000, "requiredWeather": "Tsukuyomi", "nativeWeather": "tsukuyomi", "stats": {"hp": 20300, "atk": 7750}, "passive": {"name": "Datebayo", "description": "Each new active enemy rolls Naruto/Sasuke mode (50% each); keep the card’s attack counter across target changes.\nNaruto: every 3rd attack deals x3 damage and creates a 10% current HP/ATK Clone. Living Clones follow up each attack; Clone death heals the owner 10% max HP. No count cap; generated units cannot summon.\nSasuke: every 2nd attack hits all enemies for 50% ATK; 20% dodge. Dodge applies Burn for 5 turns (25% ATK/turn) and a 3-combat-turn shield equal to avoided damage. Burn ending naturally Stuns for 1 turn.\nSwitching to Sasuke removes Clones without healing; switching to Naruto removes the shield."}, "requiredWeathers": ["Tsukuyomi", "Mangekyo"]},
@@ -1431,11 +1431,11 @@ const TOWER_REWARD_CARDS = [
 CARDS.push(...TOWER_REWARD_CARDS);
 // Raid-only secrets never enter RNG pools, including after their first unlock.
 const RAID_SECRET_CARDS = [
-  { id: 'raid-secret-mihawk', element: 'Nature', name: 'Mihawk', category: ["Swordman", "Human", "AntiVillian", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 13100, atk: 5000 }, image: 'assets/cards/mihawk.png',
+  { id: 'raid-secret-mihawk', element: 'Nature', name: 'Mihawk', category: ["Swordman", "Human", "AntiVillian", "Brutal", "Pirate"], rarity: 'Secret', chance: 0, stats: { hp: 13100, atk: 5000 }, image: 'assets/cards/mihawk.png',
     passive: { name: 'Hawkeye', description: "50% dodge; successful dodge counters for 500% current ATK.\nPrimary attacks pierce the enemy lineup; each damaging hit reduces the next target’s damage by 25%. Dodges/fully blocked hits do not consume a falloff step.\nEach combat turn: 25% chance for Haki for 2 own turns (+250% ATK, 25% damage reduction); refreshes without stacking." } },
-  { id: 'raid-secret-ace', element: 'Fire', name: 'Ace', category: ["Pirate", "Human", "Hero", "Supporter", "Brutal"], rarity: 'Secret', chance: 0, stats: { hp: 3970, atk: 1510 }, image: 'assets/cards/ace.png',
+  { id: 'raid-secret-ace', element: 'Fire', name: 'Ace', category: ["Pirate", "Human", "Hero", "Supporter", "Brutal", "Captain"], rarity: 'Secret', chance: 0, stats: { hp: 3970, atk: 1510 }, image: 'assets/cards/ace.png',
     passive: { name: 'Mera Mera', description: "Successful attacks: 10% chance to Burn for 3 turns (100% current ATK/turn).\nOn death: living teammates gain Brother Soul. Their successful attacks have a separate 10% chance to Burn for 1 turn (100% their current ATK). Stacks with other Burns; multiple Ace deaths do not increase the chance." } },
-  { id: 'raid-secret-marco', element: 'Water', name: 'Marco', category: ["Pirate", "Human", "Supporter", "Hero"], rarity: 'Secret', chance: 0, stats: { hp: 51500, atk: 3140 }, image: 'assets/cards/marco.png',
+  { id: 'raid-secret-marco', element: 'Water', name: 'Marco', category: ["Pirate", "Human", "Supporter", "Hero", "Captain"], rarity: 'Secret', chance: 0, stats: { hp: 51500, atk: 3140 }, image: 'assets/cards/marco.png',
     passive: { name: 'Phoenix Inferno', description: "While alive, attacks against other teammates have a 10% chance to be blocked; counter for 200% current ATK without swapping.\nOnce/match, prevent an ally’s fatal hit or danger below 10% HP, swap positions and heal to max HP. Bleed blocks the heal; fatal rescue leaves at least 1 HP.\n10% dodge; each dodge grants the living team +10% current max HP, stacking for the match." } }
 ].map(card => Object.freeze({ ...card, requiredWeather: null, raidOnly: true, raidType: 'marine_fort', unlockRequirement: `raid_secret_${card.name.toLowerCase()}`, description: 'Exclusive Marine Ford Raid drop. Never available from normal rolls.' }));
 CARDS.push(...RAID_SECRET_CARDS);
@@ -1449,7 +1449,7 @@ if (typeof window !== 'undefined') window.TOWER_REWARD_CARDS = TOWER_REWARD_CARD
 const EXPANSION_CARDS = [
   {
     "id": "funny-valentine",
-    "name": "Funny Valentine", category: ["JoJo", "Villian", "Human", "Brutal"],
+    "name": "Funny Valentine", category: ["JoJo", "Villian", "Human", "Brutal", "Mastermind"],
     "element": "Nature",
     "rarity": "Secret",
     "chance": 214000,
@@ -1533,7 +1533,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "emmu",
-    "name": "Emmu", category: ["Hero", "Protagonist", "Human", "Supporter"],
+    "name": "Emmu", category: ["Human", "Supporter", "Villian", "DemonSlayer", "Unhuman", "Brutal", "PureEvil"],
     "element": "Dark",
     "rarity": "Secret",
     "chance": 1700000,
@@ -1584,7 +1584,7 @@ const EXPANSION_CARDS = [
   },
   {
     "id": "awakened-doflamingo", evolvesFrom: 'doflamingo',
-    "name": "Awakened Doflamingo", category: ["Pirate", "Villian", "Human", "Brutal", "Captain", "PureEvil"],
+    "name": "Awakened Doflamingo", category: ["Pirate", "Villian", "Human", "Brutal", "Captain", "PureEvil", "Mastermind"],
     "element": "Dark",
     "rarity": "Secret",
     "chance": 0,
@@ -1622,7 +1622,7 @@ window.EXPANSION_CARDS = EXPANSION_CARDS;
 // Boss Event exclusive: never enters normal rolls.
 const BOSS_EVENT_CARDS = [{
   "id": "boss-event-alucard",
-  "name": "Alucard", category: ["Protagonist", "AntiHero", "Unhuman", "Brutal", "Hunter"],
+  "name": "Alucard", category: ["Protagonist", "AntiHero", "Unhuman", "Brutal", "Hunter", "Gunner"],
   "element": "Fire",
   "rarity": "Secret",
   "chance": 0,
@@ -1644,7 +1644,7 @@ window.BOSS_EVENT_CARDS = BOSS_EVENT_CARDS;
 const QUEST_UPDATE_CARDS = [
   {
     "id": "madara-lubu",
-    "name": "Madara Lubu", category: ["Ninja", "Villian", "Unhuman", "Brutal", "Army"],
+    "name": "Madara Lubu", category: ["Ninja", "Villian", "Unhuman", "Brutal", "Army", "Mastermind"],
     "element": "Fire",
     "rarity": "Secret",
     "chance": 10000000,
@@ -1702,7 +1702,7 @@ const QUEST_UPDATE_CARDS = [
   },
   {
     "id": "alexander-anderson",
-    "name": "Alexander Anderson", category: ["AntiVillian", "Human", "Brutal", "Hunter"],
+    "name": "Alexander Anderson", category: ["AntiVillian", "Human", "Brutal", "Hunter", "Swordman"],
     "element": "Water",
     "rarity": "Mythic",
     "chance": 777000,
@@ -1725,7 +1725,7 @@ CARDS.push(...QUEST_UPDATE_CARDS);
 CARDS.push(...[
   {
     "id": "julius",
-    "name": "Julius", category: ["Magician", "Human", "Captain", "Hero", "Supporter"],
+    "name": "Julius", category: ["Magician", "Human", "Captain", "Hero", "Supporter", "Mastermind"],
     "element": "Holy",
     "rarity": "Secret",
     "chance": 1500000,
@@ -1761,7 +1761,7 @@ CARDS.push(...[
   },
   {
     "id": "boss-event-lucius",
-    "name": "Lucius Zogratis", category: ["Villian", "Human", "Magician", "Brutal", "PureEvil", "Alternative"],
+    "name": "Lucius Zogratis", category: ["Villian", "Human", "Magician", "Brutal", "PureEvil", "Alternative", "Mastermind"],
     "element": "Dark",
     "rarity": "Secret",
     "chance": 0,
@@ -1901,7 +1901,7 @@ CARDS.push(...[
 ]);
 // Normal Tower Floor 200 champion; artwork is supplied by the game owner.
 CARDS.push({
-  id: 'tower-champion-normal-200', name: 'Reagan Ridley', category: ["Human", "Supporter", "Alternative"], element: 'Electric', rarity: 'Secret',
+  id: 'tower-champion-normal-200', name: 'Reagan Ridley', category: ["Human", "Supporter", "Alternative", "Mastermind"], element: 'Electric', rarity: 'Secret',
   chance: 1692007, requiredWeather: 'Normal', towerType: 'normal', towerFloor: 200,
   unlockRequirement: 'tower_floor_200_normal', stats: {hp: 42700, atk: 2610},
   image: 'assets/cards/reaganridley.png',
@@ -1915,12 +1915,7 @@ CARDS.push(...[
   {
     "id": "shirou",
     "name": "Shirou",
-    "category": [
-      "Swordman",
-      "Fate",
-      "Hero",
-      "Protagonist"
-    ],
+    "category": ["Swordman", "Fate", "Hero", "Protagonist", "Magician"],
     "element": "Electric",
     "rarity": "Mythic",
     "chance": 850000,
@@ -1938,11 +1933,7 @@ CARDS.push(...[
   {
     "id": "kiritsu",
     "name": "Kiritsu",
-    "category": [
-      "Fate",
-      "Brutal",
-      "AntiVillian"
-    ],
+    "category": ["Fate", "Brutal", "AntiVillian", "Gunner", "Human"],
     "element": "Fire",
     "rarity": "Mythic",
     "chance": 1850000,
@@ -1962,11 +1953,7 @@ CARDS.push(...[
   {
     "id": "mash",
     "name": "Mash",
-    "category": [
-      "Hero",
-      "Fate",
-      "Supporter"
-    ],
+    "category": ["Hero", "Fate", "Supporter", "Human"],
     "element": "Water",
     "rarity": "Mythic",
     "chance": 2900000,
@@ -1984,12 +1971,7 @@ CARDS.push(...[
   {
     "id": "gilgamesh",
     "name": "Gilgamesh",
-    "category": [
-      "Villian",
-      "Hero",
-      "PureEvil",
-      "Fate"
-    ],
+    "category": ["Villian", "Hero", "PureEvil", "Fate", "Swordman"],
     "element": "Holy",
     "rarity": "Secret",
     "chance": 10000000,
@@ -2007,11 +1989,7 @@ CARDS.push(...[
   {
     "id": "cu-chalinn",
     "name": "Cu Chalinn",
-    "category": [
-      "Hero",
-      "Swordman",
-      "Fate"
-    ],
+    "category": ["Hero", "Swordman", "Fate", "Human"],
     "element": "Water",
     "rarity": "Secret",
     "chance": 4500000,
@@ -2029,11 +2007,7 @@ CARDS.push(...[
   {
     "id": "saber-knight", evolvesFrom: 'saber',
     "name": "Saber Knight",
-    "category": [
-      "Hero",
-      "Swordman",
-      "Fate"
-    ],
+    "category": ["Hero", "Swordman", "Fate", "Human"],
     "element": "Water",
     "rarity": "Mythic",
     "chance": 0,
@@ -2052,13 +2026,7 @@ CARDS.push(...[
   {
     "id": "iskandar",
     "name": "Iskandar",
-    "category": [
-      "Army",
-      "Fate",
-      "Swordman",
-      "Captain",
-      "Hero"
-    ],
+    "category": ["Army", "Fate", "Swordman", "Captain", "Hero", "Human"],
     "element": "Fire",
     "rarity": "Secret",
     "chance": 5500000,
@@ -2076,11 +2044,7 @@ CARDS.push(...[
   {
     "id": "medea",
     "name": "Medea",
-    "category": [
-      "Villian",
-      "Fate",
-      "Magician"
-    ],
+    "category": ["Villian", "Fate", "Magician", "Human"],
     "element": "Dark",
     "rarity": "Secret",
     "chance": 3200000,
@@ -2098,12 +2062,7 @@ CARDS.push(...[
   {
     "id": "merlin",
     "name": "Merlin",
-    "category": [
-      "Hero",
-      "Magician",
-      "Fate",
-      "Swordman"
-    ],
+    "category": ["Hero", "Magician", "Fate", "Swordman", "Human", "Supporter"],
     "element": "Holy",
     "rarity": "Secret",
     "chance": 1700000,
@@ -2121,12 +2080,7 @@ CARDS.push(...[
   {
     "id": "tower-champion-heavenly-200",
     "name": "Gilgamesh Chan",
-    "category": [
-      "AntiHero",
-      "VideoGame",
-      "Fate",
-      "Alternative"
-    ],
+    "category": ["AntiHero", "VideoGame", "Fate", "Alternative"],
     "element": "Electric",
     "rarity": "Secret",
     "chance": 20000000,
@@ -2154,12 +2108,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 666333,
     "requiredWeather": null,
-    "category": [
-      "VideoGame",
-      "Brutal",
-      "Human",
-      "Swordman"
-    ],
+    "category": ["VideoGame", "Brutal", "Human", "Swordman", "Villian", "PureEvil"],
     "stats": {
       "hp": 14300,
       "atk": 5460
@@ -2178,12 +2127,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 333666,
     "requiredWeather": null,
-    "category": [
-      "VideoGame",
-      "Brutal",
-      "Magician",
-      "Swordman"
-    ],
+    "category": ["VideoGame", "Brutal", "Magician", "Swordman", "Villian", "PureEvil"],
     "stats": {
       "hp": 10800,
       "atk": 4140
@@ -2202,12 +2146,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 333999,
     "requiredWeather": null,
-    "category": [
-      "VideoGame",
-      "Brutal",
-      "Swordman",
-      "Unhuman"
-    ],
+    "category": ["VideoGame", "Brutal", "Swordman", "Unhuman", "Villian"],
     "stats": {
       "hp": 11700,
       "atk": 4450
@@ -2226,13 +2165,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 0,
     "requiredWeather": null,
-    "category": [
-      "Alternative",
-      "Brutal",
-      "PureEvil",
-      "Swordman",
-      "Unhuman"
-    ],
+    "category": ["Alternative", "Brutal", "PureEvil", "Swordman", "Unhuman", "Villian"],
     "stats": {
       "hp": 42100,
       "atk": 10300
@@ -2251,14 +2184,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 999666,
     "requiredWeather": null,
-    "category": [
-      "PureEvil",
-      "Villian",
-      "Alternative",
-      "Brutal",
-      "Magician",
-      "Unhuman"
-    ],
+    "category": ["PureEvil", "Villian", "Alternative", "Brutal", "Magician", "Unhuman"],
     "stats": {
       "hp": 16800,
       "atk": 6420
@@ -2277,14 +2203,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 6666666,
     "requiredWeather": null,
-    "category": [
-      "PureEvil",
-      "Villian",
-      "Alternative",
-      "Swordman",
-      "Brutal",
-      "Human"
-    ],
+    "category": ["PureEvil", "Villian", "Alternative", "Swordman", "Brutal", "Human"],
     "stats": {
       "hp": 35900,
       "atk": 13700
@@ -2305,12 +2224,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 0,
     "requiredWeather": null,
-    "category": [
-      "Hero",
-      "Magician",
-      "Jujutsu",
-      "Brutal"
-    ],
+    "category": ["Hero", "Magician", "Jujutsu", "Brutal", "Human"],
     "stats": {
       "hp": 30500,
       "atk": 2790
@@ -2329,12 +2243,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 525000,
     "requiredWeather": "Malevolent",
-    "category": [
-      "Jujutsu",
-      "Hero",
-      "Magician",
-      "Army"
-    ],
+    "category": ["Jujutsu", "Hero", "Magician", "Army", "Human"],
     "stats": {
       "hp": 14000,
       "atk": 5340
@@ -2352,14 +2261,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 3500000,
     "requiredWeather": "Malevolent",
-    "category": [
-      "Brutal",
-      "PureEvil",
-      "Jujutsu",
-      "Swordman",
-      "Human",
-      "AntiHero"
-    ],
+    "category": ["Brutal", "PureEvil", "Jujutsu", "Swordman", "Human", "AntiHero", "Gunner"],
     "stats": {
       "hp": 27800,
       "atk": 10600
@@ -2381,13 +2283,7 @@ CARDS.push(...[
     "element": "Fire",
     "rarity": "Secret",
     "chance": 0,
-    "category": [
-      "Jujutsu",
-      "Villian",
-      "Unhuman",
-      "Brutal",
-      "PureEvil"
-    ],
+    "category": ["Jujutsu", "Villian", "Unhuman", "Brutal", "PureEvil"],
     "stats": {
       "hp": 26800,
       "atk": 10200
@@ -2406,14 +2302,7 @@ CARDS.push(...[
     "element": "Water",
     "rarity": "Secret",
     "chance": 0,
-    "category": [
-      "Brutal",
-      "PureEvil",
-      "Villian",
-      "Jujutsu",
-      "Swordman",
-      "Unhuman"
-    ],
+    "category": ["Brutal", "PureEvil", "Villian", "Jujutsu", "Swordman", "Unhuman"],
     "stats": {
       "hp": 19000,
       "atk": 7260
@@ -2432,12 +2321,7 @@ CARDS.push(...[
     "element": "Water",
     "rarity": "Mythic",
     "chance": 530000,
-    "category": [
-      "Army",
-      "Hero",
-      "Jujutsu",
-      "Supporter"
-    ],
+    "category": ["Army", "Hero", "Jujutsu", "Supporter", "Human"],
     "stats": {
       "hp": 29400,
       "atk": 1790
@@ -2457,14 +2341,7 @@ CARDS.push(...[
     "element": "Water",
     "rarity": "Secret",
     "chance": 2200000,
-    "category": [
-      "Jujutsu",
-      "Unhuman",
-      "Magician",
-      "Villian",
-      "Brutal",
-      "Army"
-    ],
+    "category": ["Jujutsu", "Unhuman", "Magician", "Villian", "Brutal", "Army"],
     "stats": {
       "hp": 46100,
       "atk": 4230
@@ -2482,12 +2359,7 @@ CARDS.push(...[
     "element": "Fire",
     "rarity": "Secret",
     "chance": 3850000,
-    "category": [
-      "Unhuman",
-      "Jujutsu",
-      "AntiHero",
-      "Human"
-    ],
+    "category": ["Unhuman", "Jujutsu", "AntiHero", "Human"],
     "stats": {
       "hp": 31000,
       "atk": 11800
@@ -2505,11 +2377,7 @@ CARDS.push(...[
     "element": "Electric",
     "rarity": "Mythic",
     "chance": 0,
-    "category": [
-      "AntiHero",
-      "Jujutsu",
-      "Human"
-    ],
+    "category": ["AntiHero", "Jujutsu", "Human"],
     "stats": {
       "hp": 10900,
       "atk": 4150
@@ -2528,13 +2396,7 @@ CARDS.push(...[
     "element": "Electric",
     "rarity": "Secret",
     "chance": 2800000,
-    "category": [
-      "Jujutsu",
-      "AntiHero",
-      "Army",
-      "Magician",
-      "Supporter"
-    ],
+    "category": ["Jujutsu", "AntiHero", "Army", "Magician", "Supporter", "Human"],
     "stats": {
       "hp": 29000,
       "atk": 7090
@@ -2552,12 +2414,7 @@ CARDS.push(...[
     "element": "Nature",
     "rarity": "Mythic",
     "chance": 1820000,
-    "category": [
-      "Unhuman",
-      "Jujutsu",
-      "Brutal",
-      "Magician"
-    ],
+    "category": ["Unhuman", "Jujutsu", "Brutal", "Magician", "Villian"],
     "stats": {
       "hp": 42700,
       "atk": 3920
@@ -2575,13 +2432,7 @@ CARDS.push(...[
     "element": "Fire",
     "rarity": "Secret",
     "chance": 9999999,
-    "category": [
-      "Jujutsu",
-      "PureEvil",
-      "Brutal",
-      "Villian",
-      "AntiVillian"
-    ],
+    "category": ["Jujutsu", "PureEvil", "Brutal", "Villian", "AntiVillian"],
     "stats": {
       "hp": 63600,
       "atk": 5830
@@ -2602,11 +2453,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 3000000,
   "requiredWeather": "Sunny",
-  "category": [
-    "DragonWarrior",
-    "Hero",
-    "Protagonist"
-  ],
+  "category": ["DragonWarrior", "Hero", "Protagonist", "Unhuman"],
   "stats": {
     "hp": 25500,
     "atk": 10115
@@ -2624,12 +2471,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 2000000,
   "requiredWeather": "Sunny",
-  "category": [
-    "DragonWarrior",
-    "Hero",
-    "AntiHero",
-    "Protagonist"
-  ],
+  "category": ["DragonWarrior", "Hero", "AntiHero", "Protagonist", "Unhuman", "Brutal"],
   "stats": {
     "hp": 20200,
     "atk": 7560
@@ -2647,13 +2489,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 0,
   "portalOnly": true,
-  "category": [
-    "DragonWarrior",
-    "Hero",
-    "AntiHero",
-    "AntiVillian",
-    "Brutal"
-  ],
+  "category": ["DragonWarrior", "Hero", "AntiHero", "AntiVillian", "Brutal", "Unhuman"],
   "stats": {
     "hp": 31200,
     "atk": 12200
@@ -2672,10 +2508,7 @@ CARDS.push(...[
   "chance": 0,
   "evolutionOnly": true,
   "evolvesFrom": "gohan",
-  "category": [
-    "DragonWarrior",
-    "Hero"
-  ],
+  "category": ["DragonWarrior", "Hero", "Human"],
   "stats": {
     "hp": 21860,
     "atk": 6950
@@ -2694,12 +2527,7 @@ CARDS.push(...[
   "chance": 0,
   "evolutionOnly": true,
   "evolvesFrom": "frieza",
-  "category": [
-    "Villian",
-    "PlanetDestroyer",
-    "Brutal",
-    "AntiHero"
-  ],
+  "category": ["Villian", "PlanetDestroyer", "Brutal", "AntiHero", "DragonWarrior", "Unhuman"],
   "stats": {
     "hp": 21875,
     "atk": 5350
@@ -2715,13 +2543,7 @@ CARDS.push(...[
   "name": "Pennywise",
   "origin": "Tsuyokumi - Spooky Exclusive",
   "element": "Dark",
-  "category": [
-    "Villian",
-    "Brutal",
-    "PureEvil",
-    "Unhuman",
-    "Alternative"
-  ],
+  "category": ["Villian", "Brutal", "PureEvil", "Unhuman", "Alternative"],
   "rarity": "Secret",
   "chance": 27000000,
   "requiredWeather": "Tsukuyomi",
@@ -2743,13 +2565,7 @@ CARDS.push(...[
     "id": "tower-champion-raining-200",
     "name": "Florentino",
     "element": "Water",
-    "category": [
-      "VideoGame",
-      "Human",
-      "Brutal",
-      "Swordman",
-      "AntiVillian"
-    ],
+    "category": ["VideoGame", "Human", "Brutal", "Swordman", "AntiVillian"],
     "rarity": "Secret",
     "chance": 12000000,
     "requiredWeather": "Raining",
@@ -2770,12 +2586,7 @@ CARDS.push(...[
     "id": "tower-champion-sugar-200",
     "name": "Kafka",
     "element": "Fire",
-    "category": [
-      "VideoGame",
-      "Villian",
-      "Supporter",
-      "Swordman"
-    ],
+    "category": ["VideoGame", "Villian", "Supporter", "Swordman", "Human", "Gunner"],
     "rarity": "Secret",
     "chance": 11750000,
     "requiredWeather": "Sugar",
@@ -2796,13 +2607,7 @@ CARDS.push(...[
     "id": "tower-champion-sunny-200",
     "name": "Escanor The Indomitable",
     "element": "Holy",
-    "category": [
-      "AntiVillian",
-      "Alternative",
-      "Sins",
-      "Brutal",
-      "VideoGame"
-    ],
+    "category": ["AntiVillian", "Alternative", "Sins", "Brutal", "VideoGame", "Human", "Hero"],
     "rarity": "Secret",
     "chance": 15000000,
     "requiredWeather": "Sunny",
@@ -2823,13 +2628,7 @@ CARDS.push(...[
     "id": "tower-champion-reaper-200",
     "name": "Yhwach Omniscience",
     "element": "Water",
-    "category": [
-      "Villian",
-      "Hero",
-      "Alternative",
-      "Unhuman",
-      "Swordman"
-    ],
+    "category": ["Villian", "Hero", "Alternative", "Unhuman", "Swordman", "Bleach", "Mastermind", "Army"],
     "rarity": "Secret",
     "chance": 16000000,
     "requiredWeather": "Reaper",
@@ -2854,14 +2653,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "element": "Water",
     "chance": 0,
-    "category": [
-      "Hero",
-      "AntiVillian",
-      "Brutal",
-      "DragonWarrior",
-      "Swordman",
-      "Unhuman"
-    ],
+    "category": ["Hero", "AntiVillian", "Brutal", "DragonWarrior", "Swordman", "Unhuman"],
     "stats": {
       "hp": 56800,
       "atk": 13900
@@ -2880,14 +2672,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "element": "Electric",
     "chance": 22000000,
-    "category": [
-      "Villian",
-      "Unhuman",
-      "DragonWarrior",
-      "Magician",
-      "PureEvil",
-      "Brutal"
-    ],
+    "category": ["Villian", "Unhuman", "DragonWarrior", "Magician", "PureEvil", "Brutal"],
     "stats": {
       "hp": 72000,
       "atk": 17700
@@ -2908,13 +2693,7 @@ CARDS.push({
   "chance": 100000000,
   "rarity": "Secret",
   "element": "Water",
-  "category": [
-    "Protagonist",
-    "Hero",
-    "Swordman",
-    "Human",
-    "Brutal"
-  ],
+  "category": ["Protagonist", "Hero", "Swordman", "Human", "Brutal"],
   "stats": {
     "hp": 121000,
     "atk": 29600
@@ -2935,13 +2714,7 @@ CARDS.push({
   "requiredWeather": "Eclipse",
   "questOnly": true,
   "unlockRequirement": "quest_card_the-mourner",
-  "category": [
-    "Villian",
-    "Unhuman",
-    "VideoGame",
-    "Brutal",
-    "Supporter"
-  ],
+  "category": ["VideoGame", "Human", "Supporter", "Gunner"],
   "stats": {
     "hp": 149000,
     "atk": 36500
@@ -2960,14 +2733,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 0,
     "requiredWeather": null,
-    "category": [
-      "Ninja",
-      "AntiHero",
-      "Human",
-      "Swordman",
-      "Brutal",
-      "Magician"
-    ],
+    "category": ["Ninja", "Human", "AntiHero", "Brutal", "Mastermind"],
     "stats": {
       "hp": 38000,
       "atk": 9300
@@ -2987,11 +2753,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 2900000,
     "requiredWeather": "Wind",
-    "category": [
-      "Villian",
-      "Ninja",
-      "Magician"
-    ],
+    "category": ["Ninja", "Human", "Villian", "Magician", "Supporter"],
     "stats": {
       "hp": 32200,
       "atk": 7900
@@ -3009,13 +2771,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 3300000,
     "requiredWeather": "Raining",
-    "category": [
-      "Unhuman",
-      "Villian",
-      "Brutal",
-      "Swordman",
-      "Ninja"
-    ],
+    "category": ["Ninja", "Human", "Villian", "Brutal", "Swordman"],
     "stats": {
       "hp": 36400,
       "atk": 8900
@@ -3033,14 +2789,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 3450000,
     "requiredWeather": "Sunny",
-    "category": [
-      "Human",
-      "Villian",
-      "Brutal",
-      "Magician",
-      "Ninja",
-      "Supporter"
-    ],
+    "category": ["Ninja", "Human", "Villian", "Brutal", "Magician"],
     "stats": {
       "hp": 46700,
       "atk": 2900
@@ -3058,12 +2807,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 4600000,
     "requiredWeather": "Reaper",
-    "category": [
-      "Unhuman",
-      "Ninja",
-      "Supporter",
-      "Brutal"
-    ],
+    "category": ["Ninja", "Human", "Villian", "Brutal", "Mastermind"],
     "stats": {
       "hp": 69700,
       "atk": 4300
@@ -3081,14 +2825,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 5800000,
     "requiredWeather": "Shadow",
-    "category": [
-      "Unhuman",
-      "Magician",
-      "Ninja",
-      "Brutal",
-      "PureEvil",
-      "Villian"
-    ],
+    "category": ["Ninja", "Human", "Villian", "Brutal", "Hunter"],
     "stats": {
       "hp": 38800,
       "atk": 9500
@@ -3106,14 +2843,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 6960000,
     "requiredWeather": "Malevolent",
-    "category": [
-      "Unhuman",
-      "Villian",
-      "PureEvil",
-      "Brutal",
-      "Ninja",
-      "Swordman"
-    ],
+    "category": ["Ninja", "Human", "Villian", "Brutal", "PureEvil"],
     "stats": {
       "hp": 78600,
       "atk": 7200
@@ -3131,14 +2861,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 7450000,
     "requiredWeather": "Tsukuyomi",
-    "category": [
-      "Unhuman",
-      "Villian",
-      "Brutal",
-      "PureEvil",
-      "Ninja",
-      "Supporter"
-    ],
+    "category": ["Ninja", "Unhuman", "Villian", "Supporter", "Mastermind"],
     "stats": {
       "hp": 35300,
       "atk": 8600
@@ -3156,14 +2879,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 6350000,
     "requiredWeather": "Eclipse",
-    "category": [
-      "Unhuman",
-      "Villian",
-      "Magician",
-      "Supporter",
-      "Ninja",
-      "Brutal"
-    ],
+    "category": ["Ninja", "Human", "Villian", "Brutal", "Mastermind", "Unhuman"],
     "stats": {
       "hp": 59700,
       "atk": 3700
@@ -3181,14 +2897,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 0,
     "requiredWeather": null,
-    "category": [
-      "Ninja",
-      "Brutal",
-      "AntiHero",
-      "Villian",
-      "Magician",
-      "Supporter"
-    ],
+    "category": ["Ninja", "Human", "Villian", "Brutal", "Mastermind", "Army"],
     "stats": {
       "hp": 75700,
       "atk": 18500
@@ -3209,12 +2918,7 @@ CARDS.push(...[
   "rarity": "Common",
   "chance": 30,
   "requiredWeather": null,
-  "category": [
-    "Titan",
-    "Unhuman",
-    "Brutal",
-    "PureEvil"
-  ],
+  "category": ["Titan", "Unhuman", "Brutal", "Villian"],
   "stats": {
     "hp": 390,
     "atk": 96
@@ -3232,12 +2936,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 29000000,
   "requiredWeather": "Rumbling",
-  "category": [
-    "Titan",
-    "Swordman",
-    "Brutal",
-    "Unhuman"
-  ],
+  "category": ["Titan", "Unhuman", "Brutal", "Villian", "Mastermind"],
   "stats": {
     "hp": 60900,
     "atk": 14900
@@ -3255,12 +2954,7 @@ CARDS.push(...[
   "rarity": "Mythic",
   "chance": 1345000,
   "requiredWeather": "Rumbling",
-  "category": [
-    "Titan",
-    "Unhuman",
-    "Brutal",
-    "Animal"
-  ],
+  "category": ["Titan", "Unhuman", "Brutal", "Villian"],
   "stats": {
     "hp": 25500,
     "atk": 6200
@@ -3278,12 +2972,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 45000000,
   "requiredWeather": "Rumbling",
-  "category": [
-    "Titan",
-    "Brutal",
-    "Supporter",
-    "Unhuman"
-  ],
+  "category": ["Titan", "Unhuman", "Brutal", "Villian"],
   "stats": {
     "hp": 131000,
     "atk": 8000
@@ -3301,16 +2990,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 0,
   "requiredWeather": null,
-  "category": [
-    "Protagonist",
-    "Hero",
-    "AntiHero",
-    "Villian",
-    "AntiVillian",
-    "Mastermind",
-    "TitanSlayer",
-    "Human"
-  ],
+  "category": ["Titan", "TitanSlayer", "Human", "Protagonist", "AntiHero", "Brutal"],
   "stats": {
     "hp": 91300,
     "atk": 22300
@@ -3330,13 +3010,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 18000000,
   "requiredWeather": "Rumbling",
-  "category": [
-    "Titan",
-    "Animal",
-    "Brutal",
-    "Unhuman",
-    "Mastermind"
-  ],
+  "category": ["Titan", "Unhuman", "Brutal", "Villian"],
   "stats": {
     "hp": 48800,
     "atk": 18700
@@ -3354,14 +3028,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 15000000,
   "requiredWeather": null,
-  "category": [
-    "Villian",
-    "AntiHero",
-    "Human",
-    "Brutal",
-    "Captain",
-    "Baller"
-  ],
+  "category": ["Baller", "Human", "AntiHero", "Brutal"],
   "stats": {
     "hp": 57700,
     "atk": 22000
@@ -3380,12 +3047,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 22400000,
   "requiredWeather": null,
-  "category": [
-    "Hero",
-    "Protagonist",
-    "Human",
-    "Baller"
-  ],
+  "category": ["Baller", "Human", "Protagonist", "Hero"],
   "stats": {
     "hp": 66600,
     "atk": 16300
@@ -3404,13 +3066,7 @@ CARDS.push(...[
   "rarity": "Secret",
   "chance": 55500000,
   "requiredWeather": null,
-  "category": [
-    "Supporter",
-    "Human",
-    "Brutal",
-    "Baller",
-    "Captain"
-  ],
+  "category": ["Baller", "Human", "AntiVillian", "Brutal"],
   "stats": {
     "hp": 142000,
     "atk": 8700
@@ -3431,14 +3087,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 0,
     "requiredWeather": null,
-    "category": [
-      "Protagonist",
-      "Unhuman",
-      "Hero",
-      "AntiVillian",
-      "Swordman",
-      "Sins"
-    ],
+    "category": ["Sins", "Protagonist", "Hero", "Unhuman", "Brutal", "Swordman"],
     "stats": {
       "hp": 118000,
       "atk": 45100
@@ -3457,14 +3106,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 20000000,
     "requiredWeather": "Eclipse",
-    "category": [
-      "Villian",
-      "AntiHero",
-      "Sins",
-      "Brutal",
-      "PureEvil",
-      "Unhuman"
-    ],
+    "category": ["Sins", "Protagonist", "Hero", "Unhuman", "Brutal"],
     "stats": {
       "hp": 74900,
       "atk": 18300
@@ -3482,14 +3124,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 19999999,
     "requiredWeather": "Lucky",
-    "category": [
-      "Titan",
-      "Sins",
-      "Brutal",
-      "Magician",
-      "Supporter",
-      "Human"
-    ],
+    "category": ["Sins", "Protagonist", "Hero", "Unhuman", "Brutal"],
     "stats": {
       "hp": 63700,
       "atk": 15600
@@ -3507,13 +3142,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 27000000,
     "requiredWeather": "Wind",
-    "category": [
-      "Unhuman",
-      "Sins",
-      "Magician",
-      "Swordman",
-      "Hero"
-    ],
+    "category": ["Sins", "Protagonist", "Hero", "Unhuman", "Magician", "Supporter"],
     "stats": {
       "hp": 106000,
       "atk": 6500
@@ -3531,14 +3160,7 @@ CARDS.push(...[
     "rarity": "Secret",
     "chance": 26000000,
     "requiredWeather": "Sugar",
-    "category": [
-      "Magician",
-      "Sins",
-      "Unhuman",
-      "AntiVillian",
-      "Hero",
-      "Mastermind"
-    ],
+    "category": ["Sins", "Protagonist", "Hero", "Unhuman", "Magician", "Supporter"],
     "stats": {
       "hp": 83200,
       "atk": 20300
@@ -3556,13 +3178,7 @@ CARDS.push(...[
     "rarity": "Mythic",
     "chance": 0,
     "requiredWeather": null,
-    "category": [
-      "Sins",
-      "Hero",
-      "Human",
-      "Brutal",
-      "Captain"
-    ],
+    "category": ["Sins", "Hero", "Human", "Brutal", "Protagonist"],
     "stats": {
       "hp": 24300,
       "atk": 9300
@@ -3586,13 +3202,7 @@ CARDS.push(
     "requiredWeather": null,
     "evolutionOnly": true,
     "evolvesFrom": "rimuru",
-    "category": [
-      "Protagonist",
-      "Isekai",
-      "Magician",
-      "Swordman",
-      "Hero"
-    ],
+    "category": ["Protagonist", "Unhuman", "Magician", "Supporter", "Isekai", "Mastermind"],
     "stats": {
       "hp": 160000,
       "atk": 39100
@@ -3610,13 +3220,7 @@ CARDS.push(
     "rarity": "Secret",
     "chance": 86000000,
     "requiredWeather": "Raining",
-    "category": [
-      "Draconic",
-      "Isekai",
-      "Hero",
-      "Brutal",
-      "AntiVillian"
-    ],
+    "category": ["Unhuman", "Draconic", "DragonWarrior", "Brutal", "Protagonist"],
     "stats": {
       "hp": 91300,
       "atk": 34900
@@ -3634,12 +3238,7 @@ CARDS.push(
     "rarity": "Secret",
     "chance": 54000000,
     "requiredWeather": "Eclipse",
-    "category": [
-      "Unhuman",
-      "Isekai",
-      "Hero",
-      "Supporter"
-    ],
+    "category": ["Unhuman", "Villian", "Brutal", "Magician", "Supporter"],
     "stats": {
       "hp": 120000,
       "atk": 29400
@@ -3657,13 +3256,7 @@ CARDS.push(
     "rarity": "Secret",
     "chance": 95000000,
     "requiredWeather": "Sunny",
-    "category": [
-      "Captain",
-      "Isekai",
-      "Magician",
-      "Hero",
-      "Swordman"
-    ],
+    "category": ["Unhuman", "Protagonist", "Hero", "Swordman", "Brutal"],
     "stats": {
       "hp": 112000,
       "atk": 42700
@@ -3682,14 +3275,7 @@ CARDS.push(
     "chance": 0,
     "requiredWeather": null,
     "portalOnly": true,
-    "category": [
-      "Villian",
-      "AntiHero",
-      "Magician",
-      "Brutal",
-      "Mastermind",
-      "Isekai"
-    ],
+    "category": ["Human", "Villian", "Mastermind", "AntiHero"],
     "stats": {
       "hp": 126000,
       "atk": 30900
@@ -3710,13 +3296,7 @@ CARDS.push(
     "evolvesFrom": "rukia",
     "element": "Water",
     "rarity": "Mythic",
-    "category": [
-      "Unhuman",
-      "Swordman",
-      "Bleach",
-      "Hero",
-      "AntiVillian"
-    ],
+    "category": ["Reaper", "Swordman", "Human", "Hero", "Bleach"],
     "stats": {
       "hp": 23700,
       "atk": 5800
@@ -3735,15 +3315,7 @@ CARDS.push(
     "riftOnly": true,
     "element": "Nature",
     "rarity": "Secret",
-    "category": [
-      "Unhuman",
-      "Swordman",
-      "Bleach",
-      "Villian",
-      "AntiHero",
-      "Brutal",
-      "Magician"
-    ],
+    "category": ["Unhuman", "Villian", "Brutal", "Reaper", "Bleach"],
     "stats": {
       "hp": 130000,
       "atk": 49800
@@ -3762,15 +3334,7 @@ CARDS.push(
     "requiredWeather": "Reaper",
     "element": "Fire",
     "rarity": "Secret",
-    "category": [
-      "Captain",
-      "Unhuman",
-      "Swordman",
-      "Bleach",
-      "Hero",
-      "AntiVillian",
-      "Brutal"
-    ],
+    "category": ["Reaper", "Human", "Captain", "Hero", "Bleach", "Army"],
     "stats": {
       "hp": 93900,
       "atk": 35900
@@ -3788,15 +3352,7 @@ CARDS.push(
     "requiredWeather": "Reaper",
     "element": "Water",
     "rarity": "Secret",
-    "category": [
-      "Swordman",
-      "Bleach",
-      "Villian",
-      "AntiHero",
-      "Brutal",
-      "Magician",
-      "Gunner"
-    ],
+    "category": ["Unhuman", "Villian", "Reaper", "Bleach", "Gunner"],
     "stats": {
       "hp": 123000,
       "atk": 46900
@@ -3814,15 +3370,7 @@ CARDS.push(
     "requiredWeather": "Reaper",
     "element": "Nature",
     "rarity": "Secret",
-    "category": [
-      "Supporter",
-      "Bleach",
-      "Hero",
-      "AntiVillian",
-      "Unhuman",
-      "Magician",
-      "Swordman"
-    ],
+    "category": ["Reaper", "Human", "Captain", "Mastermind", "Supporter", "Bleach"],
     "stats": {
       "hp": 315000,
       "atk": 19200
@@ -3840,13 +3388,7 @@ CARDS.push(
     "requiredWeather": "Reaper",
     "element": "Dark",
     "rarity": "Common",
-    "category": [
-      "Unhuman",
-      "Bleach",
-      "Brutal",
-      "PureEvil",
-      "Swordman"
-    ],
+    "category": ["Unhuman", "Villian", "Brutal", "Reaper", "Bleach"],
     "stats": {
       "hp": 1680,
       "atk": 410

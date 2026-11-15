@@ -1,6 +1,7 @@
 /* Reagan/robot runtime hooks. No saves, rewards, timers or global battle state. */
 (function(host){
   'use strict';
+ if(host.createReaganSkills?.__reaganWrapped)return;
   host.createReaganSkills=function(api){
     const ID='tower-champion-normal-200', LIMIT=Number.MAX_VALUE/1024;
     const {alive,all,allies,enemies,team,front,has,runtime,atk,hit,heal,refresh,random,log}=api;
@@ -14,7 +15,7 @@
         // Entry means reaching the active frontline, not merely joining a queue.
         for(const lineup of [bs.playerTeam||[],bs.enemyTeam||[]]){
           let unit=front(bs,lineup);
-          while(alive(unit)&&has(unit,ID)&&!state(unit).sacrificed){
+          let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(unit)&&has(unit,ID)&&!state(unit).sacrificed)){
             state(unit).sacrificed=true;
             const recipient=choose(allies(bs,unit,false));
             if(recipient){
@@ -86,4 +87,7 @@
     }
     return {ID,frontline,endTurn,countedAttack,attack,kill,describe,reduction:unit=>!api.suppressed(unit)&&runtime(unit).robotArmor?.5:0};
   };
+ const originalFactory=host.createReaganSkills,cachedFactories=new WeakMap();
+ host.createReaganSkills=function(api,...rest){if(api&&cachedFactories.has(api))return cachedFactories.get(api);const skills=originalFactory.call(this,api,...rest);if(api&&typeof api==='object')cachedFactories.set(api,skills);return skills;};
+ host.createReaganSkills.__reaganWrapped=true;
 })(window);

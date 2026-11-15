@@ -1,6 +1,7 @@
 /* New DragonWarrior skills. Only battle-local state; existing cards are untouched. */
 (function(host){
  'use strict';
+ if(host.createDragonSkills?.__dragon_skillsWrapped)return;
  host.createDragonSkills=function(api){
   const IDS=Object.freeze(['goku-ssj3','vegeta-ssj2','broly','ultimate-gohan','golden-frieza']);
   const {has,alive,all,allies,enemies,team,atk,random}=api;
@@ -48,7 +49,7 @@
   function after(bs,u,target,result,options={}){
    if(!has(u,'goku-ssj3')||options.isFollowUp||!alive(u)||result.skipped||!api.canFollow(u))return;
    const c=state(u,'goku-ssj3');let count=0;
-   while(alive(u)&&has(u,'goku-ssj3')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.30,count>0)){
+   let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,'goku-ssj3')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.30,count>0))){
     target=alive(target)?target:enemies(bs,u)[0];
     const shot=api.attack(bs,u,target,{isFollowUp:true,passiveAttack:true,damageMultiplier:.30,dragonChain:true});
     if(shot.skipped||shot.outOfTurn)break;count++;c.next+=.05;
@@ -64,4 +65,7 @@
   }
   return {IDS,entry,crit,startTurn,healFactor,target,prepare,counted,replacement,critical,after,taken,protect};
  };
+ const originalFactory=host.createDragonSkills,cachedFactories=new WeakMap();
+ host.createDragonSkills=function(api,...rest){if(api&&cachedFactories.has(api))return cachedFactories.get(api);const skills=originalFactory.call(this,api,...rest);if(api&&typeof api==='object')cachedFactories.set(api,skills);return skills;};
+ host.createDragonSkills.__dragon_skillsWrapped=true;
 })(window);

@@ -1,6 +1,7 @@
 /* Gomen combat skills. Runtime-only; no rewards, saves or quest writes. */
 (function(host){
   'use strict';
+ if(host.createGomenSkills?.__gomenWrapped)return;
   host.createGomenSkills=function(api){
     const GOJO='gojo-revice',GETO='geto-young',TOJI='toji',IDS=Object.freeze([GOJO,GETO,TOJI]);
     const {has,id,runtime,alive,all,enemies,atk,random,refresh}=api;
@@ -36,7 +37,7 @@
         const first=options.grimoireInitialResult||api.attack(bs,u,target,{...options,gomenToken:token});
         if(first.skipped||first.outOfTurn||!alive(u))return first;
         const c=state(u,TOJI),initialChance=api.followChance(bs,u,.80);let index=0;
-        while(alive(u)&&has(u,TOJI)&&c.mode==='spear'&&api.canFollow(u)&&enemies(bs,u).length){
+        let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,TOJI)&&c.mode==='spear'&&api.canFollow(u)&&enemies(bs,u).length)){
           // 80%, 75%, ... 5%, 0%: termination comes from the skill's own rule.
           const raw=Math.max(0,initialChance-index*.05),chance=raw>0?api.chainChance(u,raw,index>0):0;if(chance<=0||random()>=chance)break;
           target=alive(target)?target:enemies(bs,u)[0];
@@ -56,4 +57,7 @@
     function badges(u){const out=[];if(has(u,GOJO)){const c=state(u,GOJO);if(c.bonuses.length)out.push({icon:'∞',label:`DAMAGE +${stacks(u)*8}%`,tone:'buff'});if(c.ready)out.push({icon:'✦',label:'NEXT x8',tone:'buff'});}if(has(u,TOJI))out.push({icon:'⚔',label:({spear:'INVERTED SPEAR',katana:'SS KATANA',cloud:'PLAYFUL CLOUD',chains:'THOUSAND CHAINS'})[state(u,TOJI).mode]||'HEAVENLY RESTRICTION',tone:'passive'});return out;}
     return {GOJO,GETO,TOJI,IDS,state,entry,counted,prepare,attack,canChain,chain,linked:(u,o)=>Boolean(o.gomenToken&&chains.get(u)===o.gomenToken),dodge,incoming,defeated,ownStart,endTurn,damageFactor,badges,isGojo:u=>has(u,GOJO)};
   };
+ const originalFactory=host.createGomenSkills,cachedFactories=new WeakMap();
+ host.createGomenSkills=function(api,...rest){if(api&&cachedFactories.has(api))return cachedFactories.get(api);const skills=originalFactory.call(this,api,...rest);if(api&&typeof api==='object')cachedFactories.set(api,skills);return skills;};
+ host.createGomenSkills.__gomenWrapped=true;
 })(window);

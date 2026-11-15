@@ -1,11 +1,14 @@
 /* Tensura: explicit battle hooks; no listeners, intervals or persisted combat state. */
 (function(host){
  'use strict';
+ if(host.createTensuraSkills?.__tensura_passivesWrapped)return;
+ const instances=new WeakMap();
  host.createTensuraSkills=function(api){
+  if(instances.has(api))return instances.get(api);
   const RIM='rimuru-demon-lord',VEL='veldora',DIA='diablo',BEN='benimaru-jura',YUU='yuuki-kagurazaka';
   const IDS=Object.freeze([RIM,VEL,DIA,BEN,YUU]),{has,alive,runtime,all,enemies,atk,random,heal}=api;
   const state=(u,id)=>api.passiveRuntimeFor(u,id).tensura ||= {sage:0,energy:1000,attacks:0,entered:false,execution:false,copy:null,shiftTarget:null};
-  const pending=new WeakMap(),observed=new WeakSet(),proxies=new WeakMap(),killed=new WeakMap();
+  const pending=new WeakMap(),killed=new WeakMap();
   const debuffs=new Set(['stunTurns','freezeTurns','snailTurns','weakenAttackTurns','weakenAttackPct','hypnosisTurns','sinsHypnosisTurns','passiveSuppressionTurns','passiveSuppressedUntilDeath','hindredTurns','akatsukiHypnosis','shibuyaHypnosis','deadlightsHypnosis','akatsukiMiss','akatsukiPoison','akatsukiVoodoo','akatsukiHealBlock','tensuraHypnosis','incomingVulnerabilityTurns']);
   const buffs=new Set(['shield','atkBonusPct','maxHpBonusPct','critChanceBonus','critDamageBonus','damageReductionPct','postReviveDodgeBonus','invincibleTurns','incomingImmuneTurns','immuneTurns','nextAttackMultiplier','nextAttackIsBuffed','nextAttackCritGuaranteed']);
   function duel(bs){const d=bs?.tensuraDuel;if(d&&(!api.inBattle(bs,d.a)||!api.inBattle(bs,d.b))){bs.tensuraDuel=null;return null;}return d||null;}
@@ -21,18 +24,14 @@
   function suppressedByFlame(u){return (u?.passiveState?.burn||[]).some(e=>e.turns>0&&e.tensuraSuppression);}
   function allowGain(bs,u,delta,source=api.currentSource()){if(!(delta>0))return true;if(suppressedByFlame(u))return false;const d=duel(bs);return !d||!participant(d,u)||source===u;}
   function cleanseIncoming(u,key,uncleansable=false){if(uncleansable||!debuffs.has(key)&&!['burn','bleed','poison','passive suppression'].includes(key)||!has(u,RIM))return false;const c=state(u,RIM);if(c.sage<=10)return false;c.sage-=10;api.log('[PASSIVE] Universal Predator cleansed '+key+'.','passive');return true;}
-  function observe(bs,u,r){
-   if(!r||observed.has(r))return r;if(proxies.has(r))return proxies.get(r);
-   const proxy=new Proxy(r,{set(target,key,value){bs=api.currentBattle?.()||bs;
-    const before=target[key];
-    if(buffs.has(key)&&Number(value)>Number(before||0)&&!allowGain(bs,u,Number(value)-Number(before||0)))return true;
-    const activeStatus=Array.isArray(value)?value.some(e=>e?.turns>0):value&&typeof value==='object'?'turns' in value?value.turns>0:true:Boolean(value);
-    if(debuffs.has(key)&&activeStatus&&(typeof value==='number'?value>Number(before||0):value!==before)&&cleanseIncoming(u,key))return true;
-    const lease=api.currentLease();
-    if(lease&&!lease.expired&&buffs.has(key)&&value!==before){const previous=lease.runtime.find(c=>c.target===target&&c.key===key);if(previous)previous.after=value;else lease.runtime.push({target,key,before,after:value});}
-    return Reflect.set(target,key,value);
-   }});proxies.set(r,proxy);observed.add(proxy);return proxy;
-  }
+  function observe(bs,u,r){return api.observeRuntime(bs,u,r,'tensura',[...buffs,...debuffs],(target,key,value)=>{
+    const current=api.currentBattle?.()||bs,before=target[key];
+    if(buffs.has(key)&&Number(value)>Number(before||0)&&!allowGain(current,u,Number(value)-Number(before||0)))return{block:true};
+    const activeStatus=Array.isArray(value)?value.some(e=>e?.turns>0):value&&typeof value==='object'?'turns'in value?value.turns>0:true:Boolean(value);
+    if(debuffs.has(key)&&activeStatus&&(typeof value==='number'?value>Number(before||0):value!==before)&&cleanseIncoming(u,key))return{block:true};
+    const lease=api.currentLease();if(lease&&!lease.expired&&buffs.has(key)&&value!==before){const previous=lease.runtime.find(c=>c.target===target&&c.key===key);if(previous)previous.after=value;else lease.runtime.push({target,key,before,after:value});}
+    return{value};
+  });}
   function entry(bs,u){
    if(has(u,VEL)){const c=state(u,VEL);if(!c.entered){c.entered=true;for(const v of [...enemies(bs,u)])if(alive(u)&&atk(v)<atk(u))api.hit(bs,u,v,atk(u)*2,{passiveAttack:true,specialAttack:true,tensuraEntry:true});}}
   }
@@ -97,6 +96,7 @@
   function turnEnd(bs,u){const p=pending.get(u);if(p?.stage==='stun'&&runtime(u).stunTurns<=0){pending.delete(u);api.disable(u,1,bs,p.source);}const d=duel(bs);if(d&&(!alive(d.a)||!alive(d.b)))bs.tensuraDuel=null;if(!bs.tensuraDuel&&bs.tensuraWaiting?.length){const waiting=bs.tensuraWaiting;bs.tensuraWaiting=[];for(const v of waiting)if(alive(v)&&api.inBattle(bs,v))api.enter(bs,v);}}
   function wave(bs,old){duel(bs);for(const u of bs.playerTeam||[]){const r=runtime(u);for(const key of ['lastFacingEnemy','lastAttacker','noDodgeAgainstUnit'])if(old.includes(r[key]))r[key]=null;if(has(u,RIM)&&old.includes(state(u,RIM).shiftTarget)){state(u,RIM).shiftTarget=null;u.card={...u.card,element:'Dark'};}}}
   function badges(u){const rows=[];if(has(u,RIM))rows.push({icon:'◈',label:'SAGE '+state(u,RIM).sage,tone:'buff'});if(has(u,YUU))rows.push({icon:'◉',label:'SOUL '+state(u,YUU).energy,tone:'buff'});if(runtime(u).tensuraHypnosis>0)rows.push({icon:'⊘',label:'HYPNOSIS · SKIP',tone:'debuff'});return rows;}
-  return {IDS,state,onMatchStart:start,onEntry:entry,beforeAttack,onAttack:attack,afterAttack,beforeDamageTaken:beforeDamage,onFatalHit:fatal,onKill,onStatusInflicted:cleanseIncoming,beforeControl,onTurnEnd:turnEnd,onWave:wave,observe,allowGain,passiveImmune,inactive,effectAllowed,allies,opponents,execute,badges,duel};
+  const skills={IDS,state,onMatchStart:start,onEntry:entry,beforeAttack,onAttack:attack,afterAttack,beforeDamageTaken:beforeDamage,onFatalHit:fatal,onKill,onStatusInflicted:cleanseIncoming,beforeControl,onTurnEnd:turnEnd,onWave:wave,observe,allowGain,passiveImmune,inactive,effectAllowed,allies,opponents,execute,badges,duel};instances.set(api,skills);return skills;
  };
+host.createTensuraSkills.__tensura_passivesWrapped=true;
 })(window);

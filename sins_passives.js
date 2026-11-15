@@ -1,7 +1,10 @@
 /* Seven Sins: battle-local state, bounded summons and shared combat adapters. */
 (function(host){
  'use strict';
+ if(host.createSinsSkills?.__sins_passivesWrapped)return;
+ const instances=new WeakMap();
  host.createSinsSkills=function(api){
+  if(instances.has(api))return instances.get(api);
   const MELI='meliodas',BAN='ban',DIANE='diane',KING='king-harlequin',GOW='gowther',ESC='escanor-the-one';
   const IDS=Object.freeze([MELI,BAN,DIANE,KING,GOW,ESC]);
   const {has,alive,all,allies,enemies,team,runtime,refresh,random}=api;
@@ -17,7 +20,7 @@
    if(delta>0)return false;
    return !(stat==='atk'&&delta<0&&one(u));
   }
-  const proxies=new WeakMap(),observed=new WeakSet(),shieldWriting=new WeakSet();
+  const shieldWriting=new WeakSet();
   const buffFields=new Set(['atkBonusPct','maxHpBonusPct','displayAtkBonusPct','displayHpBonusPct','critChanceBonus','critDamageBonus','damageReductionPct','postReviveDodgeBonus','invincibleTurns','incomingImmuneTurns','immuneTurns','nextAttackMultiplier']);
   function shieldAmount(bs,u,amount){
    if(has(u,ESC))return 0;
@@ -25,21 +28,15 @@
    return Math.max(0,Number(amount)||0)*(king?.75:1);
   }
   function writeShield(u,fn){shieldWriting.add(u);try{return fn();}finally{shieldWriting.delete(u);}}
-  function observe(bs,u,view){
-   if(!view||observed.has(view))return view;
-   if(proxies.has(view))return proxies.get(view);
-   const proxy=new Proxy(view,{set(target,key,value){bs=api.currentBattle?.()||bs;
-    const before=Number(target[key])||0;
-    if(key==='shield'&&!shieldWriting.has(u)&&Number(value)>before)value=before+shieldAmount(bs,u,Number(value)-before);
+  function observe(bs,u,view){return api.observeRuntime(bs,u,view,'sins',['shield',...buffFields,'stunTurns','freezeTurns','weakenAttackTurns','weakenAttackPct'],(target,key,value)=>{
+    const current=api.currentBattle?.()||bs,before=Number(target[key])||0;
+    if(key==='shield'&&!shieldWriting.has(u)&&Number(value)>before)value=before+shieldAmount(current,u,Number(value)-before);
     if(has(u,ESC)){
-     if(buffFields.has(key)&&Number(value)>Math.max(0,before))return true;
-     if(['stunTurns','freezeTurns','weakenAttackTurns','weakenAttackPct'].includes(key)&&Number(value)>0&&one(u))return true;
-     if(key==='atkBonusPct'&&Number(value)<before&&one(u))return true;
-    }
-    return Reflect.set(target,key,value);
-   }});
-   proxies.set(view,proxy);observed.add(proxy);return proxy;
-  }
+      if(buffFields.has(key)&&Number(value)>Math.max(0,before))return{block:true};
+      if(['stunTurns','freezeTurns','weakenAttackTurns','weakenAttackPct'].includes(key)&&Number(value)>0&&one(u))return{block:true};
+      if(key==='atkBonusPct'&&Number(value)<before&&one(u))return{block:true};
+    }return{value};
+  });}
   function exitOne(u){const c=state(u,ESC);c.sun=0;c.mode=0;api.percent(u,'atk','sins:the-one',0);refresh(u);}
   function enterOne(u){
    const c=state(u,ESC);c.mode=5;
@@ -142,6 +139,7 @@
   function immune(u,key){return one(u)&&['stunTurns','freezeTurns','weakenAttackTurns','weakenAttackPct'].includes(key);}
   function hypnosisTarget(bs,u,fallback){return runtime(u).sinsHypnosisTurns>0&&random()<.80?allies(bs,u,false)[Math.floor(random()*allies(bs,u,false).length)]||fallback:fallback;}
   function badges(bs,u){const out=[];if(has(u,ESC)){const c=state(u,ESC);out.push({icon:'☀',label:c.mode?'THE ONE '+c.mode+'t':'SUNSHINE '+c.sun+'/12',tone:'form'});}if(has(u,GOW))out.push({icon:'♥',label:'LUST '+state(u,GOW).lust,tone:'buff'});if(has(u,KING))out.push({icon:'◆',label:'DISASTER '+state(u,KING).rescues+'/3',tone:'passive'});if(has(u,BAN)&&state(u,BAN).stolen.length)out.push({icon:'↙',label:'SNATCH '+state(u,BAN).stolen.length,tone:'buff'});return out;}
-  return {IDS,state,present,one,allowStat,observe,shieldAmount,writeShield,entry,created,startTurn,endTurn,prepare,target,damageBonus,after,crit,dodge,reduction,stolenBonus,consumeHit,counter,protect,fatal,dotFactor,blackExecute,immune,hypnosisTarget,badges,blocksExternal:u=>has(u,ESC)};
+  const skills={IDS,state,present,one,allowStat,observe,shieldAmount,writeShield,entry,created,startTurn,endTurn,prepare,target,damageBonus,after,crit,dodge,reduction,stolenBonus,consumeHit,counter,protect,fatal,dotFactor,blackExecute,immune,hypnosisTarget,badges,blocksExternal:u=>has(u,ESC)};instances.set(api,skills);return skills;
  };
+host.createSinsSkills.__sins_passivesWrapped=true;
 })(window);

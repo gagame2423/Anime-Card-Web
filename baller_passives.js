@@ -1,7 +1,10 @@
 /* Football cards: battle-local counters, bounded redirects and additive stat growth. */
 (function(host){
  'use strict';
+ if(host.createBallerSkills?.__baller_passivesWrapped)return;
+ const instances=new WeakMap();
  host.createBallerSkills=function(api){
+  if(instances.has(api))return instances.get(api);
   const KAISER='michael-kaiser',ISAGI='isagi-yoichi',LORENZO='don-lorenzo',IDS=Object.freeze([KAISER,ISAGI,LORENZO]);
   const {runtime,has,alive,all,allies,enemies,team,atk,random,refresh}=api;
   const state=(u,id)=>api.passiveRuntimeFor(u,id).baller ||= {eye:0,zombie:0,absorbed:0,growth:0,immune:0,reads:new WeakMap(),readActions:new WeakMap(),kills:new WeakSet()};
@@ -67,6 +70,7 @@
   function ownEnd(bs,u){if(!u||!api.ownTurn(bs,u))return;const c=api.passiveRuntimeFor(u,ISAGI).baller;if(c?.immune>0&&api.ownTurns(bs,u)>c.immuneApplied)c.immune--;}
   function immune(u,key){return key==='stunTurns'&&has(u,ISAGI)&&state(u,ISAGI).immune>0;}
   function badges(bs,u){const rows=[];if(has(u,KAISER))rows.push({icon:'◉',label:'EyE '+state(u,KAISER).eye+'/4',tone:'passive',category:'passive'});if(has(u,LORENZO))rows.push({icon:'◆',label:'ZOMBIE '+state(u,LORENZO).zombie+'/10',tone:'passive',category:'passive'});if(has(u,ISAGI))rows.push({icon:'◈',label:'EGO '+state(u,ISAGI).growth+'/5',tone:'buff',category:'buff'});if(bs){const enemy=enemies(bs,u)[0],stacks=enemy?marked(bs,enemy,u):0;if(stacks)rows.push({icon:'◉',label:'READ '+stacks+'/3',tone:'debuff',category:'status'});}return rows;}
-  return {IDS,state,prepare,attack,attacking,transform,present:bs=>all(bs).some(u=>alive(u)&&IDS.some(id=>has(u,id))),direct:(bs,u,target)=>has(u,ISAGI)&&marked(bs,u,target)>=3,reduction,incoming,redirect,damaged,afterDamage,killed,ownStart,ownEnd,immune,badges};
+  const skills={IDS,state,prepare,attack,attacking,transform,present:bs=>all(bs).some(u=>alive(u)&&IDS.some(id=>has(u,id))),direct:(bs,u,target)=>has(u,ISAGI)&&marked(bs,u,target)>=3,reduction,incoming,redirect,damaged,afterDamage,killed,ownStart,ownEnd,immune,badges};instances.set(api,skills);return skills;
  };
+host.createBallerSkills.__baller_passivesWrapped=true;
 })(window);

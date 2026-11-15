@@ -1,7 +1,10 @@
 /* Akatsuki combat only. No inventory writes, timers or progression state. */
 (function(host){
  'use strict';
+ if(host.createAkatsukiSkills?.__akatsuki_passivesWrapped)return;
+ const instances=new WeakMap();
  host.createAkatsukiSkills=function(api){
+  if(instances.has(api))return instances.get(api);
   const IDS=Object.freeze(['itachi-awakened','konan','kisame-hoshigaki','deidara','sasori','kakuzu','hidan','zetsu','orochimaru','pain']);
   const PATHS=Object.freeze(['Deva','Asura','Animal','Preta','Human','Naraka']);
   const NO_LIFE=['konan','deidara','sasori','zetsu'],NO_CLONE=[...NO_LIFE,'orochimaru'];
@@ -179,6 +182,8 @@
   }
   function hypnosisTarget(bs,u,fallback){return runtime(u).akatsukiHypnosis?.turns>0&&random()<.80?pick(allies(bs,u,false))||fallback:fallback;}
   function badges(u){const r=runtime(u),rows=[];if(r.burn.some(e=>e.uncleansable&&e.turns>0))rows.push({label:'BLACK FLAME',icon:'♨',tone:'debuff',category:'status'});if(r.akatsukiPaper)rows.push({label:'PAPER '+r.akatsukiPaper,icon:'▤',tone:'debuff',category:'status'});if(r.akatsukiPoison?.length)rows.push({label:'POISON '+Math.max(...r.akatsukiPoison.map(p=>p.turns))+'t',icon:'☠',tone:'debuff',category:'status'});if(r.akatsukiVoodoo?.length)rows.push({label:'VOODOO',icon:'◈',tone:'debuff',category:'status'});if(r.akatsukiPuppets?.some(p=>alive(p.owner)))rows.push({label:'PUPPET · ATK +10% / HP +15%',icon:'♟',tone:'buff',category:'buff'});if(has(u,'kakuzu'))rows.push({label:'HEART '+(state(u,'kakuzu').hearts||0)+'/5 · '+(u.akatsukiElements||[]).join('/'),icon:'♥',tone:'passive',category:'passive'});if(isPain(u))rows.push({label:'RINNEGAN · '+painState(u).path+(painState(u).path==='Deva'?' '+(painState(u).charge||0)+'/3':''),icon:'◉',tone:'passive',category:'passive'});if(has(u,'itachi-awakened')){const c=state(u,'itachi-awakened');rows.push({label:'TECHNIQUES '+(c.pool?.length||0)+' · COOLDOWN '+(c.cooldown||0),icon:'◉',tone:'passive',category:'passive'});}return rows;}
-  return {IDS,PATHS,state,painState,entry,counted,attack,skipTurn,cloneChance,hasClone,hasLife,uncloneable,noLife,noExternalRevive,reviveAlly,died,killed,fatal,interceptHeal,dodgeChance,dodge,misses,immune,incoming,reflect,damaged,startTurn,endTurn,hypnosisTarget,observeAttack,rememberBurn,restoreBurn,cleanse,clearBuffs,shieldGranted,shieldBroken:u=>{state(u,'itachi-awakened').yata=false;},paperReduction,badges};
+  const skills={IDS,PATHS,state,painState,entry,counted,attack,skipTurn,cloneChance,hasClone,hasLife,uncloneable,noLife,noExternalRevive,reviveAlly,died,killed,fatal,interceptHeal,dodgeChance,dodge,misses,immune,incoming,reflect,damaged,startTurn,endTurn,hypnosisTarget,observeAttack,rememberBurn,restoreBurn,cleanse,clearBuffs,shieldGranted,shieldBroken:u=>{state(u,'itachi-awakened').yata=false;},paperReduction,badges};
+  instances.set(api,skills);return skills;
  };
+host.createAkatsukiSkills.__akatsuki_passivesWrapped=true;
 })(window);

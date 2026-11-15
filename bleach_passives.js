@@ -1,11 +1,14 @@
 /* Bleach skills: deterministic battle hooks, scoped copy state and bounded companions. */
 (function(host){
  'use strict';
+ if(host.createBleachSkills?.__bleach_passivesWrapped)return;
+ const instances=new WeakMap();
  host.createBleachSkills=function(api){
+  if(instances.has(api))return instances.get(api);
   const RUK='rukia-bankai',ULQ='ulquiorra',YAM='yamamoto',STA='coyote-starrk',URA='kisuke-urahara',ARR='normal-arrancar';
   const IDS=Object.freeze([RUK,ULQ,YAM,STA,URA,ARR]),{has,alive,all,allies,enemies,team,runtime,atk,random}=api;
   const state=(u,id)=>api.passiveRuntimeFor(u,id).bleach ||= {entered:false,attacks:0,processed:0,hakka:0,vista:0,form:'base',modeTurns:0,firstRelease:false,shieldTurns:0,shieldCap:0,shieldTag:null,corpse:0,pool:[],readyAt:0,bankai:0,bankaiUsed:false,leftBoost:false};
-  const pendingFreeze=new WeakMap(),seenDeaths=new WeakMap(),seenKills=new WeakMap(),proxies=new WeakMap(),observed=new WeakSet(),writing=new WeakSet();
+  const pendingFreeze=new WeakMap(),seenDeaths=new WeakMap(),seenKills=new WeakMap(),writing=new WeakSet();
   const control=new Set(['stunTurns','freezeTurns','snailTurns','hypnosisTurns','sinsHypnosisTurns','tensuraHypnosis','hindredTurns','spookyFrogTurns','akatsukiHypnosis','shibuyaHypnosis','deadlightsHypnosis','akatsukiMiss','deadlightsFearTurn','noDodgeTurns','passiveSuppressionTurns','passiveSuppressedUntilDeath','akatsukiPoison','akatsukiVoodoo','akatsukiHealBlock','burn','bleed']);
   const statDebuffs=new Set(['weakenAttackTurns','weakenAttackPct','incomingVulnerabilityTurns','incomingVulnerabilityPct','akatsukiPaper']);
   const turn=bs=>Number(bs?.turnCount)||0;
@@ -126,15 +129,10 @@
    const c=has(u,ULQ)?state(u,ULQ):null;
    return Boolean(!statDebuffs.has(key)&&c?.form==='resurreccion'&&runtime(u).shield>0||bankaiOwner(bs,u));
   }
-  function observe(bs,u,r){
-   if(!r||observed.has(r))return r;if(proxies.has(r))return proxies.get(r);
-   const proxy=new Proxy(r,{set(target,key,value){
-    const current=api.currentBattle()||bs;
-    const active=Array.isArray(value)?value.some(e=>e?.turns>0):value&&typeof value==='object'?'turns'in value?value.turns>0:true:Boolean(value);
-    if((control.has(key)||statDebuffs.has(key))&&active&&value!==target[key]&&status(current,u,key,api.currentSource(),{effects:Array.isArray(value)?value:undefined,uncleansable:Array.isArray(value)&&value.every(e=>e.uncleansable)}))return true;
-    return Reflect.set(target,key,value);
-   }});proxies.set(r,proxy);observed.add(proxy);return proxy;
-  }
+  function observe(bs,u,r){return api.observeRuntime(bs,u,r,'bleach',[...control,...statDebuffs],(target,key,value)=>{
+    const current=api.currentBattle()||bs,active=Array.isArray(value)?value.some(e=>e?.turns>0):value&&typeof value==='object'?'turns'in value?value.turns>0:true:Boolean(value);
+    if(active&&value!==target[key]&&status(current,u,key,api.currentSource(),{effects:Array.isArray(value)?value:undefined,uncleansable:Array.isArray(value)&&value.every(e=>e.uncleansable)}))return{block:true};return{value};
+  });}
   function bleedBonus(bs,source){return source?allies(bs,source).filter(u=>has(u,URA)&&api.assistance(bs,u,source)).reduce((n,u)=>n+atk(u)*.25,0):0;}
   function startTurn(bs){for(const u of [...all(bs)])if(alive(u)&&u.bleachExpiresAt!==undefined&&turn(bs)>=u.bleachExpiresAt){u.bleachExpired=true;api.forceDeath(bs,u.companionOwner,u);}for(const u of all(bs)){if(!alive(u))continue;if(bankaiOwner(bs,u))cleanseNormal(u,true);else if(has(u,ULQ)&&state(u,ULQ).form==='resurreccion'&&runtime(u).shield>0)cleanseNormal(u);const pending=runtime(u).bleed;if(pending?.length)status(bs,u,'bleed',pending[0].source,{effects:pending});}}
   function endTurn(bs,actor){
@@ -162,6 +160,7 @@
   function dodge(u){return has(u,STA)?.24:0;}
   function onDodge(u){if(has(u,STA))state(u,STA).leftBoost=true;}
   function badges(u){const rows=[];for(const id of IDS)if(has(u,id)){const c=state(u,id);if(id===RUK)rows.push({icon:'❄',label:'HAKKA '+c.hakka+'/100',tone:'buff'});if(id===ULQ)rows.push({icon:'◈',label:c.form==='base'?'VISTA '+c.vista+'/100':c.form.toUpperCase()+' '+c.modeTurns+'t · VISTA '+c.vista,tone:'form'});if(id===YAM)rows.push({icon:'♨',label:'CORPSE '+c.corpse+' · '+c.pool.length+' TECHNIQUES',tone:'buff'});if(id===STA)rows.push({icon:'◆',label:c.leftBoost?'SONÍDO · LEFT 75%':'CERO METRALLETA',tone:'buff'});if(id===URA&&c.bankai)rows.push({icon:'✚',label:'KANNONBIRAKI '+c.bankai+'t',tone:'form'});}return rows;}
-  return {IDS,state,entry,beforeAttack,multiplier,counted,afterAttack,attack,status,observe,bleedBonus,startTurn,endTurn,killed,died,fronts,scorch,cleanup,dodge,onDodge,badges,forbidden,cleanseNormal};
+  const skills={IDS,state,entry,beforeAttack,multiplier,counted,afterAttack,attack,status,observe,bleedBonus,startTurn,endTurn,killed,died,fronts,scorch,cleanup,dodge,onDodge,badges,forbidden,cleanseNormal};instances.set(api,skills);return skills;
  };
+host.createBleachSkills.__bleach_passivesWrapped=true;
 })(window);

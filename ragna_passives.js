@@ -1,7 +1,10 @@
 /* Ragna and Woltekamui: battle-local state, no inventory or progression writes. */
 (function(host){
  'use strict';
+ if(host.createRagnaSkills?.__ragna_passivesWrapped)return;
+ const instances=new WeakMap();
  host.createRagnaSkills=function(api){
+  if(instances.has(api))return instances.get(api);
   const RAGNA='boss-event-ragna',WOLTE='woltekamui',IDS=Object.freeze([RAGNA,WOLTE]);
   const {has,alive,allies,enemies,team,runtime,atk,random}=api;
   const state=(unit,id)=>api.passiveRuntimeFor(unit,id).ragna ||= {rage:0,nextBleed:false};
@@ -24,7 +27,7 @@
    if(c.nextBleed){c.nextBleed=false;if(result.hit&&alive(target)&&api.allowed(target,u))api.dot(target,'bleed',3,atk(u)*.40,u);}
    if(options.isFollowUp||options.isCounter||!api.canFollow(u))return;
    let count=0,chance=.22;
-   while(alive(u)&&has(u,WOLTE)&&enemies(bs,u).length&&api.canFollow(u)){
+   let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,WOLTE)&&enemies(bs,u).length&&api.canFollow(u))){
     if(random()>=api.followChance(bs,u,chance,count>0,.72))break;
     const enemy=alive(target)?target:enemies(bs,u)[0];
     const shot=api.attack(bs,u,enemy,{isFollowUp:true,passiveAttack:true,damageMultiplier:.50,wolteChain:true});
@@ -35,6 +38,7 @@
    }
   }
   function badges(u){const rows=[];if(has(u,RAGNA))rows.push({icon:'⚔',label:`RAGE ${state(u,RAGNA).rage}/300`,tone:'passive',category:'passive'});if(has(u,WOLTE)&&state(u,WOLTE).nextBleed)rows.push({icon:'🩸',label:'NEXT ATTACK · BLEED',tone:'passive',category:'passive'});return rows;}
-  return {IDS,counted,critical,fatal,immune,dotFactor,dodgeChance,dodged,after,badges};
+  const skills={IDS,counted,critical,fatal,immune,dotFactor,dodgeChance,dodged,after,badges};instances.set(api,skills);return skills;
  };
+host.createRagnaSkills.__ragna_passivesWrapped=true;
 })(window);

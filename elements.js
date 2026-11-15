@@ -29,6 +29,9 @@
     const type = of(value);
     return type ? `<span class="element-badge" data-element="${type}" title="${type} element" aria-label="${type} element"><img src="${ICONS[type]}" alt="" width="28" height="28"></span>` : '';
   }
+  function inlineMarkup(value) {
+    const type=of(value);return type?`<span class="element-inline" data-element="${type}"><img src="${ICONS[type]}" alt="" width="20" height="20">${type}</span>`:'';
+  }
   function renderBadge(container, value) {
     if (!container) return;
     const type = of(value), prior = container.querySelector(':scope > .element-badge');
@@ -42,5 +45,5 @@
     badge.append(img); container.insertBefore(badge, container.querySelector(':scope > .drop-rate'));
   }
   function compare(a, b) { return TYPES.indexOf(of(a)) - TYPES.indexOf(of(b)); }
-  host.ElementSystem = Object.freeze({ TYPES, COUNTERS, ICONS, MATRIX, of, multiplier, damage, badgeMarkup, renderBadge, compare });
+  host.ElementSystem = Object.freeze({ TYPES, COUNTERS, ICONS, MATRIX, of, multiplier, damage, inlineMarkup, badgeMarkup, renderBadge, compare });
 })(window);

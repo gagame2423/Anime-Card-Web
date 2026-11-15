@@ -1,258 +1,488 @@
-PASSIVE AUDIT — AUTO CHESS UPDATE
-Ngày: 15/11/2026 • Build: 20261115-autochess-1
+PASSIVE AUDIT — AUTO CHESS: RE-ENTRANCY, AUGMENTS & TELEMETRY
+Ngày: 15/11/2026 • Build: 20261115-autochess-augments-1
 
-autochess.js → synergies → bots → view → tactical combat được triển khai theo
-năm phase yêu cầu; module load order đặt combat trước view và app cuối cùng.
-Không thêm card hoặc sửa native card definitions của roster 217 thẻ.
+SCOPE / FIXES
+- Full roster: 217 canonical cards; exact category refresh for all 217.
+  cards.js non-category fields compared byte-for-value against previous build.
+- Sins/Tensura/Bleach/Tower200: one shared plain descriptor observer registry;
+  no layered Proxy setters or Reflect.set cycles. Hook labels install once.
+- All 9 *_passives.js: idempotent script guards and per-API factory caches.
+  Other chained skill factories retain isolated state and are cached per API.
+- ensureRuntime re-entry guard; per-field setter guard and bounded callback depth.
+  try/finally releases guards even after a blocked transform or thrown callback.
+- damageUnit and champion hit guard source re-entry plus depth > 2. Sequential
+  follow-ups remain valid after the previous resolution unwinds.
+- Malevolent King: follow-up slashes no longer open another full nested volley.
+  Auto Chess has a shared 64-dispatch budget per action, plus local chain caps.
+  This prevents multiplicative nesting even when each individual loop is bounded.
+- Combat units/stats/runtime and match Relics are isolated from permanent inventory.
+  The copied-passive virtual view remains private to its copy scope; units do not
+  acquire stacked Proxy observers. No global per-unit event listeners are added.
+- Deterministic native grid scheduler, event order and seeded random source remain
+  in use. Worker has its own module/runtime instances and cannot write localStorage.
+- Shield/heal/HP-loss/kill measurements feed match-local telemetry. One official
+  battle per tactician/round; ghost opponents do not duplicate the defender record.
+- Augments are match-local: 3 Armories, slot rerolls once, real bot selections,
+  ISO UTC weekly pool fixed at match creation, capped Gold credited centrally.
 
-Tactical pipeline:
-- Normalize battle-local stats, attach match Relic copy, prepare native ledger.
-- Snapshot 43 synergies; apply start buffs trước entry effects.
-- Grid scheduler chọn actor/nearest enemy, giữ native own-turn phase context.
-- Movement/range → native status control → native attack/counter/follow-ups.
-- Central damage → shield/DR/true damage → fatal/revive/kill → trait procs.
-- Own-turn expiry và global turn clock riêng (1.35 giây); native immunity giữ nguyên.
-- Summon admission/grid sync; hết fight dispose isolated runtime.
-- Một Worker/lobby chạy native engine, gửi visual state; RAF chỉ render/interpolate.
-  Worker không có localStorage. Save & Exit terminate Worker và revoke Blob URL.
+RUNTIME VERIFICATION FOR THIS PATCH
+- 217/217 grid scenarios ran up to 40 simulated seconds with high-HP opponents,
+  followed by fatal-hit probes and repeated status/shield writes: zero exceptions.
+- Four mixed 9v9 copy/reflect/summon fixtures, each repeated with the same seed:
+  equal final state and released damage guards. Normal-mode regression included.
+- Re-loading passive/helper scripts did not install duplicate wrappers.
+- Native vs Worker: identical complete outcome including telemetry; compact
+  numeric metrics streamed during combat; disposed pool retained no fight.
+- Full seeded lobbies verified all 8 rows with real damage, economy, card records,
+  unique displayed placement and one reward award. Living bots marked provisional.
+- Armories, per-slot reroll, duplicate-pick prevention, UTC ISO year boundaries,
+  hard +16 bonus Gold / +2 card Gold caps and guaranteed Relic count/tier ranges.
+- Desktop/mobile geometry, Armory, element/role/active-trait inspection, touch hold
+  without purchase, report tabs, expanded bot rows and fresh-state exit checked.
+- All 8 reward tiers/multipliers, interrupted main/item save, retry with frozen
+  quote, old-checkpoint replay and disposed-session guards passed.
+- Full modified source syntax checked. See README for application and formulas.
 
-Verification:
-- 217 native card grid scenarios (tối đa 40 simulated seconds mỗi case).
-- Ba full seeded lobbies có 8 placement duy nhất; reward một lần/match.
-- Native/Worker fight cùng seed: cùng winner/survivors/time.
-- 20 model/economy/fusion/rollback/reload/odd-lobby assertions.
-- 15,000 fusion trials: Supporter 75/80/85% theo 1/2/3 nguyên liệu Supporter.
-- Holy true damage bypass elemental/DR tương ứng; duplicate card không tăng trait;
-  Unique Potara cho cả hai đội bằng match-local Relics.
-- Actual account material receipt: duplicate Claim/checkpoint replay không tăng thêm.
-- UI desktop/portrait/landscape; pointer placement/sell, anvil, relic tap/fusion,
-  equipped Relic return, worker/RAF/token/FX cleanup qua nhiều open/exit cycles.
-- Regression Bleach 76 checks, Sins 67; PvP 39 deterministic steps/3 seeds;
-  Infinity 100 transitions và Tower 21 fresh matches. Không reward writes từ simulations.
+COVERAGE LIMITS
+These are runtime scenarios and targeted regressions, not a proof of every branch
+of every possible mutation/copy/trait/Relic combination. Damage totals count actual
+HP loss; healing/Shield totals count actual gains. Legacy runs are marked partial.
+A human elimination ends the run; live bot rankings reflect the exit snapshot,
+not future matches. Headless Chromium does not establish a 60-FPS guarantee on
+all physical Android/iOS hardware. No media files are included in this patch.
 
-Limits: scenario coverage không chứng minh mọi team, mutation, copied passive,
-relic combination hoặc mọi browser/device đạt 60 FPS. Native passive caps và
-mode-only hard cap 48 living units bảo vệ grid khỏi summon recursion.
-Các kết quả runtime trong danh sách dưới đây là native grid smoke scenarios;
-không được hiểu là kiểm chứng toàn bộ nhánh passive của từng thẻ.
-
-CARD REGISTRY / RUNTIME RESULTS
+CARD REGISTRY / RUNTIME RESULTS (updated categories)
 1. Naruto Kid [starter-common] — First Strike — PASS
+   Categories: Protagonist, Hero, Ninja, Human
 2. Normal Demon [normal-demon] — Lifesteal — PASS
+   Categories: Villian, Unhuman, Brutal
 3. Sasuke Kid [sasuke-kid] — Chidori — PASS
+   Categories: AntiHero, Ninja, Human
 4. Powerless Guy [deku-mc] — What can i get you sir — PASS
+   Categories: Human, Alternative, Supporter
 5. Ichigo Young [starter-rare] — Afterimage — PASS
+   Categories: Protagonist, Hero, Human, Swordman, Reaper, Bleach
 6. Gon Kid [gon-kid] — Rock — PASS
+   Categories: Protagonist, Hero, Human, Hunter
 7. Tanjiro [tanjiro] — Rock — PASS
+   Categories: Protagonist, Hero, Human, DemonSlayer, Swordman
 8. Luffy Kid [starter-epic] — GOMU NO MU NO PISTOL — PASS
+   Categories: Protagonist, Hero, Pirate, Human, Captain
 9. Six Seven [six-seven] — SIX SEVEN — PASS
+   Categories: Alternative, Supporter
 10. Kaneki [kaneki-ghoul] — GHOUL — PASS
+   Categories: Protagonist, AntiHero, Unhuman, Brutal
 11. The Trapper [the-trapper] — Trap — PASS
+   Categories: Villian, VideoGame, Brutal, Hunter, Human
 12. Nezuko [nezuko] — Bleed — PASS
+   Categories: Unhuman, Supporter, DemonSlayer
 13. Buggy [buggy] — Chop Chop — PASS
+   Categories: Pirate, Human, AntiVillian, Supporter, Captain
 14. Bounty Hunter [bounty-hunter] — BOUNTY — PASS
+   Categories: Hunter, Human, Alternative, Brutal
 15. Jotaro Kujo [jotaro-kujo] — Ora Ora — PASS
+   Categories: JoJo, Protagonist, Hero, Human
 16. Hakari [hakari] — Lucky Train — PASS
+   Categories: Jujutsu, Protagonist, Human, Brutal
 17. Saber [saber] — EXCALIBUR!!! — PASS
+   Categories: Fate, Hero, Protagonist, Swordman
 18. Jonathan Joestar [jonathan-joestar] — HAMONNN — PASS
+   Categories: JoJo, Protagonist, Hero, Human, Swordman
 19. Son Goku [starter-legendary] — Kamehameha — PASS
+   Categories: DragonWarrior, Protagonist, Hero, Unhuman
 20. Vegeta [vegeta] — Super Vegeta — PASS
+   Categories: DragonWarrior, AntiHero, Unhuman, Brutal, PlanetDestroyer
 21. Kakashi [kakashi] — Kamui — PASS
+   Categories: Ninja, Human, Hero, Captain
 22. Kamen Rider Kuuga [kr-kuuga] — KUUGA — PASS
+   Categories: Hero, Protagonist, Unhuman
 23. Bulma [bulma] — WISH — PASS
+   Categories: Supporter, Human, Alternative, Mastermind, DragonWarrior
 24. Denji [denji] — POCHITA — PASS
+   Categories: Protagonist, AntiHero, Unhuman, Brutal
 25. Uchiha Itachi [uchiha-itachi] — Amaterasu — PASS
+   Categories: Ninja, Human, AntiHero, Brutal, Mastermind
 26. Madness Doctor [madness-doctor] — Madness — PASS
+   Categories: Villian, Brutal, Alternative, Mastermind
 27. Erza [erza] — MAGIC ARMOR — PASS
+   Categories: Swordman, Magician, Hero, Human
 28. Yuji Itadori [yuji-itadori] — BLACK FLASH — PASS
+   Categories: Jujutsu, Protagonist, Hero, Human, Brutal
 29. Guts [guts] — OUTRAGE — PASS
+   Categories: Berserk, Protagonist, AntiHero, Swordman, Human, Brutal
 30. Polnareff [polnareff] — SILVER CHARIOT — PASS
+   Categories: JoJo, Supporter, Human, Swordman, Hero
 31. The Flash [the-flash] — FLASH — PASS
+   Categories: Hero, Human, Protagonist, Alternative
 32. Rimuru [rimuru] — SLIME — PASS
+   Categories: Protagonist, Unhuman, Magician, Supporter, Isekai
 33. The Truth [starter-secret] — Omniscience — PASS
+   Categories: Unhuman, Alternative, Magician
 34. Viltrumite [viltrumite] — PUNCH — PASS
+   Categories: Unhuman, Villian, Brutal, PlanetDestroyer
 35. Mahito [mahito] — Idle Transfiguration — PASS
+   Categories: Jujutsu, Villian, Unhuman, Brutal, PureEvil
 36. BlackBeard [blackbeard] — Liberation — PASS
+   Categories: Pirate, Villian, Human, Brutal, Captain
 37. Garp [garp] — Fist of Love — PASS
+   Categories: Human, Captain, Hero, Brutal, Army
 38. Erwin [erwin] — CAPTAIN — PASS
+   Categories: Captain, Human, Army, Hero, TitanSlayer
 39. Boa Hancock [boa-hancock] — Mero Mero — PASS
+   Categories: Pirate, Human, AntiVillian, Captain
 40. Senku [senku] — Chemistry — PASS
+   Categories: Human, Supporter, Alternative, Mastermind
 41. Grimmjaw [grimmjaw] — Gran Rey Cero — PASS
+   Categories: Unhuman, AntiVillian, Brutal, Reaper, Bleach
 42. Reigen [reigen] — Scam — PASS
+   Categories: Human, Supporter, Alternative, Mastermind
 43. Kamen Rider Kabuto [kamen-rider-kabuto] — CLOCK UP — PASS
+   Categories: Hero, Protagonist, Human
 44. Meruem [meruem] — Aura Synthesis — PASS
+   Categories: Villian, Unhuman, Brutal, AntiVillian, Mastermind
 45. Frieza [frieza] — Telekinesis — PASS
+   Categories: Villian, Unhuman, Brutal, PureEvil, PlanetDestroyer, Army
 46. Adam Francis [adam-francis] — Champion of Light — PASS
+   Categories: VideoGame, Human, Supporter, Alternative
 47. Katakuri [katakuri] — MOCHI — PASS
+   Categories: Pirate, AntiVillian, Human, Brutal
 48. WhiteBeard [whitebeard] — Quake Hermit — PASS
+   Categories: Pirate, Captain, Human, Brutal, Army
 49. Doppio [doppio] — FROG — PASS
+   Categories: JoJo, Villian, Human, Supporter, Alternative
 50. Shanks [shanks] — HAKI — PASS
+   Categories: Pirate, Captain, Human, Hero, Swordman, Brutal
 51. Metal Cooler [metal-cooler] — CLONE — PASS
+   Categories: Villian, Unhuman, Brutal, PlanetDestroyer, Army
 52. Gohan [gohan] — MASENKO — PASS
+   Categories: DragonWarrior, Hero, Human, Protagonist
 53. Yuno [yuno] — Zephyr Bow — PASS
+   Categories: Magician, Human, Protagonist
 54. Asta [asta] — ANTI MAGIC — PASS
+   Categories: Protagonist, Hero, Human, Swordman, Brutal
 55. Demon Asta [asta-demon] — ANTI MAGIC BOOK — PASS
+   Categories: Protagonist, AntiHero, Unhuman, Swordman, Brutal
 56. Nami [nami] — Greedy — PASS
+   Categories: Pirate, Human, Supporter
 57. Giyu Tomioka [giyu-tomioka] — Dead Calm — PASS
+   Categories: DemonSlayer, Swordman, Human, Hero
 58. Sea Beast [sea-beast] — Big Fish — PASS
+   Categories: Unhuman, Villian, Brutal, Hunter
 59. Arlong [arlong] — ZAWATER — PASS
+   Categories: Villian, Unhuman, Pirate, Brutal, Captain
 60. Aquaman [aquaman] — AQUARIUM — PASS
+   Categories: Hero, Unhuman, Captain
 61. Noelle Silva [noelle-silva] — Tsunami Water — PASS
+   Categories: Magician, Supporter, Human, Hero
 62. Weather Report [weather-report] — BUBBLE CONTROL — PASS
+   Categories: JoJo, Supporter, Magician
 63. Piccolo [piccolo] — AURA FARMER — PASS
+   Categories: DragonWarrior, Unhuman, Hero, Supporter, Brutal
 64. Peashooter [peashooter] — Plant — PASS
+   Categories: VideoGame, Supporter, Alternative, Unhuman
 65. Hutao [hutao] — Fire Burst — PASS
+   Categories: VideoGame, Magician, Human
 66. Escanor [weather-solar-deity] — SUNNY — PASS
+   Categories: Sins, Hero, Human, Brutal
 67. Builderman [builderman] — DEVELOPER — PASS
+   Categories: VideoGame, Supporter, Alternative
 68. Aatrox [aatrox] — WORLD ENDER — PASS
+   Categories: VideoGame, Unhuman, Brutal, Swordman, Villian
 69. Griffith [weather-eclipse-harvester] — ECLIPSED — PASS
+   Categories: Villian, Unhuman, Brutal, AntiVillian, Berserk, Swordman
 70. Dante Limbus [dante-limbus] — M@!L%#TH — PASS
+   Categories: VideoGame, Protagonist, Human, Swordman, Brutal
 71. Adult Gon [adult-gon] — END!!! — PASS
+   Categories: Protagonist, Hunter, Human, Brutal
 72. Rukia [rukia] — Freeze — PASS
+   Categories: Reaper, Swordman, Supporter, Human, Hero, Bleach
 73. Ice Admiral [ice-admiral] — Ice Age — PASS
+   Categories: Human, Magician, Captain, Villian, Army
 74. Esdeath [weather-frost-sovereign] — Absolute Zero — PASS
+   Categories: Villian, Human, Magician, Brutal, PureEvil, Captain, Army, Swordman
 75. Toshiro [toshiro] — Absolute Zero — PASS
+   Categories: Reaper, Swordman, Human, Hero, Bleach, Captain
 76. Android 21 [android-21] — Sweet Destruction — PASS
+   Categories: AntiVillian, Unhuman, Magician, Brutal, VideoGame, DragonWarrior
 77. Yuta Okkotsu [yuta-okkotsu] — Cursed Love — PASS
+   Categories: Jujutsu, Protagonist, Human, Swordman, Hero
 78. Luffy Nightmare [luffy-nightmare] — ENHANCE — PASS
+   Categories: Pirate, Protagonist, Brutal, Berserk, Unhuman, Captain
 79. Igris [weather-shadow-monarch] — SHADOW KNIGHT — PASS
+   Categories: Supporter, Unhuman, Swordman, Army
 80. Cid Atomic [cid-shadow] — I AM ATMOIC !!! — PASS
+   Categories: Protagonist, Swordman, Human, Magician, Isekai
 81. Enderman [enderman] — PEARL — PASS
+   Categories: VideoGame, Unhuman, Brutal
 82. Homura Akemi [homura-akemi] — Time Manipulation — PASS
+   Categories: Magician, Protagonist, AntiHero, Human
 83. Kamen Rider Decade [kr-decade] — Rider Card — PASS
+   Categories: Hero, Protagonist, Human, Alternative
 84. Uchiha Sasuke [uchiha-sasuke] — Storm Susano — PASS
+   Categories: Ninja, AntiHero, Human, Swordman, Brutal
 85. Light Admiral [light-admiral] — Light Speed — PASS
+   Categories: Human, Magician, Captain, Villian, Army
 86. Gojo Young [gojo-young] — Infinity — PASS
+   Categories: Jujutsu, Hero, Human, Brutal, Magician
 87. The First Human [weather-heavenly-seraph] — Ascension — PASS
+   Categories: Unhuman, Villian, Brutal, PureEvil
 88. Sailor Moon [sailor-moon] — Moon Manipulation — PASS
+   Categories: Hero, Protagonist, Magician, Human, Supporter
 89. Jin Mori [jin-mori] — 72 Magic Spell — PASS
+   Categories: Protagonist, Hero, Human, Brutal
 90. Wish [wish] — Heavenly Blessing — PASS
+   Categories: Alternative, Supporter, Magician
 91. Uchiha Shisui [weather-tsukuyomi-eye] — TSUKUYOMI — PASS
+   Categories: Ninja, Human, Hero, Supporter
 92. Diavolo [diavolo] — EPITAH — PASS
+   Categories: JoJo, Villian, Human, Brutal, Mastermind
 93. Kaguya [kaguya] — Dimensional Domain — PASS
+   Categories: Villian, Unhuman, Magician, PureEvil
 94. Vasto Lord [weather-reaper-hollow] — Last Breath — PASS
+   Categories: Unhuman, Villian, Brutal, Reaper, Bleach
 95. Subaru [subaru] — Return By Death — PASS
+   Categories: Protagonist, Human, Supporter, Alternative, Isekai
 96. Dio Brando [dio-brando] — WGRYYYY — PASS
+   Categories: JoJo, Villian, Unhuman, Brutal, PureEvil
 97. Malevolent King [weather-malevolent-king] — Malevolent Kitchen — PASS
+   Categories: Villian, Unhuman, PureEvil, Brutal, Army, Magician, Jujutsu
 98. Doflamingo [doflamingo] — STRING ARMY — PASS
+   Categories: Pirate, Villian, Human, Brutal, Captain, Mastermind
 99. Hakari Jackpot [hakari-jackpot] — JACKPOT — PASS
+   Categories: Jujutsu, Protagonist, Human, Brutal
 100. Mahoraga [mahoraga] — ADAPTION — PASS
+   Categories: Jujutsu, Unhuman, Brutal
 101. Equinox [tower-champion-normal] — Emotional Meter — PASS
+   Categories: VideoGame, Alternative, Brutal
 102. Aqua [tower-champion-raining] — Useless — PASS
+   Categories: Supporter, Magician, Unhuman, Isekai
 103. Ice King [tower-champion-snowing] — Ice Manipulation — PASS
+   Categories: AntiVillian, Magician, Human, Alternative
 104. Charizard Mega X [tower-champion-sunny] — Solar Claw — PASS
+   Categories: Unhuman, Brutal, Alternative, VideoGame, Draconic
 105. Majin Buu [tower-champion-sugar] — Candy Eater — PASS
+   Categories: Villian, Unhuman, Brutal, AntiVillian, DragonWarrior
 106. Aizen Beyond [tower-champion-reaper] — Illusion Shattering Flower — PASS
+   Categories: Villian, Reaper, Unhuman, Brutal, PureEvil, Bleach, Swordman, Captain, Mastermind
 107. Wonder Of You [tower-champion-eclipse] — Calamity — PASS
+   Categories: JoJo, Supporter, Magician, Alternative
 108. Thukuna [tower-champion-malevolent] — Malevolent Kitchen — PASS
+   Categories: Jujutsu, Villian, Unhuman, Brutal, PureEvil
 109. Naruto x Sasuke [tower-champion-tsukuyomi] — Datebayo — PASS
+   Categories: Ninja, Protagonist, Hero, Human, Brutal
 110. The Judgement [tower-champion-heavenly] — Divine Light — PASS
+   Categories: Alternative, Magician, Unhuman, Supporter
 111. Kamen Rider Dark Decade [tower-champion-shadow] — Dark Aurora — PASS
+   Categories: Villian, AntiVillian, Human, Alternative, Brutal
 112. Mihawk [raid-secret-mihawk] — Hawkeye — PASS
+   Categories: Swordman, Human, AntiVillian, Brutal, Pirate
 113. Ace [raid-secret-ace] — Mera Mera — PASS
+   Categories: Pirate, Human, Hero, Supporter, Brutal, Captain
 114. Marco [raid-secret-marco] — Phoenix Inferno — PASS
+   Categories: Pirate, Human, Supporter, Hero, Captain
 115. Funny Valentine [funny-valentine] — D4C — PASS
+   Categories: JoJo, Villian, Human, Brutal, Mastermind
 116. Dio The World [dio-the-world] — The World — PASS
+   Categories: JoJo, Villian, Unhuman, Brutal, PureEvil
 117. Joseph Joestar [joseph-joestar] — Secret Techniques — PASS
+   Categories: JoJo, Protagonist, Hero, Human, Supporter
 118. Jolyne Joestar [jolyne-joestar] — Stone Free — PASS
+   Categories: JoJo, Protagonist, Hero, Human, Brutal
 119. Tohth [tohth] — OinGo BoinGo — PASS
+   Categories: JoJo, Supporter, Magician, Alternative
 120. Emmu [emmu] — Sleep Demon Art — PASS
+   Categories: Human, Supporter, Villian, DemonSlayer, Unhuman, Brutal, PureEvil
 121. Josuke [josuke] — Crazy Diamond — PASS
+   Categories: JoJo, Protagonist, Hero, Human, Supporter
 122. Akaza [akaza] — Destructive Demon Art — PASS
+   Categories: DemonSlayer, Villian, Unhuman, Brutal
 123. Awakened Doflamingo [awakened-doflamingo] — Ito Ito — PASS
+   Categories: Pirate, Villian, Human, Brutal, Captain, PureEvil, Mastermind
 124. Prime Garp [prime-garp] — Galaxy Impact — PASS
+   Categories: Hero, Human, Captain, Brutal, Army
 125. Alucard [boss-event-alucard] — Bird of Hermes — PASS
+   Categories: Protagonist, AntiHero, Unhuman, Brutal, Hunter, Gunner
 126. Madara Lubu [madara-lubu] — Divine Steed — PASS
+   Categories: Ninja, Villian, Unhuman, Brutal, Army, Mastermind
 127. Sung Jin Woo [sung-jin-woo] — Systems Stats — PASS
+   Categories: Protagonist, Hunter, Human, Supporter, Army, Brutal
 128. Frieren [frieren] — Endless Mana — PASS
+   Categories: Protagonist, Magician, Supporter, Unhuman, Hero
 129. Alexander Anderson [alexander-anderson] — Pray to God — PASS
+   Categories: AntiVillian, Human, Brutal, Hunter, Swordman
 130. Julius [julius] — Time Grimoire — PASS
+   Categories: Magician, Human, Captain, Hero, Supporter, Mastermind
 131. Speed Wizard [speed-wizard] — Godspeed — PASS
+   Categories: Alternative, Magician, Human
 132. Lucius Zogratis [boss-event-lucius] — All Grimoire — PASS
+   Categories: Villian, Human, Magician, Brutal, PureEvil, Alternative, Mastermind
 133. Sea Goddess Valkyrie [sea-goddess-valkyrie] — Ultimate Tsunami — PASS
+   Categories: Unhuman, Supporter, Magician
 134. Yuno Spirit [yuno-spirit] — Spirit Wind Grimoire — PASS
+   Categories: Magician, Supporter, Human, Protagonist
 135. Yuno Spirit Demonic [tower-champion-lucky] — Anti Spirit Grimoire — PASS
+   Categories: Magician, Human, Brutal, Protagonist
 136. Xtreme Chan [tower-champion-wind] — The Fuuto Wind — PASS
+   Categories: Alternative, Supporter, Magician
 137. Star Plantinum Requiem [tower-champion-bizare] — SPR — PASS
+   Categories: JoJo, Protagonist, Unhuman, Brutal, Alternative
 138. Shadow The World Requiem [tower-champion-shadow-200] — STWR — PASS
+   Categories: JoJo, Villian, Unhuman, Brutal, Alternative
 139. Reagan Ridley [tower-champion-normal-200] — Mad Scientist — PASS
+   Categories: Human, Supporter, Alternative, Mastermind
 140. Shirou [shirou] — Rose Shield — PASS
+   Categories: Swordman, Fate, Hero, Protagonist, Magician
 141. Kiritsu [kiritsu] — Hitman — PASS
+   Categories: Fate, Brutal, AntiVillian, Gunner, Human
 142. Mash [mash] — Shield — PASS
+   Categories: Hero, Fate, Supporter, Human
 143. Gilgamesh [gilgamesh] — King of Heros — PASS
+   Categories: Villian, Hero, PureEvil, Fate, Swordman
 144. Cu Chalinn [cu-chalinn] — Gae Blog — PASS
+   Categories: Hero, Swordman, Fate, Human
 145. Saber Knight [saber-knight] — EXCALIBURH — PASS
+   Categories: Hero, Swordman, Fate, Human
 146. Iskandar [iskandar] — Ionian Hetairoi — PASS
+   Categories: Army, Fate, Swordman, Captain, Hero, Human
 147. Medea [medea] — Rule Breaker — PASS
+   Categories: Villian, Fate, Magician, Human
 148. Merlin [merlin] — Noble Phantasm — PASS
+   Categories: Hero, Magician, Fate, Swordman, Human, Supporter
 149. Gilgamesh Chan [tower-champion-heavenly-200] — Enuma English — PASS
+   Categories: AntiHero, VideoGame, Fate, Alternative
 150. The Legion [the-legion] — Frenzy — PASS
+   Categories: VideoGame, Brutal, Human, Swordman, Villian, PureEvil
 151. The Clown [the-clown] — Potion — PASS
+   Categories: VideoGame, Brutal, Magician, Swordman, Villian, PureEvil
 152. The Oni [the-oni] — Cursed Blood — PASS
+   Categories: VideoGame, Brutal, Swordman, Unhuman, Villian
 153. Jason 13th [jason-13th] — Ki ki ma ma — PASS
+   Categories: Alternative, Brutal, PureEvil, Swordman, Unhuman, Villian
 154. Freddy Krueger [freddy-krueger] — Nightmare — PASS
+   Categories: PureEvil, Villian, Alternative, Brutal, Magician, Unhuman
 155. Myers [myers] — Stalking — PASS
+   Categories: PureEvil, Villian, Alternative, Swordman, Brutal, Human
 156. Gojo Revice [gojo-revice] — Gomen Amanai — PASS
+   Categories: Hero, Magician, Jujutsu, Brutal, Human
 157. Geto Young [geto-young] — Summon Technique — PASS
+   Categories: Jujutsu, Hero, Magician, Army, Human
 158. Toji [toji] — Heavenly Restriction — PASS
+   Categories: Brutal, PureEvil, Jujutsu, Swordman, Human, AntiHero, Gunner
 159. Jogo [jogo] — Inferno Domain — PASS
+   Categories: Jujutsu, Villian, Unhuman, Brutal, PureEvil
 160. True Mahito [true-mahito] — Heni Satsu Rei Tai — PASS
+   Categories: Brutal, PureEvil, Villian, Jujutsu, Swordman, Unhuman
 161. Todo [todo] — Besto Friendo — PASS
+   Categories: Army, Hero, Jujutsu, Supporter, Human
 162. Dagon [dagon] — Water Manipulation — PASS
+   Categories: Jujutsu, Unhuman, Magician, Villian, Brutal, Army
 163. Choso [choso] — Blood Technique — PASS
+   Categories: Unhuman, Jujutsu, AntiHero, Human
 164. Haruta [haruta] — Coward — PASS
+   Categories: AntiHero, Jujutsu, Human
 165. Mechamaru [mechamaru] — Puppet Manipulation — PASS
+   Categories: Jujutsu, AntiHero, Army, Magician, Supporter, Human
 166. Hanami [hanami] — Flower Field — PASS
+   Categories: Unhuman, Jujutsu, Brutal, Magician, Villian
 167. Sukuna Shibuya [sukuna-shibuya] — FUGA x Domain — PASS
+   Categories: Jujutsu, PureEvil, Brutal, Villian, AntiVillian
 168. Goku SSJ3 [goku-ssj3] — Dragon Combo — PASS
+   Categories: DragonWarrior, Hero, Protagonist, Unhuman
 169. Vegeta SSJ2 [vegeta-ssj2] — Saiyan Prince — PASS
+   Categories: DragonWarrior, Hero, AntiHero, Protagonist, Unhuman, Brutal
 170. Broly [broly] — LEGENDARY SUPER SAIYAN — PASS
+   Categories: DragonWarrior, Hero, AntiHero, AntiVillian, Brutal, Unhuman
 171. Ultimate Gohan [ultimate-gohan] — MASENKOO — PASS
+   Categories: DragonWarrior, Hero, Human
 172. Golden Frieza [golden-frieza] — Supernova — PASS
+   Categories: Villian, PlanetDestroyer, Brutal, AntiHero, DragonWarrior, Unhuman
 173. Pennywise [pennywise] — The Deadlights — PASS
+   Categories: Villian, Brutal, PureEvil, Unhuman, Alternative
 174. Florentino [tower-champion-raining-200] — Flower Dance — PASS
+   Categories: VideoGame, Human, Brutal, Swordman, AntiVillian
 175. Kafka [tower-champion-sugar-200] — Manipulator — PASS
+   Categories: VideoGame, Villian, Supporter, Swordman, Human, Gunner
 176. Escanor The Indomitable [tower-champion-sunny-200] — Ultimate Divine Lance — PASS
+   Categories: AntiVillian, Alternative, Sins, Brutal, VideoGame, Human, Hero
 177. Yhwach Omniscience [tower-champion-reaper-200] — Auswahlen — PASS
+   Categories: Villian, Hero, Alternative, Unhuman, Swordman, Bleach, Mastermind, Army
 178. Ragna [boss-event-ragna] — Dragon Slayer — PASS
+   Categories: Hero, AntiVillian, Brutal, DragonWarrior, Swordman, Unhuman
 179. Woltekamui [woltekamui] — Godlike Speed — PASS
+   Categories: Villian, Unhuman, DragonWarrior, Magician, PureEvil, Brutal
 180. Kagurabachi [kagurabachi] — Enten — PASS
+   Categories: Protagonist, Hero, Swordman, Human, Brutal
 181. The Mourner [the-mourner] — The Solemn Lament — PASS
+   Categories: VideoGame, Human, Supporter, Gunner
 182. Itachi Awakened [itachi-awakened] — Mangekyou Awakening — PASS
+   Categories: Ninja, Human, AntiHero, Brutal, Mastermind
 183. Konan [konan] — Paper Genkai — PASS
+   Categories: Ninja, Human, Villian, Magician, Supporter
 184. Kisame Hoshigaki [kisame-hoshigaki] — Samehada — PASS
+   Categories: Ninja, Human, Villian, Brutal, Swordman
 185. Deidara [deidara] — Clay Genkai — PASS
+   Categories: Ninja, Human, Villian, Brutal, Magician
 186. Sasori [sasori] — Puppet Genkai — PASS
+   Categories: Ninja, Human, Villian, Brutal, Mastermind
 187. Kakuzu [kakuzu] — Grudge Fear — PASS
+   Categories: Ninja, Human, Villian, Brutal, Hunter
 188. Hidan [hidan] — Undead Genkai — PASS
+   Categories: Ninja, Human, Villian, Brutal, PureEvil
 189. Zetsu [zetsu] — White / Black — PASS
+   Categories: Ninja, Unhuman, Villian, Supporter, Mastermind
 190. Orochimaru [orochimaru] — Snake Genkai — PASS
+   Categories: Ninja, Human, Villian, Brutal, Mastermind, Unhuman
 191. Pain [pain] — Rinnegan — PASS
+   Categories: Ninja, Human, Villian, Brutal, Mastermind, Army
 192. Dumb Titan [dumb-titan] — Stomp — PASS
+   Categories: Titan, Unhuman, Brutal, Villian
 193. War Hammer Titan [war-hammer-titan] — Crystal Heart — PASS
+   Categories: Titan, Unhuman, Brutal, Villian, Mastermind
 194. Jaw Titan [jaw-titan] — Iron Jaw — PASS
+   Categories: Titan, Unhuman, Brutal, Villian
 195. Armored Titan [armored-titan] — Titan Shield — PASS
+   Categories: Titan, Unhuman, Brutal, Villian
 196. Eren [eren-rumbling] — Titan Wrath — PASS
+   Categories: Titan, TitanSlayer, Human, Protagonist, AntiHero, Brutal
 197. Beast Titan [beast-titan] — Rock Throw — PASS
+   Categories: Titan, Unhuman, Brutal, Villian
 198. Michael Kaiser [michael-kaiser] — Predator Instinct — PASS
+   Categories: Baller, Human, AntiHero, Brutal
 199. Isagi Yoichi [isagi-yoichi] — Metavision — PASS
+   Categories: Baller, Human, Protagonist, Hero
 200. Don Lorenzo [don-lorenzo] — Ace Eater — PASS
+   Categories: Baller, Human, AntiVillian, Brutal
 201. Meliodas [meliodas] — Hellblaze — PASS
+   Categories: Sins, Protagonist, Hero, Unhuman, Brutal, Swordman
 202. Ban [ban] — Snatch — PASS
+   Categories: Sins, Protagonist, Hero, Unhuman, Brutal
 203. Diane [diane] — Envy Creation — PASS
+   Categories: Sins, Protagonist, Hero, Unhuman, Brutal
 204. King Harlequin [king-harlequin] — Disaster — PASS
+   Categories: Sins, Protagonist, Hero, Unhuman, Magician, Supporter
 205. Gowther [gowther] — Puppet Invasion — PASS
+   Categories: Sins, Protagonist, Hero, Unhuman, Magician, Supporter
 206. Escanor The One [escanor-the-one] — The One — PASS
+   Categories: Sins, Hero, Human, Brutal, Protagonist
 207. Rimuru Demon Lord [rimuru-demon-lord] — Universal Predator — PASS
+   Categories: Protagonist, Unhuman, Magician, Supporter, Isekai, Mastermind
 208. Veldora [veldora] — Storm Dragon — PASS
+   Categories: Unhuman, Draconic, DragonWarrior, Brutal, Protagonist
 209. Diablo [diablo] — Immortal Spirit — PASS
+   Categories: Unhuman, Villian, Brutal, Magician, Supporter
 210. Benimaru Jura [benimaru-jura] — Shimmering Flame — PASS
+   Categories: Unhuman, Protagonist, Hero, Swordman, Brutal
 211. Yuuki Kagurazaka [yuuki-kagurazaka] — Mammon Creator — PASS
+   Categories: Human, Villian, Mastermind, AntiHero
 212. Rukia Bankai [rukia-bankai] — Hakka no Togame — PASS
+   Categories: Reaper, Swordman, Human, Hero, Bleach
 213. Ulquiorra [ulquiorra] — Resurrección Segunda Etapa — PASS
+   Categories: Unhuman, Villian, Brutal, Reaper, Bleach
 214. Yamamoto [yamamoto] — Zanka No Tachi — PASS
+   Categories: Reaper, Human, Captain, Hero, Bleach, Army
 215. Coyote Starrk [coyote-starrk] — Cero Metralleta — PASS
+   Categories: Unhuman, Villian, Reaper, Bleach, Gunner
 216. Kisuke Urahara [kisuke-urahara] — Zanpakutō Benihime — PASS
+   Categories: Reaper, Human, Captain, Mastermind, Supporter, Bleach
 217. Normal Arrancar [normal-arrancar] — Cero — PASS
-
-Idle own-turn guards: itachi-awakened, kagurabachi, the-mourner, war-hammer-titan, pain, toji, the-clown, raid-secret-mihawk, weather-report, toshiro, builderman, awakened-doflamingo
+   Categories: Unhuman, Villian, Brutal, Reaper, Bleach
