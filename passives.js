@@ -48,12 +48,15 @@
           const result=hook.handler(object,key,value,record.slots.get(key));if(result?.block)return;
           if(result&&Object.prototype.hasOwnProperty.call(result,'value'))value=result.value;
           if(result?.after)after.push(result.after);
-        }const before=record.slots.get(key);record.slots.set(key,value);if(key==='shield'&&Number(value)>Number(before||0)&&activeCombat?.mode==='auto-chess')host.onCombatShield?.(activeCombat,statusSource||phaseUnit||u,u,Number(value)-Number(before||0));for(const fn of after)fn();
+        }const before=record.slots.get(key);
+        // Covers direct shield writes from every native passive as well as traits.
+        if(key==='shield'&&!shieldScaleBypass&&Number(value)>Number(before||0)&&activeCombat?.mode==='auto-chess')value=Number(before||0)+(Number(value)-Number(before||0))*(activeCombat.tactical?.sustainFactor??1);
+        record.slots.set(key,value);if(key==='shield'&&Number(value)>Number(before||0)&&activeCombat?.mode==='auto-chess')host.onCombatShield?.(activeCombat,statusSource||phaseUnit||u,u,Number(value)-Number(before||0));for(const fn of after)fn();
         }finally{record.depth--;record.writing.delete(key);}
       }});
     }return object;
   }
-  let damageRecursionDepth=0,hitRecursionDepth=0,currentDamageMeta=null;
+  let damageRecursionDepth=0,hitRecursionDepth=0,currentDamageMeta=null,shieldScaleBypass=0;
   const activeDamageSources=new Set(),activeHitSources=new Set();
   const stoppedChain=()=>({damage:0,killed:false,hit:false,skipped:true,recursionGuard:true});
   const SHARED_PASSIVE_FIELDS = new Set(('attackCount ownAttackCount ownTurnCount baseAtkAtBattleStart displayAtkBonusPct displayHpBonusPct flatAtkBonusDisplay atkBonusPct maxHpBonusPct damageReductionPct critChanceBonus critDamageBonus stunTurns freezeTurns incomingImmuneTurns weakenAttackTurns weakenAttackPct snailTurns burn bleed shield shieldKind invincibleTurns passiveImmune noDodgeAgainstUnit incomingVulnerabilityTurns incomingVulnerabilityPct passiveSuppressionTurns passiveSuppressedUntilDeath suppressionAppliedTurn activeTags lastCrit lastDodge lastPassiveTrigger lastActionLabel lastFacingEnemy initialLineupIndex brotherSoul grimoireShield yunoShields shibuyaHypnosis hindredTurns hindredAppliedTurn spookyFrogTurns spookyFrogAppliedTurn spookyStolenPassives successfulHits followUpHits sinsHypnosisTurns sinsHypnosisApplied sinsHypnosisOwner tensuraHypnosis akatsukiPuppets akatsukiPaper akatsukiPaperOwner akatsukiPoison akatsukiVoodoo akatsukiMiss akatsukiHypnosis akatsukiHealBlock akatsukiHealApplied akatsukiDeathHandled lastAttacker titanShieldCapacity titanStunPenalty').split(' '));
@@ -1246,7 +1249,7 @@
   });
 
   const yuno = window.createYunoSkills({
-    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,shieldAmount:(u,n)=>tensura?.allowGain(activeCombat,u,n)===false?0:(sins?sins.shieldAmount(activeCombat,u,n):n)*(activeCombat?.mode==='auto-chess'?1+(u.grid?.traits?.shield||0):1),writeShield:(u,fn)=>sins?sins.writeShield(u,fn):fn(),onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
+    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,shieldAmount:(u,n)=>tensura?.allowGain(activeCombat,u,n)===false?0:(sins?sins.shieldAmount(activeCombat,u,n):n)*(activeCombat?.mode==='auto-chess'?(1+(u.grid?.traits?.shield||0))*(activeCombat.tactical?.sustainFactor??1):1),writeShield:(u,fn)=>{shieldScaleBypass++;try{return sins?sins.writeShield(u,fn):fn();}finally{shieldScaleBypass--;}},onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
     all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,enemyTeam:enemyTeamOf,
     atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,log:safeLog,
     indices:ensureCurrentIndices,hit:(...args)=>champions.hit(...args)
@@ -1604,7 +1607,8 @@
     const runtime = ensureRuntime(unit);
     const before = Math.max(0, Number(unit.hp) || 0);
     const external=source!==unit&&mourner.condition(unit)?.10:1;
-    const delta = Math.max(0, Math.floor((Number(amount) || 0)*dragon.healFactor(state||activeCombat,unit)*external));
+    const context=state||activeCombat,sustain=context?.mode==='auto-chess'?(context.tactical?.sustainFactor??1):1;
+    const delta = Math.max(0, Math.floor((Number(amount) || 0)*dragon.healFactor(context,unit)*external*sustain));
     if (delta <= 0) return 0;
     unit.hp = Math.min(Math.max(1, Number(unit.maxHp) || 1), before + delta);
     const gained = unit.hp - before;
@@ -1996,9 +2000,10 @@
 
   function addShield(unit, amount, kind = 'shield') {
     const runtime = ensureRuntime(unit);
-    const value = Math.max(0, Math.floor(Number(amount) || 0));
+    const sustain=activeCombat?.mode==='auto-chess'?(activeCombat.tactical?.sustainFactor??1):1;
+    const value = Math.max(0, Math.floor((Number(amount) || 0)*sustain));
     const previousShield=runtime.shield,layers=yuno.layerTotal(unit);
-    runtime.shield = layers + Math.max(0,runtime.shield-layers,value);
+    shieldScaleBypass++;try{runtime.shield = layers + Math.max(0,runtime.shield-layers,value);}finally{shieldScaleBypass--;}
     runtime.shieldKind = kind;
     addActiveTag(unit, `${kind}-shield`);
     if(value>0){titan?.shieldGranted(unit,previousShield);akatsuki?.shieldGranted(unit);}

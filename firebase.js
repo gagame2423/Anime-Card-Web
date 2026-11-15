@@ -7,7 +7,7 @@
  const object=v=>Boolean(v&&typeof v==='object'&&!Array.isArray(v)),el=id=>doc?.getElementById(id);
  let bridge={},configured=false,auth=null,db=null,account=null,verified=false,enabled=false,sdkReady=false,initializing=null,identityJob=null,identityTarget=null,epoch=0;
  let busy=false,restoring=false,popupBusy=false,disconnecting=false,capturing=false,dirty=0,timer=null,lastWrite=0,pendingRevision=0,watch=null,recoveryBlocked=false;
- let pendingCredential=null;
+ let pendingCredential=null,autoChessHold=false;
  let status='Local save active. Account sync is optional.';
  function localProfile(){
   try{const saved=JSON.parse(host.localStorage.getItem(PROFILE_KEY)||'null');if(saved?.version===1&&/^local_[a-zA-Z0-9_-]{8,80}$/.test(saved.uid)&&typeof saved.name==='string'&&saved.name.length>0)return saved;}catch(_){}
@@ -49,7 +49,7 @@
  function friendly(error){const code=String(error?.code||'');if(code.includes('unauthorized-domain'))return 'Add this site to Firebase Authentication Authorized domains. Local play is available.';if(code.includes('popup-blocked'))return 'Allow popups to connect Google. Local play continues.';if(code.includes('popup-closed')||code.includes('cancelled-popup'))return 'Google sign-in cancelled. Local progress is unchanged.';if(code.includes('permission-denied'))return 'Cloud access denied. Local progress is kept on this device.';return(error?.message||'Cloud sync unavailable.')+' Local play continues.';}
  function pauseCloud(message){enabled=false;clearTimer();stopWatch();update(message||'Cloud sync paused. Local progress is safe.');}
  async function verifyToken(user){if(!supportedUser(user)||typeof user.getIdTokenResult!=='function')throw Error('This session cannot sync.');const token=await U.timeout(user.getIdTokenResult(),15000,'Cloud authentication timed out.');if(!['google.com','password'].includes(token.signInProvider||token.claims?.firebase?.sign_in_provider)||!Number.isFinite(Date.parse(token.expirationTime))||Date.parse(token.expirationTime)<=Date.now())throw Error('Cloud session expired.');return true;}
- function schedule(delay){if(timer!==null||!cloudReady()||!meta.autoSync)return;timer=host.setTimeout(()=>{timer=null;void flush();},delay??Math.max(1500,INTERVAL-(Date.now()-lastWrite)));}
+ function schedule(delay){if(autoChessHold||timer!==null||!cloudReady()||!meta.autoSync)return;timer=host.setTimeout(()=>{timer=null;void flush();},delay??Math.max(1500,INTERVAL-(Date.now()-lastWrite)));}
  function markDirty(){if(!configured||capturing)return;dirty++;meta.dirty=true;saveMeta();schedule();}
  function capture(){capturing=true;try{return Promise.resolve(bridge.capture());}finally{capturing=false;}}
  async function readRemote(uid){const snap=await U.timeout(db.collection('users').doc(uid).get({source:'server'}));return snap.exists?snap.data():null;}
@@ -74,7 +74,7 @@
   if(result.obsolete&&result.obsolete!==body.manifest?.snapshotId)void deleteSnapshot(uid,result.obsolete);return result;
  }
  async function flush(force=false,explicit=false){
-  if(busy||restoring||!configured||!canUseCloud()||recoveryBlocked||bridge.canSnapshot?.()!==true)return false;
+  if(autoChessHold||busy||restoring||!configured||!canUseCloud()||recoveryBlocked||bridge.canSnapshot?.()!==true)return false;
   if(!explicit&&!cloudReady())return false;if(!meta.dirty&&!force)return true;
   busy=true;clearTimer();const ticket=epoch,uid=account.uid,generation=dirty;update('Saving optional Cloud copy…');
   try{
@@ -85,7 +85,7 @@
   }catch(error){if(ticket===epoch)pauseCloud(friendly(error));return false;}
   finally{busy=false;if(current(ticket,uid)&&pendingRevision>meta.revision)pauseCloud('Cloud updated on another device. Local progress is kept.');else{update();if(meta.dirty)schedule();}}
  }
- function listen(uid){if(watch)return;watch=db.collection('users').doc(uid).onSnapshot(snapshot=>{
+ function listen(uid){if(autoChessHold||watch)return;watch=db.collection('users').doc(uid).onSnapshot(snapshot=>{
   if(account?.uid!==uid||!snapshot.exists||snapshot.metadata?.hasPendingWrites||snapshot.metadata?.fromCache)return;const remote=snapshot.data();if(remote.revision<=meta.revision)return;
   if(busy){pendingRevision=Math.max(pendingRevision,remote.revision);return;}pauseCloud('Cloud updated on another device. Local progress is kept; choose a Cloud action when convenient.');
  },error=>pauseCloud(friendly(error)));}
@@ -179,10 +179,32 @@
   if(!['totalRolls','strongestPower','timeTrialRoom'].includes(metric))throw Error('Unknown leaderboard.');if(!canUseCloud())return{rows:localRows(),localOnly:true};
   try{const result=await U.timeout(db.collection('leaderboards').orderBy(metric,'desc').limit(50).get({source:'server'}));return{rows:result.docs.map(d=>d.data()),localOnly:false};}catch(error){update(friendly(error));return{rows:localRows(),localOnly:true};}
  }
+ // Auto Chess uses this bounded public-run adapter, never the main save transaction.
+ const autoChessService=Object.freeze({
+  get available(){return canUseCloud();},
+  async recentRuns(){
+   if(!canUseCloud())return [];
+   const snapshot=await U.timeout(db.collection('autochess_runs').orderBy('updatedAt','desc').limit(8).get({source:'server'}),8000,'Replay pool unavailable.');
+   return snapshot.docs.map(row=>row.data());
+  },
+  async publishRun(uid,payload){
+   if(!canUseCloud()||account.uid!==uid||payload.uid!==uid)throw Error('Auto Chess account changed.');
+   if(U.bytes(JSON.stringify(payload)).length>5900)throw Error('Auto Chess run exceeds its wire budget.');
+   // Exactly one logical set; no transaction, read-back, listener or retry loop.
+   return db.collection('autochess_runs').doc(uid).set({...payload,uid,updatedAt:host.firebase.firestore.FieldValue.serverTimestamp()});
+  },
+  async leaderboard(){
+   if(!canUseCloud())return {rows:[],localOnly:true};
+   const snapshot=await U.timeout(db.collection('autochess_runs').orderBy('elo','desc').limit(50).get({source:'server'}),8000,'Leaderboard unavailable.');
+   return {rows:snapshot.docs.map(row=>row.data()),localOnly:false};
+  }
+ });
+ function holdAutoChess(){autoChessHold=true;clearTimer();stopWatch();}
+ function releaseAutoChess(){autoChessHold=false;if(cloudReady()&&meta.uid===account?.uid)listen(account.uid);afterActivity();}
  function afterActivity(){update();if(meta.dirty)schedule(1500);}
  function mount(){el('cloudLoginOpenButton')?.addEventListener('click',()=>{bridge.open?.('cloudAccountModal');update();});el('cloudGoogleButton')?.addEventListener('click',google);for(const [id,mode]of [['cloudEmailRegister','register'],['cloudEmailLink','link']])el(id)?.addEventListener('click',()=>emailAction(mode));el('cloudPasswordReset')?.addEventListener('click',passwordReset);el('cloudEmailForm')?.addEventListener('submit',event=>{event.preventDefault();void emailAction(account?'link':'login');});el('cloudSyncButton')?.addEventListener('click',retry);el('cloudLogoutButton')?.addEventListener('click',logout);el('cloudReloadButton')?.addEventListener('click',loadCloud);el('cloudDisplayName')?.addEventListener('change',event=>{meta.displayName=event.target.value.trim().slice(0,40);markDirty();update();});update();}
  host.addEventListener('online',()=>{if(meta.autoSync&&meta.uid)void initialize().then(()=>{if(auth.currentUser)void observeUser(auth.currentUser);}).catch(()=>{});else update('Online · local save active.');});
  host.addEventListener('offline',()=>pauseCloud('Offline · gameplay and local saving continue.'));
  host.addEventListener('storage',event=>{if(event.key===META_KEY&&event.newValue){try{const other=JSON.parse(event.newValue);if(other.uid!==meta.uid||other.revision!==meta.revision||other.digest!==meta.digest)pauseCloud('Another tab synced this profile. This tab keeps its local gameplay active.');}catch(_){}}});
- host.CloudSaveSystem=Object.freeze({CONFIG,META_KEY,RESTORE_KEY,BOOT_KEY,PROFILE_KEY,recovered,markDirty,start,initialize,retry,flush,google,emailAction,passwordReset,logout,loadCloud,leaderboardView,leaderboard:async metric=>(await leaderboardView(metric)).rows,afterActivity,blockForRecovery(message){recoveryBlocked=true;pauseCloud(message);},get authVerified(){return canUseCloud();},get googleVerified(){return canUseCloud();},get cloudReady(){return cloudReady();},get ready(){return cloudReady();},get firestore(){return canUseCloud()?db:null;},get activeUser(){return account||guest;},get publicName(){return(meta.displayName||account?.displayName||profile.name).trim().slice(0,40);},get playAllowed(){return !host.GameStartup?.failed;},get blocking(){return false;},get recoveryBlocked(){return recoveryBlocked;},get status(){return status;},configure(options){bridge=options||{};configured=true;mount();}});
+ host.CloudSaveSystem=Object.freeze({CONFIG,META_KEY,RESTORE_KEY,BOOT_KEY,PROFILE_KEY,recovered,autoChessService,holdAutoChess,releaseAutoChess,markDirty,start,initialize,retry,flush,google,emailAction,passwordReset,logout,loadCloud,leaderboardView,leaderboard:async metric=>(await leaderboardView(metric)).rows,afterActivity,blockForRecovery(message){recoveryBlocked=true;pauseCloud(message);},get authVerified(){return canUseCloud();},get googleVerified(){return canUseCloud();},get cloudReady(){return cloudReady();},get ready(){return cloudReady();},get firestore(){return canUseCloud()?db:null;},get activeUser(){return account||guest;},get publicName(){return(meta.displayName||account?.displayName||profile.name).trim().slice(0,40);},get playAllowed(){return !host.GameStartup?.failed;},get blocking(){return false;},get recoveryBlocked(){return recoveryBlocked;},get status(){return status;},configure(options){bridge=options||{};configured=true;mount();}});
 })(window);

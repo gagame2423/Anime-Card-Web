@@ -64,6 +64,7 @@ const defaultState = {
   totalRolls: 0,
   currency: 0,
   experience: 0,
+  autochessRank: window.AutoChessRanked.fresh(),
   battleDropRateBonus: 0,
   dropChance: 0, // percent points; potion drop logic reads ONLY this stat and pity
   cardProgress: {},
@@ -302,6 +303,7 @@ function cloneDefaultState() {
     totalRolls: 0,
     currency: 0,
     experience: 0,
+  autochessRank: window.AutoChessRanked.fresh(),
     battleDropRateBonus: 0,
     cardProgress: {},
     teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
@@ -816,6 +818,8 @@ function normalizeState(parsed = {}) {
   normalized.experience = Number.isFinite(Number(parsed.experience))
     ? Math.max(0, Math.floor(Number(parsed.experience)))
     : 0;
+
+  normalized.autochessRank = window.AutoChessRanked.normalise(parsed.autochessRank);
 
   normalized.battleDropRateBonus = Number.isFinite(Number(parsed.battleDropRateBonus))
     ? Math.max(0, Math.min(100, Number(parsed.battleDropRateBonus)))
@@ -4783,6 +4787,7 @@ function validateSaveRecord(key, value) {
     }
     if ('upgrades' in value) counts(value.upgrades, 'upgrades');
     if ('equipment' in value) ensure(Array.isArray(value.equipment), 'equipment must be an array.');
+    if ('autochessRank' in value) ensure(window.AutoChessRanked.validProfile(value.autochessRank), 'invalid Auto Chess rank');
     if ('achievementRewardReceipts' in value) flags(value.achievementRewardReceipts, 'reward receipts');
     if('spookyRewardReceipt' in value)ensure(typeof value.spookyRewardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(value.spookyRewardReceipt),'invalid Spooky reward receipt');
     if ('migrations' in value) flags(value.migrations, 'save migrations');
@@ -6062,11 +6067,12 @@ function openAutoChess(){
   if(window.AutoChessView.open({requestLandscape:true}))document.getElementById('battleModal')?.classList.add('hidden');
 }
 document.getElementById('autochessOpenButton')?.addEventListener('click',openAutoChess);
+window.AutoChessRanked.configure({getProfile:()=>state.autochessRank});
 window.AutoChessView.configure({
  canOpen:()=>!window.PenaltyView?.active&&canPlayPenalty(),
  name:()=>window.CloudSaveSystem?.publicName||'You',
- onEnter:()=>{clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();saveState();},
- onExit:()=>{document.getElementById('battleModal')?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.afterActivity();resumeGameRuntime();updateStats();},
+ onEnter:()=>{window.CloudSaveSystem.holdAutoChess();clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();saveState();},
+ onExit:()=>{document.getElementById('battleModal')?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.releaseAutoChess();resumeGameRuntime();updateStats();},
  rewardQuote:rank=>window.AutoChessSystem.reward(rank,{vnd:getCoinMultiplier(true,'autochess'),drop:window.InventorySystem.getDropMultiplier()}),
  reward:(match,rewards)=>{
   const chess=window.AutoChessSystem;
@@ -6074,14 +6080,20 @@ window.AutoChessView.configure({
   // Inventory grants/receipt share one write. A failed main-save write can retry safely.
   const grants=[{id:'star_orb',quantity:rewards.orbs.total},...(rewards.gems?[{id:'gems',quantity:rewards.gems}]:[])];
   const receipt='autochess_'+match.id,accountPaid=state.achievementRewardReceipts?.[receipt]===true;
-  if(!accountPaid&&(state.currency>Number.MAX_SAFE_INTEGER-rewards.vnd.total||state.experience>Number.MAX_SAFE_INTEGER-rewards.exp))return false;
+  if(!accountPaid&&(state.currency>Number.MAX_SAFE_INTEGER-rewards.vnd.total||state.experience>Number.MAX_SAFE_INTEGER-(rewards.exp||0)))return false;
   let itemsPaid=false;try{itemsPaid=JSON.parse(localStorage.getItem(window.InventorySystem.KEY)||'null')?.receipts?.['ac_'+match.id]==='placement_v2';}catch(_){return false;}
   if(!itemsPaid&&grants.some(row=>window.InventorySystem.quantity(row.id)>Number.MAX_SAFE_INTEGER-row.quantity))return false;
   if(!window.InventorySystem.transactOnce('ac_'+match.id,'placement_v2',grants))return false;
-  if(accountPaid)return true;
+  if(accountPaid){
+   const recorded=state.autochessRank?.receipts?.[match.id];if(rewards.version===2&&recorded)match.reward.elo={...recorded};return true;
+  }
+  // Only Elo is rebased if another completed run changed the rating; currency
+  // multipliers remain the original frozen quote. Save before account mutation.
+  if(rewards.version===2){rewards.elo=window.AutoChessRanked.quoteElo(rewards.rank,state.autochessRank?.elo||0);match.reward.elo={...rewards.elo};if(!chess.save(match))return false;}
   const before=JSON.parse(JSON.stringify(state));
   state.currency=Math.min(Number.MAX_SAFE_INTEGER,state.currency+rewards.vnd.total);
-  state.experience=Math.min(Number.MAX_SAFE_INTEGER,state.experience+rewards.exp);
+  state.experience=Math.min(Number.MAX_SAFE_INTEGER,state.experience+(rewards.exp||0));
+  if(rewards.version===2)state.autochessRank=window.AutoChessRanked.applyProfile(state.autochessRank,match.id,rewards.elo);
   state.achievementRewardReceipts ||= {};state.achievementRewardReceipts[receipt]=true;
   if(!saveGame(AUTO_CHESS_REWARD_SAVE)){state=before;return false;}
   updateStats();renderPotionInventory();window.CloudSaveSystem.markDirty();return true;

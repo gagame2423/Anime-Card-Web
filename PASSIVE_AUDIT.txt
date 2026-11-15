@@ -1,55 +1,61 @@
-PASSIVE AUDIT — AUTO CHESS: RE-ENTRANCY, AUGMENTS & TELEMETRY
-Ngày: 15/11/2026 • Build: 20261115-autochess-augments-1
+PASSIVE AUDIT — AUTO CHESS: RANKED, OVERTIME & HYBRID RUN SAFETY
+Ngày: 15/11/2026 • Build: 20261115-autochess-ranked-1
 
-SCOPE / FIXES
-- Full roster: 217 canonical cards; exact category refresh for all 217.
-  cards.js non-category fields compared byte-for-value against previous build.
-- Sins/Tensura/Bleach/Tower200: one shared plain descriptor observer registry;
-  no layered Proxy setters or Reflect.set cycles. Hook labels install once.
-- All 9 *_passives.js: idempotent script guards and per-API factory caches.
-  Other chained skill factories retain isolated state and are cached per API.
-- ensureRuntime re-entry guard; per-field setter guard and bounded callback depth.
-  try/finally releases guards even after a blocked transform or thrown callback.
-- damageUnit and champion hit guard source re-entry plus depth > 2. Sequential
-  follow-ups remain valid after the previous resolution unwinds.
-- Malevolent King: follow-up slashes no longer open another full nested volley.
-  Auto Chess has a shared 64-dispatch budget per action, plus local chain caps.
-  This prevents multiplicative nesting even when each individual loop is bounded.
-- Combat units/stats/runtime and match Relics are isolated from permanent inventory.
-  The copied-passive virtual view remains private to its copy scope; units do not
-  acquire stacked Proxy observers. No global per-unit event listeners are added.
-- Deterministic native grid scheduler, event order and seeded random source remain
-  in use. Worker has its own module/runtime instances and cannot write localStorage.
-- Shield/heal/HP-loss/kill measurements feed match-local telemetry. One official
-  battle per tactician/round; ghost opponents do not duplicate the defender record.
-- Augments are match-local: 3 Armories, slot rerolls once, real bot selections,
-  ISO UTC weekly pool fixed at match creation, capped Gold credited centrally.
+SCOPE / RETAINED ARCHITECTURE
+- All 217 canonical card/category definitions are unchanged from the Augments patch.
+- Shared descriptor registry and idempotent passive factories remain in place.
+  No new layered Proxy/Reflect.set wrappers or global per-unit listeners added.
+- damageUnit/hit source/depth guards and the 64-dispatch action budget remain.
+  Combat units, copied skills, Relics and telemetry stay match-local.
+- Worker uses separate runtime modules. Native and Worker use the same seeded
+  scheduler and ordered combat hooks, including the new overtime factors.
+
+CURRENT CHANGES
+- Supporter tiers: +3/6/9/12 Energy, mend every 7/6/5/5 attacks, heal
+  20/40/60/100% ATK and shield 0/0/10/20% ATK on the same pre-heal lowest-HP ally.
+- 60-second timeout; overtime damage/sustain linear from x1.5/x0.5 at 30s to
+  x2.5/x0.2 at 45s. Heal and direct/layered Shield gains scale exactly once.
+- Timeout compares remaining team HP fraction, then actual damage dealt; exact
+  equality draws, with zero tactician damage and no false loss/streak increment.
+- High-rank bot policies are separate; 120 low-rank decisions compared exactly
+  with the old bot implementation, excluding names and added rank metadata.
+- Ghost units/Relics are rebuilt from validated canonical definitions and a bounded
+  compact replay schema. No runtime/passive state crosses recorded rounds.
+- Multi-human local hybrid runs retain dead human Spectator until final survivor;
+  no early rewards/forfeit. Solo elimination still finalizes immediately.
+- Stage 100-6 safety cap resolves remaining standings instead of invalid Stage 101.
+- New Elo reward receipts use the existing main/item save retry boundaries. New
+  matches grant no Player EXP; frozen legacy pending rewards remain compatible.
 
 RUNTIME VERIFICATION FOR THIS PATCH
-- 217/217 grid scenarios ran up to 40 simulated seconds with high-HP opponents,
-  followed by fatal-hit probes and repeated status/shield writes: zero exceptions.
-- Four mixed 9v9 copy/reflect/summon fixtures, each repeated with the same seed:
-  equal final state and released damage guards. Normal-mode regression included.
-- Re-loading passive/helper scripts did not install duplicate wrappers.
-- Native vs Worker: identical complete outcome including telemetry; compact
-  numeric metrics streamed during combat; disposed pool retained no fight.
-- Full seeded lobbies verified all 8 rows with real damage, economy, card records,
-  unique displayed placement and one reward award. Living bots marked provisional.
-- Armories, per-slot reroll, duplicate-pick prevention, UTC ISO year boundaries,
-  hard +16 bonus Gold / +2 card Gold caps and guaranteed Relic count/tier ranges.
-- Desktop/mobile geometry, Armory, element/role/active-trait inspection, touch hold
-  without purchase, report tabs, expanded bot rows and fresh-state exit checked.
-- All 8 reward tiers/multipliers, interrupted main/item save, retry with frozen
-  quote, old-checkpoint replay and disposed-session guards passed.
-- Full modified source syntax checked. See README for application and formulas.
+- 217/217 high-HP card scenarios ran up to 40 simulated seconds, followed by
+  fatal-hit probes and repeated status/shield writes: no exceptions.
+- Four mixed 9v9 copy/reflect/summon fixtures repeated with the same seed: equal
+  outcome and released guards. Normal battle-mode regression also passed.
+- Reloading passive/helper scripts did not stack wrappers.
+- Native/Worker outcome and telemetry matched; streaming and worker disposal passed.
+- Full seeded Iron, Platinum and Challenger lobbies ended with valid telemetry,
+  unique placements and one reward. Group run continued after human elimination.
+- Exact Supporter proc/heal/shield, overtime points, real 60-second timeout and
+  symmetric draw fixtures passed. Run cap resolves tied survivors deterministically.
+- Elo tier/division bounds, 500 consecutive wins to 3300, demotion, promotions,
+  retry after main/item save failures and old-checkpoint replay passed.
+- 120 baseline low-rank decisions matched. Mid/high draft, lineup, Relic assignment,
+  smart Augments and state invariants passed, with no bonus resource cheats.
+- PeerJS eight-client simulation, ninth-client rejection, shared seed, cleanup;
+  cloud cache/query/write adapter, own-UID guards and 598-stage codec tested.
+- Desktop/mobile geometry, portrait fallback, Spectator/scout, rank HUD/VFX,
+  cached leaderboard and My Augments flow checked. See README for exact scope.
 
 COVERAGE LIMITS
-These are runtime scenarios and targeted regressions, not a proof of every branch
-of every possible mutation/copy/trait/Relic combination. Damage totals count actual
-HP loss; healing/Shield totals count actual gains. Legacy runs are marked partial.
-A human elimination ends the run; live bot rankings reflect the exit snapshot,
-not future matches. Headless Chromium does not establish a 60-FPS guarantee on
-all physical Android/iOS hardware. No media files are included in this patch.
+These are targeted runtime regressions, not proof of every mutation/copy/trait/
+Relic branch. Damage counts actual HP loss; healing/Shield count actual gains.
+Hybrid invite runs are independent local tournaments using replay/AI opponents,
+not synchronized live PvP. Solo exit standings for living bots remain provisional;
+group summaries wait for the local final survivor. Replay/Elo data is client-reported.
+Cloud adapter/Peer tests were mocked; production Firebase rules/index deployment,
+real NAT connectivity and physical mobile FPS were not tested or deployed here.
+No assets or media are included. Full configuration and application steps: README.
 
 CARD REGISTRY / RUNTIME RESULTS (updated categories)
 1. Naruto Kid [starter-common] — First Strike — PASS

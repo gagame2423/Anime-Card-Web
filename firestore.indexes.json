@@ -15,6 +15,31 @@
       "collectionGroup": "recovery",
       "fieldPath": "payload",
       "indexes": []
+    },
+    {
+      "collectionGroup": "autochess_runs",
+      "fieldPath": "cards",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "autochess_runs",
+      "fieldPath": "relics",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "autochess_runs",
+      "fieldPath": "boards",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "autochess_runs",
+      "fieldPath": "augments",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "autochess_runs",
+      "fieldPath": "stages",
+      "indexes": []
     }
   ]
 }

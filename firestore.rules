@@ -74,6 +74,29 @@ service cloud.firestore {
         && (!(request.auth.uid in resource.data)
           || request.resource.data[request.auth.uid].highestWave >= resource.data[request.auth.uid].highestWave);
     }
+    // Public replay snapshots; one own document overwritten at the end of a run.
+    match /autochess_runs/{uid} {
+      function validRun(d) {
+        return d.keys().hasOnly(['version','codec','uid','name','matchId','placement','elo','wins','rounds','sampled','cards','relics','boards','augments','stages','updatedAt'])
+          && d.version == 1 && d.codec == 'ac-run-1' && d.uid == uid
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 40
+          && d.matchId is string && d.matchId.size() > 0 && d.matchId.size() <= 80
+          && d.placement is int && d.placement >= 1 && d.placement <= 8
+          && d.elo is int && d.elo >= 0 && d.elo <= 9007199254740991
+          && d.wins is int && d.wins >= 0 && d.wins <= 9007199254740991
+          && d.rounds is int && d.rounds > 0 && d.rounds <= 600 && d.sampled is bool
+          && d.cards is list && d.cards.size() <= 1000
+          && d.relics is list && d.relics.size() <= 64
+          && d.boards is list && d.boards.size() > 0 && d.boards.size() <= 600
+          && d.augments is list && d.augments.size() <= 16
+          && d.stages is map && d.stages.size() > 0 && d.stages.size() <= 600
+          && d.updatedAt == request.time;
+      }
+      allow get: if accountUser();
+      allow list: if accountUser() && request.query.limit != null && request.query.limit <= 50;
+      allow create, update: if owner(uid) && validRun(request.resource.data);
+      allow delete: if owner(uid);
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }

@@ -36,7 +36,7 @@
   Alternative:{icon:'⤨',bonus:{dodge:.02},proc:'echo',power:.18,text:'Every fourth attack echoes into the target with True Damage.'},
   Army:{icon:'⚐',bonus:{hp:.05},proc:'formation',power:.05,text:'Summoned allies gain stronger stats; every fifth attack shields adjacent allies.'},
   Swordman:{icon:'†',bonus:{atk:.045},proc:'cleave',power:.24,text:'Every third strike cleaves adjacent enemies around the primary target.'},
-  Supporter:{icon:'✚',bonus:{mana:3},proc:'mend',power:.40,text:'Every third attack heals the lowest-HP ally and grants a small Shield.'},
+  Supporter:{icon:'✚',bonus:{mana:3},proc:'mend',power:.20,text:'Gain 3/6/9/12 Energy per attack. Every 7/6/5/5 attacks, heal the lowest-HP ally for 20/40/60/100% ATK; Gold/Prismatic also shield the same ally for 10/20% ATK.'},
   Magician:{icon:'✵',bonus:{mana:4},proc:'nova',power:.28,text:'At full Energy, cast a spell nova at the target and its adjacent allies.'},
   Reaper:{icon:'☽',bonus:{crit:.02},proc:'harvest',power:.11,text:'Reapers heal on kills; attacks gain extra damage below 30% target HP.'},
   Hunter:{icon:'⌖',bonus:{speed:.04},proc:'mark',power:.14,text:'Every fourth attack marks the target: piercing damage and Hindered.'},
@@ -95,7 +95,7 @@
    case'sin':extra.push('Against a Burned, Bleeding or Frozen enemy, deal '+a+' of triggering damage as bonus damage. Every fifth attack heals '+a+' ATK.');break;
    case'echo':extra.push('Every fourth attack deals '+a+' ATK bonus damage ignoring damage reduction.');break;
    case'cleave':extra.push('Every third attack deals '+a+' ATK to enemies adjacent to the primary target.');break;
-   case'mend':extra.push('Every third attack heals the lowest-HP ally for '+a+' ATK and shields that ally for '+pct(power*.25)+' ATK.');break;
+   case'mend':extra.push('Every '+[7,6,5,5][n-1]+' attacks, heal the lowest-HP ally for '+pct([.20,.40,.60,1][n-1])+' ATK.'+(n>=3?' Shield that same ally for '+pct([0,0,.10,.20][n-1])+' ATK.':''));break;
    case'nova':extra.push('At 100 Energy, deal '+a+' ATK to the primary target and its adjacent allies.');break;
    case'harvest':extra.push('Against enemies below 30% HP, deal '+a+' of the triggering damage as bonus damage.');break;
    case'mark':extra.push('Every fourth attack deals '+a+' ATK ignoring Shields and Hinders the target for 1 turn.');break;
@@ -160,7 +160,7 @@
      case'sin':if(nAttack%5===0)api.heal(u,atk*power,u);break;
      case'echo':if(nAttack%4===0)hit(u,target,atk*power,{ignoreReduction:true});break;
      case'cleave':if(ready&&target)for(const v of nearby(target,foes))hit(u,v,atk*power);break;
-     case'mend':if(ready){api.heal(low(),atk*power,u);api.shield(low(),atk*power*.25,u);}break;
+     case'mend':if(nAttack%[7,6,5,5][n-1]===0){const ally=low();api.heal(ally,atk*[.20,.40,.60,1][n-1],u);if(n>=3)api.shield(ally,atk*[0,0,.10,.20][n-1],u);}break;
      case'nova':if(u.grid.mana>=100)for(const v of [target,...(target?nearby(target,foes):[])])hit(u,v,atk*power);break;
      case'mark':if(nAttack%4===0){hit(u,target,atk*power,{ignoreShield:true});api.status(target,'hindredTurns',1,u);}break;
      case'stomp':if(nAttack%4===0){for(const v of nearby(u,foes))hit(u,v,atk*power);api.shield(u,u.maxHp*.02*n,u);}break;

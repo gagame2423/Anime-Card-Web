@@ -3,32 +3,33 @@
  'use strict';
  const C=host.AutoChessSystem,S=host.AutoChessSynergies;
  const PERSONALITIES=Object.freeze([
-  {name:'Mika Vale',style:'Interest Keeper',trait:'Human',save:40,rerolls:0,xp:1},
-  {name:'Rook Ashfall',style:'Aggressive Reroller',trait:'Brutal',save:8,rerolls:3,xp:0},
-  {name:'Sera Moon',style:'Synergy Scholar',trait:'Magician',save:20,rerolls:2,xp:1},
-  {name:'Kai Storm',style:'Tempo Captain',trait:'Electric',save:12,rerolls:1,xp:2},
-  {name:'Nox Hollow',style:'Dark Specialist',trait:'Bleach',save:20,rerolls:2,xp:1},
-  {name:'Luna Wren',style:'Support Curator',trait:'Supporter',save:25,rerolls:1,xp:1},
-  {name:'Atlas Thorn',style:'Frontline Builder',trait:'Titan',save:15,rerolls:1,xp:2}
+  {name:'Mr Win',style:'Interest Keeper',trait:'Human',save:40,rerolls:0,xp:1},
+  {name:'Ms Willy',style:'Aggressive Reroller',trait:'Brutal',save:8,rerolls:3,xp:0},
+  {name:'CHV',style:'Synergy Scholar',trait:'Magician',save:20,rerolls:2,xp:1},
+  {name:'Jusi',style:'Tempo Captain',trait:'Electric',save:12,rerolls:1,xp:2},
+  {name:'Crosshair',style:'Dark Specialist',trait:'Bleach',save:20,rerolls:2,xp:1},
+  {name:'Maid Girl',style:'Support Curator',trait:'Supporter',save:25,rerolls:1,xp:1},
+  {name:'Blox Fruit Kid',style:'Frontline Builder',trait:'Titan',save:15,rerolls:1,xp:2}
  ].map(Object.freeze));
  const ranged=c=>(c?.category||[]).some(x=>['Gunner','Magician','Supporter'].includes(x));
- function initialize(s){for(const[p,i]of s.players.filter(p=>p.bot).map((p,i)=>[p,i])){p.name=PERSONALITIES[i].name;p.personality=i;p.botActions=0;p.botRound='';}return s;}
+ function initialize(s){for(const[p,i]of s.players.filter(p=>p.bot).map((p,i)=>[p,i])){p.name=PERSONALITIES[i].name;p.personality=i;p.aiTier=Number.isInteger(s.rankedStart?.tier)?s.rankedStart.tier:0;p.botActions=0;p.botRound='';}return s;}
  function profile(p){return PERSONALITIES[p.personality??0];}
- function score(p,id){const c=C.card(id),r=C.RARITIES.indexOf(c.rarity),d=profile(p),units=C.deployed(p),tags=[c.element,...c.category];let synergy=0;for(const tag of tags){const n=(host.AutoChessAugments?.traits(p)?.[tag]||0)+new Set(units.filter(u=>u.cardId!==id&&[C.card(u).element,...C.card(u).category].includes(tag)).map(u=>u.cardId)).size;synergy+=n%2===1?1.4:n*.15;}return 2+r*2+synergy+(tags.includes(d.trait)?3:0)+(c.category.includes('Supporter')&&!units.some(u=>C.card(u).category.includes('Supporter'))?1.5:0);}
- function arrange(s,p){
+ function score(p,id){if((p.aiTier||0)>=4)return host.AutoChessAI.score(p,id);const c=C.card(id),r=C.RARITIES.indexOf(c.rarity),d=profile(p),units=C.deployed(p),tags=[c.element,...c.category];let synergy=0;for(const tag of tags){const n=(host.AutoChessAugments?.traits(p)?.[tag]||0)+new Set(units.filter(u=>u.cardId!==id&&[C.card(u).element,...C.card(u).category].includes(tag)).map(u=>u.cardId)).size;synergy+=n%2===1?1.4:n*.15;}return 2+r*2+synergy+(tags.includes(d.trait)?3:0)+(c.category.includes('Supporter')&&!units.some(u=>C.card(u).category.includes('Supporter'))?1.5:0);}
+ function arrange(s,p){if((p.aiTier||0)>=4)return host.AutoChessAI.arrange(s,p);
   const selected=[],candidates=p.units.slice();for(let i=0;i<p.level&&candidates.length;i++){const proxy={...p,units:selected.map(u=>({...u,board:0}))};candidates.sort((a,b)=>score(proxy,b.cardId)-score(proxy,a.cardId)||a.uid.localeCompare(b.uid));selected.push(candidates.shift());}
   const front=[3,2,4,1,5,0,6,10,9,11,8,12,7,13],back=[24,23,25,22,26,21,27,17,16,18,15,19,14,20],used=new Set();
   for(const u of selected){const cells=ranged(C.card(u))?back:front,cell=cells.find(i=>!used.has(i))??Array.from({length:28},(_,i)=>i).find(i=>!used.has(i));u.board=cell;u.bench=null;u.reserve=false;used.add(cell);}
   let bench=0;for(const u of p.units.filter(u=>!selected.includes(u))){u.board=null;u.bench=bench<9?bench++:null;u.reserve=u.bench===null;}C.drain(p);
  }
- function equip(s,p){
+ function equip(s,p){if((p.aiTier||0)>=7)return host.AutoChessAI.equip(s,p);return legacyEquip(s,p);}
+ function legacyEquip(s,p){
   // Compress the stash before selecting carries; never use permanent Relic instances.
   for(let guard=0;guard<10;guard++){const pair=p.relics.filter(Boolean).find(r=>!r.roll.unique&&p.relics.some(x=>x&&x!==r&&!x.roll.unique&&x.roll.rarity===r.roll.rarity));if(!pair)break;const other=p.relics.find(x=>x&&x!==pair&&!x.roll.unique&&x.roll.rarity===pair.roll.rarity);C.fuseRelics(s,p,pair.uid,other.uid);}
   const carries=C.deployed(p).slice().sort((a,b)=>C.tier(b)-C.tier(a)||a.uid.localeCompare(b.uid));
   for(const u of carries){if(u.relic)continue;const r=p.relics.filter(Boolean).sort((a,b)=>relicScore(b,u)-relicScore(a,u))[0];if(r)C.equip(p,r.uid,u.uid);}
  }
  function relicScore(r,u){const d=host.RelicSystem.DEFINITIONS.find(x=>x.kind===r.roll.kind),c=C.card(u),matches=d.category?c.category.includes(d.category):c.element===r.roll.element;return(matches?4:0)+(['common','rare','legendary'].indexOf(r.roll.rarity)+1)+(r.roll.unique?4:0);}
- function plan(s,p,budget=3){
+ function plan(s,p,budget=3){if(host.AutoChessOnline?.replay(p))return;if((p.aiTier||0)>=4)return host.AutoChessAI.plan(s,p,budget);
   if(!p.bot||p.hp<=0||s.phase!=='planning')return false;const key=C.label(s),d=profile(p);if(p.botRound!==key){p.botRound=key;p.botActions=0;p.botRerolls=0;p.botXp=0;}
   for(let step=0;step<budget&&p.botActions<24;step++,p.botActions++){
    arrange(s,p);
@@ -42,7 +43,7 @@
   }
   arrange(s,p);equip(s,p);return p.botActions<24;
  }
- function draft(s,p){if(!C.released(s,p.id)||s.carousel.some(u=>u.claimedBy===p.id))return null;const options=s.carousel.filter(u=>!u.claimedBy);options.sort((a,b)=>score(p,b.cardId)+relicScore(b.relic,b)-score(p,a.cardId)-relicScore(a.relic,a)||a.uid.localeCompare(b.uid));if(options[0]){const u=C.draft(s,p,options[0].uid);arrange(s,p);return u;}return null;}
+ function draft(s,p){if(!C.released(s,p.id)||s.carousel.some(u=>u.claimedBy===p.id))return null;const options=s.carousel.filter(u=>!u.claimedBy);const itemValue=u=>(p.aiTier||0)>=7?host.AutoChessAI.relicValue(u.relic,u,p):relicScore(u.relic,u);options.sort((a,b)=>score(p,b.cardId)+itemValue(b)-score(p,a.cardId)-itemValue(a)||a.uid.localeCompare(b.uid));if(options[0]){const u=C.draft(s,p,options[0].uid);arrange(s,p);return u;}return null;}
  function pair(s){
   const living=C.alive(s).slice();for(let i=living.length-1;i>0;i--){const j=Math.floor(C.random(s)*(i+1));[living[i],living[j]]=[living[j],living[i]];}
   let ghost=null;if(living.length%2){const a=living.pop(),options=C.alive(s).filter(p=>p!==a),b=options.sort((x,y)=>(x.history.at(-1)===a.id)-(y.history.at(-1)===a.id)||x.hp-y.hp||x.id.localeCompare(y.id))[0];ghost={a:a.id,b:b.id,ghost:true};}
@@ -52,7 +53,7 @@
  function settle(s,results){
   if(s.phase!=='combat')throw Error('This round is already resolved.');const creep=['creep','boss'].includes(C.roundKind(s)),tacticianDamage=2+s.stage*2+(s.stage>=6?(s.stage-5)*3:0),changes=new Map();
   for(const r of results){const a=C.get(s,r.a),b=C.get(s,r.b);if(!a||a.hp<=0)continue;
-   const record=(p,won,survivors,opponent)=>{const loss=won?0:tacticianDamage+Math.min(15,survivors);changes.set(p.id,{p,won,damage:loss,opponent,beforeHp:p.hp});};
+   const record=(p,won,survivors,opponent)=>{if(r.winner==='draw')won=null;const loss=won!==false?0:tacticianDamage+Math.min(15,survivors);changes.set(p.id,{p,won,damage:loss,opponent,beforeHp:p.hp});};
    if(creep)record(a,r.winner==='player',r.enemySurvivors,'creeps');
    else{record(a,r.winner==='player',r.enemySurvivors,b.id);if(!r.ghost)record(b,r.winner==='enemy',r.playerSurvivors,a.id);}
   }
@@ -66,9 +67,10 @@
    if(creep){C.creepRelics(s,p);if(won)C.bonus(s,p,Math.min(3,s.stage),'creep');}
   }
   const eliminated=[...changes.values()].filter(v=>!v.p.hp).sort((a,b)=>b.damage-a.damage||a.p.id.localeCompare(b.p.id));let rank=s.players.filter(p=>p.rank===null).length;for(const v of eliminated){v.p.rank=rank--;host.AutoChessTelemetry?.snapshot(s,v.p);}
+  if(s.stage===100&&s.round===6&&C.alive(s).length>1){s.lastResults=results;C.finishAtLimit(s);return s;}
   const living=C.alive(s);if(living.length<=1){if(living[0])living[0].rank=1;else{const survivor=s.players.find(p=>p.rank===1);if(survivor)survivor.hp=1;}s.finished=true;s.phase='complete';}else{s.phase='results';s.remaining=C.RULES.resultSeconds;}
   s.lastResults=results;C.finalize(s);s.revision++;return s;
  }
  const reward=(rank,multipliers)=>C.reward(rank,multipliers);
- host.AutoChessBots=Object.freeze({PERSONALITIES,initialize,profile,score,arrange,equip,plan,draft,pair,settle,reward,ranged});
+ host.AutoChessBots=Object.freeze({PERSONALITIES,initialize,profile,score,arrange,equip,legacyEquip,augmentChoice:(s,p,a)=>host.AutoChessAI.augmentChoice(s,p,a),plan,draft,pair,settle,reward,ranged});
 })(window);
