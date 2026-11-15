@@ -29,12 +29,13 @@
   function publicState(full=false){const s=getState(),{matchStats,hybrid,...body}=s,out=C.clone(body);out.hybrid={...hybrid,stages:{}};if(full)out.matchStats=C.clone(matchStats);delete out.localPlayerId;delete out.reward;delete out.finishReason;out.paid=false;out.hybrid={...out.hybrid,stages:{},uid:'shared',readRequested:true,writeAttempted:false};if(!full)delete out.matchStats;return out;}
   function publish(full=false,uid=null){if(!authority)return;state=getState();safeSend({type:'state',seq:++seq,state:publicState(full),manifest,at:now()},uid);stateAt=elapsed;dirty=false;}
   function disconnect(uid){
-   if(disposed)return;if(!authority){closed=true;error('Host connection lost. Waiting for host authority; no local result or Elo will be fabricated.');return;}
+   if(disposed)return;if(!authority){abandon('connection-lost');return;}
    const h=state.live.humans.find(h=>h.uid===uid);if(!h||!h.connected||uid===link.self)return;h.connected=false;const p=C.get(state,h.id);p.bot=true;p.source={...p.source,kind:'disconnected-ai'};delete state.live.ready[h.id];barrier?.pending.delete(uid);state.revision++;dirty=true;
   }
   function input(uid,message){
    state=getState();const h=state.live.humans.find(h=>h.uid===uid);if(!h||!h.connected)return;
    lastSeen.set(uid,now());
+   if(message.type==='leave'){disconnect(uid);return;}
    if(message.type==='attach'){publish(true,uid);return;}
    if(message.type==='pong')return;
    if(message.type==='locked'){if(barrier&&message.token===barrier.token&&message.seq===(seen.get(uid)||0)){const p=C.get(state,h.id);state.live.lockHashes ||= {};state.live.lockHashes[h.id]=C.seedOf(JSON.stringify({units:p.units,level:p.level,hp:p.hp,augments:p.augments}));barrier.pending.delete(uid);}return;}
@@ -80,9 +81,10 @@
     if(a.bytes>MAX_BYTES){assemblies.delete(key);return;}if(a.rows.filter(x=>x!==undefined).length===a.n){assemblies.delete(key);try{receive(JSON.parse(a.rows.join('')),uid);}catch(_){}}return;
    }
    if(authority){input(uid,message);return;}if(uid!==state.live.owner)return;lastPacket=now();closed=false;
+   if(message.type==='leave'){abandon('host-left');return;}
    if(message.type==='state'){
     if(!Number.isSafeInteger(message.seq)||message.seq<=received||message.state?.id!==state.id||message.state?.live?.owner!==state.live.owner)return;
-    const next=localise(message.state);if(!next)return;received=message.seq;state=next;manifest=message.manifest;hostTime=message.at;
+    const next=localise(message.state);if(!next)return;received=message.seq;state=next;if(!state.finished&&!state.live.humans.find(h=>h.id===local)?.connected){abandon('disconnected');return;}manifest=message.manifest;hostTime=message.at;
     if(state.phase==='combat'){makeVisuals();host.AutoChessOnline.record(state);}else disposeFights();
     if(state.finished){state.finishReason=C.get(state).rank===1?'victory':'eliminated';settleLocal();}else C.save(state);options.onChange?.();
    }else if(message.type==='pulse'){
@@ -116,7 +118,7 @@
     const phase=stage(state);if(phase!==lastPhase){lastPhase=phase;if(state.phase!=='combat')manifest=null;publish(true);}else if(dirty&&elapsed-stateAt>=.1||elapsed-stateAt>=1)publish(false);
     if(elapsed-pulseAt>=.25){pulseAt=elapsed;const times={};for(const p of state.players){const fight=base.combatFor(p.id),pair=state.pairs.find(j=>j.a===p.id);if(pair)times[pair.a+'/'+pair.b]=fight?.time||0;else if(['creep','boss'].includes(C.roundKind(state)))times[p.id+'/creeps']=fight?.time||0;}safeSend({type:'pulse',key:C.label(state),phase:state.phase,remaining:state.remaining,ready:state.live.ready,times,at:now()});}
    }else{
-    if(now()-lastPacket>10000&&!state.finished&&!closed){closed=true;error('Waiting for host connection. The shared match is paused on this client.');}
+    if(now()-lastPacket>10000&&!state.finished&&!closed){abandon('connection-timeout');return;}
     for(const j of jobs){const n=Math.max(0,j.target-j.combat.time);if(n>0)j.combat.step(Math.min(.5,n));j.combat.interpolate(dt);}
    }
   }
@@ -124,9 +126,12 @@
    links.delete(state.id);
    if(authority){state.localPlayerId='human';base=host.AutoChessCombat.createSession(state,{...options,authority:true,beforeCombat:startBarrier,onChange:()=>{dirty=true;options.onChange?.();},onFinalized:s=>{state=s;publish(true);options.onFinalized?.(s);}});state=base.state;for(const h of state.live.humans)lastSeen.set(h.uid,now());}
    unsubscribe=link.subscribe(receive,disconnect);if(authority)publish(true);else safeSend({type:'attach'});
-  }else{closed=true;error('Live room connection is unavailable. Resume with the original host connection.');}
+  }else{closed=true;host.queueMicrotask(()=>abandon('connection-unavailable'));}
   const timer=host.setInterval(loop,50);
-  return{get state(){return getState();},get speed(){return 1;},set speed(v){},get workerCount(){return base?.workerCount||worker?.size||0;},get combat(){return base?.combatFor(local)||jobs.find(j=>j.a===local||!j.ghost&&j.b===local)?.combat||jobs[0]?.combat;},get connectionLost(){return closed;},dispatch:command,ready:()=>command({type:'ready'}),tick(){},claim:()=>base?.claim()||settlement?.claim()||false,forfeit(){error('Live matches continue to one champion.');return false;},checkpoint:()=>C.save(getState()),combatFor(id){return base?.combatFor(id)||jobs.find(j=>j.a===id||!j.ghost&&j.b===id)?.combat||null;},opponentLabel(id){if(closed)return 'Waiting for host connection';if(base)return base.opponentLabel(id);const j=jobs.find(j=>j.a===id||!j.ghost&&j.b===id);return j?'VS '+(C.get(state,j.a===id?j.b:j.a)?.name||'Arcane Guardians'):'Live synchronized · '+state.phase;},dispose(){if(disposed)return;disposed=true;host.clearInterval(timer);unsubscribe?.();link?.close();base?.dispose();settlement?.dispose();disposeFights();assemblies.clear();}};
+  function dispose(){if(disposed)return;disposed=true;host.clearInterval(timer);unsubscribe?.();link?.close();base?.dispose();settlement?.dispose();disposeFights();assemblies.clear();}
+  function abandon(reason='left'){if(disposed)return false;state=getState();if(state.finished){dispose();return true;}safeSend({type:'leave'});state.abandoned=true;C.purgeCheckpoint();dispose();if(!['left','navigation'].includes(reason))options.onAbandon?.(reason);return true;}
+
+  return{get state(){return getState();},get speed(){return 1;},set speed(v){},get workerCount(){return base?.workerCount||worker?.size||0;},get combat(){return base?.combatFor(local)||jobs.find(j=>j.a===local||!j.ghost&&j.b===local)?.combat||jobs[0]?.combat;},get connectionLost(){return closed;},dispatch:command,ready:()=>command({type:'ready'}),tick(){},claim:()=>base?.claim()||settlement?.claim()||false,abandon,forfeit:()=>abandon('left'),checkpoint:()=>C.save(getState()),combatFor(id){return base?.combatFor(id)||jobs.find(j=>j.a===id||!j.ghost&&j.b===id)?.combat||null;},opponentLabel(id){if(closed)return 'Waiting for host connection';if(base)return base.opponentLabel(id);const j=jobs.find(j=>j.a===id||!j.ghost&&j.b===id);return j?'VS '+(C.get(state,j.a===id?j.b:j.a)?.name||'Arcane Guardians'):'Live synchronized · '+state.phase;},dispose};
  }
  host.AutoChessLive=Object.freeze({seed,createSession});
 })(window);

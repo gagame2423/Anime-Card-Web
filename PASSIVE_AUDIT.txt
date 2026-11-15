@@ -1,35 +1,32 @@
-PASSIVE AUDIT — AUTO CHESS: LIVE TRANSPORT ADAPTER
-Ngày: 16/11/2026 • Build: 20261116-autochess-live-1
+PASSIVE AUDIT — AUTO CHESS: FROZEN FIGHT / FUTURE ROSTER FORGE
+Ngày: 16/11/2026 • Build: 20261116-autochess-qol-1
 
 SCOPE
-- All 217 cards and all passive scripts are unchanged from the Ranked patch.
-- No new Proxy, Reflect.set trap, per-card timer or passive listener added.
-- Live builds use the existing isolated tactical engine and canonical unit/
-  Relic definitions. Both viewers use the exact manifest orientation and seed.
-- Host owns all economy intents and round settlement; guest visual simulations
-  cannot write standings or permanent inventory. Local seat selects own rewards.
-- Supporter, overtime factors, fair timeout and action recursion guards retained.
-- New Peer listener/fragment/clock state belongs to a disposable match session.
-  Disconnect removes a human from Ready/lock gates and transfers that seat to AI.
+- 217 card definitions and passive scripts unchanged. No new Proxy or passive hook.
+- Solo combat fusion changes only the model roster, bench and stash. Each fight
+  gets frozen lineup/Relic/Augment inputs before lazy native/Worker initialization.
+- Settlement uses the original fielded roster for roundsDeployed, Synergy history
+  and card/trait Gold; the upgraded persistent roster survives the round reset.
+- Live P2P rejects combat fusion both at command and model helper boundaries.
+- Abandon disposes fight workers, peer subscriptions and timers. It never settles
+  an unfinished fight, issues placement rewards or publishes an abandoned run.
+- Active checkpoint persistence/recovery removed; a separate bounded completed-
+  result queue preserves only idempotent pending reward claims without resuming.
 
-CURRENT VERIFICATION
-- Targeted Supporter 4 tiers, overtime 30/45/60s and fair timeout/draw passed.
-- 120 baseline low-rank AI decisions matched; high-rank team/Relic/Augment checks.
-- Two-client live commands, lock-in and deterministic PvP fixture passed;
-  host broadcasts identical final ranks and one-shot rewards to both clients.
-- Eight-client fixture: final Champion/placements identical; eliminated humans
-  spectate; 8 separate reward awards and 8 cloud query/write pairs, one per UID.
-- Guest viewport UI, live Ready/scouting and rich Relic inspection regressions.
-- Completed guest checkpoint: offline pending reward retry, correct local Elo/
-  promotion, no Player EXP, idempotent item/main receipts and clean exit.
-- Existing native/Worker deterministic regression retained (see README scope).
+CURRENT TARGETED VERIFICATION
+- 80 new Elo band/placement boundary cases; old receipts and tier boundaries.
+- One-round shop hold consumption and next unlocked refresh.
+- Solo bench / one deployed + two bench fusion, exact-once Relic returns,
+  unchanged active fighter identities, future roster retention and telemetry.
+- Live combat fusion rejected; Live Ready/exit/disconnect regressions.
+- Desktop/mobile UI, no Resume, fresh lobby on X/F5; host drop no longer strands
+  clients. Completed result retry after reload keeps Elo/items exactly once.
+- Existing native/Worker, Supporter/overtime and low-rank AI regression scenarios.
 
-COVERAGE
-The 217-card registry below records the endurance audit of the preceding patch;
-no new 217-card sweep is claimed here. Current changes are networking/view adapters.
-Peer/backend tests use mocks; production NAT, host migration and physical-device
-FPS are outside verified scope. A lost host pauses guests rather than fabricating
-results. Runtime combinations are not an exhaustive proof of every passive branch.
+LIMITS
+Registry below retains the previous endurance audit; this patch does not claim
+another exhaustive 217-card sweep. Peer tests use mocks; NAT production and physical
+mobile performance are not established. No assets/media are included.
 
 CARD REGISTRY / RUNTIME RESULTS (updated categories)
 1. Naruto Kid [starter-common] — First Strike — PASS

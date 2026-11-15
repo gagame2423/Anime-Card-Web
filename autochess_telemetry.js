@@ -29,11 +29,11 @@
   function compact(){return Object.fromEntries(Object.entries(sides).map(([side,r])=>[side,{...r,units:Object.fromEntries(Object.entries(r.units).map(([id,u])=>[id,Object.fromEntries(Object.entries(u).filter(([key])=>key.startsWith('total')||key==='damageBreakdown'))]))}]));}
   return{damage,heal,kill,gold,compact,snapshot:()=>C.clone(sides)};
  }
- function commit(s,p,result,round){
+ function commit(s,p,result,round,fieldedPlayer=p){
   ensure(s);const row=s.matchStats.tacticians[p.id];if(row.rounds.includes(round))return false;row.rounds.push(round);
   if(!s.matchStats.roundKeys.includes(round)){s.matchStats.roundKeys.push(round);s.matchStats.roundsPlayed++;}
   for(const key of ['totalDamageDealt','totalDamageTaken','totalHealingDone','totalShieldingDone','totalKills'])add(row,key,result?.[key]);
-  const deployed=C.deployed(p),fielded=new Set(deployed.map(u=>u.cardId));
+  const deployed=C.deployed(fieldedPlayer),fielded=new Set(deployed.map(u=>u.cardId));
   for(const u of deployed)unitRow(row,C.card(u),u.relic?.roll||u.relic).equippedRelic=u.relic?C.clone(u.relic.roll||u.relic):null;
   for(const [id,raw]of Object.entries(result?.units||{})){
    const card=C.card(id);if(!card)continue;const u=unitRow(row,card,raw.equippedRelic);if(raw.equippedRelic)u.equippedRelic=C.clone(raw.equippedRelic);
@@ -41,7 +41,7 @@
    for(const [k,n]of Object.entries(raw.damageBreakdown||{}))add(u.damageBreakdown,k,n);u.peakRoundDamage=Math.max(u.peakRoundDamage,count(raw.totalDamageDealt));
   }
   for(const id of fielded)row.units[id].roundsDeployed++;
-  for(const trait of S.analyze(deployed,host.AutoChessAugments?.traits(p)))if(trait.tier){const old=row.synergies[trait.id] ||= {id:trait.id,name:trait.name,type:trait.type,icon:trait.icon,roundsActive:0,peakCount:0,peakTier:0,peakTierName:'Inactive'};old.roundsActive++;old.peakCount=Math.max(old.peakCount,trait.count);old.peakTier=Math.max(old.peakTier,trait.tier);old.peakTierName=S.TIERS[old.peakTier];}
+  for(const trait of S.analyze(deployed,host.AutoChessAugments?.traits(fieldedPlayer)))if(trait.tier){const old=row.synergies[trait.id] ||= {id:trait.id,name:trait.name,type:trait.type,icon:trait.icon,roundsActive:0,peakCount:0,peakTier:0,peakTierName:'Inactive'};old.roundsActive++;old.peakCount=Math.max(old.peakCount,trait.count);old.peakTier=Math.max(old.peakTier,trait.tier);old.peakTierName=S.TIERS[old.peakTier];}
   return true;
  }
  function recordResult(s,p,won,damageToEnemy=0){ensure(s);const r=s.matchStats.tacticians[p.id];add(r,won===null?'draws':won?'wins':'losses',1);r.currentWinStreak=won?r.currentWinStreak+1:0;r.longestWinStreak=Math.max(r.longestWinStreak,r.currentWinStreak);add(r,'tacticianDamageDealt',damageToEnemy);}

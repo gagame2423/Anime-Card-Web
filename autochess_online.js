@@ -34,7 +34,7 @@
   // Start never awaits this request. Bots are playable immediately at Stage 1-1.
   Promise.resolve().then(()=>cloud.recentRuns()).then(rows=>{
    const valid=(rows||[]).map(R.decode).filter(Boolean).map(r=>r.wire).slice(0,8);storePool(valid);
-   const s=getState();if(!s||s.id!==id||s.finished||s.hybrid.uid!==uid)return;
+   const s=getState();if(!s||s.id!==id||s.abandoned||s.finished||s.hybrid.uid!==uid)return;
    s.hybrid.cloudStatus='synced';
    if(!s.live&&s.stage===1&&s.round<4){const used=new Set([uid,...s.players.map(p=>p.source?.uid).filter(Boolean)]),slots=s.players.slice(1).filter(p=>!p.source);
     for(const wire of distinct(valid,uid)){const friend=s.players.find(p=>p.source?.kind==='friend-ai'&&p.source.uid===wire.uid);if(friend){install(s,s.players.indexOf(friend),{uid:wire.uid,name:friend.name,elo:wire.elo,run:wire},true);continue;}if(used.has(wire.uid)||!slots.length)continue;used.add(wire.uid);const p=slots.shift();install(s,s.players.indexOf(p),{uid:wire.uid,name:wire.name,elo:wire.elo,run:wire});}
@@ -55,7 +55,7 @@
  }
  function record(s){R.record(s);}
  function finish(s){
-  if(!s.hybrid||!s.finished||!s.paid||s.hybrid.writeAttempted||s.stage<2)return;
+  if(s.abandoned||!s.hybrid||!s.finished||!s.paid||s.hybrid.writeAttempted||s.stage<2)return;
   R.record(s,true);const ranked=host.AutoChessRanked?.current()||{},payload=R.encode({uid:s.hybrid.uid,name:C.get(s).name,matchId:s.id,placement:C.get(s).rank,elo:ranked.elo||0,wins:ranked.wins||0},s.hybrid.stages);
   s.hybrid.writeAttempted=true;if(!payload){s.hybrid.cloudStatus='too-large';C.save(s);return;}
   R.save(payload);s.hybrid.payloadBytes=R.bytes(payload);

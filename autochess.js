@@ -1,7 +1,7 @@
 /* Phase 1: pure, seeded lobby/economy model. Match items never enter the collection. */
 (function(host){
  'use strict';
- const KEY='anime_card_rng_autochess_v1',VERSION=1;
+ const KEY='anime_card_rng_autochess_v1',PENDING_KEY='anime_card_rng_ac_pending_results_v1',VERSION=1;
  const RARITIES=Object.freeze(['Common','Rare','Epic','Legendary','Mythic','Secret']),COSTS=Object.freeze([1,2,3,4,5,7]);
  const XP=Object.freeze([2,6,10,18,28,40,56,72,0]);
  const ODDS=Object.freeze([[100,0,0,0,0,0],[80,20,0,0,0,0],[65,28,7,0,0,0],[48,32,18,2,0,0],[32,33,25,9,1,0],[20,30,30,16,4,0],[12,22,30,25,10,1],[7,15,25,30,20,3],[3,10,20,30,28,9]].map(Object.freeze));
@@ -57,17 +57,21 @@
   }else if(where==='bench'){if(!int(index,0,8))throw Error('Choose a bench slot.');const other=p.units.find(v=>v.bench===index),old={board:u.board,bench:u.bench,reserve:u.reserve};u.board=null;u.bench=index;u.reserve=false;if(other&&other!==u)Object.assign(other,old);}else throw Error('Invalid destination.');p.anvil=p.anvil.filter(id=>p.units.some(v=>v.uid===id&&v.board===null));drain(p);
  }
  function sell(p,uid){const u=p.units.find(u=>u.uid===uid);if(!u)throw Error('Unit unavailable.');earn(p,price(u));stash(p,u.relic);p.units=p.units.filter(v=>v!==u);p.anvil=p.anvil.filter(id=>id!==uid);drain(p);}
+ const soloCombat=s=>s.phase==='combat'&&!s.live&&(s.hybrid?.humanPlayers??1)===1;
+ const combatForge=(s,p)=>soloCombat(s)&&p===get(s)&&p.hp>0&&!s.finished;
+ const fusionEligible=(s,p,u)=>!!u&&(u.board===null||combatForge(s,p));
  function fuse(s,p,ids){
+  if(s.phase==='combat'&&!combatForge(s,p))throw Error('Combat fusion is Solo-only.');
   if(!Array.isArray(ids)||ids.length!==3||new Set(ids).size!==3)throw Error('Choose exactly three units.');
-  const rows=ids.map(id=>p.units.find(u=>u.uid===id));if(rows.some(u=>!u||u.board!==null))throw Error('Only benched units can enter the anvil.');const t=tier(rows[0]);if(t<0||t===5||rows.some(u=>tier(u)!==t))throw Error('Use three cards of the same rarity, below Secret.');
+  const rows=ids.map(id=>p.units.find(u=>u.uid===id));const fielded=rows.filter(u=>u?.board!==null);if(rows.some(u=>!fusionEligible(s,p,u))||fielded.length>1)throw Error('Use bench units, or one deployed unit plus two bench units in Solo combat.');const t=tier(rows[0]);if(t<0||t===5||rows.some(u=>tier(u)!==t))throw Error('Use three cards of the same rarity, below Secret.');
   let available=pools[t+1],supporters=rows.filter(u=>card(u).category.includes('Supporter')).length;
   if(supporters){const supports=available.filter(c=>c.category.includes('Supporter')),others=available.filter(c=>!c.category.includes('Supporter'));if(supports.length&&others.length)available=random(s)<.70+.05*supporters?supports:others;}
   if(random(s)<.50){const counts=new Map();for(const u of rows)for(const tag of [...card(u).category,card(u).element])counts.set(tag,(counts.get(tag)||0)+1);const max=Math.max(...counts.values()),tags=[...counts].filter(([,n])=>n===max).map(([tag])=>tag),tag=choose(s,tags),matches=available.filter(c=>c.element===tag||c.category.includes(tag));if(matches.length)available=matches;}
-  const result=unit(s,choose(s,available)),slot=rows.map(u=>u.bench).filter(i=>i!==null).sort((a,b)=>a-b)[0];for(const u of rows)stash(p,u.relic);p.units=p.units.filter(u=>!ids.includes(u.uid));p.anvil=p.anvil.filter(id=>!ids.includes(id));result.bench=slot??null;result.reserve=slot===undefined;p.units.push(result);host.AutoChessTelemetry?.economy(p,'rarityFusionsCount',1);drain(p);return result;
+  const result=unit(s,choose(s,available)),slot=rows.map(u=>u.bench).filter(i=>i!==null).sort((a,b)=>a-b)[0];for(const u of rows)stash(p,u.relic);p.units=p.units.filter(u=>!ids.includes(u.uid));p.anvil=p.anvil.filter(id=>!ids.includes(id));result.board=fielded[0]?.board??null;result.bench=result.board===null?(slot??null):null;result.reserve=result.board===null&&slot===undefined;p.units.push(result);host.AutoChessTelemetry?.economy(p,'rarityFusionsCount',1);drain(p);return result;
  }
  function autoFuse(s,p){for(let guard=0;guard<24;guard++){const rows=RARITIES.slice(0,5).map((_,t)=>p.units.filter(u=>u.board===null&&!u.keep&&!p.anvil.includes(u.uid)&&tier(u)===t)).find(a=>a.length>=3);if(!rows)break;fuse(s,p,rows.slice(0,3).map(u=>u.uid));}}
  function equip(p,relicId,uid){const index=p.relics.findIndex(r=>r?.uid===relicId),u=p.units.find(v=>v.uid===uid);if(index<0||!u)throw Error('Relic or unit unavailable.');const old=u.relic;u.relic=p.relics[index];p.relics[index]=old;drain(p);}
- function fuseRelics(s,p,a,b){const ai=p.relics.findIndex(r=>r?.uid===a),bi=p.relics.findIndex(r=>r?.uid===b);if(ai<0||bi<0||ai===bi)throw Error('Choose two stash Relics.');const x=p.relics[ai].roll,y=p.relics[bi].roll;if(x.rarity!==y.rarity||x.unique||y.unique)throw Error('Relics must share a tier and be non-Unique.');const next=x.rarity==='common'?'rare':'legendary',unique=x.rarity==='legendary',result=relic(s,next,unique,random(s)<.5?x.kind:y.kind);p.relics[ai]=result;p.relics[bi]=null;host.AutoChessTelemetry?.economy(p,'relicsCrafted',1);drain(p);return result;}
+ function fuseRelics(s,p,a,b){if(s.phase==='combat'&&!combatForge(s,p))throw Error('Combat fusion is Solo-only.');const ai=p.relics.findIndex(r=>r?.uid===a),bi=p.relics.findIndex(r=>r?.uid===b);if(ai<0||bi<0||ai===bi)throw Error('Choose two stash Relics.');const x=p.relics[ai].roll,y=p.relics[bi].roll;if(x.rarity!==y.rarity||x.unique||y.unique)throw Error('Relics must share a tier and be non-Unique.');const next=x.rarity==='common'?'rare':'legendary',unique=x.rarity==='legendary',result=relic(s,next,unique,random(s)<.5?x.kind:y.kind);p.relics[ai]=result;p.relics[bi]=null;host.AutoChessTelemetry?.economy(p,'relicsCrafted',1);drain(p);return result;}
  function carousel(s){
   s.phase='carousel';s.remaining=RULES.carouselSeconds;s.draftElapsed=0;s.draftWave=0;s.draftOrder=alive(s).slice().sort((a,b)=>a.hp-b.hp||s.players.indexOf(a)-s.players.indexOf(b)).map(p=>p.id);
   const rarity=s.stage<3?'common':s.stage<5?'rare':'legendary';
@@ -75,7 +79,7 @@
  }
  function released(s,id){const i=s.draftOrder.indexOf(id);return i>=0&&(s.stage===1||i<(s.draftWave+1)*2);}
  function draft(s,p,uid){const u=s.carousel.find(v=>v.uid===uid);if(!u||u.claimedBy||!released(s,p.id)||s.carousel.some(v=>v.claimedBy===p.id))throw Error('Wait for your release pair or choose an unclaimed unit.');u.claimedBy=p.id;const result=clone(u);delete result.claimedBy;acquire(p,result);return result;}
- function plan(s){s.phase='planning';s.remaining=RULES.planningSeconds;s.pairs=[];s.roundSeed=seedOf(s.seed,s.stage,s.round);for(const p of alive(s)){economyRound(s,p);if(!p.locked)shop(s,p);drain(p);}host.AutoChessAugments?.begin(s);s.revision++;}
+ function plan(s){s.phase='planning';s.remaining=RULES.planningSeconds;s.pairs=[];s.roundSeed=seedOf(s.seed,s.stage,s.round);for(const p of alive(s)){economyRound(s,p);if(p.locked)p.locked=false;else shop(s,p);drain(p);}host.AutoChessAugments?.begin(s);s.revision++;}
  function finishAtLimit(s){
   if(s.finished||s.stage!==100||s.round!==6)return false;
   const rows=alive(s).sort((a,b)=>b.hp-a.hp||(s.matchStats?.tacticians[b.id]?.totalDamageDealt||0)-(s.matchStats?.tacticians[a.id]?.totalDamageDealt||0)||b.level-a.level||seedOf(s.seed,a.id)-seedOf(s.seed,b.id));
@@ -84,7 +88,8 @@
  function advance(s){if(s.finished||finishAtLimit(s))return;if(s.round===(s.stage===1?4:6)){s.stage++;s.round=1;}else s.round++;s.lastResults=[];if(roundKind(s)==='carousel')carousel(s);else plan(s);s.revision++;}
  function apply(s,playerId,action){
   const p=get(s,playerId);if(!p||p.hp<=0||s.finished)throw Error('This tactician is eliminated.');
-  if(!['planning','carousel','augment'].includes(s.phase))throw Error('Wait for the planning phase.');
+  if(!['planning','carousel','augment'].includes(s.phase)&&!combatForge(s,p))throw Error('Wait for the planning phase.');
+  if(s.phase==='combat'&&!['fuse','anvil','relicFuse','keep'].includes(action.type))throw Error('Only card/Relic fusion is available during Solo combat.');
   const kind=action.type;if(s.phase==='augment'&&!['augmentPick','augmentReroll'].includes(kind))throw Error('Choose your Augment first.');if(s.phase==='carousel'&&!['draft','sell','move','unequip','keep'].includes(kind))throw Error('Complete the carousel first.');
   switch(kind){
    case'buy':buy(s,p,action.index);break;
@@ -97,7 +102,7 @@
    case'move':move(p,action.uid,action.where,action.index);break;
    case'sell':sell(p,action.uid);break;
    case'keep':{const u=p.units.find(v=>v.uid===action.uid);if(u)u.keep=!u.keep;break;}
-   case'anvil':{const u=p.units.find(v=>v.uid===action.uid);if(!u||u.board!==null)throw Error('Move this unit to the bench first.');if(p.anvil.includes(u.uid))p.anvil=p.anvil.filter(id=>id!==u.uid);else if(p.anvil.length<3)p.anvil.push(u.uid);else throw Error('Anvil is full.');break;}
+   case'anvil':{const u=p.units.find(v=>v.uid===action.uid);if(!fusionEligible(s,p,u))throw Error('Move this unit to the bench first.');if(p.anvil.includes(u.uid))p.anvil=p.anvil.filter(id=>id!==u.uid);else if(p.anvil.length<3){if(u.board!==null&&p.anvil.some(id=>p.units.find(v=>v.uid===id)?.board!==null))throw Error('Only one deployed material is allowed.');p.anvil.push(u.uid);}else throw Error('Anvil is full.');break;}
    case'fuse':fuse(s,p,action.ids||p.anvil.slice());break;
    case'equip':equip(p,action.relicId,action.uid);break;
    case'unequip':{const u=p.units.find(v=>v.uid===action.uid);if(u?.relic){stash(p,u.relic);u.relic=null;drain(p);}break;}
@@ -136,6 +141,7 @@
   const champion=p.rank===1||alive(s).length===1&&alive(s)[0]===p;
   if(!s.finished&&p.hp>0&&!champion)return false;
   if(p.rank===null)p.rank=champion?1:Math.min(8,alive(s).length+1);
+  for(const row of s.players)row.anvil=row.anvil.filter(id=>row.units.some(u=>u.uid===id&&u.board===null));
   const changed=!s.finished||s.phase!=='complete'||s.remaining!==0||!s.finishReason;
   s.finishReason ||= reason==='forfeit'?'forfeit':p.rank===1?'victory':'eliminated';
   s.finished=true;s.phase='complete';s.remaining=0;host.AutoChessTelemetry?.finish(s);if(changed)s.revision++;
@@ -155,10 +161,15 @@
   for(const p of s.players){if(!['human','bot0','bot1','bot2','bot3','bot4','bot5','bot6'].includes(p.id)||typeof p.name!=='string'||p.name.length>40||typeof p.bot!=='boolean'||!(p.rank===null||int(p.rank,1,8))||ids.has(p.id)||!int(p.hp,0,100)||!int(p.gold,0,100000)||!int(p.level,1,9)||!int(p.xp,0,100)||!Array.isArray(p.units)||p.units.length>100||!Array.isArray(p.relics)||p.relics.length!==10||!Array.isArray(p.loot)||p.loot.length>512||!Array.isArray(p.shop)||p.shop.length!==5||p.shop.some(id=>id!==null&&!card(id)))return false;ids.add(p.id);const tiles=new Set(),bench=new Set();
    const checkRelic=r=>{if(!r)return true;if(typeof r.uid!=='string'||relicIds.has(r.uid)||!host.RelicSystem.validRoll(r.roll))return false;relicIds.add(r.uid);return true;};
    for(const u of p.units){if(!card(u)||typeof u.uid!=='string'||unitIds.has(u.uid)||!checkRelic(u.relic))return false;unitIds.add(u.uid);if(u.board!==null){if(!int(u.board,0,27)||tiles.has(u.board)||u.bench!==null||u.reserve)return false;tiles.add(u.board);}else if(u.bench!==null){if(!int(u.bench,0,8)||bench.has(u.bench)||u.reserve)return false;bench.add(u.bench);}else if(!u.reserve)return false;}
-   if(tiles.size>p.level||![...p.relics,...p.loot].every(checkRelic)||!Array.isArray(p.anvil)||p.anvil.length>3||new Set(p.anvil).size!==p.anvil.length||p.anvil.some(id=>!p.units.some(u=>u.uid===id&&u.board===null)))return false;
+   if(tiles.size>p.level||![...p.relics,...p.loot].every(checkRelic)||!Array.isArray(p.anvil)||p.anvil.length>3||new Set(p.anvil).size!==p.anvil.length||p.anvil.some(id=>!p.units.some(u=>u.uid===id&&fusionEligible(s,p,u)))||p.anvil.filter(id=>p.units.find(u=>u.uid===id)?.board!==null).length>1)return false;
   }const ranks=s.players.map(p=>p.rank).filter(n=>n!==null);if(new Set(ranks).size!==ranks.length)return false;if(!Array.isArray(s.pairs)||s.pairs.length>4||s.pairs.some(p=>!ids.has(p.a)||!ids.has(p.b)||p.a===p.b||typeof p.ghost!=='boolean'))return false;if(!Array.isArray(s.carousel)||s.carousel.length!==9||new Set(s.carousel.map(u=>u?.uid)).size!==9||s.carousel.some(u=>!card(u)||!u.relic||!host.RelicSystem.validRoll(u.relic.roll)||u.claimedBy!==null&&!ids.has(u.claimedBy)))return false;if(!Array.isArray(s.draftOrder)||new Set(s.draftOrder).size!==s.draftOrder.length||s.draftOrder.some(id=>!ids.has(id))||!int(s.draftWave,0,4)||!Number.isFinite(s.draftElapsed)||s.draftElapsed<0)return false;return ids.has('human');
  }
- function save(s){try{if(!validate(s))throw Error('Invalid Auto Chess checkpoint.');host.localStorage.setItem(KEY,JSON.stringify(s));return true;}catch(_){return false;}}
- function load(){try{const s=JSON.parse(host.localStorage.getItem(KEY)||'null');if(!validate(s))return null;host.AutoChessTelemetry?.ensure(s);host.AutoChessAugments?.initialize(s);for(const p of s.players)economyRound(s,p);return s;}catch(_){return null;}}
- host.AutoChessSystem=Object.freeze({KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,income,levelUp,buy,move,sell,fuse,autoFuse,equip,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load});
+ function pendingResults(){try{const rows=JSON.parse(host.localStorage.getItem(PENDING_KEY)||'[]');return Array.isArray(rows)?rows.filter(s=>s?.finished&&!s.paid&&!s.abandoned&&validate(s)).slice(0,16):[];}catch(_){return[];}}
+ function save(s){try{if(!validate(s)||s.abandoned)throw Error('Invalid Auto Chess state.');if(!s.finished)return true;const rows=pendingResults().filter(row=>row.id!==s.id);if(!s.paid){if(rows.length>=16)return false;rows.push(clone(s));}if(rows.length)host.localStorage.setItem(PENDING_KEY,JSON.stringify(rows));else host.localStorage.removeItem(PENDING_KEY);return true;}catch(_){return false;}}
+ function purgeCheckpoint(){try{const old=JSON.parse(host.localStorage.getItem(KEY)||'null');if(old?.finished&&!old.paid&&!old.abandoned&&validate(old)&&!save(old))return false;host.localStorage.removeItem(KEY);return true;}catch(_){return clear();}}
+ function load(){purgeCheckpoint();return null;}
+ // Startup invalidates the former recovery key; Worker runtimes have no storage.
+ if(host.document)purgeCheckpoint();
+
+ host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,income,levelUp,buy,move,sell,soloCombat,combatForge,fusionEligible,fuse,autoFuse,equip,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
 })(window);
