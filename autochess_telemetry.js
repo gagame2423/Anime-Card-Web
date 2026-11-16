@@ -42,9 +42,10 @@
   }
   for(const id of fielded)row.units[id].roundsDeployed++;
   for(const trait of S.analyze(deployed,host.AutoChessAugments?.traits(fieldedPlayer)))if(trait.tier){const old=row.synergies[trait.id] ||= {id:trait.id,name:trait.name,type:trait.type,icon:trait.icon,roundsActive:0,peakCount:0,peakTier:0,peakTierName:'Inactive'};old.roundsActive++;old.peakCount=Math.max(old.peakCount,trait.count);old.peakTier=Math.max(old.peakTier,trait.tier);old.peakTierName=S.TIERS[old.peakTier];}
+  host.AutoChessStrategy?.record(s,p,fieldedPlayer);
   return true;
  }
- function recordResult(s,p,won,damageToEnemy=0){ensure(s);const r=s.matchStats.tacticians[p.id];add(r,won===null?'draws':won?'wins':'losses',1);r.currentWinStreak=won?r.currentWinStreak+1:0;r.longestWinStreak=Math.max(r.longestWinStreak,r.currentWinStreak);add(r,'tacticianDamageDealt',damageToEnemy);}
+ function recordResult(s,p,won,damageToEnemy=0){ensure(s);const r=s.matchStats.tacticians[p.id];add(r,won===null?'draws':won?'wins':'losses',1);if(won!==null)r.currentWinStreak=won?r.currentWinStreak+1:0;r.longestWinStreak=Math.max(r.longestWinStreak,r.currentWinStreak);add(r,'tacticianDamageDealt',damageToEnemy);}
  function snapshot(s,p,provisional=false,placement=p.rank){
   ensure(s);const r=s.matchStats.tacticians[p.id];r.placement=placement;r.provisional=provisional;r.finalHp=p.hp;r.finalLevel=p.level;
   if(!r.eliminatedAtStage)r.eliminatedAtStage=p.rank===1?'Champion':p.hp<=0?'Stage '+C.label(s):'Surviving at player exit';

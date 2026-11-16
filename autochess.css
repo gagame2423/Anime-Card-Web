@@ -369,3 +369,86 @@
 
 /* Solo combat forging edits the future roster, never the current simulation. */
 .ac-forge-notice{position:absolute;left:50%;bottom:calc(clamp(132px,21vh,172px) + 3px);transform:translateX(-50%);max-width:70%;padding:3px 10px;border:1px solid #ac8956;border-radius:5px;background:#102522ee;color:#f2d8a0;font-size:10px;pointer-events:none;z-index:5;text-align:center}.ac-forge-notice[hidden]{display:none}.ac-combat-forge .ac-fusion-row{border-color:#cba96b}.ac-combat-forge #acAnvil{box-shadow:inset 0 0 12px #d3ae5124}.ac-combat-forge .ac-bench-slot{outline-color:#a58a51}.ac-combat-forge #acSell{opacity:.4;pointer-events:none}@media(max-height:540px){.ac-forge-notice{bottom:calc(clamp(96px,25vh,118px) + 2px);font-size:8px;padding:2px 5px;max-width:65%}}
+
+/* Strategy update: roomy Relic hit zones and a non-intercepting hover layer. */
+.ac-rich-relic,.ac-rich-relic *{pointer-events:none!important}.ac-rich-relic .ac-relic-close-hint{font-size:9px;color:#9ab3c2;max-width:58px}.ac-rich-relic{transition:opacity .08s ease}
+#autochessModal .ac-relic-target{box-sizing:border-box;min-width:24px;min-height:24px;padding:4px;margin:-4px;position:relative;z-index:4}
+#autochessModal .ac-stash-slot .ac-relic-target{width:100%;height:100%;padding:4px;margin:0}
+#autochessModal .ac-equipped{overflow:visible;min-width:20px;min-height:20px}
+#autochessModal .ac-equipped>.ac-relic-target{display:flex;width:calc(100% + 8px);height:calc(100% + 8px);padding:4px}
+#autochessModal .ac-equipped .ac-relic-target>span{display:none}
+#autochessModal .ac-token-relic{min-width:20px;min-height:20px;overflow:visible}
+#autochessModal .ac-token-relic .ac-relic-target{width:calc(100% + 8px);height:calc(100% + 8px)}
+#autochessModal .ac-relic-target img{width:100%;height:100%;object-fit:contain}
+#autochessModal .ac-streak-badge{flex-shrink:0;font-size:10px;font-weight:800;padding:2px 7px;border:1px solid #607c89;border-radius:10px;letter-spacing:0;white-space:nowrap}
+#autochessModal .ac-streak-badge[data-kind="win"]{color:#f9db95;border-color:#d3ad5f;background:#6c471b33}
+#autochessModal .ac-streak-badge[data-kind="loss"]{color:#b4def2;border-color:#719fb7;background:#2f527033}
+#autochessModal #acTimer.is-urgent{color:#ffe4af;border-color:#dc9b57;animation:ac-urgency 1.5s ease-in-out infinite}
+@keyframes ac-urgency{50%{box-shadow:0 0 12px #eaa14566;background:#7f4e2322}}
+#autochessModal .ac-tactical-reward{border-color:#c0a46d;background:linear-gradient(110deg,#4f402826,#2d37452e)}
+#autochessModal .ac-planner-button{padding:2px 6px;min-width:24px;min-height:20px;color:#ffe0a1;border-color:#a88e58;font-size:15px}
+#autochessModal .ac-offer.is-target{border-color:#ffe18a!important;box-shadow:0 0 8px #ffd65b8c,inset 0 0 12px #e7c45c35;animation:ac-target-aura 1.8s ease-in-out infinite}
+#autochessModal .ac-target-badge{position:absolute;top:3px;left:3px;z-index:4;border-radius:3px;padding:2px 4px;background:#ffe499;color:#332209;font-size:7px;font-weight:950;letter-spacing:1px;box-shadow:0 0 8px #ffe39688;line-height:1}
+@keyframes ac-target-aura{50%{border-color:#fff8d8;box-shadow:0 0 13px #ffe99db8,inset 0 0 16px #e7c45c55}}
+#autochessModal .ac-lobby-brand{display:flex;gap:12px;align-items:center;min-width:0}
+#autochessModal .ac-lobby-guide{flex-shrink:0;border-radius:50%;width:38px;height:38px;padding:0;border:1px solid #cbb477;background:#102338cc;color:#ffe4a4;font:700 23px Georgia,serif}
+#autochessModal .ac-lobby-targets{width:100%;max-width:260px;min-height:42px;background:linear-gradient(145deg,#1f3449dd,#0c1725);border:1px solid #b49a5c88;border-radius:7px;padding:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#f0dba7;font-size:11px}
+#autochessModal .ac-lobby-targets:hover{border-color:#efd48e;box-shadow:0 0 15px #b79a4733}
+#autochessModal .ac-lobby-targets>small{font-size:9px;color:#a8c5d5;letter-spacing:.3px}
+#autochessModal .ac-target-mini{width:100%;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
+#autochessModal .ac-target-mini img{width:100%;height:30px;object-fit:cover;border:1px solid #bea66c;border-radius:3px;min-width:0;box-sizing:border-box}
+#autochessModal .ac-tool-layer{position:absolute;inset:0;display:grid;place-items:center;background:#041019d9;backdrop-filter:blur(8px);z-index:1600;padding:10px;box-sizing:border-box}
+#autochessModal .ac-tool-panel{width:min(1080px,98%);height:min(740px,98%);max-height:98%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);border:1px solid #819eaa88;border-radius:13px;background:linear-gradient(145deg,#172b39,#0c1722);box-shadow:0 24px 90px #000a;overflow:hidden;color:#e5edf3}
+#autochessModal .ac-tool-panel>header{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px 18px;border-bottom:1px solid #4d6c7b77}
+#autochessModal .ac-tool-panel h2{margin:3px 0 0;font-size:21px;line-height:1.2}
+#autochessModal .ac-tool-panel [data-ac-tool-close]{font-size:23px;min-height:34px;min-width:34px;padding:0;flex-shrink:0}
+#autochessModal .ac-tool-content{padding:13px 17px;display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden}
+#autochessModal .ac-tool-intro{font-size:12px;margin:0;color:#abc9d6}
+#autochessModal .ac-planner-filters{display:grid;grid-template-columns:1.4fr 1fr 1fr .8fr;gap:8px}
+#autochessModal .ac-planner-filters input,#autochessModal .ac-planner-filters select{box-sizing:border-box;min-width:0;width:100%;font-size:12px;height:34px;border-radius:5px;border:1px solid #617c8e;background:#091823;color:#e5f0f5;padding:4px 8px}
+#autochessModal .ac-planner-status{display:flex;align-items:center;gap:10px;font-size:11px;color:#f4d995;min-height:24px}
+#autochessModal .ac-planner-status>span{color:#9cdcc9;flex:1}
+#autochessModal .ac-planner-status button{font-size:10px;padding:4px 8px}
+#autochessModal .ac-planner-grid{min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;align-content:start;padding:3px}
+#autochessModal .ac-planner-card{min-width:0;height:204px;padding:0;display:flex;flex-direction:column;gap:4px;overflow:hidden;background:#101f2b;border:1px solid #5b7585;border-radius:7px;position:relative}
+#autochessModal .ac-planner-card>img{width:100%;height:106px;object-fit:cover;object-position:top}
+#autochessModal .ac-planner-card>strong{font-size:11px;padding:0 5px;line-height:1.25;min-height:26px}
+#autochessModal .ac-planner-card>small{font-size:9px;color:#c4c9c8}
+#autochessModal .ac-planner-card>.element-inline{font-size:10px;justify-content:center}
+#autochessModal .ac-planner-card>.element-inline img{height:14px;width:14px}
+#autochessModal .ac-planner-card>span:last-child{font-size:8px;color:#9ab3c4;padding:0 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;box-sizing:border-box}
+#autochessModal .ac-planner-card[data-rarity="Secret"]{border-color:#c3a657}#autochessModal .ac-planner-card[data-rarity="Mythic"]{border-color:#c386b7}
+#autochessModal .ac-planner-card.is-chosen{border:2px solid #ffe7a0;background:#3c3523;box-shadow:0 0 13px #ffe2a14a}
+#autochessModal .ac-planner-card.is-chosen:after{content:'✓';position:absolute;top:5px;right:5px;background:#ffe19e;border-radius:50%;color:#1c2a20;font-weight:900;font-size:14px;width:23px;height:23px}
+#autochessModal .ac-guide-tabs{display:flex;gap:7px;flex-shrink:0;overflow:auto;padding-bottom:3px}
+#autochessModal .ac-guide-tabs button{white-space:nowrap;font-size:11px;padding:7px 10px}
+#autochessModal .ac-guide-tabs [aria-pressed="true"]{color:#ffe3a1;background:#4b4129;border-color:#bfa368}
+#autochessModal .ac-guide-body{min-height:0;overflow:auto;padding:0 6px 12px 0;font-size:13px;line-height:1.65;flex:1}
+#autochessModal .ac-guide-section{background:#10233088;border:1px solid #46617255;padding:12px 15px;border-radius:7px;margin:0 0 10px}
+#autochessModal .ac-guide-section h3{color:#f2d99b;font-size:15px;margin:0 0 7px}
+#autochessModal .ac-guide-section p{margin:7px 0;color:#c6d8e2}
+#autochessModal .ac-guide-section dt{font-weight:800;color:#acd9eb;margin:9px 0 3px}
+#autochessModal .ac-guide-section dd{margin:0;color:#c2d1da}
+#autochessModal .ac-guide-reference>summary{cursor:pointer;padding:10px;color:#f5d995;border:1px solid #7e895a77;border-radius:5px;margin-bottom:10px}
+#autochessModal .ac-guide-table{overflow:auto;margin-bottom:12px}
+#autochessModal .ac-guide-table table{border-collapse:collapse;min-width:550px;width:100%;font-size:11px}
+#autochessModal .ac-guide-table td,#autochessModal .ac-guide-table th{border:1px solid #5a748477;padding:6px;text-align:center}
+#autochessModal .ac-guide-table th{color:#ecd7a0;background:#19303c}
+#autochessModal.ac-compact .ac-lobby-brand{gap:8px}#autochessModal.ac-compact .ac-lobby-guide{height:29px;width:29px;font-size:18px}
+#autochessModal.ac-compact .ac-lobby-targets{min-height:29px;padding:4px;font-size:8px;gap:3px}#autochessModal.ac-compact .ac-lobby-targets>small{font-size:7px}#autochessModal.ac-compact .ac-target-mini img{height:20px}
+#autochessModal.ac-compact .ac-invite-host{gap:3px;padding-bottom:6px}
+#autochessModal.ac-compact .ac-streak-badge{font-size:8px;padding:1px 4px}
+#autochessModal.ac-compact .ac-planner-button{font-size:11px;min-height:16px;height:16px;min-width:20px;padding:0 4px}
+#autochessModal.ac-compact .ac-tool-panel>header{padding:7px 11px}#autochessModal.ac-compact .ac-tool-panel h2{font-size:16px}
+#autochessModal.ac-compact .ac-tool-content{padding:8px 10px;gap:6px}#autochessModal.ac-compact .ac-tool-intro{font-size:10px}
+#autochessModal.ac-compact .ac-planner-filters{gap:5px}#autochessModal.ac-compact .ac-planner-filters input,#autochessModal.ac-compact .ac-planner-filters select{height:27px;font-size:10px}
+#autochessModal.ac-compact .ac-planner-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:7px}#autochessModal.ac-compact .ac-planner-card{height:166px}#autochessModal.ac-compact .ac-planner-card>img{height:75px}
+#autochessModal.ac-compact .ac-guide-tabs button{font-size:10px;padding:5px 8px}#autochessModal.ac-compact .ac-guide-body{font-size:11px}#autochessModal.ac-compact .ac-guide-section{padding:9px 11px}#autochessModal.ac-compact .ac-guide-section h3{font-size:13px}
+@media(max-width:600px) and (orientation:portrait){#autochessModal .ac-planner-filters{grid-template-columns:1fr 1fr}#autochessModal .ac-tool-panel{width:100%;height:100%;max-height:100%}#autochessModal .ac-tool-layer{padding:6px}}
+@media(max-height:340px){#autochessModal.ac-compact .ac-lobby-targets{min-height:22px;padding:2px}#autochessModal.ac-compact .ac-target-mini img{height:14px}#autochessModal.ac-compact .ac-lobby-targets>small{display:none}}
+@media(prefers-reduced-motion:reduce){#autochessModal #acTimer.is-urgent,#autochessModal .ac-offer.is-target{animation:none}}
+#autochessModal .ac-invite-avatar{overflow:hidden;pointer-events:none}#autochessModal .ac-invite-avatar img{position:absolute;inset:8%;width:84%;height:84%;min-width:0;min-height:0;max-height:84%;pointer-events:none}
+#autochessModal #acSummaryModal{grid-template-rows:minmax(0,1fr)}
+#autochessModal .ac-match-report .ac-tactical-reward{grid-column:1/-1;display:grid;grid-template-columns:minmax(115px,.85fr) minmax(0,2fr) auto;align-items:center;gap:3px 10px}
+#autochessModal .ac-match-report .ac-tactical-reward>small{grid-column:1/-1}
+@media(max-height:340px){#autochessModal.ac-compact .ac-match-report{padding:7px}#autochessModal.ac-compact .ac-match-report .ac-reward-line{padding:3px 5px}#autochessModal.ac-compact .ac-match-report .ac-summary-heading h2{font-size:16px}#autochessModal.ac-compact .ac-match-report .ac-summary-heading>p{font-size:8px;line-height:1.2}#autochessModal.ac-compact .ac-match-report .ac-dialog-actions{margin-top:5px}}

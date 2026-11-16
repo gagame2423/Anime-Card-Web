@@ -6,9 +6,11 @@
   rumbling:Object.freeze({id:'rumbling',name:'Rumbling Rift',element:'Nature',minion:'dumb-titan',bosses:['war-hammer-titan','jaw-titan','beast-titan','armored-titan'],stats:[[100000,10000],[150000,15000],[200000,20000],[250000,25000],[1000000,50000]],card:'eren-rumbling',cardChance:.005,relic:'odm',relicChance:.05,item:null,itemChance:0}),
   hueco:Object.freeze({id:'hueco',name:'Hueco Rift',element:'Dark',minion:'normal-arrancar',bosses:['coyote-starrk','ulquiorra'],stats:[[200000,20000],[350000,35000],[400000,40000],[600000,50000],[1500000,100000]],card:'ulquiorra',cardChance:.004,relic:null,relicChance:0,item:'hakka_earing',itemChance:.001})
  });
- const definition=type=>TYPES[type]||TYPES.rumbling;
+ function definition(value){const type=value===undefined?rotation().type:typeof value==='object'?value?.type||value?.id:value;const found=TYPES[type];if(!found)throw Error('Unknown Rift type.');return found;}
  const cardSource=id=>Object.values(TYPES).find(type=>type.card===id)?.name||'Rift';
- const dropText=type=>type==='hueco'?'Ulquiorra 0.4% • Hakka Earing 0.1%':'Eren 0.5% • O.D.M. 5%';
+ function specialDrops(type){const d=definition(type);return[{kind:'card',id:d.card,chance:d.cardChance,name:host.ALL_CARDS.find(c=>c.id===d.card)?.name||d.card},{kind:'relic',id:d.relic,chance:d.relicChance,name:host.RelicSystem.DEFINITIONS.find(r=>r.kind===d.relic)?.name},{kind:'item',id:d.item,chance:d.itemChance,name:inv().getItem(d.item)?.name||d.item}].filter(row=>row.id&&row.chance>0);}
+ const dropText=type=>specialDrops(type).map(row=>row.name+' '+Number((row.chance*100).toFixed(4))+'%').join(' • ');
+ function preview(type){const d=definition(type);return{type:d.id,name:d.name,element:d.element,drops:specialDrops(d.id),text:'5v5 • '+d.element+' enemies • Victory: 1–5 Rift Shards • '+dropText(d.id)};}
  const SHOP=Object.freeze([{id:'lucky_potion',cost:1},{id:'rich_potion',cost:1},{id:'speed_potion',cost:1},{id:'speed_battle_potion',cost:3},{id:'guarantee_shard',cost:1000}]);
  const inv=()=>host.InventorySystem,integer=(n,min=0,max=Number.MAX_SAFE_INTEGER)=>Number.isSafeInteger(n)&&n>=min&&n<=max;
  const unit=random=>Math.max(0,Math.min(1-Number.EPSILON,Number(random())||0));
@@ -53,21 +55,22 @@
   });
  }
  function start(battle,guaranteed=false){
-  if(battle?.mode!==MODE||battle.playerTeam?.length!==5||battle.enemyTeam?.length!==5||!canEnter()||data.sequence===Number.MAX_SAFE_INTEGER)throw Error('Rift is closed or the lineup is incomplete.');
-  const active=rotation();if(battle.enemyTeam.some(u=>u.riftType&&u.riftType!==active.type))throw Error('Rift rotation changed. Reopen the current Rift.');
+  const now=Date.now(),active=rotation(now);
+  if(battle?.mode!==MODE||battle.playerTeam?.length!==5||battle.enemyTeam?.length!==5||!canEnter(now)||data.sequence===Number.MAX_SAFE_INTEGER)throw Error('Rift is closed or the lineup is incomplete.');
+  if(battle.enemyTeam.some(u=>!u.isRiftEnemy||u.riftType!==active.type))throw Error('Rift rotation changed. Reopen the current Rift.');
   if(guaranteed&&inv().quantity('guarantee_shard')<1)throw Error('No Guarantee Shard available.');
-  const before={...data},now=Date.now();data.sequence++;
-  data.activeAttempt={id:now+'_'+data.sequence,type:rotation(now).type,startedAt:now,guaranteed:Boolean(guaranteed)};
+  const before={...data};data.sequence++;
+  data.activeAttempt={id:now+'_'+data.sequence,type:active.type,startedAt:now,guaranteed:Boolean(guaranteed)};
   if(!persist()){data=before;throw Error('Unable to save Rift entry.');}
   if(guaranteed&&!inv().transactOnce('rift_entry',data.activeAttempt.id,[],[{id:'guarantee_shard',quantity:1}])){data=before;persist();throw Error('Unable to consume Guarantee Shard.');}
-  battle.rift={...data.activeAttempt,completed:false};if(inv().quantity('guarantee_shard')===0&&data.autoGuarantee)setAutoGuarantee(false);
+  battle.riftType=active.type;battle.rift={...data.activeAttempt,completed:false};if(inv().quantity('guarantee_shard')===0&&data.autoGuarantee)setAutoGuarantee(false);
   return battle.rift;
  }
  function rollReward(attempt,random=Math.random,battle=null){
   const d=definition(attempt.type),reward={...attempt,shards:inv().scaleDrop(1+Math.floor(unit(random)*5),random,battle),card:null,relic:null,item:null};
   // Guarantee dùng trọng số drop gốc; special item/card luôn chỉ có một bản.
   const total=d.cardChance+d.relicChance+d.itemChance;
-  const selected=attempt.guaranteed?(unit(random)<d.cardChance/total?'card':d.relic?'relic':'item'):null;
+  let selected=null;if(attempt.guaranteed){let draw=unit(random)*total;for(const row of specialDrops(d.id)){draw-=row.chance;if(draw<0){selected=row.kind;break;}}}
   if(selected==='card'||!selected&&unit(random)<d.cardChance)reward.card={cardId:d.card,mutationIds:(bridge.rollMutations?.()||[]).map(m=>typeof m==='string'?m:m.id)};
   if(d.relic&&(selected==='relic'||!selected&&unit(random)<d.relicChance)){reward.relic=host.RelicSystem.createItem('relic_'+host.OnlineUtils.token(),host.RelicSystem.roll(d.relic,random));reward.relic.metadata.source=d.name+' victory';}
   if(d.item&&(selected==='item'||!selected&&unit(random)<d.itemChance))reward.item={id:d.item,quantity:1};
@@ -84,7 +87,7 @@
   return {won:true,...p};
  }
  function finish(battle,won,random=Math.random){
-  const run=battle?.rift;if(!run||run.completed||!data.activeAttempt||run.id!==data.activeAttempt.id)return null;
+  const run=battle?.rift;if(!run||run.completed||!data.activeAttempt||run.id!==data.activeAttempt.id||run.type!==data.activeAttempt.type||battle.enemyTeam?.some(u=>u.riftType!==run.type))return null;
   if(won&&(!battle.enemyTeam?.some(u=>u.isRiftEnemy)||battle.enemyTeam.some(u=>u.hp>0&&!u.defeated)))return null;
   if(data.pendingReward){const reward=commitPending();run.completed=true;return reward;}
   if(!won){const before=data.activeAttempt;data.activeAttempt=null;if(!persist()){data.activeAttempt=before;throw Error('Unable to save Rift result.');}run.completed=true;return {won:false,shards:0,card:null,relic:null};}
@@ -117,11 +120,11 @@
   const doc=host.document,box=doc?.getElementById('riftControls');if(!box)return;box.classList.toggle('hidden',!active);
   const r=rotation(),remaining=Math.max(0,Math.ceil((r.endsAt-Date.now())/1000)),label=`${TYPES[r.type].name} • ${r.open?'OPEN':'CLOSED'} • ${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;
   doc.getElementById('riftRotationHint').textContent=label;if(!active)return;
-  doc.getElementById('riftAvailability').textContent=label+' • '+dropText(r.type);
+  const battle=bridge.getBattle?.(),showBattle=battle?.mode===MODE&&battle.rift&&(battle.isBattling||battle.finished),type=showBattle?battle.rift.type:r.type,view=preview(type);box.dataset.riftType=view.type;doc.getElementById('riftAvailability').textContent=(showBattle?view.name+' • '+(battle.finished?'RESULT':'IN BATTLE'):label)+' • '+dropText(type);const drops=doc.getElementById('riftDropPreview');if(drops){drops.dataset.riftType=view.type;drops.textContent=view.text;}
   const start=doc.getElementById('battleStartButton');if(start&&!host.document.getElementById('battleSetup')?.classList.contains('hidden'))start.textContent='Enter '+definition(r.type).name+' • 5 cards';
   doc.getElementById('riftBalance').textContent=inv().quantity('rift_shard').toLocaleString('en-US')+' Rift Shards';
   const toggle=doc.getElementById('riftAutoGuarantee'),owned=inv().quantity('guarantee_shard');if(!owned&&data.autoGuarantee)setAutoGuarantee(false);toggle.checked=data.autoGuarantee;toggle.disabled=!owned;doc.getElementById('riftGuaranteeCount').textContent=owned+' Guarantee Shards';
  }
  function configure(options={}){bridge=options;const doc=host.document;doc?.getElementById('riftAutoGuarantee')?.addEventListener('change',e=>{setAutoGuarantee(e.target.checked);renderControls(true);});host.ShopBulkSystem.mountHeader(doc?.getElementById('riftShopModal'));if(data.pendingReward){try{commitPending();bridge.onChange?.();}catch(e){host.console.warn(e.message);}}}
- host.RiftSystem=Object.freeze({KEY,MODE,TYPES,SHOP,definition,cardSource,dropText,register,sources,rotation,validSave,canEnter,chooseGuarantee,setAutoGuarantee,enemies,start,rollReward,finish,abort,purchase,renderShop,renderControls,configure,get autoGuarantee(){return data.autoGuarantee;},flush:persist,reset(){data=fresh();persist();}});
+ host.RiftSystem=Object.freeze({KEY,MODE,TYPES,SHOP,definition,cardSource,specialDrops,preview,dropText,register,sources,rotation,validSave,canEnter,chooseGuarantee,setAutoGuarantee,enemies,start,rollReward,finish,abort,purchase,renderShop,renderControls,configure,get autoGuarantee(){return data.autoGuarantee;},flush:persist,reset(){data=fresh();persist();}});
 })(window);

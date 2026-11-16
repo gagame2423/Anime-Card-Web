@@ -2828,7 +2828,7 @@ function isTimeTrialBattle() { return Boolean(window.TimeTrialSystem?.isMode(get
 function getBattleTurnMs() { if(isSpookyBattle())return window.SettingsSystem.spookySpeedUp?1000:window.SpookySystem.TURN_MS; return isTimeTrialBattle() ? window.TimeTrialSystem.turnMs(getBattleMode()) : window.InventorySystem?.combatTurnMs(BATTLE_TURN_MS) || BATTLE_TURN_MS; }
 function getBattleModeLabel() {
   const timing = `${getBattleTurnMs() / 1000}s TURNS`;
-  if(isRiftBattle())return `RUMBLING RIFT • 5V5 • ${timing}`;
+  if(isRiftBattle())return `${window.RiftSystem.definition(battleState?.rift?.type||battleState?.riftType||window.RiftSystem.rotation().type).name.toUpperCase()} • 5V5 • ${timing}`;
   if(isSpookyBattle())return `SPOOKY HUNT • WAVE ${battleState?.spooky?.wave||window.SpookySystem.snapshot().wave} / 50 • 6V3 • ${timing}`;
   if (isBossEventBattle()) return `${window.BossEventSystem.TYPES[getBossEventType()].name.toUpperCase()} • DIFF ${battleState?.bossEvent?.difficulty || window.BossEventSystem.snapshot(getBossEventType()).difficulty} • 5 vs 1 • ${timing}`;
   if (isRaidBattle()) return `${window.RaidSystem.TYPES[getRaidType()].name.toUpperCase()} • DIFF ${battleState?.raid?.difficulty || window.RaidSystem.snapshot(getRaidType()).difficulty} • 4 vs ${window.RaidSystem.TYPES[getRaidType()].enemies.length} • ${timing}`;
@@ -4144,7 +4144,8 @@ function startBattle(useExistingSetup = true, autoStart = false) {
   const towerWeather = isTowerBattle() ? getTowerWeatherMode() : null;
   const raidType = isRaidBattle() ? getRaidType() : null;
   const bossEventType = isBossEventBattle() ? getBossEventType() : null;
-  const enemyTeam = isRiftBattle()?window.RiftSystem.enemies():isSpookyBattle()?window.SpookySystem.enemies():isBossEventBattle() ? window.BossEventSystem.enemies(bossEventType) : isRaidBattle() ? window.RaidSystem.enemies(raidType) : isTimeTrialBattle() ? window.TimeTrialSystem.enemies(getBattleMode(), playerTeam[0]) : isTowerBattle() ? window.TowerSystem.getOpponents(ALL_CARDS, towerFloor, towerWeather, WEATHERS) : chooseBattleEnemyTeam(playerTeam);
+  const riftType=isRiftBattle()?window.RiftSystem.rotation().type:null;
+  const enemyTeam = isRiftBattle()?window.RiftSystem.enemies(Math.random,riftType):isSpookyBattle()?window.SpookySystem.enemies():isBossEventBattle() ? window.BossEventSystem.enemies(bossEventType) : isRaidBattle() ? window.RaidSystem.enemies(raidType) : isTimeTrialBattle() ? window.TimeTrialSystem.enemies(getBattleMode(), playerTeam[0]) : isTowerBattle() ? window.TowerSystem.getOpponents(ALL_CARDS, towerFloor, towerWeather, WEATHERS) : chooseBattleEnemyTeam(playerTeam);
   if (enemyTeam.length !== (isSpookyBattle() ? window.SpookySystem.ENEMY_TEAM_SIZE : isBossEventBattle() ? 1 : isRaidBattle() ? window.RaidSystem.TYPES[getRaidType()].enemies.length : playerTeam.length)) { battleState.isBattling = false; return; }
   const playerPower = calculateBattleTeamPower(playerTeam);
   const enemyPower = calculateBattleTeamPower(enemyTeam);
@@ -4155,7 +4156,7 @@ function startBattle(useExistingSetup = true, autoStart = false) {
   battleState = {
     mode,
     championChoices: { aqua: document.querySelector('input[name="aquaBattleMode"]:checked')?.value || 'hp' },
-    towerFloor, towerWeather,
+    towerFloor, towerWeather,riftType,
     currentOpponent: enemyTeam[0] || null,
     setup: { team: setupTeam.map(slot => ({ ...slot })), activeIndex: 0 },
     turn: 'player',
@@ -5841,7 +5842,7 @@ window.BossEventSystem.configure({ rollMutations, grantCard:grantBossEventCard }
 window.PenaltyStatsSystem.configure({canAct:canPlayPenalty,onChange:()=>{refreshAchievements();window.PenaltyView?.refresh();}});
 window.PenaltyView.configure({canOpen:canPlayPenalty,onExit:()=>{if(penaltyReturnToArena){penaltyReturnToArena=false;openModal('battleModal');}refreshAchievements();}});
 
-window.RiftSystem.configure({rollMutations,grantCard:grantRiftCard,canAct:canEvolveNow,onChange:()=>{updateStats();renderPotionInventory();window.RiftSystem.renderControls(isRiftBattle());}});
+window.RiftSystem.configure({getBattle:()=>battleState,rollMutations,grantCard:grantRiftCard,canAct:canEvolveNow,onChange:()=>{updateStats();renderPotionInventory();window.RiftSystem.renderControls(isRiftBattle());}});
 window.TimeTrialSystem?.configure({clock:()=>state.weather.gameSeconds,canSkip:()=>getBattleMode()==='time-trial'&&canEvolveNow(),onSkip:event=>window.QuestsSystem.recordTrialSkip(event), resolveCompanions: (battle,advanceEnemy) => window.PassiveSystem.resolveTrialCompanions(battle,advanceEnemy), getLevelInfo: getCardLevelInfo, grantExperience: grantTimeTrialExperience, onTimingChange:(battle,oldMs,newMs)=>{if(battleState!==battle||!battle.isBattling||battle.finished)return;const fraction=Math.max(0,Math.min(1,((battle.nextTurnAt||Date.now()+oldMs)-Date.now())/oldMs));scheduleNextBattleTurn(fraction*newMs);}, onTimeout: (battle, won) => { if (!isImportingSave && battleState === battle && !battle.finished) finishTimeTrialBattle(won, 'time-limit'); } });
 window.QuestSystem.configure({ weatherIds:()=>getActiveWeatherDefinitions().map(w=>w.id), canAccept: canEvolveNow, grantCard: id => { const card = getCardById(id); return Boolean(card?.questOnly && applyAchievementReward({ id: card.unlockRequirement, reward: {cardId: id} })); } });
 window.SpookySystem.configure({canAct:canEvolveNow,grantCards:grantSpookyCards,rollMutations,hasJudgement:()=>window.AchievementSystem.isUnlocked('tower_floor_100_heavenly')||state.achievementRewardReceipts?.tower_floor_100_heavenly===true,onChange:queueSpookyUi,onCapsule:showSpookyCapsule});
@@ -6073,7 +6074,7 @@ window.AutoChessView.configure({
  name:()=>window.CloudSaveSystem?.publicName||'You',
  onEnter:()=>{window.CloudSaveSystem.holdAutoChess();clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();saveState();},
  onExit:()=>{document.getElementById('battleModal')?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.releaseAutoChess();resumeGameRuntime();updateStats();},
- rewardQuote:rank=>window.AutoChessSystem.reward(rank,{vnd:getCoinMultiplier(true,'autochess'),drop:window.InventorySystem.getDropMultiplier()}),
+ rewardQuote:(rank,match)=>window.AutoChessSystem.reward(rank,{vnd:getCoinMultiplier(true,'autochess'),drop:window.InventorySystem.getDropMultiplier(),tactical:window.AutoChessStrategy.forPlayer(match)}),
  reward:(match,rewards)=>{
   const chess=window.AutoChessSystem;
   if(!match.finished||!chess.validate(match)||!chess.validReward(rewards,chess.get(match).rank))return false;
@@ -6089,7 +6090,7 @@ window.AutoChessView.configure({
   }
   // Only Elo is rebased if another completed run changed the rating; currency
   // multipliers remain the original frozen quote. Save before account mutation.
-  if(rewards.version===2){rewards.elo=window.AutoChessRanked.quoteElo(rewards.rank,state.autochessRank?.elo||0);match.reward.elo={...rewards.elo};if(!chess.save(match))return false;}
+  if(rewards.version===2){rewards.elo=window.AutoChessRanked.quoteElo(rewards.rank,state.autochessRank?.elo||0,rewards.elo.tableVersion===3?rewards.elo.tactical:null);match.reward.elo={...rewards.elo};if(!chess.save(match))return false;}
   const before=JSON.parse(JSON.stringify(state));
   state.currency=Math.min(Number.MAX_SAFE_INTEGER,state.currency+rewards.vnd.total);
   state.experience=Math.min(Number.MAX_SAFE_INTEGER,state.experience+(rewards.exp||0));
