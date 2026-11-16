@@ -455,6 +455,83 @@
 #autochessModal .ac-match-report .ac-tactical-reward{grid-column:1/-1;display:grid;grid-template-columns:minmax(115px,.85fr) minmax(0,2fr) auto;align-items:center;gap:3px 10px}
 #autochessModal .ac-match-report .ac-tactical-reward>small{grid-column:1/-1}
 
+/* Relic forge feedback and the glass Team Planner. All interaction transitions are 180ms. */
+#autochessModal .ac-draft-unit{left:50%;top:48%;will-change:transform}
+#autochessModal .ac-draft-unit>img,#autochessModal .ac-draft-unit>strong,#autochessModal .ac-draft-unit>.ac-draft-relic{transition:opacity 180ms ease}
+#autochessModal .ac-draft-unit.is-claimed{opacity:1!important;border-color:#526f7a;box-shadow:none}
+#autochessModal .ac-draft-unit.is-claimed>img,#autochessModal .ac-draft-unit.is-claimed>strong{opacity:.24}
+#autochessModal .ac-draft-unit.is-claimed>.ac-draft-relic{opacity:.45}
+#autochessModal .ac-draft-unit.is-claimed>small{color:#b6e5e7;background:#0a1825ed;border:1px solid #63828a;border-radius:4px;padding:2px 3px;font-size:7px;overflow:hidden;text-overflow:ellipsis}
+#autochessModal .ac-offer.is-target:after{content:'';position:absolute;inset:0;z-index:3;pointer-events:none;background:linear-gradient(110deg,transparent 30%,#d3fff022 49%,transparent 68%);transform:translateX(-130%);animation:ac-plan-shimmer 3.4s ease-in-out infinite}
+@keyframes ac-plan-shimmer{55%{transform:translateX(-130%)}95%,100%{transform:translateX(130%)}}
+#autochessModal .ac-drag-ghost,#autochessModal .ac-drag-ghost *,#autochessModal .ac-drag-ghost :before,#autochessModal .ac-drag-ghost :after{pointer-events:none!important}
+#autochessModal .ac-stash-slot{transition:border-color 180ms ease,background 180ms ease,box-shadow 180ms ease}
+#autochessModal .ac-stash-slot.ac-relic-valid{border-color:#e9d291;box-shadow:inset 0 0 12px #53d6ef25,0 0 9px #ddc37e55;animation:ac-relic-ready 1.4s ease-in-out infinite}
+#autochessModal .ac-stash-slot.ac-relic-source{opacity:.5;border-color:#7bd8e7}
+#autochessModal .ac-stash-slot.ac-relic-valid.ac-drop-hover{border-color:#b9ffff!important;background:#244451!important;box-shadow:0 0 17px #b1f4f7aa,inset 0 0 10px #ffdc7955!important}
+#autochessModal .ac-forge-flash{animation:ac-forge-bloom 220ms ease-out 2}
+@keyframes ac-relic-ready{50%{box-shadow:inset 0 0 13px #53d6ef44,0 0 13px #ddc37e88}}
+@keyframes ac-forge-bloom{50%{filter:brightness(1.9);box-shadow:0 0 22px #9bf6fa,inset 0 0 15px #f8dda4}}
+#autochessModal .ac-target-badge{letter-spacing:.4px;font-size:6px;background:linear-gradient(110deg,#ffe6a2,#9af4f5);color:#12232c;transition:box-shadow 180ms ease}
+#autochessModal .ac-offer.is-target{background:linear-gradient(140deg,#32403b,#10232c);border-color:#b3ece6!important;box-shadow:0 0 9px #a9e9d766,inset 0 0 14px #eac86c33}
+#autochessModal .ac-plan-traits{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;max-width:100%;line-height:1.2}
+#autochessModal .ac-plan-traits>b{font-size:7px;padding:2px 3px;border:1px solid #9e967166;border-radius:4px;background:#071723cc;color:#e9dcb8;font-weight:650}
+#autochessModal .ac-target-mini>i{display:grid;place-items:center;border:1px dashed #6f8a9455;border-radius:3px;font-size:10px;font-style:normal;color:#607b89}
+#autochessModal .ac-lobby-targets{transition:border-color 180ms ease,box-shadow 180ms ease,background 180ms ease;background:linear-gradient(130deg,#142632e8,#0a121ce8)}
+#autochessModal .ac-team-planner .ac-tool-panel{width:min(1240px,98%);height:min(850px,98%);border-color:#95b7c477;background:linear-gradient(125deg,#141e2af7,#080f18fa);box-shadow:0 20px 100px #000c,inset 0 1px #b8dbdd22}
+#autochessModal .ac-team-planner .ac-tool-panel>header{background:linear-gradient(100deg,#1c303b88,transparent);border-color:#8c967e44}
+#autochessModal .ac-team-planner .ac-tool-content{display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px}
+#autochessModal .ac-plan-rosterbar{min-width:0;border:1px solid #829b9e55;background:linear-gradient(120deg,#1c2c3644,#071019bb);border-radius:10px;padding:10px}
+#autochessModal .ac-plan-rosterhead{display:flex;align-items:center;gap:12px;margin-bottom:9px;font-size:10px;letter-spacing:1.5px;color:#b0c8ce}
+#autochessModal .ac-plan-rosterhead>b{color:#e5d5a8;font-size:10px;letter-spacing:.5px;margin-left:auto}
+#autochessModal .ac-plan-rosterhead>button{font-size:10px;padding:5px 10px;border:1px solid #a9966566;background:#191f25;transition:background 180ms ease,border-color 180ms ease}
+#autochessModal .ac-plan-roster{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:9px;min-width:0}
+#autochessModal .ac-plan-slot{position:relative;height:94px;min-width:0;overflow:hidden;background:linear-gradient(145deg,#1b2c37,#090f18);border:1px solid #5b768477;border-radius:7px;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px #aedbdf22;transition:transform 180ms ease,border-color 180ms ease,box-shadow 180ms ease}
+#autochessModal .ac-plan-slot:hover{transform:translateY(-2px);border-color:#efda9b;box-shadow:0 0 14px #7de6ef33}
+#autochessModal .ac-plan-slot>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%}
+#autochessModal .ac-plan-slot-number{position:absolute;left:4px;top:4px;z-index:2;border:1px solid #9ab1ae55;background:#08121cdf;border-radius:3px;padding:1px 4px;font-size:8px;color:#e5d6a7}
+#autochessModal .ac-plan-slot>b{color:#607d8b;font-size:20px;font-weight:300}
+#autochessModal .ac-plan-slot>strong{position:absolute;bottom:0;left:0;right:0;padding:12px 3px 4px;font-size:8px;background:linear-gradient(transparent,#040a13ef 45%);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#autochessModal .ac-plan-slot>i{position:absolute;right:3px;top:3px;z-index:2;display:grid;place-items:center;border-radius:50%;width:15px;height:15px;background:#0d1724df;color:#f8dcb9;font-size:12px;font-style:normal}
+#autochessModal .ac-plan-slot.is-new{animation:ac-plan-arrive 180ms ease-out}
+@keyframes ac-plan-arrive{from{transform:translateY(10px) scale(.92);opacity:.25}to{transform:none;opacity:1}}
+#autochessModal .ac-plan-workspace{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px;min-height:0;min-width:0}
+#autochessModal .ac-plan-pool{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:8px;min-height:0;min-width:0}
+#autochessModal .ac-team-planner .ac-planner-filters{grid-template-columns:1.35fr 1fr 1fr .85fr}
+#autochessModal .ac-team-planner .ac-planner-filters input,#autochessModal .ac-team-planner .ac-planner-filters select{border:1px solid #72929c66;border-radius:7px;background:#0d1924;box-shadow:inset 0 1px #0008;transition:border-color 180ms ease,box-shadow 180ms ease}
+#autochessModal .ac-team-planner .ac-planner-filters :is(input,select):hover{border-color:#c4b786}
+#autochessModal .ac-team-planner .ac-planner-status{margin:0;gap:8px;font-size:10px;min-height:18px}
+#autochessModal .ac-team-planner .ac-planner-status>span{font-size:10px;color:#90b0c1}
+#autochessModal .ac-team-planner .ac-planner-grid{gap:9px;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));scrollbar-width:thin;scrollbar-color:#718e94 #09131e;padding:2px 4px 6px 2px}
+#autochessModal .ac-team-planner .ac-planner-card{height:190px;gap:3px;border:1px solid #718795;border-radius:8px;background:linear-gradient(150deg,#1a2d3a,#0c141e);transition:transform 180ms ease,box-shadow 180ms ease,border-color 180ms ease}
+#autochessModal .ac-team-planner .ac-planner-card:hover{transform:translateY(-2px);box-shadow:0 4px 15px #0009,inset 0 0 15px #72dcf11c}
+#autochessModal .ac-team-planner .ac-planner-card>img{height:99px}
+#autochessModal .ac-team-planner .ac-planner-card.is-chosen{border:1px solid #b9f0e6;box-shadow:0 0 11px #91dbde55,inset 0 0 18px #e3ce6933;background:#223331}
+#autochessModal .ac-team-planner .ac-planner-card.is-chosen:after{display:none}
+#autochessModal .ac-plan-check{position:absolute;right:4px;top:5px;z-index:2;background:#c8efe4;color:#183129;border:1px solid #fff5c1;border-radius:50%;width:18px;height:18px;font-size:12px;font-style:normal;display:none}
+#autochessModal .is-chosen>.ac-plan-check{display:grid;place-items:center}
+#autochessModal .ac-plan-cost{position:absolute;top:5px;left:5px;z-index:2;padding:2px 6px;font-size:10px;color:#ffe0a0;background:#07131de8;border:1px solid #cead5f99;border-radius:5px}
+#autochessModal :is(.ac-plan-slot,.ac-team-planner .ac-planner-card)[data-rarity=Rare]{border-color:#579ada}#autochessModal :is(.ac-plan-slot,.ac-team-planner .ac-planner-card)[data-rarity=Epic]{border-color:#9f72d7}#autochessModal :is(.ac-plan-slot,.ac-team-planner .ac-planner-card)[data-rarity=Legendary]{border-color:#d5b566}#autochessModal :is(.ac-plan-slot,.ac-team-planner .ac-planner-card)[data-rarity=Mythic]{border-color:#d07eaa}#autochessModal :is(.ac-plan-slot,.ac-team-planner .ac-planner-card)[data-rarity=Secret]{border-color:#a9dbe8}
+#autochessModal .ac-plan-synergies{display:flex;flex-direction:column;min-height:0;min-width:0;border:1px solid #8a9f9955;border-radius:9px;background:linear-gradient(130deg,#1d2d3644,#070f19cc);overflow:hidden}
+#autochessModal .ac-plan-synergies>header{padding:11px 12px;border-bottom:1px solid #a7b7b522;font-size:10px;letter-spacing:1.1px;color:#eedcaf;flex-shrink:0}
+#autochessModal .ac-plan-synergies>header p{margin:4px 0 0;font-size:9px;color:#8cabb8;letter-spacing:0}
+#autochessModal [data-plan-traits]{min-height:0;overflow-y:auto;padding:8px;scrollbar-width:thin;scrollbar-color:#68838d #0b131d}
+#autochessModal .ac-plan-trait{margin-bottom:7px;padding:8px;border:1px solid #3b515d;border-radius:8px;background:linear-gradient(120deg,#1b2934bb,#0a141dbb);color:#c9d7db;transition:border-color 180ms ease,background 180ms ease}
+#autochessModal .ac-plan-trait:hover{border-color:#c5b682}
+#autochessModal .ac-plan-trait>header{display:flex;align-items:center;gap:7px}
+#autochessModal .ac-plan-trait>header>i{flex-shrink:0;display:grid;place-items:center;width:28px;height:30px;clip-path:polygon(50% 0,96% 24%,96% 76%,50% 100%,4% 76%,4% 24%);background:linear-gradient(145deg,#62747e,#263b4a);font-size:14px;font-style:normal;color:#f0dfaf}
+#autochessModal .ac-plan-trait>header>div{min-width:0;flex:1}#autochessModal .ac-plan-trait strong{display:block;font-size:10px;overflow-wrap:anywhere}#autochessModal .ac-plan-trait>header span{display:block;font-size:9px;color:#9db4be;margin-top:2px}
+#autochessModal .ac-plan-trait>header>b{font-size:7px;letter-spacing:.3px;padding:3px 5px;border-radius:10px;border:1px solid #8a9c9b55;color:#bfd5db;background:#0c1924}
+#autochessModal .ac-plan-trait.tier-1>header>b{color:#e5b491;border-color:#b68158}#autochessModal .ac-plan-trait.tier-2>header>b{color:#d8e7f4;border-color:#a2b6c9}#autochessModal .ac-plan-trait.tier-3>header>b{color:#ffdf8e;border-color:#d2ad57;box-shadow:0 0 8px #c9ab4a22}#autochessModal .ac-plan-trait.tier-4>header>b{color:#d9faff;border-color:#a5d9eb;background:linear-gradient(110deg,#43324d,#17434c);box-shadow:0 0 9px #96e9fb33}
+#autochessModal .ac-plan-trait>p{font-size:9px;color:#9fb9c2;line-height:1.5;margin:6px 0;overflow-wrap:anywhere}
+#autochessModal .ac-plan-trait details{font-size:9px;color:#b0c4d1}#autochessModal .ac-plan-trait summary{cursor:pointer;color:#ddc891;font-size:9px;padding:3px 0}#autochessModal .ac-plan-trait details small{display:block;margin:5px 0}#autochessModal .ac-plan-trait ul{padding-left:14px;margin:4px 0;line-height:1.5}
+#autochessModal .ac-plan-empty{padding:15px;color:#7896a5;font-size:11px;line-height:1.6;text-align:center}#autochessModal .ac-plan-empty>b{display:block;font-size:28px;color:#a3c9cd;margin:8px}#autochessModal .ac-plan-empty>strong{display:block;color:#d7d7bd}
+#autochessModal.ac-compact .ac-team-planner .ac-tool-content{gap:8px}#autochessModal.ac-compact .ac-plan-rosterbar{padding:6px}#autochessModal.ac-compact .ac-plan-rosterhead{font-size:8px;gap:5px;margin-bottom:6px}#autochessModal.ac-compact .ac-plan-rosterhead>b{font-size:8px}#autochessModal.ac-compact .ac-plan-rosterhead>button{font-size:8px;padding:3px 6px}#autochessModal.ac-compact .ac-plan-roster{gap:5px}#autochessModal.ac-compact .ac-plan-slot{height:65px}#autochessModal.ac-compact .ac-plan-slot>strong{font-size:7px}
+#autochessModal.ac-compact .ac-plan-workspace{grid-template-columns:minmax(0,1fr) 195px;gap:8px}#autochessModal.ac-compact .ac-plan-pool{gap:5px}#autochessModal.ac-compact .ac-team-planner .ac-planner-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px}#autochessModal.ac-compact .ac-team-planner .ac-planner-card{height:120px;gap:2px}#autochessModal.ac-compact .ac-team-planner .ac-planner-card>img{height:40px}#autochessModal.ac-compact .ac-team-planner .ac-planner-card>strong{font-size:10px;min-height:24px}#autochessModal.ac-compact .ac-plan-synergies>header{padding:7px;font-size:8px}#autochessModal.ac-compact [data-plan-traits]{padding:5px}#autochessModal.ac-compact .ac-plan-trait{padding:5px}#autochessModal.ac-compact .ac-plan-trait>header>i{width:22px;height:25px;font-size:12px}
+@media(max-width:600px) and (orientation:portrait){#autochessModal .ac-plan-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.3fr) minmax(0,1fr)}#autochessModal .ac-plan-roster{gap:3px}#autochessModal .ac-plan-slot{height:48px}#autochessModal .ac-plan-slot>strong{font-size:5px}#autochessModal .ac-team-planner .ac-planner-filters{grid-template-columns:1fr 1fr}}
+@media(max-height:320px){#autochessModal.ac-compact .ac-plan-slot{height:39px}#autochessModal.ac-compact .ac-plan-slot>strong{display:none}#autochessModal.ac-compact .ac-plan-rosterhead{margin-bottom:3px}#autochessModal.ac-compact .ac-plan-rosterbar{padding:4px}#autochessModal.ac-compact .ac-plan-workspace{grid-template-columns:minmax(0,1fr) 165px}#autochessModal.ac-compact .ac-plan-synergies>header p{display:none}#autochessModal.ac-compact .ac-team-planner .ac-planner-status>span{font-size:8px}#autochessModal.ac-compact .ac-plan-traits>b{font-size:6px;padding:1px 2px}#autochessModal.ac-compact .ac-team-planner .ac-planner-card{height:92px;gap:0}#autochessModal.ac-compact .ac-team-planner .ac-planner-card>img{height:34px}#autochessModal.ac-compact .ac-team-planner .ac-planner-card>strong{font-size:8px;min-height:20px}#autochessModal.ac-compact .ac-team-planner .ac-planner-card>small{font-size:7px}}
+@media(prefers-reduced-motion:reduce){#autochessModal .ac-relic-valid,#autochessModal .ac-forge-flash,#autochessModal .ac-plan-slot.is-new,#autochessModal .ac-offer.is-target:after{animation:none}#autochessModal .ac-plan-slot,#autochessModal .ac-team-planner .ac-planner-card{transition:none}}
+
 /* Self profile: artwork, peak emblem, 3x2 usage cards and a scrolling lifetime panel. */
 #autochessModal .ac-profile-layer{padding:18px;background:#030710e8;z-index:1700}
 #autochessModal .ac-profile-card{position:relative;isolation:isolate;width:min(1100px,100%);height:min(650px,100%);min-height:0;min-width:0;display:grid;grid-template-rows:minmax(105px,.9fr) minmax(0,1.4fr) auto;gap:14px;padding:24px;border:1px solid var(--ac-profile-tier,#98aec8);border-radius:18px;overflow:hidden;background:#111929;box-shadow:0 0 24px color-mix(in srgb,var(--ac-profile-tier) 22%,transparent),0 25px 80px #000b;color:#f3f2ec}
@@ -501,3 +578,5 @@
 @media(max-width:600px) and (orientation:portrait){#autochessModal .ac-profile-card{padding:13px;grid-template-rows:110px minmax(0,1.5fr) auto}#autochessModal .ac-profile-identity{padding-right:0;align-self:end}#autochessModal .ac-profile-main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(150px,1fr) minmax(0,1.1fr);gap:10px}#autochessModal .ac-profile-add{top:9px;right:54px;width:85px;height:35px;flex-direction:row}#autochessModal .ac-profile-add>b{font-size:24px}#autochessModal .ac-profile-name h2{font-size:24px}#autochessModal .ac-profile-stat>span{max-width:50%}}
 @media(max-height:300px){#autochessModal.ac-compact .ac-profile-card{padding:9px;gap:6px;grid-template-rows:57px minmax(0,1fr) auto}#autochessModal.ac-compact .ac-profile-peak{width:47px;height:47px}#autochessModal.ac-compact .ac-profile-name h2{font-size:18px;margin:1px 0}#autochessModal.ac-compact .ac-profile-name p{font-size:9px}#autochessModal.ac-compact .ac-profile-note{font-size:6px}#autochessModal.ac-compact .ac-profile-add{height:41px;top:4%;right:18%;width:70px}#autochessModal.ac-compact .ac-profile-add>b{font-size:21px}}
 @media(max-height:340px){#autochessModal.ac-compact .ac-match-report{padding:7px}#autochessModal.ac-compact .ac-match-report .ac-reward-line{padding:3px 5px}#autochessModal.ac-compact .ac-match-report .ac-summary-heading h2{font-size:16px}#autochessModal.ac-compact .ac-match-report .ac-summary-heading>p{font-size:8px;line-height:1.2}#autochessModal.ac-compact .ac-match-report .ac-dialog-actions{margin-top:5px}}
+
+#autochessModal .ac-plan-effect{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#c1ced4!important}

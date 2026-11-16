@@ -72,7 +72,7 @@
  // It imports only source modules, owns no browser storage and dies on Save & Exit.
  function createWorkerPool(){
   const modules=['cards','category','elements','grimoire','yuno','requiem','reagan','fate','spooky_passives','gomen','shibuya','companions','combat_stats','dragon_skills','relic_combat','tower_200_passives','ragna_passives','mourner','akatsuki_passives','enten','titan_passives','turn_phase','baller_passives','tensura_passives','sins_passives','bleach_passives','passives','relics','autochess_ranked','autochess','autochess_synergies','autochess_telemetry','autochess_augments','autochess_ai','autochess_strategy','autochess_bots','autochess_combat'];
-  const urls=modules.map(name=>new URL(name+'.js?v=20261116-autochess-profile-1',host.document.baseURI).href);
+  const urls=modules.map(name=>new URL(name+'.js?v=20261116-autochess-polish-1',host.document.baseURI).href);
   const bootstrap=`self.window=self;self.InventorySystem={registerItem(){}};self.OnlineUtils={stable:JSON.stringify};self.localStorage={getItem(){return null},setItem(){throw Error('Combat workers cannot write storage')}};\nimportScripts(...${JSON.stringify(urls)});\nconst fights=new Map();\nfunction visual(u){const r=u.passiveState||{},c=u.card,g=u.grid;return {card:{id:c.id,name:c.name,element:c.element,rarity:c.rarity,image:c.image,category:c.category||[],passive:{name:c.passive?.name||'No Passive'}},hp:u.hp,maxHp:u.maxHp,atk:u.atk,defeated:u.defeated,isClone:u.isClone,isSummoned:u.isSummoned,relic:u.relic||null,grid:g?{uid:g.uid,serial:g.serial,side:g.side,x:g.x,y:g.y,mana:g.mana}:null,passiveState:{shield:r.shield||0,freezeTurns:r.freezeTurns||0,stunTurns:r.stunTurns||0,burn:r.burn?.length?[{}]:[],bleed:r.bleed?.length?[{}]:[],bleach:r.bleach?{hakka:r.bleach.hakka,vista:r.bleach.vista}:null,tensura:r.tensura?{sage:r.tensura.sage}:null}};}\nfunction publish(id,row){const f=row.fight,events=f.events.filter(e=>e.id>row.event);if(events.length)row.event=events.at(-1).id;postMessage({id,type:'frame',done:f.done,time:f.time,remaining:f.remaining,outcome:f.outcome(),metrics:f.telemetryFrame(),playerTeam:f.battle.playerTeam.map(visual),enemyTeam:f.battle.enemyTeam.map(visual),events});}\nonmessage=event=>{const m=event.data;try{if(m.type==='init'){const row={fight:AutoChessCombat.create(m.a,m.b,m.seed,m.options),event:0};fights.set(m.id,row);publish(m.id,row);}else if(m.type==='step'){const row=fights.get(m.id);if(row){row.fight.step(m.dt);publish(m.id,row);}}else if(m.type==='dispose'){fights.get(m.id)?.fight.dispose();fights.delete(m.id);}}catch(e){postMessage({id:m.id,type:'error',message:e.message});}};postMessage({type:'ready'});`;
   const url=host.URL.createObjectURL(new Blob([bootstrap],{type:'application/javascript'})),worker=new Worker(url),listeners=new Map();let next=0,closed=false,failed=false;
   worker.onmessage=e=>{if(e.data.type==='ready'){host.URL.revokeObjectURL(url);return;}listeners.get(e.data.id)?.(e.data);};
@@ -131,7 +131,7 @@
     state.remaining=Math.max(0,state.remaining-dt);botClock+=dt;
     if(state.phase==='carousel'){
      state.draftElapsed+=dt;const wave=state.stage===1?4:Math.min(3,Math.floor(state.draftElapsed/5));if(wave!==state.draftWave){state.draftWave=wave;state.revision++;}
-     if(botClock>=.7){botClock=0;change(()=>{for(const p of C.alive(state).filter(p=>p.bot))B.draft(state,p);state.revision++;});}
+     const due=B.prepareDraft(state);if(state.draftOrder.some(id=>{const p=C.get(state,id);return p?.bot&&p.hp>0&&C.released(state,id)&&!state.carousel.some(u=>u.claimedBy===id)&&state.draftElapsed>=due.players[id]?.at;}))change(()=>{B.tickDraft(state);state.revision++;});
      if(!state.remaining){change(()=>{state.draftWave=4;for(const p of state.draftOrder.map(id=>C.get(state,id)).filter(p=>p.hp>0))if(!state.carousel.some(u=>u.claimedBy===p.id))B.draft(state,p);C.advance(state);});}
     }else if(state.phase==='augment'){if(!state.remaining)change(()=>{for(const p of C.alive(state))A.botPick(state,p);});
     }else if(state.phase==='planning'){
@@ -142,6 +142,7 @@
    if(state.finished){finish();return;}
    if(saveClock>=1){saveClock=0;checkpoint();}
   }
+  if(state.phase==='carousel')B.prepareDraft(state);
   if(terminal())finish();else if(state.phase==='combat')prepareCombat();else checkpoint();
   return{get state(){return state;},get speed(){return speed;},set speed(v){speed=[1,2,3].includes(v)?v:1;},get workerCount(){return pool&&!pool.failed?1:0;},get combat(){return current||jobs.find(j=>j.combat)?.combat;},dispatch,dispatchFor,startCombat,ready,tick,claim,abandon,forfeit:abandon,checkpoint,opponentLabel(id){const job=jobs.find(j=>j.a===id||!j.ghost&&j.b===id);if(!job)return C.roundKind(state)==='carousel'?'A card and Relic for every tactician':C.roundKind(state)==='boss'?'Neutral Boss Round':'Planning · '+C.roundKind(state).toUpperCase();return 'VS '+(job.creep?'Arcane Guardians':C.get(state,job.a===id?job.b:job.a)?.name)+(job.ghost?' · Echo':'');},combatFor(id){return jobs.find(j=>j.a===id||!j.ghost&&j.b===id)?.combat||null;},dispose(){if(disposed)return;disposed=true;disposeJobs();pool?.dispose();pool=null;}};
  }

@@ -43,7 +43,16 @@
   }
   arrange(s,p);equip(s,p);return p.botActions<24;
  }
- function draft(s,p){if(!C.released(s,p.id)||s.carousel.some(u=>u.claimedBy===p.id))return null;const options=s.carousel.filter(u=>!u.claimedBy);const itemValue=u=>(p.aiTier||0)>=7?host.AutoChessAI.relicValue(u.relic,u,p):relicScore(u.relic,u);options.sort((a,b)=>score(p,b.cardId)+itemValue(b)-score(p,a.cardId)-itemValue(a)||a.uid.localeCompare(b.uid));if(options[0]){const u=C.draft(s,p,options[0].uid);arrange(s,p);return u;}return null;}
+ function prepareDraft(s){
+  const key=C.label(s)+'/'+s.carousel.map(u=>u.uid).join(',');if(s.draftPlan?.key!==key)s.draftPlan={key,players:{}};
+  let previous=0;for(const id of s.draftOrder){const p=C.get(s,id);if(!p||p.hp<=0)continue;const index=s.draftOrder.indexOf(id),release=s.stage===1?0:Math.floor(index/2)*5,delay=.65+(C.seedOf(s.seed,s.stage,s.round,id)%751)/1000;
+   if(!p.bot)continue;const saved=s.draftPlan.players[id];if(saved){previous=Math.max(previous,saved.at);continue;}
+   const ranked=s.carousel.map(u=>({uid:u.uid,value:score(p,u.cardId)+((p.aiTier||0)>=7?host.AutoChessAI.relicValue(u.relic,u,p):relicScore(u.relic,u))})).sort((a,b)=>b.value-a.value||a.uid.localeCompare(b.uid));
+   const at=Math.max(release,previous)+delay;s.draftPlan.players[id]={at,ranking:ranked.map(r=>r.uid)};previous=at;
+  }return s.draftPlan;
+ }
+ function draft(s,p){if(!C.released(s,p.id)||s.carousel.some(u=>u.claimedBy===p.id))return null;const plan=prepareDraft(s).players[p.id];if(!plan){const ranked=s.carousel.map(u=>({uid:u.uid,value:score(p,u.cardId)+relicScore(u.relic,u)})).sort((a,b)=>b.value-a.value||a.uid.localeCompare(b.uid));s.draftPlan.players[p.id]={at:0,ranking:ranked.map(u=>u.uid)};return draft(s,p);}const uid=plan.ranking.find(id=>s.carousel.some(u=>u.uid===id&&!u.claimedBy));if(uid){const u=C.draft(s,p,uid);arrange(s,p);return u;}return null;}
+ function tickDraft(s){const plan=prepareDraft(s),due=s.draftOrder.map(id=>C.get(s,id)).find(p=>p?.bot&&p.hp>0&&C.released(s,p.id)&&!s.carousel.some(u=>u.claimedBy===p.id)&&s.draftElapsed>=plan.players[p.id]?.at);if(!due)return null;return draft(s,due);}
  function pair(s){
   const living=C.alive(s).slice();for(let i=living.length-1;i>0;i--){const j=Math.floor(C.random(s)*(i+1));[living[i],living[j]]=[living[j],living[i]];}
   let ghost=null;if(living.length%2){const a=living.pop(),options=C.alive(s).filter(p=>p!==a),b=options.sort((x,y)=>(x.history.at(-1)===a.id)-(y.history.at(-1)===a.id)||x.hp-y.hp||x.id.localeCompare(y.id))[0];ghost={a:a.id,b:b.id,ghost:true};}
@@ -72,5 +81,5 @@
   s.lastResults=results;C.finalize(s);s.revision++;return s;
  }
  const reward=(rank,multipliers)=>C.reward(rank,multipliers);
- host.AutoChessBots=Object.freeze({PERSONALITIES,initialize,profile,score,arrange,equip,legacyEquip,augmentChoice:(s,p,a)=>host.AutoChessAI.augmentChoice(s,p,a),plan,draft,pair,settle,reward,ranged});
+ host.AutoChessBots=Object.freeze({PERSONALITIES,initialize,profile,score,arrange,equip,legacyEquip,augmentChoice:(s,p,a)=>host.AutoChessAI.augmentChoice(s,p,a),plan,draft,prepareDraft,tickDraft,pair,settle,reward,ranged});
 })(window);

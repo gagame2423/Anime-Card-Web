@@ -81,15 +81,16 @@
  }
  function autoFuse(s,p){for(let guard=0;guard<24;guard++){const rows=RARITIES.slice(0,5).map((_,t)=>p.units.filter(u=>u.board===null&&!u.keep&&!p.anvil.includes(u.uid)&&tier(u)===t)).find(a=>a.length>=3);if(!rows)break;fuse(s,p,rows.slice(0,3).map(u=>u.uid));}}
  function equip(p,relicId,uid){const index=p.relics.findIndex(r=>r?.uid===relicId),u=p.units.find(v=>v.uid===uid);if(index<0||!u)throw Error('Relic or unit unavailable.');const old=u.relic;u.relic=p.relics[index];p.relics[index]=old;drain(p);}
+ function canFuseRelics(p,a,b){const x=p?.relics.find(r=>r?.uid===a),y=p?.relics.find(r=>r?.uid===b);return!!(x&&y&&x!==y&&!x.roll.unique&&!y.roll.unique&&x.roll.rarity===y.roll.rarity);}
  function fuseRelics(s,p,a,b){if(s.phase==='combat'&&!combatForge(s,p))throw Error('Combat fusion is Solo-only.');const ai=p.relics.findIndex(r=>r?.uid===a),bi=p.relics.findIndex(r=>r?.uid===b);if(ai<0||bi<0||ai===bi)throw Error('Choose two stash Relics.');const x=p.relics[ai].roll,y=p.relics[bi].roll;if(x.rarity!==y.rarity||x.unique||y.unique)throw Error('Relics must share a tier and be non-Unique.');const next=x.rarity==='common'?'rare':'legendary',unique=x.rarity==='legendary',result=relic(s,next,unique,random(s)<.5?x.kind:y.kind);p.relics[ai]=result;p.relics[bi]=null;host.AutoChessTelemetry?.economy(p,'relicsCrafted',1);drain(p);return result;}
  function carousel(s){
-  s.phase='carousel';s.remaining=RULES.carouselSeconds;s.draftElapsed=0;s.draftWave=0;s.draftOrder=alive(s).slice().sort((a,b)=>a.hp-b.hp||s.players.indexOf(a)-s.players.indexOf(b)).map(p=>p.id);
+  s.draftPlan=null;s.phase='carousel';s.remaining=RULES.carouselSeconds;s.draftElapsed=0;s.draftWave=0;s.draftOrder=alive(s).slice().sort((a,b)=>a.hp-b.hp||s.players.indexOf(a)-s.players.indexOf(b)).map(p=>p.id);
   const rarity=s.stage<3?'common':s.stage<5?'rare':'legendary';
   s.carousel=Array.from({length:9},()=>{const pool=pools[Math.min(5,Math.max(0,s.stage-1))];return{...unit(s,choose(s,pool)),relic:relic(s,rarity),claimedBy:null};});
  }
  function released(s,id){const i=s.draftOrder.indexOf(id);return i>=0&&(s.stage===1||i<(s.draftWave+1)*2);}
  function draft(s,p,uid){const u=s.carousel.find(v=>v.uid===uid);if(!u||u.claimedBy||!released(s,p.id)||s.carousel.some(v=>v.claimedBy===p.id))throw Error('Wait for your release pair or choose an unclaimed unit.');u.claimedBy=p.id;const result=clone(u);delete result.claimedBy;acquire(p,result);return result;}
- function plan(s){s.phase='planning';s.remaining=RULES.planningSeconds;s.pairs=[];s.roundSeed=seedOf(s.seed,s.stage,s.round);for(const p of alive(s)){economyRound(s,p);const lossGold=bonus(s,p,p.pendingLossGold||0,'lossStreak');p.pendingLossGold=0;if(lossGold){p.lastIncome ||= {};p.lastIncome.lossStreak=lossGold;}if(p.locked)p.locked=false;else shop(s,p);drain(p);}host.AutoChessAugments?.begin(s);s.revision++;}
+ function plan(s){s.draftPlan=null;s.phase='planning';s.remaining=RULES.planningSeconds;s.pairs=[];s.roundSeed=seedOf(s.seed,s.stage,s.round);for(const p of alive(s)){economyRound(s,p);const lossGold=bonus(s,p,p.pendingLossGold||0,'lossStreak');p.pendingLossGold=0;if(lossGold){p.lastIncome ||= {};p.lastIncome.lossStreak=lossGold;}if(p.locked)p.locked=false;else shop(s,p);drain(p);}host.AutoChessAugments?.begin(s);s.revision++;}
  function finishAtLimit(s){
   if(s.finished||s.stage!==100||s.round!==6)return false;
   const rows=alive(s).sort((a,b)=>b.hp-a.hp||(s.matchStats?.tacticians[b.id]?.totalDamageDealt||0)-(s.matchStats?.tacticians[a.id]?.totalDamageDealt||0)||b.level-a.level||seedOf(s.seed,a.id)-seedOf(s.seed,b.id));
@@ -182,5 +183,5 @@
  // Startup invalidates the former recovery key; Worker runtimes have no storage.
  if(host.document)purgeCheckpoint();
 
- host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,sell,soloCombat,combatForge,fusionEligible,fuse,autoFuse,equip,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
+ host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,sell,soloCombat,combatForge,fusionEligible,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
 })(window);
