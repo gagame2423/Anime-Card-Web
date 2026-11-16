@@ -185,7 +185,7 @@
   async recentRuns(){
    if(!canUseCloud())return [];
    const snapshot=await U.timeout(db.collection('autochess_runs').orderBy('updatedAt','desc').limit(8).get({source:'server'}),8000,'Replay pool unavailable.');
-   return snapshot.docs.map(row=>row.data());
+   return snapshot.docs.map(row=>({...row.data(),uid:row.id}));
   },
   async publishRun(uid,payload){
    if(!canUseCloud()||account.uid!==uid||payload.uid!==uid)throw Error('Auto Chess account changed.');
@@ -195,8 +195,14 @@
   },
   async leaderboard(){
    if(!canUseCloud())return {rows:[],localOnly:true};
-   const snapshot=await U.timeout(db.collection('autochess_runs').orderBy('elo','desc').limit(50).get({source:'server'}),8000,'Leaderboard unavailable.');
-   return {rows:snapshot.docs.map(row=>row.data()),localOnly:false};
+   const collection=db.collection('autochess_runs');let snapshot,fallback=false;
+   try{snapshot=await U.timeout(collection.orderBy('elo','desc').limit(50).get({source:'server'}),8000,'Leaderboard unavailable.');}
+   catch(error){if(String(error?.code||'').includes('permission-denied'))throw error;fallback=true;snapshot=await U.timeout(collection.limit(50).get({source:'server'}),8000,'Legacy leaderboard unavailable.');}
+   const rows=new Map(snapshot.docs.map(row=>[row.id,{...row.data(),uid:row.id}]));
+   // orderBy excludes legacy documents without elo. Only a lobby leaderboard
+   // request may make this bounded fallback; active matches never call it.
+   if(!fallback&&snapshot.docs.length<50){const legacy=await U.timeout(collection.limit(50).get({source:'server'}),8000,'Legacy leaderboard unavailable.');for(const row of legacy.docs)if(!rows.has(row.id))rows.set(row.id,{...row.data(),uid:row.id});}
+   return {rows:[...rows.values()],localOnly:false};
   }
  });
  function holdAutoChess(){autoChessHold=true;clearTimer();stopWatch();}

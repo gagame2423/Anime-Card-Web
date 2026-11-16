@@ -7,8 +7,8 @@
  function uploadStatus(id,value){if(value){uploadStatuses.set(id,value);if(uploadStatuses.size>32)uploadStatuses.delete(uploadStatuses.keys().next().value);}return uploadStatuses.get(id)||null;}
  const service=()=>backendOverride||host.CloudSaveSystem?.autoChessService||null;
  function identity(){const user=host.CloudSaveSystem?.activeUser;return{uid:user?.uid||'local_player',name:R.name(host.CloudSaveSystem?.publicName||'You'),elo:host.AutoChessRanked?.current()?.elo||0,wins:host.AutoChessRanked?.current()?.wins||0,run:R.last()};}
- function cached(){try{const data=JSON.parse(host.sessionStorage.getItem(CACHE_KEY)||'null');if(data?.version!==1||!Number.isFinite(data.at)||Date.now()-data.at<0||Date.now()-data.at>=CACHE_TTL||!Array.isArray(data.rows)||data.rows.length>8)return null;return data.rows.map(R.decode).filter(Boolean).map(r=>r.wire);}catch(_){return null;}}
- function storePool(rows){try{host.sessionStorage.setItem(CACHE_KEY,JSON.stringify({version:1,at:Date.now(),rows}));}catch(_){} }
+ function cached(){try{const data=JSON.parse(host.sessionStorage.getItem(CACHE_KEY)||'null');if(data?.version!==1||!Number.isFinite(data.at)||Date.now()-data.at<0||Date.now()-data.at>=CACHE_TTL||!Array.isArray(data.rows)||!data.rows.length||data.rows.length>8)return null;return data.rows.map(R.decode).filter(Boolean).map(r=>r.wire);}catch(_){return null;}}
+ function storePool(rows){if(!rows?.length){try{host.sessionStorage.removeItem(CACHE_KEY);}catch(_){}return;}try{host.sessionStorage.setItem(CACHE_KEY,JSON.stringify({version:1,at:Date.now(),rows}));}catch(_){} }
  const usable=run=>!!run&&Object.values(run.stages).some(stage=>stage.board.length>0);
  function distinct(rows,self){const seen=new Set([self]);return(rows||[]).map(R.decode).filter(r=>usable(r)&&!seen.has(r.uid)&&seen.add(r.uid)).map(r=>r.wire).slice(0,7);}
  function install(s,slot,member,friend=false){
@@ -55,8 +55,8 @@
  }
  function record(s){R.record(s);}
  function finish(s){
-  if(s.abandoned||!s.hybrid||!s.finished||!s.paid||s.hybrid.writeAttempted||s.stage<2)return;
-  R.record(s,true);const ranked=host.AutoChessRanked?.current()||{},payload=R.encode({uid:s.hybrid.uid,name:C.get(s).name,matchId:s.id,placement:C.get(s).rank,elo:ranked.elo||0,wins:ranked.wins||0},s.hybrid.stages);
+  if(s.abandoned||!s.hybrid||!s.finished||!s.paid||s.hybrid.writeAttempted)return;
+  R.record(s,true);const ranked=host.AutoChessRanked?.current()||{},payload=R.encode({uid:s.hybrid.uid,name:C.get(s).name,matchId:s.id,placement:C.get(s).rank,elo:ranked.elo||0,wins:ranked.wins||0,...host.AutoChessProfile?.publicMeta()},s.hybrid.stages);
   s.hybrid.writeAttempted=true;if(!payload){s.hybrid.cloudStatus='too-large';C.save(s);return;}
   R.save(payload);s.hybrid.payloadBytes=R.bytes(payload);
   const cloud=service();if(!cloud?.available||identity().uid!==s.hybrid.uid||host.navigator.onLine===false){s.hybrid.cloudStatus='local';C.save(s);return;}
@@ -64,7 +64,7 @@
   s.hybrid.writeCount=1;s.hybrid.cloudStatus='uploading';C.save(s);
   // Fire-and-forget: rewards, summary and exit never wait on Firestore or retry it.
   const publishingUid=s.hybrid.uid,matchId=s.id;uploadStatus(matchId,'uploading');
-  Promise.resolve().then(()=>cloud.publishRun(publishingUid,payload)).then(()=>uploadStatus(matchId,'published')).catch(()=>uploadStatus(matchId,'offline'));
+  Promise.resolve().then(()=>cloud.publishRun(publishingUid,payload)).then(()=>{uploadStatus(matchId,'published');host.AutoChessRanked?.invalidateLeaderboard();}).catch(()=>uploadStatus(matchId,'offline'));
  }
  function createLobby(options={}){
   const me=identity();if(me.run?.uid!==me.uid)me.run=null;

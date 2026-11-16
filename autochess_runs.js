@@ -8,6 +8,7 @@
  const stageNumber=key=>{const m=/^(\d{1,3})-([1-6])$/.exec(String(key));return m&&+m[1]>=1&&+m[1]<=100&&!(+m[1]===1&&+m[2]>4)?+m[1]*10+(+m[2]):-1;};
  const name=v=>String(v||'Player').replace(/[\u0000-\u001f]/g,'').slice(0,40);
  const uid=v=>typeof v==='string'&&v.length>0&&v.length<=128&&!/[\u0000-\u0020]/.test(v);
+ function publicFields(meta){const r=host.AutoChessRanked.rankOf(Number.isSafeInteger(meta.elo)&&meta.elo>=0?meta.elo:0),peakElo=Math.max(r.elo,Number.isSafeInteger(meta.peakElo)&&meta.peakElo>=0?meta.peakElo:0);return{rank:r.index,tier:r.id,division:r.division,avatar:r.image,bannerCardId:C.card(meta.bannerCardId)?.id||null,peakElo,peakRank:host.AutoChessRanked.rankOf(peakElo).label};}
  function packRelic(r){if(!R.validRoll(r))return null;return[R.DEFINITIONS.findIndex(d=>d.kind===r.kind),['common','rare','legendary'].indexOf(r.rarity),r.unique?1:0,elements.indexOf(r.element),...fields.map(k=>Math.round((r[k]||0)*1000))];}
  function unpackRelic(row){
   if(!Array.isArray(row)||row.length!==14||row.some(n=>!Number.isInteger(n)))return null;
@@ -29,7 +30,7 @@
     const board=row.board.slice(0,9).map(u=>[entry(cards,indices[0],u.cardId),u.position,u.relic?entry(relics,indices[1],packRelic(u.relic)):-1]);
     packed[key]=[row.hp,row.level,entry(boards,indices[2],board),entry(augments,indices[3],row.augments.slice(0,3))];
    }
-   return{version:1,codec:'ac-run-1',uid:meta.uid,name:name(meta.name),matchId:String(meta.matchId||'').slice(0,80),placement:Math.max(1,Math.min(8,meta.placement||8)),elo:Math.max(0,Math.floor(meta.elo||0)),wins:Math.max(0,Math.floor(meta.wins||0)),rounds:all.length,sampled:rows.length<all.length,cards,relics,boards,augments,stages:packed};
+   return{version:1,codec:'ac-run-1',uid:meta.uid,name:name(meta.name),matchId:String(meta.matchId||'').slice(0,80),placement:Math.max(1,Math.min(8,meta.placement||8)),elo:Math.max(0,Math.floor(meta.elo||0)),...publicFields(meta),wins:Math.max(0,Math.floor(meta.wins||0)),rounds:all.length,sampled:rows.length<all.length,cards,relics,boards,augments,stages:packed};
   }
   let rows=all,payload=build(rows);
   // Preserve the earliest and latest stage; evenly thin intermediate snapshots
@@ -40,17 +41,18 @@
  function decode(input){
   try{
    if(!input||input.version!==1||input.codec!=='ac-run-1'||!uid(input.uid)||bytes(input)>6144||!Array.isArray(input.cards)||input.cards.length>217||input.cards.some(id=>!C.card(id))||!Array.isArray(input.relics)||input.relics.length>64||!Array.isArray(input.boards)||input.boards.length>MAX_STAGES||!Array.isArray(input.augments)||input.augments.length>16||!input.stages||typeof input.stages!=='object'||Array.isArray(input.stages))return null;
+   const publicMeta=publicFields(input);if(['rank','tier','division','avatar','bannerCardId','peakElo','peakRank'].some(k=>Object.hasOwn(input,k)&&input[k]!==publicMeta[k]))return null;
    const relics=input.relics.map(unpackRelic);if(relics.some(r=>!r))return null;
    const augmentSets=input.augments.map(ids=>{if(!Array.isArray(ids)||ids.length>3||ids.some(id=>!A.get(id))||new Set(ids.map(id=>A.get(id).family)).size!==ids.length)throw Error('Invalid Augments.');return ids;});
    const boards=input.boards.map(rows=>{if(!Array.isArray(rows)||rows.length>9)throw Error('Invalid board.');const used=new Set();return rows.map(tuple=>{if(!Array.isArray(tuple)||tuple.length!==3||tuple.some(v=>!Number.isInteger(v)))throw Error('Invalid token.');const [ci,position,ri]=tuple,card=C.card(input.cards[ci]);if(!card||position<0||position>27||used.has(position)||ri<-1||ri>=relics.length)throw Error('Invalid tile.');used.add(position);return{cardId:card.id,rarity:card.rarity,position,relicId:ri>=0?'replay_relic_'+ri:null,relic:ri>=0?relics[ri]:null};});});
    const stages={};if(Object.keys(input.stages).length>MAX_STAGES)return null;
    for(const [key,row]of Object.entries(input.stages)){if(stageNumber(key)<0||!Array.isArray(row)||row.length!==4||row.some(v=>!Number.isInteger(v)))return null;const [hp,level,bi,ai]=row,board=boards[bi],augments=augmentSets[ai];if(hp<0||hp>100||level<1||level>9||!board||board.length>level||!augments)return null;stages[key]={stageKey:key,hp,level,board,augments,synergies:S.analyze(board.map(u=>({card:C.card(u.cardId)})),A.traits({augments})).filter(t=>t.tier).map(t=>({id:t.id,count:t.count,tier:t.tier}))};}
    if(!Object.keys(stages).length)return null;
-   return{uid:input.uid,name:name(input.name),elo:Number.isSafeInteger(input.elo)&&input.elo>=0?input.elo:0,wins:Number.isSafeInteger(input.wins)&&input.wins>=0?input.wins:0,placement:input.placement,stages,sampled:!!input.sampled,wire:input};
+   return{uid:input.uid,name:name(input.name),...publicMeta,elo:Number.isSafeInteger(input.elo)&&input.elo>=0?input.elo:0,wins:Number.isSafeInteger(input.wins)&&input.wins>=0?input.wins:0,placement:input.placement,stages,sampled:!!input.sampled,wire:input};
   }catch(_){return null;}
  }
  function at(run,key){if(!run)return null;if(run.stages[key])return run.stages[key];const target=stageNumber(key),available=Object.keys(run.stages).filter(k=>stageNumber(k)<=target).sort((a,b)=>stageNumber(b)-stageNumber(a));return available.length?run.stages[available[0]]:null;}
  function last(){try{return decode(JSON.parse(host.localStorage.getItem(KEY)||'null'))?.wire||null;}catch(_){return null;}}
  function save(payload){if(!decode(payload))return false;try{host.localStorage.setItem(KEY,JSON.stringify(payload));return true;}catch(_){return false;}}
- host.AutoChessRuns=Object.freeze({MAX_BYTES,MAX_STAGES,KEY,bytes,stageNumber,name,uid,packRelic,unpackRelic,record,encode,decode,at,last,save});
+ host.AutoChessRuns=Object.freeze({MAX_BYTES,MAX_STAGES,KEY,bytes,stageNumber,name,uid,publicFields,packRelic,unpackRelic,record,encode,decode,at,last,save});
 })(window);

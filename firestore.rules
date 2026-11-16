@@ -76,8 +76,18 @@ service cloud.firestore {
     }
     // Public replay snapshots; one own document overwritten at the end of a run.
     match /autochess_runs/{uid} {
+      function rankFor(elo) { return elo >= 3300 ? 9 : elo >= 3100 ? 8 : elo >= 2800 ? 7 : elo >= 2400 ? 6 : elo >= 2000 ? 5 : elo >= 1600 ? 4 : elo >= 1200 ? 3 : elo >= 800 ? 2 : elo >= 400 ? 1 : 0; }
+      function profileFields(d) {
+        return ((!('rank' in d) && !('tier' in d) && !('division' in d) && !('avatar' in d)) || (d.rank is int && d.rank == rankFor(d.elo)
+          && d.tier == ['iron','bronze','silver','gold','platinum','emerald','diamond','master','grandmaster','challenger'][d.rank]
+          && d.division in ['', 'I', 'II', 'III', 'IV']
+          && d.avatar == 'assets/items/' + d.tier + '.png'))
+          && (!('bannerCardId' in d) || d.bannerCardId == null || (d.bannerCardId is string && d.bannerCardId.size() <= 100))
+          && ((!('peakElo' in d) && !('peakRank' in d)) || (d.peakElo is int && d.peakElo >= d.elo && d.peakElo <= 9007199254740991
+            && d.peakRank is string && d.peakRank.size() > 0 && d.peakRank.size() <= 40));
+      }
       function validRun(d) {
-        return d.keys().hasOnly(['version','codec','uid','name','matchId','placement','elo','wins','rounds','sampled','cards','relics','boards','augments','stages','updatedAt'])
+        return d.keys().hasOnly(['version','codec','uid','name','matchId','placement','elo','rank','tier','division','avatar','bannerCardId','peakElo','peakRank','wins','rounds','sampled','cards','relics','boards','augments','stages','updatedAt'])
           && d.version == 1 && d.codec == 'ac-run-1' && d.uid == uid
           && d.name is string && d.name.size() > 0 && d.name.size() <= 40
           && d.matchId is string && d.matchId.size() > 0 && d.matchId.size() <= 80
@@ -90,10 +100,10 @@ service cloud.firestore {
           && d.boards is list && d.boards.size() > 0 && d.boards.size() <= 600
           && d.augments is list && d.augments.size() <= 16
           && d.stages is map && d.stages.size() > 0 && d.stages.size() <= 600
-          && d.updatedAt == request.time;
+          && d.updatedAt == request.time && profileFields(d);
       }
-      allow get: if accountUser();
-      allow list: if accountUser() && request.query.limit != null && request.query.limit <= 50;
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.query.limit != null && request.query.limit <= 50;
       allow create, update: if owner(uid) && validRun(request.resource.data);
       allow delete: if owner(uid);
     }

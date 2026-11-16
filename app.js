@@ -65,6 +65,7 @@ const defaultState = {
   currency: 0,
   experience: 0,
   autochessRank: window.AutoChessRanked.fresh(),
+  autochess_profile_stats: window.AutoChessProfile.fresh(),
   battleDropRateBonus: 0,
   dropChance: 0, // percent points; potion drop logic reads ONLY this stat and pity
   cardProgress: {},
@@ -304,6 +305,7 @@ function cloneDefaultState() {
     currency: 0,
     experience: 0,
   autochessRank: window.AutoChessRanked.fresh(),
+  autochess_profile_stats: window.AutoChessProfile.fresh(),
     battleDropRateBonus: 0,
     cardProgress: {},
     teamLoadouts: window.StorageSystem.normalizeTeamLoadouts(null),
@@ -820,6 +822,7 @@ function normalizeState(parsed = {}) {
     : 0;
 
   normalized.autochessRank = window.AutoChessRanked.normalise(parsed.autochessRank);
+  normalized.autochess_profile_stats = window.AutoChessProfile.normalise(parsed.autochess_profile_stats,normalized.autochessRank);
 
   normalized.battleDropRateBonus = Number.isFinite(Number(parsed.battleDropRateBonus))
     ? Math.max(0, Math.min(100, Number(parsed.battleDropRateBonus)))
@@ -4788,6 +4791,7 @@ function validateSaveRecord(key, value) {
     }
     if ('upgrades' in value) counts(value.upgrades, 'upgrades');
     if ('equipment' in value) ensure(Array.isArray(value.equipment), 'equipment must be an array.');
+    if ('autochess_profile_stats' in value) ensure(window.AutoChessProfile.valid(value.autochess_profile_stats), 'invalid Auto Chess lifetime profile');
     if ('autochessRank' in value) ensure(window.AutoChessRanked.validProfile(value.autochessRank), 'invalid Auto Chess rank');
     if ('achievementRewardReceipts' in value) flags(value.achievementRewardReceipts, 'reward receipts');
     if('spookyRewardReceipt' in value)ensure(typeof value.spookyRewardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(value.spookyRewardReceipt),'invalid Spooky reward receipt');
@@ -6069,6 +6073,11 @@ function openAutoChess(){
 }
 document.getElementById('autochessOpenButton')?.addEventListener('click',openAutoChess);
 window.AutoChessRanked.configure({getProfile:()=>state.autochessRank});
+window.AutoChessProfile.configure({get:()=>state.autochess_profile_stats,rank:()=>state.autochessRank,commit:profile=>{
+ const previous=state.autochess_profile_stats;state.autochess_profile_stats=profile;
+ if(!saveGame(AUTO_CHESS_REWARD_SAVE)){state.autochess_profile_stats=previous;return false;}
+ window.AutoChessProfile.refresh();return true;
+}});
 window.AutoChessView.configure({
  canOpen:()=>!window.PenaltyView?.active&&canPlayPenalty(),
  name:()=>window.CloudSaveSystem?.publicName||'You',
@@ -6086,7 +6095,7 @@ window.AutoChessView.configure({
   if(!itemsPaid&&grants.some(row=>window.InventorySystem.quantity(row.id)>Number.MAX_SAFE_INTEGER-row.quantity))return false;
   if(!window.InventorySystem.transactOnce('ac_'+match.id,'placement_v2',grants))return false;
   if(accountPaid){
-   const recorded=state.autochessRank?.receipts?.[match.id];if(rewards.version===2&&recorded)match.reward.elo={...recorded};return true;
+   const recorded=state.autochessRank?.receipts?.[match.id];if(rewards.version===2&&recorded)match.reward.elo={...recorded};const previous=state.autochess_profile_stats;state.autochess_profile_stats=window.AutoChessProfile.record(previous,match,state.autochessRank);if(!saveGame(AUTO_CHESS_REWARD_SAVE)){state.autochess_profile_stats=previous;return false;}window.AutoChessProfile.refresh();return true;
   }
   // Only Elo is rebased if another completed run changed the rating; currency
   // multipliers remain the original frozen quote. Save before account mutation.
@@ -6095,8 +6104,9 @@ window.AutoChessView.configure({
   state.currency=Math.min(Number.MAX_SAFE_INTEGER,state.currency+rewards.vnd.total);
   state.experience=Math.min(Number.MAX_SAFE_INTEGER,state.experience+(rewards.exp||0));
   if(rewards.version===2)state.autochessRank=window.AutoChessRanked.applyProfile(state.autochessRank,match.id,rewards.elo);
+  state.autochess_profile_stats=window.AutoChessProfile.record(state.autochess_profile_stats,match,state.autochessRank);
   state.achievementRewardReceipts ||= {};state.achievementRewardReceipts[receipt]=true;
   if(!saveGame(AUTO_CHESS_REWARD_SAVE)){state=before;return false;}
-  updateStats();renderPotionInventory();window.CloudSaveSystem.markDirty();return true;
+  window.AutoChessProfile.refresh();window.AutoChessRanked.invalidateLeaderboard();updateStats();renderPotionInventory();window.CloudSaveSystem.markDirty();return true;
  }
 });

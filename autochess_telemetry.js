@@ -3,7 +3,7 @@
  'use strict';
  const C=host.AutoChessSystem,S=host.AutoChessSynergies,owners=new WeakMap(),MAX=Number.MAX_SAFE_INTEGER;
  const count=n=>Number(Math.max(0,Math.min(MAX,Number(n)||0)).toFixed(6)),add=(o,k,n)=>o[k]=count(Math.min(MAX,(o[k]||0)+count(n)));
- const fresh=()=>({placement:null,provisional:false,eliminatedAtStage:null,finalHp:100,finalLevel:1,totalDamageDealt:0,totalDamageTaken:0,totalHealingDone:0,totalShieldingDone:0,totalKills:0,tacticianDamageDealt:0,wins:0,losses:0,longestWinStreak:0,currentWinStreak:0,totalGoldEarned:0,totalGoldSpent:0,totalRefreshes:0,rarityFusionsCount:0,relicsCrafted:0,units:{},synergies:{},rounds:[],finalBoard:[],finalSynergies:[],augments:[],mvpUnit:null});
+ const fresh=()=>({placement:null,provisional:false,eliminatedAtStage:null,finalHp:100,finalLevel:1,totalDamageDealt:0,totalDamageTaken:0,totalHealingDone:0,totalShieldingDone:0,totalKills:0,tacticianDamageDealt:0,wins:0,losses:0,longestWinStreak:0,currentWinStreak:0,totalGoldEarned:0,totalGoldSpent:0,totalRefreshes:0,rarityFusionsCount:0,threeStarFusionsCount:0,relicsCrafted:0,units:{},synergies:{},rounds:[],finalBoard:[],finalSynergies:[],augments:[],mvpUnit:null});
  function ensure(s,freshMatch=false){
   if(!s?.players)return null;
   if(!s.matchStats||s.matchStats.version!==1)s.matchStats={version:1,startedAt:Date.now(),coverageStart:C.label(s),partial:!freshMatch&&!(s.stage===1&&s.round===1),roundsPlayed:0,roundKeys:[],tacticians:{},finishedAt:null};

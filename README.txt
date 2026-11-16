@@ -1,135 +1,121 @@
-ANIME CARD RNG — AUTO CHESS STRATEGY, PLANNER, AUDIO & RIFT PATCH
-Ngày: 16/11/2026 • Build: 20261116-autochess-strategy-2
+ANIME CARD RNG — AUTO CHESS PROFILE, RELIC ICONS & LEADERBOARD PATCH
+Ngày: 16/11/2026 • Build: 20261116-autochess-profile-1
+Changelog chỉ dành cho cập nhật này. Áp dụng trên bản strategy/planner/Rift trước.
 
-1. CÀI PATCH & PHẠM VI
-Giải nén, chép đè các file cùng tên lên bản Auto Chess QoL trước đó
-(autochess-fresh-lobby-elo-combat-fusion-patch). Thêm cả 3 module mới:
-autochess_strategy.js, autochess_audio.js, autochess_panels.js.
-index.html đã khai báo đúng thứ tự và tăng cache tag; hard refresh sau cập nhật.
-Archive chỉ chứa source đã sửa/thêm và tài liệu cần thiết. Không có assets,
-ảnh, MP3, backup, test harness hay log. Các đường dẫn assets dùng đồ có sẵn.
+TÍNH NĂNG MỚI
+- Nút Rank pill ở góc phải lobby đổi thành Profile / Hồ Sơ, có rank icon hiện tại.
+  Nút Elo Leaderboard bên cạnh vẫn mở bảng hạng riêng như trước.
+- Profile dùng banner artwork do người chơi chọn từ toàn bộ Card Index. Nền có
+  gradient tối trái/dưới; chưa chọn có nút + lớn. Change Banner mở selector có
+  tìm tên/lọc rarity; chọn xong quay về Profile, có nút xóa về nền mặc định.
+- Layout theo mockup: peak-rank box góc trái trên, username lớn + current rank/
+  division/Elo bên cạnh, 6 card 3×2 ở trái dưới, lifetime stats có scrollbar bên
+  phải, nút X đỏ góc phải. Bố cục co gọn cho landscape, xếp dọc khi portrait.
+- Peak badge lấy rank cao nhất từ peakElo; giữ nguyên khi Elo giảm. Lưới Top 6
+  đếm số match thực sự đã fielded card đó, không tính card chỉ mua rồi để bench.
+  Các ô chưa có dữ liệu hiển thị placeholder, không tạo unit/asset mới.
+- Lifetime: Matches Played, 1st-Place Wins, Top 1 Win Rate, Top 4 Finishes/Rate,
+  Average Placement, Current/Peak Elo, Longest Win Streak, Favorite Synergies,
+  3★ Units Fused, Total Damage Dealt và Total Gold Spent.
 
-2. GAMEPLAY, ELO & UX
-CHUỖI PvP
-- winStreak/lossStreak riêng cho cả 8 tactician; thắng/thua reset chuỗi đối diện.
-  Hòa giữ nguyên chuỗi, không tăng đếm, không phát thêm Relic. PvE không đổi chuỗi.
-- 3/6/9/12… thắng liên tiếp: nhận đúng 1 Relic ngẫu nhiên trong match, không có
-  bonus Gold theo win streak. Bonus +1g của một trận PvP thắng vẫn giữ nguyên.
-- Tier Relic: Stage 1–2 Common 80% / Rare 20%; Stage 3–4 Common 50% / Rare 45% /
-  Legendary 5%; Stage 5+ Common 20% / Rare 65% / Legendary 15%. Unique qua forge.
-- Stash đầy: giữ nguyên item và stats trong loot chờ; loot 512 cũng đầy thì đưa
-  vào hàng chờ streak riêng (bounded 200, đủ cho giới hạn match). Có chỗ thì drain
-  vào stash. Không đổi thành Gold, không xóa item và không chuyển sang main relics.
-- Loss streak 2–3: +1g; 4: +2g; 5+: +3g, trả đúng một lần ở Planning kế tiếp.
-  Bonus này đi qua cap chung +16g/round; card passives tối đa +2g nằm trong cap.
-  Base income và tiền refund bán unit tách khỏi cap. Không phát Gold win streak.
-- HUD hiện W/L streak; người chơi được toast khi nhận Relic và khi item đang chờ.
+CÂN BẰNG & SỬA LỖI
+- Carousel trước đó ẩn cả span bọc icon Relic. Selector CSS được thu hẹp để chỉ
+  ẩn text; cả 9 badge hiện đúng image. Hover/tap xem tooltip giàu thông tin;
+  tap badge không nhận nhầm card. Badge vẫn inspect được khi chưa được thả draft.
+- Stash bỏ absolute image offset/negative margin; wrapper và img được căn flex
+  giữa, giữ trong slot. Hit area dùng vùng pseudo và cả button, không đẩy ảnh lệch.
+  Tooltip tiếp tục pointer-events:none, hide debounce 100ms, remap theo Relic UID
+  qua các lần HUD thay DOM. Element emblem và matching board/bench preview giữ lại.
+- Leaderboard không cache []: cache rỗng cũ cũng bị vô hiệu. Ghost-pool rỗng cũng
+  không khóa các run mới trong 10 phút. Cache có dữ liệu vẫn TTL 10 phút.
+- Mỗi lần mở luôn merge dòng local hiện tại với remote/cached rows, kể cả 0 Elo.
+  Thiếu wins -> 0; legacy thiếu Elo -> 0; thiếu uid trong data dùng document ID.
+  Name legacy có displayName vẫn hiển thị. Local entry không bị cắt mất ngoài Top 50.
+- Query chính orderBy('elo','desc'), limit(50). Query này loại doc thiếu elo: khi
+  kết quả chưa đủ 50 hoặc lỗi index, leaderboard ngoài trận dùng một fallback
+  collection.limit(50), merge theo uid. Lỗi permission hiển thị hướng dẫn rules,
+  không giả thành một bảng hạng trống và không lưu cache lỗi.
+- Run hoàn tất có thưởng đã lưu sẽ publish cả khi kết thúc ở Stage 1 hoặc 0 Elo;
+  không còn điều kiện Stage >= 2. Run bỏ dở/X/F5 không có placement chính thức
+  vẫn không cấp rewards/Elo, không cộng lifetime stats và không publish run.
+- Firestore rules cho mọi user đã Firebase-authenticated get/list autochess_runs;
+  list phải có limit <=50. Write vẫn chỉ UID owner Email/Google, kiểm schema,
+  updatedAt == server time. Không mở public/unauthenticated write.
+- Giữ nguyên luật combat, odds, stats/passives, Elo placement/strategy bonus,
+  single-round Shop Lock, Solo combat forge, PeerJS/Ready/spectator và âm thanh
+  countdown10s.mp3 ở mốc 10s của bản trước.
 
-TACTICAL STRATEGY BONUS (+0 ĐẾN +6 ELO)
-- Dùng lineup thực đã bước vào combat: snapshot cuối cùng và snapshot có tổng điểm
-  cao nhất được lưu trong telemetry. Không tính một board mới sắp sau trận, không
-  cộng điểm tốt nhất của nhiều board khác nhau. Bản cũ chưa có evidence được +0.
-- Cohesion 0–3: trait phải Silver+ và có ít nhất 3 card ID thật khác nhau, crest
-  không thay thế điều kiện này. Coverage = tỷ lệ unit deployed góp vào trait đó.
-  +1: >=3 card ID khác nhau và coverage >=60%.
-  +2: coverage >=75%, có Gold+ với >=4 ID thật.
-  +3: >=5 ID khác nhau, coverage >=85%, có Prismatic với >=5 ID thật HOẶC ít nhất
-  2 trait Silver+ hợp lệ. Chỉ tính điều kiện khi board thực đã được triển khai.
-- Itemization 0–2 dùng cùng relicValue/optimal assignment của smart AI: xét category,
-  element, role, scaling, passive compatibility và hiệu quả so với cách gắn tối ưu
-  các Relic đang equip trên board đó. Relic mismatch không được tính như đồ hợp lệ.
-  +1: >=1 item hợp, hiệu quả >=60% tối ưu; +2: >=2 item hợp, >=75% item equip hợp,
-  hiệu quả >=85%. Các Unique có hiệu ứng toàn cục thực sự được xét theo luật riêng.
-- Fusion 0–1: có unit đã qua rarity fusion (fusionDepth >=1) trên board và góp vào
-  trait Silver+ hợp lệ, đồng thời board có điểm cohesion. Đây là rarity fusion
-  đang có của game (3 card cùng rarity -> rarity kế), không đổi sang luật 3 bản sao
-  giống tên của TFT. Inventory và combat entity đang đánh vẫn tách riêng.
-- Elo mới = max(0, Elo cũ + Base Placement Elo + Tactical Strategy Bonus).
-  Bonus cộng trực tiếp 0–6, có thể bù một phần/toàn bộ Elo âm kể cả Challenger.
-  Challenger chỉ hạng 1 có base dương; quy tắc bonus mới vẫn được cộng như yêu cầu.
-- Summary tách Base Placement Elo, từng phần strategy và tổng thực tăng/giảm;
-  +0 có gợi ý xây trait/gắn Relic. Không đổi thưởng VND/Star Orb/Gems hay multipliers.
-  Không cấp Player EXP. Receipt mới tableVersion 3, vẫn đọc v1/v2; retry sau lỗi lưu
-  giữ score đã chốt và không cộng lại tiền/item/Elo. Tăng tier/division vẫn dùng VFX cũ.
-- Bảng base (hạng 1 -> 8) giữ nguyên bản QoL:
-  Iron–Silver 0–1199:        +25,+18,+12,+6,+4,+2,+1,+1
-  Gold–Platinum 1200–1999:   +18,+12,+7,+2,-5,-9,-13,-18
-  Emerald–Diamond 2000–2799: +12,+7,+3,-1,-6,-10,-14,-18
-  Master–Grandmaster 2800–3299: +8,+3,-3,-6,-9,-12,-15,-18
-  Challenger 3300+:         +5,-3,-5,-8,-10,-13,-15,-18
+THÔNG SỐ & CÔNG THỨC CHI TIẾT
+LƯU HỒ SƠ & CHỐNG CỘNG TRÙNG
+- autochess_profile_stats là field authoritative trong main save. Module mới
+  autochess_profile.js quản lý chuẩn hóa, migration và aggregate; app.js chỉ
+  nối transaction save. LocalStorage cùng tên là mirror đọc được, không thay
+  nguồn main save khi import/account restore. Banner dùng bannerCardId, tham
+  chiếu image có sẵn của card; không lưu ảnh/base64 trong save hay Firestore.
+- Stats, rank và receipt nhận thưởng commit cùng một lần saveGame(). Khi main
+  save lỗi, rollback cả Elo và lifetime data; retry không đếm lại match/card/
+  damage/Gold. Mirror lỗi không làm mất main save đã ghi. Main save đã bao gồm
+  profile trong encrypted export/import và Cloud account backup hiện có.
+- Receipt profile có hai bit: placement đã tính và telemetry đã tính. Receipt
+  Elo cũ có thể seed placement trước, telemetry về sau chỉ bổ sung một lần.
+  Giữ tối đa 10,000 receipt như rank store. Card usage giới hạn theo roster;
+  favorite traits giữ roundsActive, không dùng dữ liệu mô phỏng của bot làm stats
+  của người chơi. Live guest dùng đúng localPlayerId của mình.
+- Returning players lấy Matches/Wins từ rank; Top4/Average từ receipt còn lưu.
+  Nếu Matches cũ thiếu hoặc thấp hơn Wins/receipt, khởi tạo tối thiểu bằng số
+  Wins/receipt đã biết; không khôi phục được những match chưa từng lưu.
+  Không đoán damage, Gold hoặc card usage trước khi chúng được ghi. Khi không
+  đủ lịch sử, Top4 có dấu ≥, Average dùng known matches; Profile có chú thích.
+- Top 1 rate = wins/matches ×100. Top 4 rate = top4/matches ×100; lịch sử thiếu
+  thì đó là cận dưới. Average = placementTotal/placementSamples, một số lẻ.
+- Highest rank = rankOf(max(current Elo, peakElo đã lưu, before/after của receipt)).
+  Peak được lưu cùng rank và profile, không giảm khi thua hoặc đổi banner.
+- 3★ Units Fused đếm sự kiện unit vừa đạt fusionDepth ==2. Đây là lịch sử ghép
+  hai bậc của rarity fusion đang có; không đổi game sang luật 3 bản sao cùng tên,
+  không thêm stat multiplier và không đếm lại unit khi nâng tiếp depth 3–5.
 
-PLANNER, TOOLTIP, HƯỚNG DẪN & PHÍM TẮT
-- Thẻ Mục Tiêu nằm ngay dưới username của Host trong lobby. Lọc toàn bộ 217 card
-  bằng tên, rarity/giá, category, element; chọn tối đa 8. Lưu localStorage key
-  anime_card_rng_ac_targets_v1, không gửi Cloud/P2P, không làm tăng odds shop.
-  Các card trúng target có glow và badge TARGET. Nút planner cạnh Shop Lock chỉnh
-  được giữa match. Guide và Planner riêng không can thiệp roster hoặc RNG combat.
-- Nút ? ở góc trên trái lobby mở 5 tab tiếng Việt: chỉ số/giao tranh, vòng/kinh tế,
-  fusion/Relic/Lõi, Rank/Online và phím tắt. Có bảng XP/odds shop sinh từ model,
-  danh mục Relic và toàn bộ trait/breakpoint. Mô tả Energy, Omnivamp, Crit, Attack
-  Speed, DR, Shield theo engine thực. Armor/MR không phải 2 chỉ số độc lập bản này.
-- Tooltip Relic và con cháu pointer-events:none; không cướp hover. Hide debounce
-  100ms; remap icon theo UID khi HUD thay DOM, không reset nội dung khi không đổi.
-  Hit zone tray/equipped được nới. Tap ghim; ESC/tap ngoài để đóng. Preview vẫn
-  hiện exact roll, Element emblem và unit phù hợp trên board+bench của bạn.
-- Space dùng primary round action đang hiện: Start Battle Now, Sẵn sàng/Ready hoặc
-  Next Round. Không kích khi gõ input/textarea/select/contenteditable, IME,
-  key repeat, modifier hoặc modal đang chặn. Không vô tình mua shop đang focus.
-- X bán đúng unit bench của mình ở vị trí chuột hiện tại trong Planning, refund
-  theo model chuẩn. Không bán deployed, board scout, trong combat hay lúc nhập chữ.
-- Planner/guide pause timeline Solo; đồng hồ Live vẫn chạy. My Augments vẫn xem
-  trong combat như cũ. Dialog có focus trap, backdrop/ESC/X và trả focus khi đóng.
+PUBLIC RUN DOCUMENT
+- Một set cuối run tới autochess_runs/{uid}: elo/wins luôn là số nguyên >=0,
+  rank là index tier 0..9, tier là id lowercase (iron…challenger), division là
+  IV/III/II/I hoặc chuỗi rỗng ở Challenger; avatar là assets/items/<tier>.png.
+  name, placement, updatedAt và replay codec vẫn giữ; thêm bannerCardId (hoặc
+  null), peakElo và peakRank. Không dùng placement thay cho rank tier.
+- Banner và peak metadata piggyback vào lần ghi run hoàn tất kế tiếp; đổi banner
+  lưu local/main ngay, không tạo thêm write giữa trận. Public rows cũ được hiển
+  thị bằng fallback; lần publish tiếp theo của từng người sửa schema của họ.
+- Payload encode vẫn <=5,900 byte, doc sau thêm timestamp <6KB; khi cần vẫn
+  thinning stage snapshots, giữ stage đầu/cuối. Codec cũ không có metadata vẫn đọc.
+- Mỗi match vẫn tối đa 1 recentRuns query đầu run (cache hợp lệ ->0) +1 own-run
+  write cuối run, không query/write theo round. Leaderboard global là thao tác
+  explicit NGOÀI TRẬN, tối đa query chính + một bounded legacy fallback; trong
+  trận chỉ dùng cache/local. Không có listeners/transactions mới cho public runs.
 
-3. ÂM THANH & RIFT
-AUDIO — THƯ MỤC CHÍNH XÁC: assets/audio/
-Đặt sẵn các MP3 sau tại đó; patch không cung cấp hay tạo các file âm thanh:
-  Iron -> Bronze:            assets/audio/itob.mp3
-  Bronze -> Silver:          assets/audio/btos.mp3
-  Silver -> Gold:            assets/audio/stog.mp3
-  Gold -> Platinum:          assets/audio/gtop.mp3
-  Platinum -> Emerald:       assets/audio/ptoe.mp3
-  Emerald -> Diamond:        assets/audio/etod.mp3
-  Diamond -> Master:         assets/audio/dtom.mp3
-  Master -> Grandmaster:     assets/audio/mtogm.mp3
-  Fallback nếu mtogm lỗi:    assets/audio/mtog.mp3
-  Grandmaster -> Challenger: assets/audio/gmtoc.mp3
-  Cảnh báo countdown:        assets/audio/countdown10s.mp3
-- Rank SFX chỉ khi tăng TIER, không khi chỉ lên division. Nhảy nhiều tier phát
-  âm của tier đích. VFX vẫn có cho division như trước, receipt guard chống lặp.
-- Countdown phát một lần cho match+stage-round khi còn >0 và <=10 giây, không
-  phát lại theo frame/đổi phase. Áp dụng yêu cầu mới nhất: cảnh báo 10 giây. Timer
-  có urgency pulse <=10s, tắt animation khi reduced motion.
-- Dùng DropAudioSystem.enabled và .volume của Settings SFX hiện có. Chờ tương tác
-  đầu tiên; play() reject, autoplay block hoặc thiếu file đều được catch an toàn.
-  Rank audio ưu tiên hơn countdown. Đóng mode/pagehide dừng và bỏ audio cũ.
+HƯỚNG DẪN SỬ DỤNG & KIỂM TRA
+1. Chép đè các file trong patch lên bản autochess-strategy-planner-rift-patch;
+   thêm autochess_profile.js. index.html đã đăng ký đúng thứ tự và tăng cache tag.
+2. TRIỂN KHAI firestore.rules trong Firebase project đang dùng. Source patch
+   không tự thay rules production. Nếu vẫn dùng rules cũ, write có metadata mới
+   có thể bị từ chối. Đăng nhập Email/Google và online lúc hoàn tất match để có
+   public document; local/offline vẫn có Profile và local leaderboard entry.
+3. Mở Auto Chess -> Profile. Bấm +/Change Banner, chọn artwork; ESC/backdrop/X
+   đóng modal, ESC trong selector quay về Profile. Thay banner chỉ là lựa chọn
+   giao diện, không đổi odds, roster, card inventory, Relic hoặc combat stats.
+4. Leaderboard luôn có dòng local; lần đọc remote rỗng không được cache. Nếu
+   chưa có public doc, người chơi cần hoàn tất một run online sau cập nhật.
+5. Assets giữ nguyên trên máy của bạn: assets/cards/* và assets/items/<rank>.png.
+   Không có assets/media, backup, test harness hoặc log trong archive.
 
-RIFT PREVIEW & REWARD POOLS
-- Loại Rift được resolve theo key rõ ràng; key không hợp lệ bị từ chối, không
-  fallback về Rumbling. Setup lấy rotation hiện tại; attempt giữ type lúc vào.
-- Hueco: Dark, Ulquiorra 0.4%, Hakka Earing 0.1% (luôn 1 bản).
-- Rumbling: Nature, Eren 0.5%, O.D.M. 5%.
-- Preview, nút Enter, mode label, enemy lineup và reward resolver dùng cùng type.
-  Khi giờ rotation đổi giữa trận, preview/result vẫn theo attempt đang chơi.
-- Thắng vẫn nhận 1–5 Rift Shards trước normal drop multiplier; card nhận standard
-  weather mutation roll. Special card/item/Relic không bị nhân số lượng. Guarantee
-  vẫn chọn đúng một special theo trọng số riêng của Rift đó, không dùng pool khác.
-
-4. TƯƠNG THÍCH & KIỂM TRA
-- Giữ Supporter nerf, Overtime 30s/45s, timeout 60s so HP% rồi damage, My Augments,
-  weekly Augment, rank-scaled bots, 7 tên bot, single-round Shop Lock và Solo combat
-  future-roster forge. Không thay 217 định nghĩa card hoặc passive handlers.
-- Giữ chính sách mới nhất: X/F5/thoát mode/mất peer thì bỏ run ở phía mình; không
-  Resume. Peer rời Live chuyển AI không chặn Ready. Không kết thúc hộ toàn phòng.
-  Người bị loại còn ở phòng có thể xem tới champion. Host rớt thì guest về lobby;
-  chưa có host migration. Run bỏ dở không có placement/Elo/upload rewards.
-- Firestore giữ tối đa 1 recent-runs query (cache 10 phút) +1 own-run write khi
-  hoàn tất đủ điều kiện. Không thêm read/write trong round, Planner hay tooltip.
-- Kiểm tra model: streak 3/6/9, loss timing/cap/draw/PvE/overflow; tactical 0–6,
-  snapshot đã fielded, Elo v1/v2/v3, retry/reload chống trùng; cả hai Rift gồm
-  rollover và mutation/multiplier; FakeAudio kiểm đủ file/fallback/mute/play reject.
-- Kiểm tra browser: planner 217 card/bộ lọc/max8/persist/TARGET, 5 tab guide,
-  tooltip hover qua HUD refresh, keyboard guards/refund, responsive/touch; regression
-  Supporter/overtime, low-rank AI, native/Worker và PeerJS với transport mô phỏng.
-- Kiểm tra audio ở mức dispatch/fallback/settings bằng mock; chưa nghe các MP3
-  local của bạn. PeerJS NAT và FPS trên điện thoại thật không được xác nhận bằng
-  test headless; không có cam kết mọi thiết bị đạt 60 FPS.
+ĐÃ KIỂM TRA
+- Migration rank/peak/placement, usage đúng card fielded, fusions depth 2, duplicate
+  receipts; account reward save-failure/retry/reload không cộng trùng lifetime/Elo.
+- Leaderboard 0 Elo/legacy thiếu fields/local merge/empty-cache invalidation;
+  Stage 1 hoàn tất publish đúng một lần với rank/avatar/peak metadata.
+- Firebase adapter bằng SDK mock: doc ID, bounded query/fallback, owner UID,
+  serverTimestamp và không ghi main Cloud trong thời gian Auto Chess hold.
+- Browser UI ở 1440×900, 844×390, 915×412, 390×844, 498×251; banner selector,
+  ESC, persistence, 6-slot layout, stats scroll, icon stash lệch tâm 0px.
+- 9/9 carousel icons hiển thị, hover/tap rich tooltip không nhận nhầm draft.
+- Native/Worker combat tương đương; 8 PeerJS clients mô phỏng cùng champion,
+  mỗi người tối đa 1 Query +1 Write; Ready/scout/abandon và streak/strategy giữ đúng.
+- Kiểm tra source/rules và adapter bằng mock không thay thế Firestore emulator
+  hoặc xác minh rules production đã deploy. Test không đo FPS/NAT trên máy thật.
