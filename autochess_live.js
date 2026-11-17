@@ -3,7 +3,7 @@
 (function(host){
  'use strict';
  const C=host.AutoChessSystem,B=host.AutoChessBots,A=host.AutoChessAugments,T=host.AutoChessTelemetry;
- const links=new Map(),MAX_BYTES=2*1024*1024,CHUNK=14000;
+ const links=new Map(),MAX_BYTES=2*1024*1024,CHUNK=14000,HEARTBEAT=5000,PRESENCE_GRACE=60000,LOCK_WAIT=6000;
  function seed(s,packet){
   const me=host.AutoChessOnline.identity(),roster=packet.roster;
   s.id=packet.matchId;s.localPlayerId=s.players[roster.findIndex(m=>m.uid===me.uid)]?.id||'human';
@@ -17,34 +17,42 @@
  const stage=s=>C.label(s)+'/'+s.phase;
  function createSession(initial,options={}){
   let state=C.clone(initial),link=links.get(state.id),authority=!!link?.isHost,base=null,settlement=null,disposed=false,closed=false,dirty=true,elapsed=0,last=host.performance.now(),pulseAt=0,stateAt=0,lastPhase='',seq=0,commandSeq=0,received=-1,barrier=null,allowCombat=false,startAt=0,manifest=null,jobs=[],worker=null,hostTime=0,lastPacket=Date.now(),unsubscribe=null,arrival=0;
-  const local=state.localPlayerId,seen=new Map(),lastSeen=new Map(),assemblies=new Map();
-  const error=message=>options.onError?.(message),now=()=>Date.now(),living=()=>state.live.humans.filter(h=>h.connected&&C.get(state,h.id).hp>0&&C.get(state,h.id).rank===null);
+  const local=state.localPlayerId,seen=new Map(),lastSeen=new Map(),assemblies=new Map(),misses=new Map(),departed=new Set();let heartbeatAt=0,phaseAt=Date.now(),resyncAt=0,reconnectAt=0;
+  const error=message=>options.onError?.(message),now=()=>Date.now(),living=()=>state.live.humans.filter(h=>h.connected&&!h.reconnecting&&C.get(state,h.id).hp>0&&C.get(state,h.id).rank===null);
   const getState=()=>base?.state||settlement?.state||state;
   function disposeFights(){for(const j of jobs)j.combat.dispose();jobs=[];worker?.dispose();worker=null;}
   function safeSend(message,uid=null){
-   if(!link||disposed)return;const text=JSON.stringify(message);if(text.length>MAX_BYTES){error('Live snapshot too large.');return;}
+   if(!link||disposed)return;let text;try{text=JSON.stringify(message);}catch(_){error('Unable to encode live message. Your room remains connected.');return;}if(text.length>MAX_BYTES){error('Live snapshot too large.');return;}
    const deliver=data=>uid?link.target(uid,data):link.send(data);
-   if(text.length<=CHUNK)deliver(message);else{const id=++arrival,n=Math.ceil(text.length/CHUNK);for(let i=0;i<n;i++)deliver({type:'fragment',id,n,i,text:text.slice(i*CHUNK,(i+1)*CHUNK)});}
+   if(text.length<=CHUNK)deliver(JSON.parse(text));else{const id=++arrival,n=Math.ceil(text.length/CHUNK);for(let i=0;i<n;i++)deliver({type:'fragment',id,n,i,text:text.slice(i*CHUNK,(i+1)*CHUNK)});}
   }
   function publicState(full=false){const s=getState(),{matchStats,hybrid,...body}=s,out=C.clone(body);out.hybrid={...hybrid,stages:{}};if(full)out.matchStats=C.clone(matchStats);delete out.localPlayerId;delete out.reward;delete out.finishReason;out.paid=false;out.hybrid={...out.hybrid,stages:{},uid:'shared',readRequested:true,writeAttempted:false};if(!full)delete out.matchStats;return out;}
   function publish(full=false,uid=null){if(!authority)return;state=getState();safeSend({type:'state',seq:++seq,state:publicState(full),manifest,at:now()},uid);stateAt=elapsed;dirty=false;}
+  function takeover(uid){
+   state=getState();const h=state.live.humans.find(h=>h.uid===uid);if(!h||!h.connected||uid===link.self)return;h.connected=false;h.reconnecting=true;const p=C.get(state,h.id);p.bot=true;p.source={...p.source,kind:'disconnected-ai'};delete state.live.ready[h.id];barrier?.pending.delete(uid);state.revision++;dirty=true;
+  }
   function disconnect(uid){
-   if(disposed)return;if(!authority){abandon('connection-lost');return;}
-   const h=state.live.humans.find(h=>h.uid===uid);if(!h||!h.connected||uid===link.self)return;h.connected=false;const p=C.get(state,h.id);p.bot=true;p.source={...p.source,kind:'disconnected-ai'};delete state.live.ready[h.id];barrier?.pending.delete(uid);state.revision++;dirty=true;
+   if(disposed)return;if(!authority){if(!closed)error('Connection interrupted. Reconnecting to your reserved seat…');closed=true;link?.reconnect?.();return;}
+   state=getState();const h=state.live.humans.find(h=>h.uid===uid);if(!h||uid===link.self)return;h.reconnecting=true;delete state.live.ready[h.id];barrier?.pending.delete(uid);state.revision++;dirty=true;
+  }
+  function restore(uid){
+   if(disposed||departed.has(uid))return;if(!authority){safeSend({type:'attach'});return;}
+   state=getState();const h=state.live.humans.find(h=>h.uid===uid);if(!h)return;lastSeen.set(uid,now());misses.set(uid,0);
+   if(!h.connected||h.reconnecting){h.connected=true;h.reconnecting=false;const p=C.get(state,h.id);p.bot=false;p.source={...p.source,kind:'live-human'};delete state.live.ready[h.id];state.revision++;dirty=true;}
   }
   function input(uid,message){
-   state=getState();const h=state.live.humans.find(h=>h.uid===uid);if(!h||!h.connected)return;
-   lastSeen.set(uid,now());
-   if(message.type==='leave'){disconnect(uid);return;}
-   if(message.type==='attach'){publish(true,uid);return;}
+   state=getState();const h=state.live.humans.find(h=>h.uid===uid);if(!h||departed.has(uid))return;
+   restore(uid);
+   if(message.type==='leave'){departed.add(uid);takeover(uid);return;}
+   if(message.type==='attach'||message.type==='resync'){publish(true,uid);return;}
    if(message.type==='pong')return;
-   if(message.type==='locked'){if(barrier&&message.token===barrier.token&&message.seq===(seen.get(uid)||0)){const p=C.get(state,h.id);state.live.lockHashes ||= {};state.live.lockHashes[h.id]=C.seedOf(JSON.stringify({units:p.units,level:p.level,hp:p.hp,augments:p.augments}));barrier.pending.delete(uid);}return;}
+   if(message.type==='locked'){if(barrier&&message.token===barrier.token){const p=C.get(state,h.id);state.live.lockHashes ||= {};state.live.lockHashes[h.id]=C.seedOf(JSON.stringify({units:p.units,level:p.level,hp:p.hp,augments:p.augments}));barrier.pending.delete(uid);}return;}
    if(message.type!=='intent'||!Number.isSafeInteger(message.seq)||message.seq<1||message.seq<=(seen.get(uid)||0))return;
    seen.set(uid,message.seq);const p=C.get(state,h.id);
-   if(message.stage!==C.label(state)||message.phase!==state.phase||state.finished||p.hp<=0||barrier&&!barrier.pending.has(uid))return;
+   if(message.stage!==C.label(state)||message.phase!==state.phase||state.finished||p.hp<=0||barrier){safeSend({type:'ack',seq:message.seq},uid);publish(false,uid);return;}
    try{
     if(message.action?.type==='ready'){
-     if(state.phase!=='planning'||barrier)return;state.live.ready[p.id]=!state.live.ready[p.id];state.revision++;dirty=true;
+     if(state.phase!=='planning'||barrier)return;state.live.ready[p.id]=typeof message.action.value==='boolean'?message.action.value:!state.live.ready[p.id];state.revision++;dirty=true;
     }else if(message.action?.type==='draft'||message.action?.type==='augmentPick'||message.action?.type==='augmentReroll'||state.phase==='planning'||state.phase==='carousel'){
      if(!message.action||JSON.stringify(message.action).length>2048)return;
      if(!base.dispatchFor(p.id,message.action))return;state=base.state;delete state.live.ready[p.id];dirty=true;
@@ -54,7 +62,7 @@
   }
   function startBarrier(){
    if(allowCombat)return true;if(barrier)return false;
-   barrier={token:C.label(state)+'/'+(++arrival),pending:new Set(living().filter(h=>h.uid!==link.self).map(h=>h.uid)),until:now()+3000};
+   barrier={token:C.label(state)+'/'+(++arrival),pending:new Set(living().filter(h=>h.uid!==link.self).map(h=>h.uid)),until:now()+LOCK_WAIT};
    state.live.locked=true;state.revision++;publish();safeSend({type:'lock',token:barrier.token});return false;
   }
   function openManifest(){
@@ -77,55 +85,71 @@
    if(disposed||!message||typeof message!=='object')return;
    if(message.type==='fragment'){
     if(!Number.isInteger(message.n)||message.n<1||message.n>160||!Number.isInteger(message.i)||message.i<0||message.i>=message.n||typeof message.text!=='string'||message.text.length>CHUNK)return;
-    const key=uid+'/'+message.id;let a=assemblies.get(key);if(!a){if(assemblies.size>=4)return;a={n:message.n,rows:Array(message.n),at:now(),bytes:0};assemblies.set(key,a);}if(a.n!==message.n||a.rows[message.i]!==undefined)return;a.rows[message.i]=message.text;a.bytes+=message.text.length;
+    if(authority){if(!state.live.humans.some(h=>h.uid===uid)||departed.has(uid))return;restore(uid);}else{if(uid!==state.live.owner)return;lastPacket=now();}
+    const key=uid+'/'+message.id;let a=assemblies.get(key);if(!a){if(assemblies.size>=12)return;a={n:message.n,rows:Array(message.n),at:now(),bytes:0};assemblies.set(key,a);}if(a.n!==message.n||a.rows[message.i]!==undefined)return;a.at=now();a.rows[message.i]=message.text;a.bytes+=message.text.length;
     if(a.bytes>MAX_BYTES){assemblies.delete(key);return;}if(a.rows.filter(x=>x!==undefined).length===a.n){assemblies.delete(key);try{receive(JSON.parse(a.rows.join('')),uid);}catch(_){}}return;
    }
-   if(authority){input(uid,message);return;}if(uid!==state.live.owner)return;lastPacket=now();closed=false;
+   if(authority){input(uid,message);return;}if(uid!==state.live.owner)return;lastPacket=now();
    if(message.type==='leave'){abandon('host-left');return;}
    if(message.type==='state'){
     if(!Number.isSafeInteger(message.seq)||message.seq<=received||message.state?.id!==state.id||message.state?.live?.owner!==state.live.owner)return;
-    const next=localise(message.state);if(!next)return;received=message.seq;state=next;if(!state.finished&&!state.live.humans.find(h=>h.id===local)?.connected){abandon('disconnected');return;}manifest=message.manifest;hostTime=message.at;
+    const next=localise(message.state);if(!next){if(now()-resyncAt>2000){resyncAt=now();safeSend({type:'resync'});}return;}received=message.seq;state=next;closed=false;manifest=message.manifest;hostTime=message.at;
+    if(!state.live.humans.find(h=>h.id===local)?.connected)safeSend({type:'attach'});
     if(state.phase==='combat'){makeVisuals();host.AutoChessOnline.record(state);}else disposeFights();
     if(state.finished){state.finishReason=C.get(state).rank===1?'victory':'eliminated';settleLocal();}else C.save(state);options.onChange?.();
    }else if(message.type==='pulse'){
     hostTime=message.at;if(message.key===C.label(state)&&message.phase===state.phase){state.remaining=message.remaining;state.live.ready=message.ready;for(const j of jobs)j.target=message.times?.[j.a+'/'+j.b]||0;}
     safeSend({type:'pong'});
    }else if(message.type==='lock'){
-    state.live.locked=true;const p=C.get(state);safeSend({type:'locked',token:message.token,seq:commandSeq,snapshot:{units:C.clone(p.units),level:p.level,hp:p.hp,augments:[...p.augments],synergies:host.AutoChessSynergies.analyze(C.deployed(p),A.traits(p)).filter(r=>r.tier).map(r=>({id:r.id,count:r.count,tier:r.tier}))}});options.onChange?.();
+    // The host already owns the accepted roster and exact Relic rolls. A tiny
+    // acknowledgement avoids serializing card/passive runtime objects at Ready.
+    state.live.locked=true;safeSend({type:'locked',token:message.token,seq:commandSeq});options.onChange?.();
    }
   }
   function settleLocal(){
    if(settlement)return;disposeFights();state.localPlayerId=local;delete state.reward;state.paid=false;state.finishReason=C.get(state).rank===1?'victory':'eliminated';
    settlement=host.AutoChessCombat.createSession(state,{...options,authority:true});state=settlement.state;
   }
+  function intent(action){
+   if(!action||typeof action.type!=='string')return null;const type=action.type,out={type};
+   if(['xp','refresh','lock','autoFuse'].includes(type))return out;
+   if(type==='ready')return{type,value:!state.live.ready[local]};
+   if(['buy','augmentPick','augmentReroll'].includes(type))return Number.isInteger(action.index)?{type,index:action.index}:null;
+   if(['sell','anvil','keep','unequip','draft'].includes(type))return typeof action.uid==='string'?{type,uid:action.uid.slice(0,80)}:null;
+   if(type==='move'&&typeof action.uid==='string'&&['board','bench'].includes(action.where)&&Number.isInteger(action.index))return{type,uid:action.uid.slice(0,80),where:action.where,index:action.index};
+   if(type==='equip'&&typeof action.uid==='string'&&typeof action.relicId==='string')return{type,uid:action.uid.slice(0,80),relicId:action.relicId.slice(0,80)};
+   if(type==='relicFuse'&&typeof action.a==='string'&&typeof action.b==='string')return{type,a:action.a.slice(0,80),b:action.b.slice(0,80)};
+   if(type==='fuse'){if(action.ids===undefined)return out;return Array.isArray(action.ids)&&action.ids.length<=3&&action.ids.every(id=>typeof id==='string'&&id.length<=80)?{type,ids:[...action.ids]}:null;}
+   return null;
+  }
   function command(action){
    state=getState();if(disposed||closed||state.finished||state.live.locked||C.get(state).hp<=0)return false;
-   const message={type:'intent',seq:++commandSeq,stage:C.label(state),phase:state.phase,action};
+   const clean=intent(action);if(!clean)return false;const message={type:'intent',seq:++commandSeq,stage:C.label(state),phase:state.phase,action:clean};
    if(authority)input(link.self,message);else safeSend(message);return true;
   }
   function loop(){
    if(disposed)return;const stamp=host.performance.now(),dt=Math.min(.5,Math.max(0,(stamp-last)/1000));last=stamp;elapsed+=dt;state=getState();
-   for(const [key,a]of assemblies)if(now()-a.at>5000)assemblies.delete(key);
+   for(const [key,a]of assemblies)if(now()-a.at>30000)assemblies.delete(key);
    if(authority){
-    for(const h of state.live.humans)if(h.uid!==link.self&&h.connected&&now()-(lastSeen.get(h.uid)||lastPacket)>10000)disconnect(h.uid);
+    if(now()-heartbeatAt>=HEARTBEAT){heartbeatAt=now();for(const h of state.live.humans)if(h.uid!==link.self&&h.connected){const idle=now()-(lastSeen.get(h.uid)||lastPacket);misses.set(h.uid,idle>=HEARTBEAT?(misses.get(h.uid)||0)+1:0);if(idle>=PRESENCE_GRACE&&(misses.get(h.uid)||0)>=3&&(now()-phaseAt>=2000||idle>=PRESENCE_GRACE+10000))takeover(h.uid);}}
     if(!state.finished){
-     if(barrier){if(!barrier.pending.size||now()>=barrier.until){for(const uid of barrier.pending)disconnect(uid);barrier=null;allowCombat=true;base.startCombat();allowCombat=false;state=base.state;if(state.phase==='combat')openManifest();}}
+     if(barrier){if(!barrier.pending.size||now()>=barrier.until){barrier=null;allowCombat=true;base.startCombat();allowCombat=false;state=base.state;if(state.phase==='combat')openManifest();}}
      else if(state.phase==='planning'&&living().every(h=>state.live.ready[h.id]))base.startCombat();
      if(!barrier&&now()>=startAt)base.tick(dt);
      state=base.state;if(state.phase==='combat'&&lastPhase!=='combat'&&manifest?.key!==C.label(state))openManifest();
      if(state.phase!=='planning')state.live.ready={};
     }
-    const phase=stage(state);if(phase!==lastPhase){lastPhase=phase;if(state.phase!=='combat')manifest=null;publish(true);}else if(dirty&&elapsed-stateAt>=.1||elapsed-stateAt>=1)publish(false);
+    const phase=stage(state);if(phase!==lastPhase){lastPhase=phase;phaseAt=now();if(state.phase!=='combat')manifest=null;publish(true);}else if(dirty&&elapsed-stateAt>=.1||elapsed-stateAt>=1)publish(false);
     if(elapsed-pulseAt>=.25){pulseAt=elapsed;const times={};for(const p of state.players){const fight=base.combatFor(p.id),pair=state.pairs.find(j=>j.a===p.id);if(pair)times[pair.a+'/'+pair.b]=fight?.time||0;else if(['creep','boss'].includes(C.roundKind(state)))times[p.id+'/creeps']=fight?.time||0;}safeSend({type:'pulse',key:C.label(state),phase:state.phase,remaining:state.remaining,ready:state.live.ready,times,at:now()});}
    }else{
-    if(now()-lastPacket>10000&&!state.finished&&!closed){abandon('connection-timeout');return;}
+    if(now()-lastPacket>15000&&!state.finished&&now()-reconnectAt>=HEARTBEAT){reconnectAt=now();if(!closed)error('Waiting for the host. Reconnecting without abandoning your seat…');closed=true;link?.reconnect?.();}
     for(const j of jobs){const n=Math.max(0,j.target-j.combat.time);if(n>0)j.combat.step(Math.min(.5,n));j.combat.interpolate(dt);}
    }
   }
   if(link){
    links.delete(state.id);
    if(authority){state.localPlayerId='human';base=host.AutoChessCombat.createSession(state,{...options,authority:true,beforeCombat:startBarrier,onChange:()=>{dirty=true;options.onChange?.();},onFinalized:s=>{state=s;publish(true);options.onFinalized?.(s);}});state=base.state;for(const h of state.live.humans)lastSeen.set(h.uid,now());}
-   unsubscribe=link.subscribe(receive,disconnect);if(authority)publish(true);else safeSend({type:'attach'});
+   unsubscribe=link.subscribe(receive,disconnect,restore);if(authority)publish(true);else safeSend({type:'attach'});
   }else{closed=true;host.queueMicrotask(()=>abandon('connection-unavailable'));}
   const timer=host.setInterval(loop,50);
   function dispose(){if(disposed)return;disposed=true;host.clearInterval(timer);unsubscribe?.();link?.close();base?.dispose();settlement?.dispose();disposeFights();assemblies.clear();}

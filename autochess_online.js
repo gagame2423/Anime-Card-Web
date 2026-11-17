@@ -2,7 +2,7 @@
 (function(host){
  'use strict';
  const C=host.AutoChessSystem,R=host.AutoChessRuns,U=host.OnlineUtils;
- const CACHE_KEY='ac_ghost_pool_cache',CACHE_TTL=600000,ATTEMPTS_KEY='anime_card_rng_ac_run_uploads_v1',PROTOCOL='ac-live-2';
+ const CACHE_KEY='ac_ghost_pool_cache',CACHE_TTL=600000,ATTEMPTS_KEY='anime_card_rng_ac_cloud_published_v2',PENDING_KEY='anime_card_rng_ac_cloud_pending_v1',PROTOCOL='ac-live-3';
  let backendOverride=null;const uploadStatuses=new Map();
  function uploadStatus(id,value){if(value){uploadStatuses.set(id,value);if(uploadStatuses.size>32)uploadStatuses.delete(uploadStatuses.keys().next().value);}return uploadStatuses.get(id)||null;}
  const service=()=>backendOverride||host.CloudSaveSystem?.autoChessService||null;
@@ -27,6 +27,7 @@
  }
  function beginRun(getState,notify=()=>{}){
   const initial=getState();if(!initial?.hybrid||initial.hybrid.readRequested)return;
+  running.add(initial.id);
   const id=initial.id,uid=initial.hybrid.uid,pool=cached();initial.hybrid.readRequested=true;initial.hybrid.cloudStatus=pool?'cached':'local';if(!C.save(initial))return;
   if(pool)return;
   const cloud=service();if(!cloud?.available||host.navigator.onLine===false)return;
@@ -55,69 +56,114 @@
  }
  function record(s){R.record(s);}
  function finish(s){
+  if(s.finished)running.delete(s.id);
   if(s.abandoned||!s.hybrid||!s.finished||!s.paid||s.hybrid.writeAttempted)return;
-  R.record(s,true);const ranked=host.AutoChessRanked?.current()||{},payload=R.encode({uid:s.hybrid.uid,name:C.get(s).name,matchId:s.id,placement:C.get(s).rank,elo:ranked.elo||0,wins:ranked.wins||0,...host.AutoChessProfile?.publicMeta()},s.hybrid.stages);
+  R.record(s,true);const ranked=host.AutoChessRanked?.current()||{},payload=R.encode({uid:s.hybrid.uid,name:C.get(s).name,matchId:s.id,placement:C.get(s).rank,elo:ranked.elo||0,wins:ranked.wins||0,matches:ranked.matches||0,...host.AutoChessProfile?.publicMeta()},s.hybrid.stages);
   s.hybrid.writeAttempted=true;if(!payload){s.hybrid.cloudStatus='too-large';C.save(s);return;}
   R.save(payload);s.hybrid.payloadBytes=R.bytes(payload);
-  const cloud=service();if(!cloud?.available||identity().uid!==s.hybrid.uid||host.navigator.onLine===false){s.hybrid.cloudStatus='local';C.save(s);return;}
-  let attempts;try{attempts=JSON.parse(host.localStorage.getItem(ATTEMPTS_KEY)||'[]');if(!Array.isArray(attempts))attempts=[];const attemptKey=s.hybrid.uid+':'+s.id;if(attempts.includes(attemptKey)||!s.live&&attempts.includes(s.id)){C.save(s);return;}attempts.push(attemptKey);host.localStorage.setItem(ATTEMPTS_KEY,JSON.stringify(attempts.slice(-1024)));}catch(_){s.hybrid.cloudStatus='local';C.save(s);return;}
-  s.hybrid.writeCount=1;s.hybrid.cloudStatus='uploading';C.save(s);
-  // Fire-and-forget: rewards, summary and exit never wait on Firestore or retry it.
-  const publishingUid=s.hybrid.uid,matchId=s.id;uploadStatus(matchId,'uploading');
-  Promise.resolve().then(()=>cloud.publishRun(publishingUid,payload)).then(()=>{uploadStatus(matchId,'published');host.AutoChessRanked?.invalidateLeaderboard();}).catch(()=>uploadStatus(matchId,'offline'));
+  try{host.localStorage.setItem(PENDING_KEY,JSON.stringify(payload));}catch(_){}
+  const started=publish(payload);s.hybrid.writeCount=started?1:0;s.hybrid.cloudStatus=started?'uploading':'local';C.save(s);
+ }
+ const publishing=new Map(),running=new Set();
+ function publish(payload){
+  const cloud=service(),key=payload.uid+':'+payload.matchId;if(publishing.has(key)||!cloud?.available||identity().uid!==payload.uid||host.navigator.onLine===false)return false;
+  let attempts;try{attempts=JSON.parse(host.localStorage.getItem(ATTEMPTS_KEY)||'[]');if(!Array.isArray(attempts))attempts=[];if(attempts.includes(key))return false;}catch(_){return false;}
+  uploadStatus(payload.matchId,'uploading');
+  const job=Promise.resolve().then(()=>cloud.publishRun(payload.uid,payload)).then(()=>{
+   uploadStatus(payload.matchId,'published');host.AutoChessRanked?.invalidateLeaderboard();
+   try{const rows=JSON.parse(host.localStorage.getItem(ATTEMPTS_KEY)||'[]');host.localStorage.setItem(ATTEMPTS_KEY,JSON.stringify([...new Set([...(Array.isArray(rows)?rows:[]),key])].slice(-1024)));const pending=JSON.parse(host.localStorage.getItem(PENDING_KEY)||'null');if(pending?.uid===payload.uid&&pending.matchId===payload.matchId)host.localStorage.removeItem(PENDING_KEY);}catch(_){}
+   host.dispatchEvent?.(new host.CustomEvent('autochess-cloud-published',{detail:{uid:payload.uid,matchId:payload.matchId}}));
+  }).catch(error=>{uploadStatus(payload.matchId,String(error?.code||'').includes('permission-denied')?'denied':'offline');}).finally(()=>publishing.delete(key));publishing.set(key,job);return true;
+ }
+ function syncPending(){
+  if(running.size)return false;
+  try{
+   let payload=R.decode(JSON.parse(host.localStorage.getItem(PENDING_KEY)||'null'))?.wire;
+   if(!payload){const run=R.decode(R.last()),me=identity(),rank=host.AutoChessRanked?.current();if(!run||run.uid!==me.uid||!rank)return false;payload=R.encode({...run.wire,...rank,...host.AutoChessProfile?.publicMeta(),name:me.name},run.stages);}
+   return payload?publish(payload):false;
+  }catch(_){return false;}
  }
  function createLobby(options={}){
-  const me=identity();if(me.run?.uid!==me.uid)me.run=null;
-  let room='AC-'+U.token(6).toUpperCase(),owner=me.uid,members=[me],peer=null,upstream=null,connections=new Map(),active=true,started=false,ready=false,joining=false,generation=0,status='Preparing invite code…';const timers=new Set();let liveReceiver=null,liveClosed=null;const pendingLive=[];
+  syncPending();const me=identity();if(me.run?.uid!==me.uid)me.run=null;
+  let room='AC-'+U.token(6).toUpperCase(),owner=me.uid,members=[me],peer=null,upstream=null,connections=new Map(),active=true,started=false,ready=false,joining=false,generation=0,status='Preparing invite code…',resumeToken='',matchId='',retryTimer=null,signalTimer=null,retryCount=0,lastRetry=0;
+  const timers=new Set(),pendingConnections=new Set(),leases=new Map();let liveReceiver=null,liveClosed=null,liveRestored=null;const pendingLive=[];
   const later=(fn,ms)=>{const t=host.setTimeout(()=>{timers.delete(t);fn();},ms);timers.add(t);return t;};
   const view=()=>({room,owner,members:C.clone(members),self:me.uid,isHost:owner===me.uid,ready,joining,started,status});
   const update=message=>{if(message)status=message;if(active)options.onChange?.(view());};
   const validMember=x=>x&&R.uid(x.uid)&&typeof x.name==='string'&&x.name.length<=40&&Number.isSafeInteger(x.elo)&&x.elo>=0&&Number.isSafeInteger(x.wins)&&x.wins>=0&&(!x.run||R.decode(x.run)?.uid===x.uid);
-  function send(c,type,data={}){if(c?.open)try{c.send({protocol:PROTOCOL,type,room,...data});}catch(_){}}
+  function send(c,type,data={}){if(!c?.open)return false;try{c.send(JSON.parse(JSON.stringify({protocol:PROTOCOL,type,room,...data})));return true;}catch(_){return false;}}
   function broadcast(type,data={}){for(const c of connections.values())send(c,type,data);}
   function rosterValid(rows){return Array.isArray(rows)&&rows.length>=1&&rows.length<=8&&rows.every(validMember)&&new Set(rows.map(r=>r.uid)).size===rows.length&&rows.some(r=>r.uid===me.uid);}
-  function clearNetwork(){generation++;for(const t of timers)host.clearTimeout(t);timers.clear();for(const c of [...connections.values(),upstream].filter(Boolean)){c.removeAllListeners?.();try{c.close();}catch(_){}}connections.clear();upstream=null;try{peer?.destroy();}catch(_){}peer=null;ready=false;}
+  function clearNetwork(){generation++;for(const t of timers)host.clearTimeout(t);timers.clear();retryTimer=null;signalTimer=null;for(const c of new Set([...connections.values(),...pendingConnections,upstream].filter(Boolean))){c.removeAllListeners?.();try{c.close();}catch(_){}}connections.clear();pendingConnections.clear();leases.clear();upstream=null;try{peer?.destroy();}catch(_){}peer=null;ready=false;}
+  function reconnectSignal(){if(!active||!started||signalTimer||!peer?.disconnected)return;signalTimer=later(()=>{signalTimer=null;try{if(peer?.disconnected&&!peer.destroyed)peer.reconnect?.();}catch(_){}reconnectSignal();},3000);}
   function fail(message){if(!active||started)return;clearNetwork();joining=false;owner=me.uid;members=[me];room='AC-'+U.token(6).toUpperCase();update(message+' · Start solo is available.');}
+  function retry(force=false){
+   if(!active||!started||owner===me.uid||retryTimer)return false;
+   const wait=Math.max(0,Math.min(5000,1000+retryCount*500)-(Date.now()-lastRetry));
+   retryTimer=later(()=>{retryTimer=null;if(!active||!started)return;if(upstream?.open&&!force)return;lastRetry=Date.now();retryCount++;try{if(peer?.disconnected)peer.reconnect?.();if(peer&&!peer.destroyed)openUpstream(generation);}catch(_){}if(!upstream?.open)retry();},wait);
+   return true;
+  }
+  function hello(connection){send(connection,'hello',{member:me,resumeToken,matchId});}
+  function openUpstream(ticket){
+   if(!peer||ticket!==generation||!active)return;const previous=upstream;
+   const next=peer.connect('acr-'+room.toLowerCase(),{reliable:true,serialization:'json'});upstream=next;bind(next,false,ticket);next.on('open',()=>{if(upstream!==next||ticket!==generation)return;retryCount=0;hello(next);});
+   if(previous&&previous!==next){previous.acSuperseded=true;try{previous.close();}catch(_){}}
+   later(()=>{if(upstream===next&&!next.open){try{next.close();}catch(_){}retry();}},10000);
+  }
   function acceptPacket(message,connection,isHost){
    if(!active||!message||message.protocol!==PROTOCOL||message.room!==room||R.bytes(message)>90000)return;
-   if(started&&message.type==='live'){if(liveReceiver)liveReceiver(message.payload,connection.acUid||owner);else if(pendingLive.length<256)pendingLive.push([message.payload,connection.acUid||owner]);return;}
+   if(started&&message.type==='live'){
+    if(isHost&&(!connection.acUid||connections.get(connection.peer)!==connection)||!isHost&&connection!==upstream)return;
+    if(liveReceiver)liveReceiver(message.payload,connection.acUid||owner);else if(pendingLive.length<256)pendingLive.push([message.payload,connection.acUid||owner]);return;
+   }
    if(isHost){
     if(message.type==='hello'){
-     if(started||members.length>=8||!validMember(message.member)||members.some(m=>m.uid===message.member.uid)){send(connection,'error',{message:'Room is full, started, or this player already joined.'});connection.close();return;}
-     connection.acUid=message.member.uid;members.push(message.member);broadcast('state',{owner,members});update('Invite room ready · '+members.length+'/8 players');
+     if(!validMember(message.member)){send(connection,'error',{message:'Invalid room identity.'});return;}
+     const uid=message.member.uid,existing=members.find(m=>m.uid===uid),lease=leases.get(uid);
+     if(started&&(!existing||!lease||message.resumeToken!==lease||message.matchId!==matchId)||!started&&existing&&connection.acUid!==uid){send(connection,'error',{message:'This room seat is already reserved.'});return;}
+     if(!existing&&members.length>=8){send(connection,'error',{message:'This room is full.'});return;}
+     connection.acUid=uid;pendingConnections.delete(connection);
+     for(const [key,old]of connections)if(old!==connection&&old.acUid===uid){connections.delete(key);old.acSuperseded=true;try{old.close();}catch(_){}}
+     connections.set(connection.peer,connection);if(!existing){members.push(message.member);leases.set(uid,U.token(16));}
+     send(connection,started?'resumed':'welcome',{resumeToken:leases.get(uid),matchId});
+     if(started)liveRestored?.(uid);else{broadcast('state',{owner,members});update('Invite room ready · '+members.length+'/8 players');}
     }else if(message.type==='ackStart'){connection.acAcknowledged=true;}
+   }else if(message.type==='welcome'||message.type==='resumed'){
+    if(connection!==upstream||typeof message.resumeToken!=='string'||message.resumeToken.length>128)return;resumeToken=message.resumeToken;
+    if(started&&message.type==='resumed'&&message.matchId===matchId){retryCount=0;ready=true;liveRestored?.(owner);}
    }else if(message.type==='state'&&!started){
     if(!rosterValid(message.members)||!message.members.some(m=>m.uid===message.owner))return;owner=message.owner;members=message.members;joining=false;ready=true;update('Joined · waiting for the host to Start');
    }else if(message.type==='start'&&!started){
     if(!rosterValid(message.roster)||!/^chess_[a-z0-9]+_[a-z0-9]+$/.test(message.matchId)||!Number.isSafeInteger(message.seed)||message.seed<1||message.seed>4294967295)return;
-    started=true;joining=false;send(connection,'ackStart');options.onStart?.({seed:message.seed,roster:message.roster,room,matchId:message.matchId,link:link(false)});
-   }else if(message.type==='error')fail(String(message.message||'Unable to join room.').slice(0,120));
+    matchId=message.matchId;started=true;joining=false;send(connection,'ackStart');options.onStart?.({seed:message.seed,roster:message.roster,room,matchId,link:link(false)});
+   }else if(message.type==='error'){if(started){update(String(message.message||'Reconnecting to your reserved seat.').slice(0,120));return;}fail(String(message.message||'Unable to join room.').slice(0,120));}
   }
   async function connect(code=null){
    clearNetwork();const ticket=generation;joining=!!code;if(code){room=code;owner='';members=[me];}update(code?'Joining invite room…':'Preparing invite code…');
    try{
     await U.loadSdk('peerJsCdn',()=>typeof host.Peer==='function');if(!active||started||ticket!==generation)return;
     const isHost=!code;peer=options.makePeer?options.makePeer(isHost?'acr-'+room.toLowerCase():undefined):new host.Peer(isHost?'acr-'+room.toLowerCase():undefined,U.peerOptions());
-    const timeout=later(()=>{if(!ready)fail('Invite service timed out');},12000);
-    peer.on('open',()=>{if(ticket!==generation||!active||started)return;
-     if(isHost){ready=true;host.clearTimeout(timeout);timers.delete(timeout);update('Invite code ready · friends can join before Start');}
-     else{upstream=peer.connect('acr-'+room.toLowerCase(),{reliable:true,serialization:'json'});bind(upstream,false,ticket);upstream.on('open',()=>send(upstream,'hello',{member:me}));}
+    const timeout=later(()=>{if(!ready&&!started)fail('Invite service timed out');},20000);
+    peer.on('open',()=>{if(ticket!==generation||!active)return;if(started){if(!isHost)retry();return;}
+     if(isHost){ready=true;host.clearTimeout(timeout);timers.delete(timeout);update('Invite code ready · friends can join before Start');}else openUpstream(ticket);
     });
-    peer.on('connection',connection=>{if(ticket!==generation||!active||!isHost||started||connections.size>=7){connection.close();return;}connections.set(connection.peer,connection);bind(connection,true,ticket);later(()=>{if(!connection.acUid){connections.delete(connection.peer);connection.close();}},6000);});
-    peer.on('error',()=>{if(ticket===generation)fail('Invite service unavailable');});
-    peer.on('disconnected',()=>{if(ticket===generation&&!started)fail('Invite service disconnected');});
+    peer.on('connection',connection=>{if(ticket!==generation||!active||!isHost||pendingConnections.size>=12){connection.close();return;}pendingConnections.add(connection);bind(connection,true,ticket);later(()=>{if(!connection.acUid){pendingConnections.delete(connection);connection.close();}},10000);});
+    peer.on('error',()=>{if(ticket!==generation)return;if(started){reconnectSignal();if(!isHost)retry();}else fail('Invite service unavailable');});
+    peer.on('disconnected',()=>{if(ticket!==generation)return;if(started){reconnectSignal();if(!isHost)retry();}else fail('Invite service disconnected');});
    }catch(_){if(ticket===generation)fail('Offline lobby');}
   }
   function bind(connection,isHost,ticket){
-   connection.on('data',message=>{if(ticket!==generation)return;try{acceptPacket(message,connection,isHost);}catch(_){connection.close();}});
-   connection.on('error',()=>{if(started)liveClosed?.(isHost?connection.acUid:owner);else if(!isHost&&ticket===generation)fail('Room connection failed');});
-   connection.on('close',()=>{if(ticket!==generation)return;if(started){liveClosed?.(isHost?connection.acUid:owner);return;}if(isHost){connections.delete(connection.peer);members=members.filter(m=>m.uid!==connection.acUid);broadcast('state',{owner,members});update('Player left · '+members.length+'/8 players');}else fail('Host left the lobby');});
+   connection.on('data',message=>{if(ticket!==generation||connection.acSuperseded)return;try{acceptPacket(message,connection,isHost);}catch(_){/* A rejected packet never closes a healthy room channel. */}});
+   function lost(){if(ticket!==generation||connection.acSuperseded||!active)return;pendingConnections.delete(connection);if(started){liveClosed?.(isHost?connection.acUid:owner);if(!isHost&&upstream===connection){upstream=null;retry();}return;}if(isHost){if(connections.get(connection.peer)===connection)connections.delete(connection.peer);members=members.filter(m=>m.uid!==connection.acUid);leases.delete(connection.acUid);broadcast('state',{owner,members});update('Player left · '+members.length+'/8 players');}else fail('Host left the lobby');}
+   connection.on('error',lost);connection.on('close',lost);
   }
   function join(value){if(started||!active)return false;const code=String(value||'').trim().toUpperCase();if(!/^AC-[A-F0-9]{12}$/.test(code)){update('Enter an invite code such as AC-012345ABCDEF');return false;}if(code===room&&owner===me.uid){update('This is your room code. Share it with friends.');return false;}void connect(code);return true;}
-  function link(isHost){return{isHost,self:me.uid,owner,send(payload){if(isHost)broadcast('live',{payload});else send(upstream,'live',{payload});},target(uid,payload){if(!isHost)return;for(const c of connections.values())if(c.acUid===uid)send(c,'live',{payload});},subscribe(fn,closed){liveReceiver=fn;liveClosed=closed;for(const args of pendingLive.splice(0))fn(...args);return()=>{liveReceiver=null;liveClosed=null;};},close(){active=false;clearNetwork();}};}
-  function start(){if(!active||started||owner!==me.uid)return false;started=true;const packet={seed:host.crypto.getRandomValues(new Uint32Array(1))[0]||1,roster:C.clone(members),room,matchId:'chess_'+Date.now().toString(36)+'_'+U.token(4)};broadcast('start',packet);options.onStart?.({...packet,link:members.length>1?link(true):null});if(members.length===1)later(clearNetwork,500);return true;}
+  function link(isHost){return{isHost,self:me.uid,owner,send(payload){if(isHost)broadcast('live',{payload});else send(upstream,'live',{payload});},target(uid,payload){if(!isHost)return;for(const c of connections.values())if(c.acUid===uid)send(c,'live',{payload});},reconnect(){return retry(true);},subscribe(fn,closed,restored){liveReceiver=fn;liveClosed=closed;liveRestored=restored;for(const args of pendingLive.splice(0))fn(...args);return()=>{liveReceiver=null;liveClosed=null;liveRestored=null;};},close(){active=false;clearNetwork();}};}
+  function start(){if(!active||started||owner!==me.uid)return false;started=true;matchId='chess_'+Date.now().toString(36)+'_'+U.token(4);const packet={seed:host.crypto.getRandomValues(new Uint32Array(1))[0]||1,roster:C.clone(members),room,matchId};broadcast('start',packet);options.onStart?.({...packet,link:members.length>1?link(true):null});if(members.length===1)later(clearNetwork,500);return true;}
   void connect();
   return{view,join,start,close(){active=false;clearNetwork();},refreshInvite(){if(!started&&!joining)void connect();}};
  }
- host.AutoChessOnline=Object.freeze({CACHE_KEY,CACHE_TTL,identity,cached,distinct,seed,beginRun,prepareRound,record,finish,replay,uploadStatus,createLobby,configure(options={}){backendOverride=options.backend||null;}});
+ host.addEventListener?.('cloud-session-ready',()=>syncPending());
+ host.addEventListener?.('online',()=>syncPending());
+ host.AutoChessOnline=Object.freeze({CACHE_KEY,CACHE_TTL,identity,cached,distinct,seed,beginRun,endRun:id=>running.delete(id),get inMatch(){return running.size>0;},prepareRound,record,finish,replay,uploadStatus,syncPending,createLobby,configure(options={}){backendOverride=options.backend||null;}});
 })(window);

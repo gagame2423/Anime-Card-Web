@@ -185,15 +185,18 @@
   async recentRuns(){
    if(!canUseCloud())return [];
    const snapshot=await U.timeout(db.collection('autochess_runs').orderBy('updatedAt','desc').limit(8).get({source:'server'}),8000,'Replay pool unavailable.');
-   return snapshot.docs.map(row=>({...row.data(),uid:row.id}));
+   return snapshot.docs.map(row=>{try{return host.AutoChessRuns.fromCloud({...row.data(),uid:row.id});}catch(_){return null;}}).filter(Boolean);
   },
   async publishRun(uid,payload){
    if(!canUseCloud()||account.uid!==uid||payload.uid!==uid)throw Error('Auto Chess account changed.');
-   if(U.bytes(JSON.stringify(payload)).length>5900)throw Error('Auto Chess run exceeds its wire budget.');
+   const decoded=host.AutoChessRuns.decode(payload);if(!decoded||decoded.uid!==uid)throw Error('Invalid Auto Chess run.');
+   const clean=host.AutoChessRuns.toCloud(decoded.wire);
+   if(U.bytes(JSON.stringify(clean)).length>5900)throw Error('Auto Chess run exceeds its wire budget.');
    // Exactly one logical set; no transaction, read-back, listener or retry loop.
-   return db.collection('autochess_runs').doc(uid).set({...payload,uid,updatedAt:host.firebase.firestore.FieldValue.serverTimestamp()});
+   return db.collection('autochess_runs').doc(uid).set({...clean,uid,updatedAt:host.firebase.firestore.FieldValue.serverTimestamp()});
   },
   async leaderboard(){
+   if(host.AutoChessOnline?.inMatch)return {rows:[],localOnly:true};
    if(!canUseCloud())return {rows:[],localOnly:true};
    const collection=db.collection('autochess_runs');let snapshot,fallback=false;
    try{snapshot=await U.timeout(collection.orderBy('elo','desc').limit(50).get({source:'server'}),8000,'Leaderboard unavailable.');}

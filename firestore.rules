@@ -87,13 +87,15 @@ service cloud.firestore {
             && d.peakRank is string && d.peakRank.size() > 0 && d.peakRank.size() <= 40));
       }
       function validRun(d) {
-        return d.keys().hasOnly(['version','codec','uid','name','matchId','placement','elo','rank','tier','division','avatar','bannerCardId','peakElo','peakRank','wins','rounds','sampled','cards','relics','boards','augments','stages','updatedAt'])
+        return d.keys().hasOnly(['version','codec','storageCodec','uid','name','matchId','placement','elo','rank','tier','division','avatar','bannerCardId','peakElo','peakRank','wins','matches','rounds','sampled','cards','relics','boards','augments','stages','updatedAt'])
           && d.version == 1 && d.codec == 'ac-run-1' && d.uid == uid
+          && (!('storageCodec' in d) || d.storageCodec == 'ac-flat-1')
           && d.name is string && d.name.size() > 0 && d.name.size() <= 40
           && d.matchId is string && d.matchId.size() > 0 && d.matchId.size() <= 80
           && d.placement is int && d.placement >= 1 && d.placement <= 8
           && d.elo is int && d.elo >= 0 && d.elo <= 9007199254740991
           && d.wins is int && d.wins >= 0 && d.wins <= 9007199254740991
+          && (!('matches' in d) || (d.matches is int && d.matches >= d.wins && d.matches <= 9007199254740991))
           && d.rounds is int && d.rounds > 0 && d.rounds <= 600 && d.sampled is bool
           && d.cards is list && d.cards.size() <= 1000
           && d.relics is list && d.relics.size() <= 64
