@@ -50,7 +50,7 @@
           if(result?.after)after.push(result.after);
         }const before=record.slots.get(key);
         // Covers direct shield writes from every native passive as well as traits.
-        if(key==='shield'&&!shieldScaleBypass&&Number(value)>Number(before||0)&&activeCombat?.mode==='auto-chess')value=Number(before||0)+(Number(value)-Number(before||0))*(activeCombat.tactical?.sustainFactor??1);
+        if(key==='shield'&&Number(value)>Number(before||0)&&activeCombat?.mode==='auto-chess'){const factor=activeCombat.tactical?.shieldFactor?.(u)??1;if(!factor)value=before||0;else if(!shieldScaleBypass)value=Number(before||0)+(Number(value)-Number(before||0))*(activeCombat.tactical?.sustainFactor??1)*factor;}
         record.slots.set(key,value);if(key==='shield'&&Number(value)>Number(before||0)&&activeCombat?.mode==='auto-chess')host.onCombatShield?.(activeCombat,statusSource||phaseUnit||u,u,Number(value)-Number(before||0));for(const fn of after)fn();
         }finally{record.depth--;record.writing.delete(key);}
       }});
@@ -1250,7 +1250,7 @@
   });
 
   const yuno = window.createYunoSkills({
-    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,lease:()=>passiveScopes.get(statusSource)?.copy?.yuukiLease||null,shieldAmount:(u,n)=>tensura?.allowGain(activeCombat,u,n)===false?0:(sins?sins.shieldAmount(activeCombat,u,n):n)*(activeCombat?.mode==='auto-chess'?(1+(u.grid?.traits?.shield||0))*(activeCombat.tactical?.sustainFactor??1):1),writeShield:(u,fn)=>{shieldScaleBypass++;try{return sins?sins.writeShield(u,fn):fn();}finally{shieldScaleBypass--;}},onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
+    runtime:ensureRuntime,id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,alive:isAlive,lease:()=>passiveScopes.get(statusSource)?.copy?.yuukiLease||null,shieldAmount:(u,n)=>tensura?.allowGain(activeCombat,u,n)===false?0:(sins?sins.shieldAmount(activeCombat,u,n):n)*(activeCombat?.mode==='auto-chess'?(1+(u.grid?.traits?.shield||0))*(activeCombat.tactical?.sustainFactor??1)*(activeCombat.tactical?.shieldFactor?.(u)??1):1),writeShield:(u,fn)=>{shieldScaleBypass++;try{return sins?sins.writeShield(u,fn):fn();}finally{shieldScaleBypass--;}},onShield:(u,before)=>{titan?.shieldGranted(u,before);akatsuki?.shieldGranted(u);},
     all:allUnits,allies:alliesOf,enemies:enemiesOf,team:teamOf,enemyTeam:enemyTeamOf,
     atk:computeWeakenedAtk,random:()=>Math.random(),refresh:refreshUnitDisplay,log:safeLog,
     indices:ensureCurrentIndices,hit:(...args)=>champions.hit(...args)
@@ -2019,7 +2019,7 @@
 
   function addShield(unit, amount, kind = 'shield') {
     const runtime = ensureRuntime(unit);
-    const sustain=activeCombat?.mode==='auto-chess'?(activeCombat.tactical?.sustainFactor??1):1;
+    const sustain=activeCombat?.mode==='auto-chess'?(activeCombat.tactical?.sustainFactor??1)*(activeCombat.tactical?.shieldFactor?.(unit)??1):1;
     const value = Math.max(0, Math.floor((Number(amount) || 0)*sustain));
     const previousShield=runtime.shield,layers=yuno.layerTotal(unit);
     shieldScaleBypass++;try{runtime.shield = layers + Math.max(0,runtime.shield-layers,value);}finally{shieldScaleBypass--;}
@@ -4761,7 +4761,7 @@
     try{
       if(bs?.mode==='auto-chess'){
         meta={...meta,autochessTrueDamage:Math.max(0,Math.min(.4,source?.grid?.traits?.trueDamage||0))};
-        if(bs.tactical?.overtime)amount*=bs.tactical.overtime;
+        if(bs.tactical?.overtime)amount*=bs.tactical.overtime;amount*=bs.tactical?.damageMultiplier?.(source,target,meta)??1;
       }
       const out=original(bs,source,target,amount,meta);
       if(bs?.mode==='auto-chess')bs.tactical?.onDamage?.(source,target,out.damage||0,meta,out);return out;
@@ -4778,6 +4778,7 @@
       case'status':return setStatus(target,options.key,amount,source);
       case'shield':return yuno.addLayer(target,Math.max(0,amount));
       case'buff':combatStats.set(target,options.stat,options.key,amount,options.fill);return refreshUnitDisplay(target);
+      case'flatBuff':if(['hp','atk'].includes(options.stat))combatStats.flat(target,options.stat,amount,options.fill);return refreshUnitDisplay(target);
       case'cleanse':for(const key of ['fearTurns','stunTurns','freezeTurns','hindredTurns','snailTurns','passiveSuppressionTurns'])ensureRuntime(target)[key]=0;for(const key of ['burn','bleed','poison'])ensureRuntime(target)[key]=(ensureRuntime(target)[key]||[]).filter(e=>e.uncleansable);return;
     }}finally{statusSource=previous;}
   }

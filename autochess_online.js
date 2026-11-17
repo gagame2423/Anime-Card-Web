@@ -47,7 +47,7 @@
   for(const p of s.players.slice(1)){
    if(s.live?.humans?.some(h=>h.id===p.id)||!replay(p)||p.rank!==null||p.hp<=0)continue;const run=R.decode(s.hybrid.runs[p.id]),snapshot=R.at(run,C.label(s));if(!snapshot)continue;
    if(snapshot.hp<=0){p.hp=0;ended.push(p);continue;}if(!snapshot.board.length)continue;
-   p.hp=Math.min(p.hp,snapshot.hp);p.level=snapshot.level;p.xp=0;p.augments=[...snapshot.augments];p.units=[];p.anvil=[];p.relics=Array(10).fill(null);p.loot=[];
+   p.hp=Math.min(p.hp,snapshot.hp);p.level=snapshot.level;p.xp=0;p.augments=[...snapshot.augments];p.augmentState={lastStandUsed:!!snapshot.lastStandUsed};p.units=[];p.anvil=[];p.relics=Array(10).fill(null);p.loot=[];
    for(const row of snapshot.board){const u=C.unit(s,C.card(row.cardId));u.board=row.position;u.bench=null;if(row.relic)u.relic={uid:'r'+(++s.serial),roll:C.clone(row.relic)};p.units.push(u);}
    p.replayStage=snapshot.stageKey;p.replaySynergies=snapshot.synergies;p.replaySampled=run.sampled;if(!p.hp)ended.push(p);
   }

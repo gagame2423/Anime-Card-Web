@@ -11,6 +11,9 @@
  function random(s){let x=s.rng>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;s.rng=x>>>0||0x6d2b79f5;return s.rng/4294967296;}
  function seedOf(...parts){let n=2166136261;for(const ch of parts.join('|'))n=Math.imul(n^ch.charCodeAt(0),16777619)>>>0;return n||1;}
  const choose=(s,a)=>a.length?a[Math.floor(random(s)*a.length)]:null;
+ // Xorshift visits 1..2^32-1. Rejection sampling removes even modulo bias.
+ function uniform(s,a){if(!a.length)return null;const limit=Math.floor(0xffffffff/a.length)*a.length;let value;do{random(s);value=(s.rng>>>0)-1;}while(value>=limit);return a[value%a.length];}
+ const teamCap=p=>Math.min(11,p.level+(host.AutoChessAugments?.effects(p).bonusSlots||0));
  const tier=u=>RARITIES.indexOf(card(u)?.rarity),price=u=>COSTS[tier(u)]||1;
  function player(id,name,bot=false){return{id,name,bot,hp:100,gold:10,level:1,xp:0,streak:0,winStreak:0,lossStreak:0,pendingLossGold:0,pendingStreakRelics:[],units:[],relics:Array(10).fill(null),loot:[],shop:Array(5).fill(null),locked:false,autoFuse:false,anvil:[],augments:[],econ:{round:'1-1',bonus:0,card:0,freeRefresh:0},rank:null,history:[],lastIncome:null};}
  function unit(s,c){return{uid:'u'+(++s.serial),cardId:c.id,board:null,bench:null,reserve:false,relic:null,keep:false};}
@@ -48,10 +51,10 @@
   p.streak=p.winStreak||-p.lossStreak;
  }
  function income(s,p,won,creep=false){
-  economyRound(s,p);const base=s.stage===1?5:8,interest=Math.min(5,Math.floor(p.gold/10));if(!creep)streakResult(s,p,won);
+  economyRound(s,p);const base=s.stage===1?5:8,interest=Math.min(host.AutoChessAugments?.effects(p).interestCap||5,Math.floor(p.gold/10));if(!creep)streakResult(s,p,won);
   const loot=creep?3+Math.min(5,s.stage):0;
   p.lastIncome={base:earn(p,base),interest:bonus(s,p,interest,'interest'),streak:0,loot:bonus(s,p,loot,'creep'),win:bonus(s,p,won&&!creep?1:0,'win')};
-  p.xp+=2;levelUp(p);return p.lastIncome;
+  host.AutoChessAugments?.endRound(s,p);p.xp+=2;levelUp(p,s);return p.lastIncome;
  }
 
  function creepRelics(s,p){
@@ -59,10 +62,10 @@
   for(let i=0;i<count;i++){const r=random(s),rarity=s.stage===1?(r<.75?'common':'rare'):s.stage===2?(r<.20?'common':r<.90?'rare':'legendary'):s.stage===3?(r<.10?'common':r<.70?'rare':'legendary'):s.stage===4?(r<.45?'rare':'legendary'):(r<.30?'rare':'legendary');const item=relic(s,rarity);stash(p,item);drops.push(item.roll.rarity);}
   p.lastRelicDrops=drops;return drops;
  }
- function levelUp(p){while(p.level<9&&p.xp>=XP[p.level-1]){p.xp-=XP[p.level-1];p.level++;}if(p.level===9)p.xp=0;}
- function buy(s,p,index){if(!int(index,0,4)||!p.shop[index])throw Error('That shop slot is empty.');const c=card(p.shop[index]),cost=COSTS[RARITIES.indexOf(c.rarity)];if(p.gold<cost)throw Error('Not enough Gold.');if(freeBench(p)<0)throw Error('Bench full. Deploy, fuse or sell a unit first.');spend(p,cost);acquire(p,unit(s,c));p.shop[index]=null;if(p.autoFuse)autoFuse(s,p);}
+ function levelUp(p,s=null){const from=p.level;while(p.level<9&&p.xp>=XP[p.level-1]){p.xp-=XP[p.level-1];p.level++;}if(p.level===9)p.xp=0;if(s&&p.level>from)host.AutoChessAugments?.onLevel(s,p,from);}
+ function buy(s,p,index){if(!int(index,0,4)||!p.shop[index])throw Error('That shop slot is empty.');const c=card(p.shop[index]),cost=COSTS[RARITIES.indexOf(c.rarity)];if(p.gold<cost)throw Error('Not enough Gold.');if(freeBench(p)<0)throw Error('Bench full. Deploy, fuse or sell a unit first.');spend(p,cost);const bought=acquire(p,unit(s,c));p.shop[index]=null;if(p.autoFuse)autoFuse(s,p,bought.uid);}
  function move(p,uid,where,index){const u=p.units.find(u=>u.uid===uid);if(!u)throw Error('Unit unavailable.');if(where==='board'){
-   if(!int(index,0,27))throw Error('Choose a friendly tile.');const other=p.units.find(v=>v.board===index);if(u.board===null&&!other&&deployed(p).length>=p.level)throw Error('Level up to deploy more units.');
+   if(!int(index,0,27))throw Error('Choose a friendly tile.');const other=p.units.find(v=>v.board===index);if(u.board===null&&!other&&deployed(p).length>=teamCap(p))throw Error('Level up to deploy more units.');
    const old={board:u.board,bench:u.bench,reserve:u.reserve};u.board=index;u.bench=null;u.reserve=false;if(other&&other!==u)Object.assign(other,old);
   }else if(where==='bench'){if(!int(index,0,8))throw Error('Choose a bench slot.');const other=p.units.find(v=>v.bench===index),old={board:u.board,bench:u.bench,reserve:u.reserve};u.board=null;u.bench=index;u.reserve=false;if(other&&other!==u)Object.assign(other,old);}else throw Error('Invalid destination.');p.anvil=p.anvil.filter(id=>p.units.some(v=>v.uid===id&&v.board===null));drain(p);
  }
@@ -70,16 +73,43 @@
  const soloCombat=s=>s.phase==='combat'&&!s.live&&(s.hybrid?.humanPlayers??1)===1;
  const combatForge=(s,p)=>soloCombat(s)&&p===get(s)&&p.hp>0&&!s.finished;
  const fusionEligible=(s,p,u)=>!!u&&(u.board===null||combatForge(s,p));
+ // Selection is spatial and deterministic; the existing rarity roll still owns the result.
+ function fusionGroup(s,p,ids=[],benchOnly=false){
+  if(!Array.isArray(ids)||ids.length>3||new Set(ids).size!==ids.length)return null;
+  const anchors=ids.map(id=>p.units.find(u=>u.uid===id));if(anchors.some(u=>!fusionEligible(s,p,u))||anchors.filter(u=>u.board!==null).length>1)return null;
+  const compare=(a,b)=>a<b?-1:a>b?1:0,positions=new Map(p.units.map((u,i)=>[u,u.bench!==null?u.bench:u.board!==null?28+u.board:100+i])),position=u=>positions.get(u);
+  const distance=(a,b)=>a.bench!==null&&b.bench!==null?Math.abs(a.bench-b.bench):a.board!==null&&b.board!==null?Math.abs(a.board%7-b.board%7)+Math.abs(Math.floor(a.board/7)-Math.floor(b.board/7)):40+Math.abs(position(a)-position(b));
+  const eligible=p.units.filter(u=>fusionEligible(s,p,u)&&(!benchOnly||u.board===null)&&(!u.keep||ids.includes(u.uid))&&(!p.anvil.includes(u.uid)||ids.includes(u.uid)));
+  if(anchors.length){
+   const t=tier(anchors[0]);if(t<0||t>=5||anchors.some(u=>tier(u)!==t))return null;
+   const fielded=anchors.some(u=>u.board!==null),same=anchors.every(u=>u.cardId===anchors[0].cardId),rows=eligible.filter(u=>!ids.includes(u.uid)&&tier(u)===t&&(!fielded||u.board===null));
+   const copies=same?rows.filter(u=>u.cardId===anchors[0].cardId):[],choices=copies.length>=3-anchors.length?copies:rows;
+   choices.sort((a,b)=>anchors.reduce((n,u)=>n+distance(a,u)-distance(b,u),0)||position(a)-position(b)||compare(a.uid,b.uid));
+   const chosen=anchors.slice();for(const u of choices){if(chosen.length===3)break;if(u.board!==null&&chosen.some(v=>v.board!==null))continue;chosen.push(u);}
+   return chosen.length===3?chosen.map(u=>u.uid):null;
+  }
+  for(let t=0;t<5;t++){
+   const rows=eligible.filter(u=>tier(u)===t&&u.board===null).sort((a,b)=>position(a)-position(b)||compare(a.uid,b.uid));if(rows.length<3)continue;
+   const groups=new Map();for(const u of rows){if(!groups.has(u.cardId))groups.set(u.cardId,[]);groups.get(u.cardId).push(u);}
+   const copies=[...groups.values()].filter(a=>a.length>=3),options=copies.length?copies:[rows];let best=null,span=Infinity;
+   for(const group of options)for(let i=0;i<=group.length-3;i++){const triple=group.slice(i,i+3),d=distance(triple[0],triple[1])+distance(triple[1],triple[2])+distance(triple[0],triple[2]);if(d<span){span=d;best=triple;}}
+   if(best)return best.map(u=>u.uid);
+  }return null;
+ }
  function fuse(s,p,ids){
   if(s.phase==='combat'&&!combatForge(s,p))throw Error('Combat fusion is Solo-only.');
   if(!Array.isArray(ids)||ids.length!==3||new Set(ids).size!==3)throw Error('Choose exactly three units.');
   const rows=ids.map(id=>p.units.find(u=>u.uid===id));const fielded=rows.filter(u=>u?.board!==null);if(rows.some(u=>!fusionEligible(s,p,u))||fielded.length>1)throw Error('Use bench units, or one deployed unit plus two bench units in Solo combat.');const t=tier(rows[0]);if(t<0||t===5||rows.some(u=>tier(u)!==t))throw Error('Use three cards of the same rarity, below Secret.');
-  let available=pools[t+1],supporters=rows.filter(u=>card(u).category.includes('Supporter')).length;
-  if(supporters){const supports=available.filter(c=>c.category.includes('Supporter')),others=available.filter(c=>!c.category.includes('Supporter'));if(supports.length&&others.length)available=random(s)<.70+.05*supporters?supports:others;}
-  if(random(s)<.50){const counts=new Map();for(const u of rows)for(const tag of [...card(u).category,card(u).element])counts.set(tag,(counts.get(tag)||0)+1);const max=Math.max(...counts.values()),tags=[...counts].filter(([,n])=>n===max).map(([tag])=>tag),tag=choose(s,tags),matches=available.filter(c=>c.element===tag||c.category.includes(tag));if(matches.length)available=matches;}
-  const result=unit(s,choose(s,available)),slot=rows.map(u=>u.bench).filter(i=>i!==null).sort((a,b)=>a-b)[0];for(const u of rows)stash(p,u.relic);p.units=p.units.filter(u=>!ids.includes(u.uid));p.anvil=p.anvil.filter(id=>!ids.includes(id));result.fusionDepth=Math.min(5,1+Math.max(...rows.map(u=>u.fusionDepth||0)));result.board=fielded[0]?.board??null;result.bench=result.board===null?(slot??null):null;result.reserve=result.board===null&&slot===undefined;p.units.push(result);host.AutoChessTelemetry?.economy(p,'rarityFusionsCount',1);if(result.fusionDepth===2)host.AutoChessTelemetry?.economy(p,'threeStarFusionsCount',1);drain(p);return result;
+  let available=pools[t+1],categoryProc=false;const chance=host.AutoChessAugments?.effects(p).fusionCategoryChance||0;
+  if(chance&&random(s)<chance){
+   const sets=rows.map(u=>new Set(card(u).category.map(tag=>host.CategorySystem.normalize(tag)))),common=[...sets[0]].filter(tag=>sets.every(set=>set.has(tag))),union=[...new Set(sets.flatMap(set=>[...set]))];
+   let matches=available.filter(c=>c.category.some(tag=>common.includes(host.CategorySystem.normalize(tag))));
+   if(!matches.length)matches=available.filter(c=>c.category.some(tag=>union.includes(host.CategorySystem.normalize(tag))));
+   if(matches.length){available=matches;categoryProc=true;}
+  }
+  const result=unit(s,uniform(s,available)),slot=rows.map(u=>u.bench).filter(i=>i!==null).sort((a,b)=>a-b)[0];for(const u of rows)stash(p,u.relic);p.units=p.units.filter(u=>!ids.includes(u.uid));p.anvil=p.anvil.filter(id=>!ids.includes(id));result.fusionDepth=Math.min(5,1+Math.max(...rows.map(u=>u.fusionDepth||0)));result.board=fielded[0]?.board??null;result.bench=result.board===null?(slot??null):null;result.reserve=result.board===null&&slot===undefined;p.units.push(result);p.lastFusion={round:label(s),uid:result.uid,cardId:result.cardId,categoryProc,chance};if(categoryProc){p.lineageProcs=(p.lineageProcs||0)+1;p.lastLineage={round:label(s),uid:result.uid,cardId:result.cardId};}host.AutoChessTelemetry?.economy(p,'rarityFusionsCount',1);if(result.fusionDepth===2)host.AutoChessTelemetry?.economy(p,'threeStarFusionsCount',1);drain(p);return result;
  }
- function autoFuse(s,p){for(let guard=0;guard<24;guard++){const rows=RARITIES.slice(0,5).map((_,t)=>p.units.filter(u=>u.board===null&&!u.keep&&!p.anvil.includes(u.uid)&&tier(u)===t)).find(a=>a.length>=3);if(!rows)break;fuse(s,p,rows.slice(0,3).map(u=>u.uid));}}
+ function autoFuse(s,p,nearUid=null){for(let guard=0;guard<24;guard++){const ids=(nearUid?fusionGroup(s,p,[nearUid],true):null)||fusionGroup(s,p,[],true);nearUid=null;if(!ids)break;fuse(s,p,ids);}}
  function equip(p,relicId,uid){const index=p.relics.findIndex(r=>r?.uid===relicId),u=p.units.find(v=>v.uid===uid);if(index<0||!u)throw Error('Relic or unit unavailable.');const old=u.relic;u.relic=p.relics[index];p.relics[index]=old;drain(p);}
  function canFuseRelics(p,a,b){const x=p?.relics.find(r=>r?.uid===a),y=p?.relics.find(r=>r?.uid===b);return!!(x&&y&&x!==y&&!x.roll.unique&&!y.roll.unique&&x.roll.rarity===y.roll.rarity);}
  function fuseRelics(s,p,a,b){if(s.phase==='combat'&&!combatForge(s,p))throw Error('Combat fusion is Solo-only.');const ai=p.relics.findIndex(r=>r?.uid===a),bi=p.relics.findIndex(r=>r?.uid===b);if(ai<0||bi<0||ai===bi)throw Error('Choose two stash Relics.');const x=p.relics[ai].roll,y=p.relics[bi].roll;if(x.rarity!==y.rarity||x.unique||y.unique)throw Error('Relics must share a tier and be non-Unique.');const next=x.rarity==='common'?'rare':'legendary',unique=x.rarity==='legendary',result=relic(s,next,unique,random(s)<.5?x.kind:y.kind);p.relics[ai]=result;p.relics[bi]=null;host.AutoChessTelemetry?.economy(p,'relicsCrafted',1);drain(p);return result;}
@@ -104,8 +134,8 @@
   const kind=action.type;if(s.phase==='augment'&&!['augmentPick','augmentReroll'].includes(kind))throw Error('Choose your Augment first.');if(s.phase==='carousel'&&!['draft','sell','move','unequip','keep'].includes(kind))throw Error('Complete the carousel first.');
   switch(kind){
    case'buy':buy(s,p,action.index);break;
-   case'xp':{const cost=xpCost(p);if(p.level===9||p.gold<cost)throw Error('Need '+cost+' Gold; maximum Level 9.');spend(p,cost);p.xp+=4;levelUp(p);break;}
-   case'refresh':{const e=economyRound(s,p);if(e.freeRefresh>0)e.freeRefresh--;else spend(p,2);host.AutoChessTelemetry?.economy(p,'totalRefreshes',1);shop(s,p);break;}
+   case'xp':{const cost=xpCost(p);if(p.level===9||p.gold<cost)throw Error('Need '+cost+' Gold; maximum Level 9.');spend(p,cost);p.xp+=4+(host.AutoChessAugments?.effects(p).buyXpBonus||0);levelUp(p,s);break;}
+   case'refresh':{const e=economyRound(s,p),paid=e.freeRefresh<=0;if(!paid)e.freeRefresh--;else spend(p,2);const chance=host.AutoChessAugments?.effects(p).rerollRefund||0;if(paid&&chance&&e.bonus<=RULES.maxBonusGoldPerRound-2&&random(s)<chance)bonus(s,p,2,'augment');host.AutoChessTelemetry?.economy(p,'totalRefreshes',1);shop(s,p);break;}
    case'augmentPick':host.AutoChessAugments.pick(s,p,action.index);break;
    case'augmentReroll':host.AutoChessAugments.reroll(s,p,action.index);break;
    case'lock':p.locked=!p.locked;break;
@@ -168,12 +198,12 @@
   if(s.finished&&get(s)?.rank===null||s.paid&&!s.finished)return false;
   if(host.AutoChessAugments?.valid(s)===false||host.AutoChessTelemetry?.valid(s)===false)return false;
   for(const p of s.players)if(['winStreak','lossStreak','pendingLossGold'].some(key=>p[key]!==undefined&&!int(p[key],0,key==='pendingLossGold'?3:600)))return false;
-  for(const p of s.players)if(p.econ&&(!Number.isInteger(p.econ.bonus)||p.econ.bonus<0||p.econ.bonus>16||!Number.isInteger(p.econ.card)||p.econ.card<0||p.econ.card>2||![0,1].includes(p.econ.freeRefresh)))return false;
+  for(const p of s.players)if(p.econ&&(!Number.isInteger(p.econ.bonus)||p.econ.bonus<0||p.econ.bonus>16||!Number.isInteger(p.econ.card)||p.econ.card<0||p.econ.card>2||!int(p.econ.freeRefresh,0,3)))return false;
   const ids=new Set(),unitIds=new Set(),relicIds=new Set();
   for(const p of s.players){if(!['human','bot0','bot1','bot2','bot3','bot4','bot5','bot6'].includes(p.id)||typeof p.name!=='string'||p.name.length>40||typeof p.bot!=='boolean'||!(p.rank===null||int(p.rank,1,8))||ids.has(p.id)||!int(p.hp,0,100)||!int(p.gold,0,100000)||!int(p.level,1,9)||!int(p.xp,0,100)||!Array.isArray(p.units)||p.units.length>100||!Array.isArray(p.relics)||p.relics.length!==10||!Array.isArray(p.loot)||p.loot.length>512||p.pendingStreakRelics!==undefined&&(!Array.isArray(p.pendingStreakRelics)||p.pendingStreakRelics.length>200)||!Array.isArray(p.shop)||p.shop.length!==5||p.shop.some(id=>id!==null&&!card(id)))return false;ids.add(p.id);const tiles=new Set(),bench=new Set();
    const checkRelic=r=>{if(!r)return true;if(typeof r.uid!=='string'||relicIds.has(r.uid)||!host.RelicSystem.validRoll(r.roll))return false;relicIds.add(r.uid);return true;};
    for(const u of p.units){if(u.fusionDepth!==undefined&&!int(u.fusionDepth,1,5))return false;if(!card(u)||typeof u.uid!=='string'||unitIds.has(u.uid)||!checkRelic(u.relic))return false;unitIds.add(u.uid);if(u.board!==null){if(!int(u.board,0,27)||tiles.has(u.board)||u.bench!==null||u.reserve)return false;tiles.add(u.board);}else if(u.bench!==null){if(!int(u.bench,0,8)||bench.has(u.bench)||u.reserve)return false;bench.add(u.bench);}else if(!u.reserve)return false;}
-   if(tiles.size>p.level||![...p.relics,...p.loot,...(p.pendingStreakRelics||[])].every(checkRelic)||!Array.isArray(p.anvil)||p.anvil.length>3||new Set(p.anvil).size!==p.anvil.length||p.anvil.some(id=>!p.units.some(u=>u.uid===id&&fusionEligible(s,p,u)))||p.anvil.filter(id=>p.units.find(u=>u.uid===id)?.board!==null).length>1)return false;
+   if(tiles.size>teamCap(p)||![...p.relics,...p.loot,...(p.pendingStreakRelics||[])].every(checkRelic)||!Array.isArray(p.anvil)||p.anvil.length>3||new Set(p.anvil).size!==p.anvil.length||p.anvil.some(id=>!p.units.some(u=>u.uid===id&&fusionEligible(s,p,u)))||p.anvil.filter(id=>p.units.find(u=>u.uid===id)?.board!==null).length>1)return false;
   }const ranks=s.players.map(p=>p.rank).filter(n=>n!==null);if(new Set(ranks).size!==ranks.length)return false;if(!Array.isArray(s.pairs)||s.pairs.length>4||s.pairs.some(p=>!ids.has(p.a)||!ids.has(p.b)||p.a===p.b||typeof p.ghost!=='boolean'))return false;if(!Array.isArray(s.carousel)||s.carousel.length!==9||new Set(s.carousel.map(u=>u?.uid)).size!==9||s.carousel.some(u=>!card(u)||!u.relic||!host.RelicSystem.validRoll(u.relic.roll)||u.claimedBy!==null&&!ids.has(u.claimedBy)))return false;if(!Array.isArray(s.draftOrder)||new Set(s.draftOrder).size!==s.draftOrder.length||s.draftOrder.some(id=>!ids.has(id))||!int(s.draftWave,0,4)||!Number.isFinite(s.draftElapsed)||s.draftElapsed<0)return false;return ids.has('human');
  }
  function pendingResults(){try{const rows=JSON.parse(host.localStorage.getItem(PENDING_KEY)||'[]');return Array.isArray(rows)?rows.filter(s=>s?.finished&&!s.paid&&!s.abandoned&&validate(s)).slice(0,16):[];}catch(_){return[];}}
@@ -183,5 +213,5 @@
  // Startup invalidates the former recovery key; Worker runtimes have no storage.
  if(host.document)purgeCheckpoint();
 
- host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,sell,soloCombat,combatForge,fusionEligible,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
+ host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,uniform,teamCap,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,sell,soloCombat,combatForge,fusionEligible,fusionGroup,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
 })(window);

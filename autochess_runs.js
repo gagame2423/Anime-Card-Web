@@ -19,7 +19,7 @@
  function record(s,final=false){
   if(!s.hybrid||s.finished&&!final)return;const p=C.get(s),stageKey=C.label(s),rows=s.hybrid.stages ||= {};
   if(Object.keys(rows).length>=MAX_STAGES&&!rows[stageKey])return;
-  rows[stageKey]={stageKey,hp:p.hp,level:p.level,board:C.deployed(p).map(u=>({cardId:u.cardId,rarity:C.card(u).rarity,position:u.board,relicId:u.relic?.uid||null,relic:u.relic?C.clone(u.relic.roll):null})),synergies:S.analyze(C.deployed(p),A.traits(p)).filter(t=>t.tier).map(t=>({id:t.id,count:t.count,tier:t.tier})),augments:[...p.augments]};
+  rows[stageKey]={stageKey,lastStandUsed:!!p.augmentState?.lastStandUsed,hp:p.hp,level:p.level,board:C.deployed(p).map(u=>({cardId:u.cardId,rarity:C.card(u).rarity,position:u.board,relicId:u.relic?.uid||null,relic:u.relic?C.clone(u.relic.roll):null})),synergies:S.analyze(C.deployed(p),A.traits(p)).filter(t=>t.tier).map(t=>({id:t.id,count:t.count,tier:t.tier})),augments:[...p.augments]};
  }
  function encode(meta,stages){
   const all=Object.entries(stages||{}).filter(([key])=>stageNumber(key)>0).sort((a,b)=>stageNumber(a[0])-stageNumber(b[0])).slice(0,MAX_STAGES);if(!all.length||!uid(meta.uid))return null;
@@ -27,8 +27,8 @@
    const cards=[],relics=[],boards=[],augments=[],indices=[new Map(),new Map(),new Map(),new Map()];
    const entry=(list,map,value)=>{const key=JSON.stringify(value);if(!map.has(key)){map.set(key,list.length);list.push(value);}return map.get(key);},packed={};
    for(const [key,row]of rows){
-    const board=row.board.slice(0,9).map(u=>[entry(cards,indices[0],u.cardId),u.position,u.relic?entry(relics,indices[1],packRelic(u.relic)):-1]);
-    packed[key]=[row.hp,row.level,entry(boards,indices[2],board),entry(augments,indices[3],row.augments.slice(0,3))];
+    const board=row.board.slice(0,11).map(u=>[entry(cards,indices[0],u.cardId),u.position,u.relic?entry(relics,indices[1],packRelic(u.relic)):-1]);
+    packed[key]=[row.hp,row.level,entry(boards,indices[2],board),entry(augments,indices[3],row.augments.slice(0,3))];if(row.lastStandUsed)packed[key].push(1);
    }
    return{version:1,codec:'ac-run-1',uid:meta.uid,name:name(meta.name),matchId:String(meta.matchId||'').slice(0,80),placement:Math.max(1,Math.min(8,meta.placement||8)),elo:Math.max(0,Math.floor(meta.elo||0)),...publicFields(meta),wins:Math.max(0,Math.floor(meta.wins||0)),rounds:all.length,sampled:rows.length<all.length,cards,relics,boards,augments,stages:packed};
   }
@@ -44,9 +44,9 @@
    const publicMeta=publicFields(input);if(['rank','tier','division','avatar','bannerCardId','peakElo','peakRank'].some(k=>Object.hasOwn(input,k)&&input[k]!==publicMeta[k]))return null;
    const relics=input.relics.map(unpackRelic);if(relics.some(r=>!r))return null;
    const augmentSets=input.augments.map(ids=>{if(!Array.isArray(ids)||ids.length>3||ids.some(id=>!A.get(id))||new Set(ids.map(id=>A.get(id).family)).size!==ids.length)throw Error('Invalid Augments.');return ids;});
-   const boards=input.boards.map(rows=>{if(!Array.isArray(rows)||rows.length>9)throw Error('Invalid board.');const used=new Set();return rows.map(tuple=>{if(!Array.isArray(tuple)||tuple.length!==3||tuple.some(v=>!Number.isInteger(v)))throw Error('Invalid token.');const [ci,position,ri]=tuple,card=C.card(input.cards[ci]);if(!card||position<0||position>27||used.has(position)||ri<-1||ri>=relics.length)throw Error('Invalid tile.');used.add(position);return{cardId:card.id,rarity:card.rarity,position,relicId:ri>=0?'replay_relic_'+ri:null,relic:ri>=0?relics[ri]:null};});});
+   const boards=input.boards.map(rows=>{if(!Array.isArray(rows)||rows.length>11)throw Error('Invalid board.');const used=new Set();return rows.map(tuple=>{if(!Array.isArray(tuple)||tuple.length!==3||tuple.some(v=>!Number.isInteger(v)))throw Error('Invalid token.');const [ci,position,ri]=tuple,card=C.card(input.cards[ci]);if(!card||position<0||position>27||used.has(position)||ri<-1||ri>=relics.length)throw Error('Invalid tile.');used.add(position);return{cardId:card.id,rarity:card.rarity,position,relicId:ri>=0?'replay_relic_'+ri:null,relic:ri>=0?relics[ri]:null};});});
    const stages={};if(Object.keys(input.stages).length>MAX_STAGES)return null;
-   for(const [key,row]of Object.entries(input.stages)){if(stageNumber(key)<0||!Array.isArray(row)||row.length!==4||row.some(v=>!Number.isInteger(v)))return null;const [hp,level,bi,ai]=row,board=boards[bi],augments=augmentSets[ai];if(hp<0||hp>100||level<1||level>9||!board||board.length>level||!augments)return null;stages[key]={stageKey:key,hp,level,board,augments,synergies:S.analyze(board.map(u=>({card:C.card(u.cardId)})),A.traits({augments})).filter(t=>t.tier).map(t=>({id:t.id,count:t.count,tier:t.tier}))};}
+   for(const [key,row]of Object.entries(input.stages)){if(stageNumber(key)<0||!Array.isArray(row)||![4,5].includes(row.length)||row.some(v=>!Number.isInteger(v))||row.length===5&&row[4]!==1)return null;const [hp,level,bi,ai]=row,board=boards[bi],augments=augmentSets[ai];if(hp<0||hp>100||level<1||level>9||!board||!augments||board.length>C.teamCap({level,augments}))return null;if(row[4]&&!A.effects({augments}).lastStandHp)return null;stages[key]={stageKey:key,lastStandUsed:row[4]===1,hp,level,board,augments,synergies:S.analyze(board.map(u=>({card:C.card(u.cardId)})),A.traits({augments})).filter(t=>t.tier).map(t=>({id:t.id,count:t.count,tier:t.tier}))};}
    if(!Object.keys(stages).length)return null;
    return{uid:input.uid,name:name(input.name),...publicMeta,elo:Number.isSafeInteger(input.elo)&&input.elo>=0?input.elo:0,wins:Number.isSafeInteger(input.wins)&&input.wins>=0?input.wins:0,placement:input.placement,stages,sampled:!!input.sampled,wire:input};
   }catch(_){return null;}

@@ -580,3 +580,132 @@
 @media(max-height:340px){#autochessModal.ac-compact .ac-match-report{padding:7px}#autochessModal.ac-compact .ac-match-report .ac-reward-line{padding:3px 5px}#autochessModal.ac-compact .ac-match-report .ac-summary-heading h2{font-size:16px}#autochessModal.ac-compact .ac-match-report .ac-summary-heading>p{font-size:8px;line-height:1.2}#autochessModal.ac-compact .ac-match-report .ac-dialog-actions{margin-top:5px}}
 
 #autochessModal .ac-plan-effect{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#c1ced4!important}
+
+/* Full card frames: rarity remains visible on all four sides, including selected cards. */
+#autochessModal :is([data-tier="0"],[data-rarity="Common"]){--rarity:#a8b6cc}
+#autochessModal :is([data-tier="1"],[data-rarity="Rare"]){--rarity:#329fff}
+#autochessModal :is([data-tier="2"],[data-rarity="Epic"]){--rarity:#b079ff}
+#autochessModal :is([data-tier="3"],[data-rarity="Legendary"]){--rarity:#f2cb62}
+#autochessModal :is([data-tier="4"],[data-rarity="Mythic"]){--rarity:#ff638f}
+#autochessModal :is([data-tier="5"],[data-rarity="Secret"]){--rarity:#79f5e9}
+.ac-rich-relic .ac-relic-matches>span[data-rarity="Common"]{border-color:#a8b6cc}
+.ac-rich-relic .ac-relic-matches>span[data-rarity="Rare"]{border-color:#329fff}
+.ac-rich-relic .ac-relic-matches>span[data-rarity="Epic"]{border-color:#b079ff}
+.ac-rich-relic .ac-relic-matches>span[data-rarity="Legendary"]{border-color:#f2cb62}
+.ac-rich-relic .ac-relic-matches>span[data-rarity="Mythic"]{border-color:#ff638f}
+.ac-rich-relic .ac-relic-matches>span[data-rarity="Secret"]{border-color:#79f5e9}
+#autochessModal :is(.ac-offer:not(.is-sold),.ac-unit-card,.ac-token,.ac-draft-unit,.ac-plan-slot[data-rarity],.ac-planner-card,.ac-inspect-portrait,.ac-anvil-item,.ac-synergy-roster figure,.ac-trait-peek figure,.ac-profile-unit[data-rarity],.ac-target-mini img){border:2px solid var(--rarity,#a8b6cc)!important;box-shadow:inset 0 0 0 1px #ffffff14,0 0 7px color-mix(in srgb,var(--rarity,#a8b6cc) 26%,transparent)}
+#autochessModal .ac-unit-art{border-top:0}
+#autochessModal :is(.ac-offer,.ac-unit-card,.ac-planner-card,.ac-plan-slot,.ac-draft-unit){transition:transform 180ms ease,opacity 180ms ease}
+#autochessModal .ac-planner-card.is-chosen{outline:1px solid #c7ffed;outline-offset:2px}
+#autochessModal .ac-offer.is-target{animation:none;box-shadow:0 0 10px #c8e9a65c,inset 0 0 14px #eac86c33}
+#autochessModal .ac-inspect-portrait{border-radius:8px;overflow:hidden}
+#autochessModal .ac-anvil-item{padding:0 3px}
+#autochessModal .ac-unit-stars,#autochessModal .ac-token-stars{position:absolute;left:2px;top:1px;z-index:4;color:#ffe5a2;font-size:7px;line-height:10px;letter-spacing:-1px;text-shadow:0 1px 3px #000;background:#07121dcc;border-radius:2px;padding:0 2px;pointer-events:none}
+#autochessModal .ac-bench-health{position:absolute;left:3px;right:3px;bottom:1px;height:2px;background:#99ecc1;pointer-events:none}
+#autochessModal .ac-unit-card>small{padding-bottom:2px}
+#autochessModal .ac-token{width:12.4%;height:11.5%;border-radius:6px;padding:2px 3px 5px;background:#0b1622;gap:1px;isolation:isolate}
+#autochessModal .ac-token .ac-token-portrait{inset:0;width:100%;height:100%;border:0;border-radius:3px;box-shadow:none;opacity:.85}
+#autochessModal .ac-token-portrait:after{content:'';position:absolute;inset:0;z-index:2;background:linear-gradient(0deg,#040a12f2,transparent 85%);pointer-events:none}
+#autochessModal .ac-token-name{position:relative;width:100%;max-width:100%;color:#fff;font-size:clamp(7px,.65vw,10px);line-height:1.1;font-weight:850;text-align:center;padding:1px 0;background:#050c16c9;text-shadow:0 1px 2px #000;border-radius:2px}
+#autochessModal .ac-token :is(.ac-token-hp,.ac-token-mana){width:100%;flex-shrink:0}
+#autochessModal .ac-token-hp{height:4px;border:0;border-radius:2px;overflow:hidden}
+#autochessModal .ac-token-mana{height:2px}
+#autochessModal .ac-token-shield{position:absolute;left:3px;right:3px;bottom:1px;height:2px;background:#153447;z-index:3;opacity:0;pointer-events:none}
+#autochessModal .is-shielded .ac-token-shield{opacity:1}
+#autochessModal .ac-token-shield>b{display:block;width:100%;height:100%;background:#b5eaff;transform-origin:left}
+#autochessModal .ac-token.is-enemy .ac-token-portrait{border:0}
+#autochessModal .ac-token.is-shielded{outline:1px solid #bceaff;outline-offset:1px}
+#autochessModal .ac-token-relic{right:1px;top:1px;width:17px;height:17px;min-width:17px;min-height:17px}
+#autochessModal .ac-token-status{top:-9px;left:0;right:0;text-align:center;font-size:7px;z-index:5}
+
+/* Round feedback is presentation-only. The authoritative host clock never waits for VFX. */
+#autochessModal .ac-battle-result{--ac-result-color:#f6d786;position:absolute;inset:0;z-index:22;display:grid;place-items:center;overflow:hidden;pointer-events:none;isolation:isolate}
+#autochessModal .ac-battle-result[data-kind="defeat"]{--ac-result-color:#ff7a91}
+#autochessModal .ac-battle-result[data-kind="draw"]{--ac-result-color:#a5d9ee}
+#autochessModal .ac-result-copy{position:relative;z-index:2;display:flex;align-items:center;flex-direction:column;gap:5px;width:90%;padding:16px;text-align:center;color:var(--ac-result-color);background:linear-gradient(90deg,transparent,#07121ce8 20%,#07121cf5 50%,#07121ce8 80%,transparent);text-shadow:0 2px 4px #000,0 0 22px color-mix(in srgb,var(--ac-result-color) 60%,transparent);animation:ac-round-banner 1500ms cubic-bezier(.18,.75,.25,1) both}
+#autochessModal .ac-result-copy>span{font-size:9px;font-weight:800;letter-spacing:4px}
+#autochessModal .ac-result-copy>strong{font:900 clamp(30px,5.8vw,78px)/1.05 Georgia,serif;letter-spacing:clamp(3px,.9vw,12px);color:var(--ac-result-color)}
+#autochessModal .ac-result-copy>small{font-size:11px;color:#d2dde5;letter-spacing:1px}
+#autochessModal .ac-result-wave{position:absolute;width:150px;height:150px;border:2px solid var(--ac-result-color);border-radius:50%;box-shadow:inset 0 0 25px color-mix(in srgb,var(--ac-result-color) 30%,transparent),0 0 30px color-mix(in srgb,var(--ac-result-color) 40%,transparent);animation:ac-round-wave 1100ms ease-out both}
+#autochessModal .ac-result-particles{position:absolute;left:50%;top:50%;width:1px;height:1px}
+#autochessModal .ac-result-particles>i{position:absolute;width:4px;height:12px;border-radius:2px;background:var(--ac-result-color);box-shadow:0 0 12px var(--ac-result-color);animation:ac-round-particle 1050ms var(--ac-particle-delay) ease-out both}
+@keyframes ac-round-banner{0%{opacity:0;transform:translate3d(0,10px,0) scale(.86)}18%,77%{opacity:1;transform:translate3d(0,0,0) scale(1)}100%{opacity:0;transform:translate3d(0,-8px,0) scale(1.04)}}
+@keyframes ac-round-wave{0%{opacity:0;transform:scale(.2)}18%{opacity:.75}100%{opacity:0;transform:scale(3.8)}}
+@keyframes ac-round-particle{0%{opacity:0;transform:rotate(var(--ac-angle)) translateY(-15px) scale(.3)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--ac-angle)) translateY(-170px) scale(.6)}}
+#autochessModal .ac-level-burst{position:absolute;z-index:26;left:50%;bottom:calc(var(--ac-dock-size) + 20px);transform:translateX(-50%);padding:8px 18px;border:1px solid #ead39a;border-radius:20px;background:#10242ced;color:#fff0b5;font-size:13px;font-weight:900;letter-spacing:2px;pointer-events:none;animation:ac-level-burst 850ms ease-out both}
+@keyframes ac-level-burst{0%{opacity:0;transform:translate(-50%,10px) scale(.85)}20%,70%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-15px) scale(1.04)}}
+
+/* Gather, leap and fan out without moving or pausing any combat entity. */
+#autochessModal .ac-travel-layer{position:absolute;inset:0;z-index:14;overflow:hidden;pointer-events:none}
+#autochessModal .ac-is-traveling :is(.ac-tokens,.ac-effects){opacity:0}
+#autochessModal .ac-away-arena .ac-floor{background:radial-gradient(ellipse at 50% 45%,#8cc9e13b,transparent 65%),repeating-linear-gradient(115deg,#102a3c00 0 26px,#57809a26 28px 31px),linear-gradient(150deg,#172f41,#38546a 46%,#244956 70%,#182e42)}
+#autochessModal .ac-venue-shift{position:absolute;inset:0;background:radial-gradient(ellipse,#c8f9ff,#22648abb 30%,#101f41e6 70%);animation:ac-venue-shift 780ms ease-in-out both}
+#autochessModal .ac-travel-unit{position:absolute;left:0;top:0;width:12.4cqw;height:11.5cqh;border:2px solid var(--rarity,#a8b6cc);border-radius:6px;background:#102333;overflow:hidden;animation:ac-squad-gather 780ms cubic-bezier(.25,.65,.22,1) both;will-change:transform,opacity}
+#autochessModal .ac-travel-unit>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#autochessModal .ac-travel-unit>strong{position:absolute;left:0;right:0;bottom:0;padding:2px;background:#030b17db;color:#fff;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+#autochessModal .ac-travel-orb{position:absolute;left:50%;top:78%;width:45px;height:45px;border-radius:50%;border:1px solid #d9faff;background:radial-gradient(circle,#fff7d3,#80edee 28%,#3293af66 65%,transparent);box-shadow:0 0 25px #b4efff,0 0 60px #b7db9366;animation:ac-squad-jump 780ms ease-in-out both;will-change:transform,opacity}
+#autochessModal .ac-travel-label{position:absolute;left:10%;right:10%;top:12%;z-index:2;text-align:center;color:#e5f7ff;font-size:10px;font-weight:800;letter-spacing:2px;animation:ac-travel-label 780ms ease both}
+@keyframes ac-squad-gather{0%{opacity:1;transform:translate3d(var(--ac-from-x),var(--ac-from-y),0) translate(-50%,-50%) scale(1)}28%{opacity:.7;transform:translate3d(50cqw,78cqh,0) translate(-50%,-50%) scale(.18)}40%,62%{opacity:0;transform:translate3d(50cqw,78cqh,0) translate(-50%,-50%) scale(.03)}70%{opacity:.7;transform:translate3d(50cqw,78cqh,0) translate(-50%,-50%) scale(.18)}100%{opacity:1;transform:translate3d(var(--ac-from-x),var(--ac-from-y),0) translate(-50%,-50%) scale(1)}}
+@keyframes ac-squad-jump{0%,12%{opacity:0;transform:translate(-50%,-50%) scale(.1)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}52%{opacity:1;transform:translate(-50%,-50%) translateY(-30cqh) scale(.7)}60%{opacity:0;transform:translate(-50%,-50%) translateY(-35cqh) scale(.3)}68%{opacity:1;transform:translate(-50%,-50%) scale(.9)}100%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}}
+@keyframes ac-venue-shift{0%,100%{opacity:0}46%,62%{opacity:.88}}
+@keyframes ac-travel-label{0%,100%{opacity:0;transform:translateY(5px)}30%,70%{opacity:1;transform:translateY(0)}}
+#autochessModal .ac-forge-flash{animation:none}
+#autochessModal .ac-forge-flash:after{content:'';position:absolute;inset:1px;border:2px solid #d3fcff;border-radius:4px;pointer-events:none;box-shadow:0 0 14px #a9f6ff;animation:ac-forge-ring 440ms ease-out both}
+@keyframes ac-forge-ring{0%{opacity:1;transform:scale(.5)}100%{opacity:0;transform:scale(1.3)}}
+
+/* On phones the board owns the viewport; Shop & Forge expands above a quick-action rail. */
+#autochessModal .ac-mobile-dockbar{display:none}
+#autochessModal .ac-codex-open{padding:6px 12px;margin:5px 0 8px;border-color:#bea66d;color:#f1dba4;background:#1b303b;font-size:11px}
+#autochessModal .ac-augment-codex .ac-tool-content{display:grid;grid-template-rows:auto auto minmax(0,1fr)}
+#autochessModal .ac-codex-filters{display:grid;grid-template-columns:minmax(0,1fr) 120px 130px;gap:8px}
+#autochessModal .ac-codex-filters :is(input,select){width:100%;min-width:0;min-height:32px;border:1px solid #708f9c;border-radius:5px;background:#0c1b28;color:#e4edf1;padding:5px 8px;font:inherit}
+#autochessModal .ac-codex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:10px;min-height:0;overflow:auto;align-content:start;scrollbar-width:thin;scrollbar-color:#92aab4 #0b1520}
+#autochessModal .ac-codex-card{--augment-color:#b9d4de;min-width:0;border:1px solid var(--augment-color);border-radius:9px;padding:13px;background:linear-gradient(135deg,#1c2d3d,#0c1723)}
+#autochessModal .ac-codex-card.augment-gold{--augment-color:#e9c36e}#autochessModal .ac-codex-card.augment-prismatic{--augment-color:#caa3ff}
+#autochessModal .ac-codex-card>small{font-size:9px;color:var(--augment-color);letter-spacing:1px}
+#autochessModal .ac-codex-card>h3{color:var(--augment-color);font-size:16px;margin:7px 0}
+#autochessModal .ac-codex-card>p{font-size:11px;line-height:1.6;color:#c1d2df;margin:0}
+#autochessModal .ac-interest{flex-wrap:wrap;max-width:85px;row-gap:0}
+@media(max-height:540px){#autochessModal .ac-codex-card{padding:9px}#autochessModal .ac-codex-card>h3{font-size:14px}#autochessModal .ac-codex-card>p{font-size:10px}#autochessModal .ac-codex-open{font-size:9px;padding:3px 8px;margin:2px 0 4px}}
+@media(max-width:600px){#autochessModal .ac-codex-filters{grid-template-columns:minmax(0,1fr) 80px 90px;gap:4px}}
+#autochessModal.ac-board-focus{--ac-dock-size:36px;--ac-bench-size:46px;--ac-full-dock-size:118px}
+#autochessModal.ac-board-focus .ac-shell{--ac-dock-size:36px;gap:4px}
+#autochessModal.ac-board-focus .ac-arena{grid-template-rows:12px minmax(0,1fr) 13px var(--ac-bench-size) auto;gap:3px}
+#autochessModal.ac-board-focus .ac-field-wrap{padding:3px 4px;border-radius:13px}
+#autochessModal.ac-board-focus .ac-main{grid-template-columns:minmax(0,1fr);gap:0}
+#autochessModal.ac-board-focus .ac-mobile-dockbar{grid-area:3/1;display:flex;align-items:center;gap:7px;min-width:0;min-height:0;height:36px;padding:2px 5px;border:1px solid #7e91846b;border-radius:7px;background:linear-gradient(110deg,#172b35,#09151f);z-index:47}
+#autochessModal .ac-mobile-dockbar>strong{color:#ffe39c;font-size:14px;font-variant-numeric:tabular-nums;min-width:43px}
+#autochessModal .ac-mobile-dockbar>button{min-height:29px;padding:3px 10px;font-size:11px;display:flex;align-items:center;justify-content:center;gap:7px;background:#132936;border-color:#708d925c}
+#autochessModal .ac-mobile-dockbar b{color:#dbe9ad;font-size:10px}
+#autochessModal #acMarketToggle{flex:1;justify-content:space-between;color:#f4dda1;background:linear-gradient(100deg,#28403f,#142c3e);border-color:#b5b17e88;font-weight:800}
+#autochessModal #acMarketToggle>span{font-size:18px;line-height:1;color:#a8e8ec}
+#autochessModal.ac-board-focus .ac-dock{display:none;position:absolute;left:max(5px,env(safe-area-inset-left));right:max(5px,env(safe-area-inset-right));bottom:calc(54px + var(--ac-bench-size) + env(safe-area-inset-bottom));height:var(--ac-full-dock-size);max-height:var(--ac-full-dock-size);grid-template-columns:92px minmax(0,1fr) 116px;gap:7px;padding:5px 7px;z-index:46;border-color:#9ea17b;background:linear-gradient(125deg,#172c37fa,#08141ffc);box-shadow:0 -10px 35px #0009;animation:ac-market-enter 180ms ease-out both}
+#autochessModal.ac-board-focus.ac-market-open .ac-dock{display:grid}
+@keyframes ac-market-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#autochessModal.ac-board-focus .ac-token{width:calc(100cqw / 7 - 4px);height:calc(100cqh / 8 - 2px);min-height:25px;padding:1px 3px 5px;border-radius:5px}
+#autochessModal.ac-board-focus .ac-token-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;overflow-wrap:anywhere;font-size:10px;line-height:10px;background:#030914e8;max-height:21px;margin-top:auto;padding:0 9px;font-weight:850;letter-spacing:0}
+#autochessModal.ac-board-focus .ac-token-portrait{opacity:.6}
+#autochessModal.ac-board-focus .ac-token-stars{font-size:6px;line-height:7px;left:0;top:0;padding:0 1px}
+#autochessModal.ac-board-focus .ac-token-relic{width:16px;height:16px;min-width:16px;min-height:16px;right:-1px;top:-1px}
+#autochessModal.ac-board-focus .ac-token-hp{height:3px}
+#autochessModal.ac-board-focus .ac-token-status{font-size:6px;top:-7px}
+#autochessModal.ac-board-focus .ac-bench-slot{border-radius:6px;overflow:visible}
+#autochessModal.ac-board-focus .ac-unit-card{display:block;border-radius:5px;overflow:hidden}
+#autochessModal.ac-board-focus .ac-unit-art{position:absolute;inset:0;min-height:0;max-height:none;height:100%}
+#autochessModal.ac-board-focus .ac-unit-art>img{opacity:.45;object-position:center 22%}
+#autochessModal.ac-board-focus .ac-unit-art:after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,#07101ced,#07101c11);z-index:1;pointer-events:none}
+#autochessModal.ac-board-focus .ac-unit-card>strong{position:absolute;left:2px;right:2px;top:10px;bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;overflow:hidden;overflow-wrap:anywhere;font-size:10px;line-height:11px;font-weight:850;color:#fff;padding:0 1px;text-align:center;text-shadow:0 1px 3px #000;z-index:2;align-content:center}
+#autochessModal.ac-board-focus .ac-unit-card>small{display:none}
+#autochessModal.ac-board-focus .ac-unit-stars{z-index:3;top:1px;left:2px}
+#autochessModal.ac-board-focus .ac-equipped{width:18px;height:18px;right:0;top:0;z-index:4}
+#autochessModal.ac-board-focus .ac-forge-notice{bottom:42px;font-size:7px;max-width:80%;z-index:48}
+#autochessModal.ac-board-focus .ac-level-burst{bottom:90px;font-size:11px}
+#autochessModal.ac-board-focus .ac-inspector{bottom:49px;left:50%;transform:translateX(-50%);width:min(470px,95%);max-height:70dvh}
+#autochessModal.ac-board-focus .ac-inspector.is-relic{top:auto;bottom:49px}
+#autochessModal.ac-board-focus.ac-rotated .ac-inspector{max-height:calc(var(--ac-landscape-height) - 90px)}
+#autochessModal.ac-board-focus .ac-mobile-button{min-height:28px}
+@media(max-width:768px){#autochessModal.ac-board-focus .ac-weekly{display:none}#autochessModal.ac-board-focus .ac-hud-rank span{display:none}#autochessModal.ac-board-focus .ac-top-actions{gap:3px}#autochessModal.ac-board-focus .ac-mobile-dockbar{gap:4px}#autochessModal.ac-board-focus .ac-mobile-dockbar>button{padding:3px 7px;font-size:10px}#autochessModal.ac-board-focus .ac-dock{grid-template-columns:80px minmax(0,1fr) 96px;gap:5px;padding:5px}#autochessModal.ac-board-focus .ac-fusion-row>span{display:none}}
+@media(max-height:340px){#autochessModal.ac-board-focus{--ac-header-size:34px;--ac-bench-size:36px;--ac-full-dock-size:108px}#autochessModal.ac-board-focus .ac-top{height:34px}#autochessModal.ac-board-focus .ac-arena{grid-template-rows:10px minmax(0,1fr) 11px var(--ac-bench-size) auto}#autochessModal.ac-board-focus .ac-arena-caption{height:10px}#autochessModal.ac-board-focus .ac-bench-label{height:11px}#autochessModal.ac-board-focus .ac-token{min-height:20px}#autochessModal.ac-board-focus .ac-token-name{font-size:9px;line-height:9px;max-height:18px;padding-inline:5px}#autochessModal.ac-board-focus .ac-unit-card>strong{font-size:9px;line-height:10px;top:8px}#autochessModal.ac-board-focus .ac-token-relic{width:13px;height:13px;min-width:13px;min-height:13px}#autochessModal .ac-result-copy{padding:8px}}
+@container (height < 170px){#autochessModal.ac-board-focus .ac-token-name{-webkit-line-clamp:1;max-height:11px}}
+@media(prefers-reduced-motion:reduce){#autochessModal :is(.ac-travel-unit,.ac-travel-orb,.ac-venue-shift,.ac-travel-label,.ac-result-copy,.ac-result-wave,.ac-result-particles>i,.ac-level-burst,.ac-forge-flash:after,.ac-dock){animation:none!important}#autochessModal .ac-travel-unit{transform:translate3d(var(--ac-from-x),var(--ac-from-y),0) translate(-50%,-50%)}#autochessModal :is(.ac-travel-orb,.ac-venue-shift,.ac-result-wave,.ac-result-particles){display:none}#autochessModal :is(.ac-offer,.ac-unit-card,.ac-planner-card,.ac-plan-slot,.ac-draft-unit){transition:none}}

@@ -114,7 +114,7 @@
   for(const u of units){const m=classify(C.card(u));if(!m)continue;metas.push(m);if(m.cc)totals.cc++;if(m.shield||m.heal||m.reduction)totals.sustain++;if(m.carry>1.2)totals.carry++;if(m.tank>2.5)totals.tank++;if(m.sacrifice)totals.sacrifice++;if(m.follow)totals.follow++;if(m.ranged)totals.spell++;
    if(!seen.has(m.id)){seen.add(m.id);for(const tag of m.tags)counts[tag]=(counts[tag]||0)+1;}
   }
-  return{units,metas,counts,seen,totals,crests:A.traits(p),desired:cores(p)};
+  return{units,metas,counts,seen,totals,aug:A.effects(p),crests:A.traits(p),desired:cores(p)};
  }
  function threateningPlayer(s,p) {
   // Same HP / seat ordering as the visible standings. Never read the next pairing.
@@ -160,17 +160,18 @@
  }
  function marginal(p,u,summary,threat=null) {
   const card=C.card(u),m=classify(card);if(!m)return-Infinity;
-  const high=skill(p)>=7;let q=m.quality+(u.fusionDepth||0)*.55;
+  const high=skill(p)>=7,aug=summary.aug,different=!!aug.differentAtk;let q=m.quality+(u.fusionDepth||0)*.55;
   const duplicate=summary.seen.has(m.id);
   if(duplicate)q-=high?3:1.5;
   for(const tag of m.tags){const n=(summary.counts[tag]||0)+(summary.crests[tag]||0),core=summary.desired.includes(tag);
-   if(core)q+=(high?2.2:1.8)+(!duplicate&&n%2===1?(high?3.6:2.8):0);
+   if(core)q+=((high?2.2:1.8)+(!duplicate&&n%2===1?(high?3.6:2.8):0))*(different?.25:1);
    else if(!duplicate&&n%2===1)q+=.5;
   }
   let pair=0;for(const other of summary.metas)pair+=combo(m,other);q+=Math.min(7,pair*.8);
   if(!summary.totals.tank&&m.tank>2.5)q+=3;
   if(!summary.totals.carry&&m.carry>1.4)q+=1.4;
   if(m.randomBuff){const carries=summary.metas.filter(c=>c.carry>1.4),weak=summary.metas.filter(c=>c.carry<1&&c.tank<2.5).length;q+=carries.length?1.2-Math.max(0,weak-1)*1.6:-3;}
+  if(different)q+=m.tags.every(t=>!(summary.counts[t]||summary.crests[t]))?7+aug.differentAtk*12:-3;
   q+=counterValue(m,threat);
   return q;
  }
@@ -188,9 +189,9 @@
   return q;
  }
  function objective(p,units,threat=contexts.get(p)?.scout) {
-  const sum=summarize(units,p);let q=0;
+  const sum=summarize(units,p),aug=A.effects(p);let q=0;
   for(let i=0;i<units.length;i++){
-   const m=sum.metas[i];q+=m.quality+(units[i].fusionDepth||0)*.55+counterValue(m,skill(p)>=7?threat:null);
+   const m=sum.metas[i];q+=m.quality+(units[i].fusionDepth||0)*.55+counterValue(m,skill(p)>=7?threat:null);if(aug.differentAtk&&m.tags.every(tag=>(sum.counts[tag]||0)+(sum.crests[tag]||0)<2))q+=7+aug.differentAtk*12;
    for(let j=0;j<i;j++)q+=combo(m,sum.metas[j])*.65;
   }
   for(const [tag,n]of Object.entries(sum.counts)){const tier=tagTier(n+(sum.crests[tag]||0));q+=sum.desired.includes(tag)?tier*tier*(skill(p)>=7?2:1.35):tier*.5;}
@@ -211,7 +212,7 @@
   selected.splice(selected.indexOf(weak),1);
  }
  function formation(p,selected,threat) {
-  const used=new Set(),high=skill(p)>=7,{carry,tank}=anchors(selected),spread=high&&!!(threat?.line||threat?.aoe);
+  const used=new Set(),high=skill(p)>=7,aug=A.effects(p),{carry,tank}=anchors(selected),spread=high&&!!(threat?.line||threat?.aoe);
   const place=(u,cell)=>{u.board=cell;u.bench=null;u.reserve=false;used.add(cell);};
   const front=selected.filter(u=>classify(C.card(u)).tank>2.5&&!classify(C.card(u)).offTurn).sort((a,b)=>tankValue(b)-tankValue(a)||cmp(a.uid,b.uid));
   const decoy=front[0]||tank;
@@ -225,7 +226,7 @@
    let best=null,value=-Infinity;
    for(let cell=0;cell<28;cell++){if(used.has(cell))continue;const x=cell%7,y=Math.floor(cell/7);
     let v=isTank?10-y*4:protect?y*3:3-Math.abs(1-y)*2;
-    if(m.sacrifice)v=y*2;
+    if(m.sacrifice)v=y*2;if(aug.soloShield&&decoy&&u!==decoy&&y===0)v-=12;if(aug.rowAtk||aug.rowReduction){const n=Math.min(3,[...used].filter(cell=>Math.floor(cell/7)===y).length);v+=n*(aug.rowAtk+aug.rowReduction)*15;}
     if(lead)v-=cell*.8;if(m.isolation)v+=y;
     if(high&&threat){if(protect)v-=(threat.columns[x]||0)*.18;if(isCarry&&threat.carry)v+=Math.abs(x-threat.carry.column)*.7;}
     if(spread){for(const cell2 of used){const d=Math.max(Math.abs(x-cell2%7),Math.abs(y-Math.floor(cell2/7)));if(d<2)v-=4-d*1.2;}v+=(x===0||x===6)?.4:0;}
@@ -247,7 +248,7 @@
   // 24 candidates; no units are discarded or removed from the player's roster.
   const candidates=all.length>rules.maxCandidates?all.slice().sort((a,b)=>Number(b.keep)-Number(a.keep)||priority(b)-priority(a)||cmp(a.uid,b.uid)).slice(0,rules.maxCandidates):all.slice();
   const selected=[];
-  while(selected.length<p.level&&candidates.length){const sum=summarize(selected,p);let index=0,best=-Infinity;for(let i=0;i<candidates.length;i++){const q=marginal(p,candidates[i],sum,ctx.scout);if(q>best){best=q;index=i;}}selected.push(candidates.splice(index,1)[0]);}
+  while(selected.length<C.teamCap(p)&&candidates.length){const sum=summarize(selected,p);let index=0,best=-Infinity;for(let i=0;i<candidates.length;i++){const q=marginal(p,candidates[i],sum,ctx.scout);if(q>best){best=q;index=i;}}selected.push(candidates.splice(index,1)[0]);}
   if(skill(p)>=7&&candidates.length&&ctx.swaps<rules.maxSwapTrials){const weak=selected.map((u,i)=>({u,i,q:priority(u)})).sort((a,b)=>a.q-b.q||a.i-b.i).slice(0,2),incoming=candidates.slice().sort((a,b)=>priority(b)-priority(a)||cmp(a.uid,b.uid)).slice(0,4);let best=objective(p,selected),swap=null;
    for(const slot of weak)for(const u of incoming){if(ctx.swaps>=rules.maxSwapTrials)break;const trial=selected.slice();trial[slot.i]=u;const q=objective(p,trial);ctx.swaps++;if(q>best+.05){best=q;swap={i:slot.i,u};}}
    if(swap)selected[swap.i]=swap.u;
@@ -308,9 +309,9 @@
    if(materials.length===2&&C.freeBench(p)>=0){deployed=eligible.filter(u=>C.tier(u)===tier).sort((a,b)=>priority(a)-priority(b)||cmp(a.uid,b.uid))[0];if(deployed)materials.push(deployed);}
    if(materials.length!==3)continue;
    // Prefer a coherent role/element seed and continued fusion depth, but leave
-   // the next-card roll and Supporter weighting entirely to C.fuse().
+   // the uniform next-card roll and optional Lineage proc entirely to C.fuse().
    const ref=classify(C.card(carry||materials[0]));
-   const aligned=rows.filter(u=>classify(C.card(u)).tags.some(t=>ref.tags.includes(t)));
+   const aligned=A.effects(p).fusionCategoryChance?rows.filter(u=>classify(C.card(u)).tags.some(t=>ref.tags.includes(t))):[];
    if(aligned.length>=3)materials=aligned.slice(0,3);
    const depth=Math.max(...materials.map(u=>u.fusionDepth||0)),best=Math.max(...materials.map(priority)),expected=2+(tier+1)*2.4+1.5;
    if(deployed&&expected<priority(deployed)+1)continue;
@@ -322,6 +323,7 @@
  }
  function reserveFloor(s,p,threat) {
   if(s.stage===1||p.hp<=30)return 0;
+  const fund=A.effects(p).interestCap;if(fund>5&&p.hp>=70&&s.stage>=3&&!threat?.pressure&&p.lossStreak<2)return fund*10;
   if(skill(p)<7)return Math.min(30,Math.max(20,host.AutoChessBots.profile(p).save));
   if(threat?.pressure||p.lossStreak>=2)return 30;
   return p.hp>=70&&s.stage>=3?50:p.hp>=50&&s.stage>=3?40:30;
@@ -336,7 +338,7 @@
    C.economyRound(s,p);if(!ctx.initialized){arrange(s,p,ctx);ctx.initialized=true;ctx.nextArrange=6;}
    const profile=host.AutoChessBots.profile(p),target=Math.min(9,Math.max(3,s.stage+(high?4:3))),limit=Math.min(rules.maxActions,Math.max(0,budget));
    for(let step=0;step<limit&&p.botActions<rules.maxActions;step++,p.botActions++){
-    const threat=ctx.scout,floor=reserveFloor(s,p,threat),desperate=p.hp<=30,board=field(p),filled=board.length>=p.level||board.some(u=>classify(C.card(u)).sacrifice)&&board.length>=p.level-1;
+    const threat=ctx.scout,floor=reserveFloor(s,p,threat),desperate=p.hp<=30,board=field(p),filled=board.length>=C.teamCap(p)||board.some(u=>classify(C.card(u)).sacrifice)&&board.length>=C.teamCap(p)-1;
     if(tryFusion(s,p,ctx)){ctx.actions++;continue;}
     const sum=summarize(board,p),offers=p.shop.map((id,index)=>({id,index,cost:id?C.price({cardId:id}):Infinity,q:id?score(p,id,sum):-Infinity})).filter(o=>o.id&&o.cost<=p.gold&&p.gold-o.cost>=floor).sort((a,b)=>b.q-a.q||a.index-b.index);
     const weak=board.length?Math.min(...board.map(u=>marginal(p,u,sum,threat))):0,tech=high&&threat?.pressure;
@@ -363,7 +365,7 @@
  }
  function augmentChoice(s,p,armory) {
   if(skill(p)<4)return null;
-  const ctx=context(s,p),summary=summarize(field(p),p),high=skill(p)>=7,threat=ctx.scout,low=p.hp<=30,pressure=low||threat?.pressure,healthy=p.hp>=70&&!pressure;
+  const ctx=context(s,p),summary=summarize(field(p),p),owned=A.effects(p),high=skill(p)>=7,threat=ctx.scout,low=p.hp<=30,pressure=low||threat?.pressure,healthy=p.hp>=70&&!pressure;
   const value=id=>{const d=A.get(id);if(!d)return-Infinity;const e=d.effects;
    let q=(e.atk||0)*(summary.totals.carry?90:65)+(e.hp||0)*45+(e.speed||0)*(summary.totals.follow||summary.totals.carry?95:65)+(e.vamp||0)*90+(e.reduction||0)*120+(e.crit||0)*(summary.totals.carry?75:45)+(e.startShield||0)*45+(e.regenWave||0)*180+(e.killHeal||0)*65+(e.forge?.count||0)*(e.forge?.rarity==='legendary'?9:5);
    if(pressure)q+=(e.hp||0)*55+(e.reduction||0)*85+(e.atk||0)*35+(e.startShield||0)*60;
@@ -371,8 +373,25 @@
    if(e.crest){const tag=normalize(e.crest),n=summary.counts[tag]||0,delta=tagTier(n+(summary.crests[tag]||0)+(e.crestCount||0))-tagTier(n+(summary.crests[tag]||0));q+=(n?delta*(high?13:9):0)+(summary.desired.includes(tag)?5:0);}
    const economy=healthy?1.2:pressure?.25:.7;
    if(e.gold)q+=Math.min(e.gold,Math.max(0,C.RULES.maxBonusGoldPerRound-(p.econ?.bonus||0)))*economy;
-   if(e.freeRefresh)q+=(p.econ?.freeRefresh?1:6)*economy;
+   if(e.freeRefresh)q+=e.freeRefresh*(p.econ?.freeRefresh?1:6)*economy;
    if(e.xpCost&&p.level<9)q+=(9-p.level)*1.5*economy;
+   if(e.fusionCategoryChance)q+=e.fusionCategoryChance*(12+Math.min(10,p.units.filter(u=>u.board===null).length*2));
+   if(e.interestCap)q+=(e.interestCap-5)*Math.min(1,p.gold/60)*3*economy;
+   if(e.rerollRefund)q+=e.rerollRefund*(pressure?18:10);
+   if(e.emptyBenchXp)q+=e.emptyBenchXp*(p.units.some(u=>u.board===null)?.5:3)*economy;
+   if(e.buyXpBonus&&p.level<9)q+=(9-p.level)*(e.buyXpBonus*1.4+(e.giftRarity+1)*.8)*economy;
+   const equipped=summary.units.filter(u=>u.relic).length/Math.max(1,summary.units.length),front=summary.units.filter(u=>u.board<7).length;
+   if(e.relicHp)q+=(e.relicHp/55+e.relicAtk*65)*(.25+.75*equipped);
+   if(e.soloShield)q+=(e.soloShield*13+e.soloReduction*70)*(front===1?1:.55);
+   if(e.rowAtk)q+=(e.rowAtk*100+e.rowReduction*150)*(summary.units.length>=4?1:.55)*(threat?.aoe ? .5 : 1);
+   if(e.damage)q+=e.damage*85-e.hpPenalty*(pressure?55:30)-(e.noShields?summary.metas.filter(m=>m.shield).length*6:0);
+   if(e.killAtk)q+=e.killAtk*120+(e.killShield||0)*25;
+   if(e.differentAtk){const rows=S.analyze(field(p),A.traits(p)).filter(r=>r.tier),eligible=summary.units.filter(u=>!rows.some(r=>S.matches(u,r.id))).length;q+=(e.differentAtk*45+e.differentHp*20)*(eligible/Math.max(1,summary.units.length))-(rows.length>3?8:0);}
+   if(e.bonusSlots)q+=e.bonusSlots*(p.units.length>=C.teamCap(p)?18:10);
+   if(e.lastStandHp)q+=low?30:pressure?20:10;
+   if(owned.noShields)q-=(e.startShield||0)*(45+(pressure?60:0))+(e.soloShield||0)*12+(e.killShield||0)*25;
+   if(e.noShields)q-=owned.startShield*30+owned.soloShield*10+owned.killShield*15;
+
    return q;
   };
   if(high){const original=armory.options.map((id,i)=>({i,q:value(id)})).sort((a,b)=>a.q-b.q||a.i-b.i),best=original.at(-1)?.q||0;let rerolled=0;
