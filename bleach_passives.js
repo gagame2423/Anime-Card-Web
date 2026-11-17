@@ -9,7 +9,7 @@
   const IDS=Object.freeze([RUK,ULQ,YAM,STA,URA,ARR]),{has,alive,all,allies,enemies,team,runtime,atk,random}=api;
   const state=(u,id)=>api.passiveRuntimeFor(u,id).bleach ||= {entered:false,attacks:0,processed:0,hakka:0,vista:0,form:'base',modeTurns:0,firstRelease:false,shieldTurns:0,shieldCap:0,shieldTag:null,corpse:0,pool:[],readyAt:0,bankai:0,bankaiUsed:false,leftBoost:false};
   const pendingFreeze=new WeakMap(),seenDeaths=new WeakMap(),seenKills=new WeakMap(),writing=new WeakSet();
-  const control=new Set(['stunTurns','freezeTurns','snailTurns','hypnosisTurns','sinsHypnosisTurns','tensuraHypnosis','hindredTurns','spookyFrogTurns','akatsukiHypnosis','shibuyaHypnosis','deadlightsHypnosis','akatsukiMiss','deadlightsFearTurn','noDodgeTurns','passiveSuppressionTurns','passiveSuppressedUntilDeath','akatsukiPoison','akatsukiVoodoo','akatsukiHealBlock','burn','bleed']);
+  const control=new Set(['fearTurns','poison','stunTurns','freezeTurns','snailTurns','hypnosisTurns','sinsHypnosisTurns','tensuraHypnosis','hindredTurns','spookyFrogTurns','akatsukiHypnosis','shibuyaHypnosis','deadlightsHypnosis','akatsukiMiss','deadlightsFearTurn','noDodgeTurns','passiveSuppressionTurns','passiveSuppressedUntilDeath','akatsukiPoison','akatsukiVoodoo','akatsukiHealBlock','burn','bleed']);
   const statDebuffs=new Set(['weakenAttackTurns','weakenAttackPct','incomingVulnerabilityTurns','incomingVulnerabilityPct','akatsukiPaper']);
   const turn=bs=>Number(bs?.turnCount)||0;
   const pick=rows=>rows.length?rows[Math.floor(random()*rows.length)]:null;
@@ -113,7 +113,7 @@
   function barrage(bs,u){for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.30,{passiveAttack:true,specialAttack:false,followOwner:u,bleachSkill:true,bleachBarrage:true});}
   function hinder(bs,source,u,turns){if(api.status(u,'hindredTurns',turns,source))runtime(u).hindredAppliedTurn=turn(bs);}
   function bankaiOwner(bs,u){return allies(bs,u).find(owner=>has(owner,URA)&&state(owner,URA).bankai>0&&api.assistance(bs,owner,u));}
-  function cleanseNormal(u,stats=false){const r=runtime(u);for(const key of control)if(!['burn','bleed'].includes(key))r[key]=['akatsukiPoison','akatsukiVoodoo'].includes(key)?[]:typeof r[key]==='number'?0:null;for(const key of ['burn','bleed'])r[key]=(r[key]||[]).filter(e=>e.uncleansable);if(stats)for(const key of statDebuffs)r[key]=0;}
+  function cleanseNormal(u,stats=false){const r=runtime(u);for(const key of control)if(!['burn','bleed','poison'].includes(key))r[key]=['akatsukiPoison','akatsukiVoodoo'].includes(key)?[]:typeof r[key]==='number'?0:null;for(const key of ['burn','bleed','poison'])r[key]=(r[key]||[]).filter(e=>e.uncleansable);if(stats)for(const key of statDebuffs)r[key]=0;}
   function status(bs,u,key,source,details={}){
    if(!u||writing.has(u))return false;
    if(key==='freezeTurns'&&owns(u,RUK)){

@@ -2,7 +2,7 @@
 (function(host){
  'use strict';
  const TIERS=Object.freeze(['Inactive','Bronze','Silver','Gold','Prismatic']),THRESHOLDS=Object.freeze([2,4,6,8]);
- const ALIASES=Object.freeze({Naruto:'Ninja','One Piece':'Pirate',JJK:'Jujutsu','Demon Slayer':'DemonSlayer','Dragon Ball':'DragonWarrior'});
+ const ALIASES=Object.freeze({Villain:'Villian',AntiVillain:'AntiVillian',Jojo:'JoJo',Naruto:'Ninja','One Piece':'Pirate',JJK:'Jujutsu','Demon Slayer':'DemonSlayer','Dragon Ball':'DragonWarrior'});
  const names={Ninja:'Ninja · Naruto',Pirate:'Pirate · One Piece',Jujutsu:'Jujutsu · JJK',DemonSlayer:'Demon Slayer',DragonWarrior:'Dragon Warrior · Dragon Ball'};
  // A profile combines a unique stat package with a named combat proc. Percentages are additive.
  const profiles={
@@ -56,11 +56,11 @@
  const DEFINITIONS=Object.freeze(registry.map(id=>Object.freeze({id,name:names[id]||id,type:host.ElementSystem.TYPES.includes(id)?'element':'category',thresholds:THRESHOLDS,...profiles[id]})));
  const byId=new Map(DEFINITIONS.map(d=>[d.id,d]));
  const native=u=>u?.card||host.AutoChessSystem.card(u);
- function analyze(units,crests={}){const counts=new Map(),seen=new Set();for(const u of units||[]){const c=native(u);if(!c||seen.has(c.id))continue;seen.add(c.id);for(const id of [c.element,...(c.category||[])])counts.set(id,(counts.get(id)||0)+1);}return DEFINITIONS.map(d=>{const realCount=counts.get(d.id)||0,virtualCount=realCount?Math.max(0,Number(crests?.[d.id])||0):0,count=realCount+virtualCount,tier=THRESHOLDS.filter(n=>count>=n).length;return{...d,count,realCount,virtualCount,tier,tierName:TIERS[tier],next:THRESHOLDS[tier]||8};}).sort((a,b)=>b.tier-a.tier||b.count-a.count||a.id.localeCompare(b.id));}
+ function analyze(units,crests={}){const counts=new Map(),seen=new Set();for(const u of units||[]){const c=native(u);if(!c||seen.has(c.id))continue;seen.add(c.id);for(const id of [c.element,...(c.category||[]).map(v=>host.CategorySystem.normalize(v))])counts.set(id,(counts.get(id)||0)+1);}return DEFINITIONS.map(d=>{const realCount=counts.get(d.id)||0,virtualCount=realCount?Math.max(0,Number(crests?.[d.id])||0):0,count=realCount+virtualCount,tier=THRESHOLDS.filter(n=>count>=n).length;return{...d,count,realCount,virtualCount,tier,tierName:TIERS[tier],next:THRESHOLDS[tier]||8};}).sort((a,b)=>b.tier-a.tier||b.count-a.count||a.id.localeCompare(b.id));}
  function tooltip(row){const bonuses=Object.entries(row.bonus).map(([k,n])=>k+': '+(k==='mana'?n:n*100).toFixed(1)+(k==='mana'?' Energy':'%')+' per tier').join(' · ');return row.name+' · '+THRESHOLDS.join(' / ')+' distinct cards\n'+row.text+'\n'+bonuses+'\nCurrent: '+row.tierName+' ('+row.count+' units). Duplicate characters do not count twice.';}
  const statNames={atk:'ATK',hp:'max HP',speed:'attack speed',vamp:'omnivamp',reflect:'damage reflection',reduction:'damage reduction',trueDamage:'damage converted to True Damage',regen:'max HP regeneration / second',crit:'critical chance',dodge:'dodge chance',shield:'Shield strength',mana:'Energy per attack',dot:'DoT damage'};
  const pct=value=>Number((value*100).toFixed(3))+'%';
- function matches(unit,id){const d=byId.get(ALIASES[id]||id),c=native(unit);return Boolean(d&&c&&(d.type==='element'?c.element===d.id:c.category?.includes(d.id)));}
+ function matches(unit,id){const d=byId.get(ALIASES[id]||id),c=native(unit);return Boolean(d&&c&&(d.type==='element'?c.element===d.id:host.CategorySystem.has(c,d.id)));}
  function roster(units,id){return(units||[]).filter(u=>matches(u,id));}
  function tierDetails(id,tier){
   const d=byId.get(ALIASES[id]||id);if(!d||tier<1||tier>4)return null;

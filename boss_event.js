@@ -20,6 +20,7 @@
   const coinRange=d=>host.RaidSystem.coinRange(d);
   const cardChance=(d,type='alucard')=>type==='gomen'?0:type==='pride'?.0001+.0099*(difficulty(d)-1)/999:type==='ragna'?.001+.009*(difficulty(d)-1)/999:(type==='lucius'?.005:.006)+(type==='lucius'?.045:.054)*(difficulty(d)-1)/999;
   const itemChance=(d,type='gomen')=>type==='pride'?.0001+.0299*(difficulty(d)-1)/999:.008+.072*(difficulty(d)-1)/999;
+  const relicChance=(d,type='alucard')=>type==='alucard'?.01+.19*(difficulty(d)-1)/999:0;
   const dropChance=(d,type='alucard')=>TYPES[type]?.itemId?itemChance(d,type):cardChance(d,type);
   function validAttempt(a) {return object(a)&&typeof a.id==='string'&&/^\d+_\d+$/.test(a.id)&&Object.hasOwn(TYPES,a.type)&&integer(a.difficulty,1,1000)&&integer(a.startedAt);}
   function validSave(v) {
@@ -34,6 +35,7 @@
     const exact=Number((p.baseCoins*p.dropMultiplier).toFixed(8));
     if(!integer(p.coins,Math.floor(exact),Math.ceil(exact)))return false;
     if(p.item!==undefined&&p.item!==null&&(!TYPES[p.type].itemId||!object(p.item)||p.item.id!==TYPES[p.type].itemId||!integer(p.item.quantity,1,Math.ceil(host.InventorySystem.MAX_KNOWN_DROP_MULTIPLIER))))return false;
+    if(p.relic!==undefined&&p.relic!==null&&(p.type!=='alucard'||!object(p.relic)||!/^relic_[a-f0-9]{32}$/.test(p.relic.id)||p.relic.roll?.kind!=='jackal_guns'||!host.RelicSystem?.validRoll(p.relic.roll)))return false;
     return p.card===null||(cardChance(p.difficulty,p.type)>0&&object(p.card)&&p.card.cardId===(TYPES[p.type].dropCardId||TYPES[p.type].cardId)&&Array.isArray(p.card.mutationIds)&&p.card.mutationIds.length<=2&&new Set(p.card.mutationIds).size===p.card.mutationIds.length&&p.card.mutationIds.every(id=>typeof id==='string'&&Object.hasOwn(host.MUTATION_BY_ID,id)));
   }
   function load(){try{const saved=JSON.parse(host.localStorage.getItem(KEY)||'null');return validSave(saved)?saved:fresh();}catch(_){return fresh();}}
@@ -86,10 +88,11 @@
     const p=data.pendingReward;if(!p)return null;
     if(p.card&&bridge.grantCard?.(p.card,p.id)!==true)throw Error('Thẻ Boss Event đang chờ lưu; game sẽ thử khôi phục khi tải lại.');
     if(p.item&&!host.InventorySystem.grantOnce('boss_event_'+p.type,p.id,p.item.id,p.item.quantity))throw Error('Vật phẩm Boss Event đang chờ lưu; game sẽ thử khôi phục khi tải lại.');
+    if(p.relic&&!host.RelicSystem.grantDropOnce(p.id,p.relic.id,p.relic.roll))throw Error('Jackal Guns reward is pending. Reload to retry saving.');
     const before=JSON.parse(JSON.stringify(data)),e=data.events[p.type],coins=Math.min(p.coins,Number.MAX_SAFE_INTEGER-e.coins);
     e.coins+=coins;e.wins=Math.min(Number.MAX_SAFE_INTEGER,e.wins+1);data.pendingReward=null;data.activeAttempt=null;
     if(!persist()){data=before;throw Error('Boss Event Coins đang chờ lưu; game sẽ thử khôi phục khi tải lại.');}
-    return {won:true,type:p.type,difficulty:p.difficulty,coins,card:p.card,item:p.item||null,dropMultiplier:p.dropMultiplier};
+    return {won:true,type:p.type,difficulty:p.difficulty,coins,card:p.card,item:p.item||null,relic:p.relic||null,dropMultiplier:p.dropMultiplier};
   }
   function configure(options={}){bridge=options;if(data.pendingReward){try{commitPending();}catch(e){console.warn(e.message);}}if(!data.pendingReward&&!migrateGomen())console.warn('Gomen Coins đang chờ chuyển sang Boss Event; tải lại để khôi phục.');}
   function finish(battle,won,random=Math.random){
@@ -100,6 +103,7 @@
     if(!won){const before=data.activeAttempt;data.activeAttempt=null;if(!persist()){data.activeAttempt=before;throw Error('Không thể lưu kết quả Boss Event.');}run.completed=true;return {won:false,type:run.type,difficulty:run.difficulty,coins:0,card:null,dropMultiplier:1};}
     const range=coinRange(run.difficulty),baseCoins=range.min+Math.floor(randomUnit(random)*(range.max-range.min+1));
     data.pendingReward={...data.activeAttempt,baseCoins,dropMultiplier:host.InventorySystem.getDropMultiplier(battle),coins:host.InventorySystem.scaleDrop(baseCoins,random,battle),card:rollCard(run.difficulty,random,run.type)};
+    if(run.type==='alucard')data.pendingReward.relic=randomUnit(random)<relicChance(run.difficulty)?{id:'relic_'+host.OnlineUtils.token(),roll:host.RelicSystem.roll('jackal_guns',random)}:null;
     if(TYPES[run.type].itemId)data.pendingReward.item=randomUnit(random)<itemChance(run.difficulty,run.type)?{id:TYPES[run.type].itemId,quantity:1}:null;
     if(!persist()){data.pendingReward=null;throw Error('Không thể lưu phần thưởng Boss Event.');}
     const result=commitPending();run.completed=true;return result;
@@ -122,5 +126,5 @@
     }
   }
   function reset(){data={...fresh(),gomenRaidMigrated:true};persist();}
-  host.BossEventSystem=Object.freeze({KEY,MODE,CARD_ID,TYPES,SHOP,offers,LEVEL_GROWTH,validSave,coinRange,cardChance,itemChance,dropChance,rotation,activeType,available,canEnter,setDifficulty,snapshot,enemies,start,rollCard,finish,abort,configure,purchase,renderShop,totalWins:()=>Object.values(data.events).reduce((sum,e)=>Math.min(Number.MAX_SAFE_INTEGER,sum+e.wins),0),reset,flush:persist});
+  host.BossEventSystem=Object.freeze({KEY,MODE,CARD_ID,TYPES,SHOP,offers,LEVEL_GROWTH,validSave,coinRange,cardChance,itemChance,relicChance,dropChance,rotation,activeType,available,canEnter,setDifficulty,snapshot,enemies,start,rollCard,finish,abort,configure,purchase,renderShop,totalWins:()=>Object.values(data.events).reduce((sum,e)=>Math.min(Number.MAX_SAFE_INTEGER,sum+e.wins),0),reset,flush:persist});
 })(window);

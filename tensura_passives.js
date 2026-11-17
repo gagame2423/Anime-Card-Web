@@ -9,7 +9,7 @@
   const IDS=Object.freeze([RIM,VEL,DIA,BEN,YUU]),{has,alive,runtime,all,enemies,atk,random,heal}=api;
   const state=(u,id)=>api.passiveRuntimeFor(u,id).tensura ||= {sage:0,energy:1000,attacks:0,entered:false,execution:false,copy:null,shiftTarget:null};
   const pending=new WeakMap(),killed=new WeakMap();
-  const debuffs=new Set(['stunTurns','freezeTurns','snailTurns','weakenAttackTurns','weakenAttackPct','hypnosisTurns','sinsHypnosisTurns','passiveSuppressionTurns','passiveSuppressedUntilDeath','hindredTurns','akatsukiHypnosis','shibuyaHypnosis','deadlightsHypnosis','akatsukiMiss','akatsukiPoison','akatsukiVoodoo','akatsukiHealBlock','tensuraHypnosis','incomingVulnerabilityTurns']);
+  const debuffs=new Set(['fearTurns','poison','stunTurns','freezeTurns','snailTurns','weakenAttackTurns','weakenAttackPct','hypnosisTurns','sinsHypnosisTurns','passiveSuppressionTurns','passiveSuppressedUntilDeath','hindredTurns','akatsukiHypnosis','shibuyaHypnosis','deadlightsHypnosis','akatsukiMiss','akatsukiPoison','akatsukiVoodoo','akatsukiHealBlock','tensuraHypnosis','incomingVulnerabilityTurns']);
   const buffs=new Set(['shield','atkBonusPct','maxHpBonusPct','critChanceBonus','critDamageBonus','damageReductionPct','postReviveDodgeBonus','invincibleTurns','incomingImmuneTurns','immuneTurns','nextAttackMultiplier','nextAttackIsBuffed','nextAttackCritGuaranteed']);
   function duel(bs){const d=bs?.tensuraDuel;if(d&&(!api.inBattle(bs,d.a)||!api.inBattle(bs,d.b))){bs.tensuraDuel=null;return null;}return d||null;}
   const participant=(d,u)=>u===d.a||u===d.b;

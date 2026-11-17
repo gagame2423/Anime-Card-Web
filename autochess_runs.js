@@ -3,18 +3,18 @@
  'use strict';
  const C=host.AutoChessSystem,A=host.AutoChessAugments,S=host.AutoChessSynergies,R=host.RelicSystem;
  const MAX_BYTES=5900,MAX_STAGES=600,KEY='anime_card_rng_ac_last_run_v1',elements=['Fire','Water','Nature','Electric','Dark','Holy'];
- const fields=['hp','atk','dodge','critChance','critDamage','expBonus','followChance','specialBonus','odmChainBonus','firstAttackBonus'];
+ const fields=['hp','atk','dodge','critChance','critDamage','expBonus','followChance','specialBonus','odmChainBonus','firstAttackBonus','perEnemyAtk'];
  const bytes=v=>host.OnlineUtils.bytes(JSON.stringify(v)).length;
  const stageNumber=key=>{const m=/^(\d{1,3})-([1-6])$/.exec(String(key));return m&&+m[1]>=1&&+m[1]<=100&&!(+m[1]===1&&+m[2]>4)?+m[1]*10+(+m[2]):-1;};
  const name=v=>String(v||'Player').replace(/[\u0000-\u001f]/g,'').slice(0,40);
  const uid=v=>typeof v==='string'&&v.length>0&&v.length<=128&&!/[\u0000-\u0020]/.test(v);
  function publicFields(meta){const r=host.AutoChessRanked.rankOf(Number.isSafeInteger(meta.elo)&&meta.elo>=0?meta.elo:0),peakElo=Math.max(r.elo,Number.isSafeInteger(meta.peakElo)&&meta.peakElo>=0?meta.peakElo:0);return{rank:r.index,tier:r.id,division:r.division,avatar:r.image,bannerCardId:C.card(meta.bannerCardId)?.id||null,peakElo,peakRank:host.AutoChessRanked.rankOf(peakElo).label};}
- function packRelic(r){if(!R.validRoll(r))return null;return[R.DEFINITIONS.findIndex(d=>d.kind===r.kind),['common','rare','legendary'].indexOf(r.rarity),r.unique?1:0,elements.indexOf(r.element),...fields.map(k=>Math.round((r[k]||0)*1000))];}
+ function packRelic(r){if(!R.validRoll(r))return null;r=R.normalizeRoll(r);return[R.DEFINITIONS.findIndex(d=>d.kind===r.kind),['common','rare','legendary'].indexOf(r.rarity),r.unique?1:0,elements.indexOf(r.element),...fields.map(k=>Math.round((r[k]||0)*1000))];}
  function unpackRelic(row){
-  if(!Array.isArray(row)||row.length!==14||row.some(n=>!Number.isInteger(n)))return null;
+  if(!Array.isArray(row)||![14,15].includes(row.length)||row.some(n=>!Number.isInteger(n)))return null;
   const def=R.DEFINITIONS[row[0]],rarity=['common','rare','legendary'][row[1]];if(!def||!rarity||![0,1].includes(row[2])||row[3]<-1||row[3]>5)return null;
-  const result={kind:def.kind,rarity,unique:!!row[2],element:elements[row[3]]??null,...Object.fromEntries(fields.map((k,i)=>[k,row[4+i]/1000]))};
-  if(def.kind==='bomb')result.bombVersion=2;return R.validRoll(result)?result:null;
+  const result={kind:def.kind,rarity,unique:!!row[2],element:elements[row[3]]??null,...Object.fromEntries(fields.map((k,i)=>[k,(row[4+i]||0)/1000]))};
+  if(def.kind==='bomb')result.bombVersion=2;if(def.kind==='god_leaf'&&row.length===15)result.godLeafVersion=2;return R.validRoll(result)?R.normalizeRoll(result):null;
  }
  function record(s,final=false){
   if(!s.hybrid||s.finished&&!final)return;const p=C.get(s),stageKey=C.label(s),rows=s.hybrid.stages ||= {};
@@ -40,7 +40,7 @@
  }
  function decode(input){
   try{
-   if(!input||input.version!==1||input.codec!=='ac-run-1'||!uid(input.uid)||bytes(input)>6144||!Array.isArray(input.cards)||input.cards.length>217||input.cards.some(id=>!C.card(id))||!Array.isArray(input.relics)||input.relics.length>64||!Array.isArray(input.boards)||input.boards.length>MAX_STAGES||!Array.isArray(input.augments)||input.augments.length>16||!input.stages||typeof input.stages!=='object'||Array.isArray(input.stages))return null;
+   if(!input||input.version!==1||input.codec!=='ac-run-1'||!uid(input.uid)||bytes(input)>6144||!Array.isArray(input.cards)||input.cards.length>C.pools.flat().length||input.cards.some(id=>!C.card(id))||!Array.isArray(input.relics)||input.relics.length>64||!Array.isArray(input.boards)||input.boards.length>MAX_STAGES||!Array.isArray(input.augments)||input.augments.length>16||!input.stages||typeof input.stages!=='object'||Array.isArray(input.stages))return null;
    const publicMeta=publicFields(input);if(['rank','tier','division','avatar','bannerCardId','peakElo','peakRank'].some(k=>Object.hasOwn(input,k)&&input[k]!==publicMeta[k]))return null;
    const relics=input.relics.map(unpackRelic);if(relics.some(r=>!r))return null;
    const augmentSets=input.augments.map(ids=>{if(!Array.isArray(ids)||ids.length>3||ids.some(id=>!A.get(id))||new Set(ids.map(id=>A.get(id).family)).size!==ids.length)throw Error('Invalid Augments.');return ids;});

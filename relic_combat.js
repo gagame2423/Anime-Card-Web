@@ -16,7 +16,8 @@
    const index=Math.min(line.indexOf(goku),line.indexOf(vegeta));line.splice(line.indexOf(goku),1);line.splice(line.indexOf(vegeta),1);line.splice(index,0,fused);
    api.runtime(fused).effectivePassiveId='goku-ssj3';api.addCopy(fused,'vegeta-ssj2');api.log('[RELIC] Unique Potara fused Goku SSJ3 and Vegeta SSJ2 into Vegito.');
   }
-  function dodge(u,base){if(u?.isVegito)return Math.max(0,.20-base);const r=trait(u);return r?.kind==='god_leaf'&&base<=.80?r.dodge:0;}
+  function dodge(u,base){if(u?.isVegito)return Math.max(0,.20-base);const r=trait(u);return r?.kind==='god_leaf'&&base<=.80?Math.max(0,Math.min(r.dodge,.80-base)):0;}
+  function dynamicAtk(bs,u){const r=trait(u);return r?.kind==='jackal_guns'?Math.max(0,Math.min(.30,Number(r.perEnemyAtk)||0))*(bs?.playerTeam?.includes(u)?bs.enemyTeam:bs?.enemyTeam?.includes(u)?bs.playerTeam:[]).filter(v=>v.hp>0&&!v.defeated).length:0;}
   function hasDodge(u){return Boolean(u?.isVegito||trait(u)?.kind==='god_leaf');}
   function crit(u){const r=trait(u);return {chance:r?.kind==='nail'?r.critChance:0,damage:r?.kind==='nail'?r.critDamage:0};}
   function onDodge(u){if(u?.isVegito)state(u).next=.25;}
@@ -49,6 +50,6 @@
    try{return callback();}finally{if(previous)actions.set(unit,previous);else actions.delete(unit);}
   }
   function burnTurns(source,turns){return trait(source)?.kind==='eternal_eye'?turns*2:turns;}
-  return {prepareBattle,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,chainChance,firstReady:u=>state(u).first,specialMultiplier,attackMultiplier,withAction};
+  return {prepareBattle,dynamicAtk,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,chainChance,firstReady:u=>state(u).first,specialMultiplier,attackMultiplier,withAction};
  };
 })(window);

@@ -10,9 +10,9 @@
     function addLayer(unit,amount,expiresAt=null,tag=null) {
       const value=bounded(api.shieldAmount?api.shieldAmount(unit,amount):amount); if(!unit||!alive(unit)||!value)return;
       const r=runtime(unit),before=r.shield,layers=r.yunoShields ||= [];
-      const existing=layers.find(layer=>layer.expiresAt===expiresAt&&(layer.tag??null)===tag);
+      const lease=api.lease?.()||null;const existing=layers.find(layer=>layer.expiresAt===expiresAt&&(layer.tag??null)===tag&&(layer.yuukiLease||null)===lease);
       if(existing)existing.amount=Math.min(LIMIT,existing.amount+value);
-      else layers.push({amount:value,expiresAt,...(tag?{tag}:{})});
+      else layers.push({amount:value,expiresAt,...(tag?{tag}:{}),...(lease?{yuukiLease:lease}:{})});
       if(api.writeShield)api.writeShield(unit,()=>{r.shield=Math.min(LIMIT,r.shield+value);});else r.shield=Math.min(LIMIT,r.shield+value);
       api.onShield?.(unit,before);
       if(!r.shieldKind)r.shieldKind='wind';

@@ -4,7 +4,7 @@
   const KEY = 'anime_card_rng_items_v1';
   // Two quest effects per period can overlap when claimed across a reset boundary.
   // Achievements (1 + .45 + .90 + .06 Spooky), quests (2*.10 + 2*.25), one equipped Cursed Finger (.66).
-  const MAX_KNOWN_DROP_MULTIPLIER = 3.77 * 6 + 1e-8; // Nami x2, Hakari x2, Aqua rewards x1.5.
+  const MAX_KNOWN_DROP_MULTIPLIER = 3.77 * 12 + 1e-8; // Nami x2, Hakari x2, Aqua x1.5, final-blow Osiris x2.
   const DURATION_MS = 600000;
   const SUPER_DURATION_MS = 300000;
   const SUPER_BASE = Object.freeze({super_luck_potion:'lucky_potion',super_rich_potion:'rich_potion',super_exp_potion:'exp_potion',super_speed_potion:'speed_potion'});
