@@ -67,7 +67,8 @@
    else{record(a,r.winner==='player',r.enemySurvivors,b.id);if(!r.ghost)record(b,r.winner==='enemy',r.playerSurvivors,a.id);}
   }
   for(const r of results){const a=C.get(s,r.a),b=C.get(s,r.b);if(a)host.AutoChessTelemetry?.commit(s,a,r.metrics?.player,C.label(s),rosters[a.id]||a);if(!creep&&!r.ghost&&b)host.AutoChessTelemetry?.commit(s,b,r.metrics?.enemy,C.label(s),rosters[b.id]||b);}
-  for(const {p,damage}of changes.values()){p.hp=Math.max(0,p.hp-damage);host.AutoChessAugments?.lastStand(s,p);}
+  for(const {p,damage}of changes.values())C.damageTactician(s,p,damage);
+  const eliminated=[...changes.values()].filter(v=>v.p.hp<=0).sort((a,b)=>b.damage-a.damage||a.p.id.localeCompare(b.p.id));C.placeEliminated(s,eliminated.map(v=>v.p));
   for(const{p,won,damage,opponent}of changes.values()){
    const r=results.find(r=>r.a===p.id||!r.ghost&&r.b===p.id),side=r?.a===p.id?'player':'enemy',other=changes.get(opponent),dealt=!creep&&!r?.ghost&&other?Math.max(0,other.beforeHp-other.p.hp):0;
    host.AutoChessTelemetry?.recordResult(s,p,won,dealt);
@@ -77,9 +78,8 @@
    if(!creep){p.history.push(opponent);p.history=p.history.slice(-3);const trait=S.analyze(C.deployed(rosters[p.id]||p),host.AutoChessAugments?.traits(rosters[p.id]||p)).find(r=>r.id==='Villian'&&r.tier);if(won&&trait)C.bonus(s,p,Math.min(3,trait.tier),'synergy');}
    if(creep){const drops=C.creepRelics(s,p);if(osiris)p.lastRelicDrops=[...drops,...C.creepRelics(s,p)];if(won)C.bonus(s,p,Math.min(3,s.stage),'creep');}
   }
-  const eliminated=[...changes.values()].filter(v=>!v.p.hp).sort((a,b)=>b.damage-a.damage||a.p.id.localeCompare(b.p.id));let rank=s.players.filter(p=>p.rank===null).length;for(const v of eliminated){v.p.rank=rank--;host.AutoChessTelemetry?.snapshot(s,v.p);}
   if(s.stage===100&&s.round===6&&C.alive(s).length>1){s.lastResults=results;C.finishAtLimit(s);return s;}
-  const living=C.alive(s);if(living.length<=1){if(living[0])living[0].rank=1;else{const survivor=s.players.find(p=>p.rank===1);if(survivor)survivor.hp=1;}s.finished=true;s.phase='complete';}else{s.phase='results';s.remaining=C.RULES.resultSeconds;}
+  const living=C.alive(s);if(living.length<=1){if(living[0])living[0].rank=1;s.finished=true;s.phase='complete';}else{s.phase='results';s.remaining=C.RULES.resultSeconds;}
   s.lastResults=results;C.finalize(s);s.revision++;return s;
  }
  const reward=(rank,multipliers)=>C.reward(rank,multipliers);

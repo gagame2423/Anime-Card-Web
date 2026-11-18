@@ -73,13 +73,13 @@
  const emptyEffects={freeRefresh:0,xpCost:4,interestCap:5,bonusSlots:0,fusionCategoryChance:0,rerollRefund:0,giftRarity:-1,noShields:false,lastStandHp:0,lastStandAtk:0};for(const k of additive)emptyEffects[k]=0;Object.freeze(emptyEffects);
  function effects(p){
   if(!p?.augments?.length)return emptyEffects;
-  const key=(p?.augments||[]).join('|')+'/'+!!p?.augmentState?.lastStandUsed,cached=p&&effectCache.get(p);if(cached?.key===key)return cached.value;
+  const key=(p?.augments||[]).join('|')+'/'+C.lastStandSpent(p),cached=p&&effectCache.get(p);if(cached?.key===key)return cached.value;
   const e={...emptyEffects};
   for(const id of p?.augments||[]){const a=get(id);if(!a)continue;const d=a.effects;for(const k of additive)e[k]+=d[k]||0;
    for(const k of ['freeRefresh','interestCap','bonusSlots','fusionCategoryChance','rerollRefund','lastStandHp','lastStandAtk'])e[k]=Math.max(e[k],d[k]||0);
    if(Number.isInteger(d.giftRarity))e.giftRarity=Math.max(e.giftRarity,d.giftRarity);e.noShields ||= !!d.noShields;e.xpCost=Math.min(e.xpCost,d.xpCost||4);
   }
-  if(p?.augmentState?.lastStandUsed){e.hp+=e.lastStandHp;e.atk+=e.lastStandAtk;}
+  if(C.lastStandSpent(p)){e.hp+=e.lastStandHp;e.atk+=e.lastStandAtk;}
   Object.freeze(e);if(p)effectCache.set(p,{key,value:e});return e;
  }
  function onLevel(s,p,from){
@@ -94,11 +94,11 @@
   const state=p.augmentState ||= {},key=C.label(s);if(state.xpRound===key)return;state.xpRound=key;p.xp+=e.emptyBenchXp;C.levelUp(p,s);p.lastAugmentXp={round:key,xp:e.emptyBenchXp};
  }
  function lastStand(s,p){
-  if(p.hp>0||p.augmentState?.lastStandUsed||!effects(p).lastStandHp)return false;
-  (p.augmentState ||= {}).lastStandUsed=true;p.hp=1;p.lastStandRound=C.label(s);return true;
+  if(p.hp>0||p.eliminated||p.rank!=null||C.lastStandSpent(p)||!effects(p).lastStandHp)return false;
+  C.consumeLastStand(p);p.hp=1;p.lastStandRound ||= C.label(s);return true;
  }
  function traits(p){const result={};for(const id of p?.augments||[]){const e=get(id)?.effects;if(e?.crest)result[e.crest]=(result[e.crest]||0)+e.crestCount;}return result;}
- function initialize(s){s.augmentWeek ||= getCurrentAugmentWeekKey();s.weeklyAugment ||= featured(s.augmentWeek);s.armories ||= {};for(const p of s.players)p.augments ||= [];}
+ function initialize(s){s.augmentWeek ||= getCurrentAugmentWeekKey();s.weeklyAugment ||= featured(s.augmentWeek);s.armories ||= {};for(const p of s.players){p.augments ||= [];C.reconcileTactician(p);}}
  function pool(s,p,tier){const owned=new Set((p.augments||[]).map(id=>get(id)?.family));return DEFINITIONS.filter(a=>a.tier===tier&&!owned.has(a.family)&&available(s,a));}
  function draw(s,p,tier,excluded=[]){const options=pool(s,p,tier).filter(a=>!excluded.includes(a.id)),signature=rotation(s).featured,weights=options.map(a=>a.family===signature?4:1);let roll=C.random(s)*weights.reduce((a,b)=>a+b,0);for(let i=0;i<options.length;i++){roll-=weights[i];if(roll<0)return options[i].id;}return options.at(-1)?.id;}
  function begin(s){

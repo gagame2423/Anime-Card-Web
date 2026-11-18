@@ -17,6 +17,7 @@
  const stage=s=>C.label(s)+'/'+s.phase;
  function createSession(initial,options={}){
   let state=C.clone(initial),link=links.get(state.id),authority=!!link?.isHost,base=null,settlement=null,disposed=false,closed=false,dirty=true,elapsed=0,last=host.performance.now(),pulseAt=0,stateAt=0,lastPhase='',seq=0,commandSeq=0,received=-1,barrier=null,allowCombat=false,startAt=0,manifest=null,jobs=[],worker=null,hostTime=0,lastPacket=Date.now(),unsubscribe=null,arrival=0;
+  for(const p of state.players)C.reconcileTactician(p);
   const local=state.localPlayerId,seen=new Map(),lastSeen=new Map(),assemblies=new Map(),misses=new Map(),departed=new Set();let heartbeatAt=0,phaseAt=Date.now(),resyncAt=0,reconnectAt=0;
   const error=message=>options.onError?.(message),now=()=>Date.now(),living=()=>state.live.humans.filter(h=>h.connected&&!h.reconnecting&&C.get(state,h.id).hp>0&&C.get(state,h.id).rank===null);
   const getState=()=>base?.state||settlement?.state||state;
@@ -76,8 +77,9 @@
    jobs=rows.map((row,i)=>{const args=[C.get(state,row.a),C.get(state,row.b),C.seedOf(manifest.roundSeed,row.a,row.b,i),{creep:row.creep,boss:row.boss,stage:state.stage}],combat=worker?host.AutoChessCombat.remoteCombat(worker,...args):host.AutoChessCombat.create(...args);return{...row,key:manifest.key,combat,target:0};});
   }
   function localise(shared){
-   const ownHybrid=getState().hybrid;
+   const previous=getState(),ownHybrid=previous.hybrid;
    const next={...shared,localPlayerId:local,hybrid:{...ownHybrid,runs:shared.hybrid.runs,mode:'live',humanPlayers:shared.live.humans.length},rankedStart:initial.rankedStart};
+   if(!Array.isArray(next.players))return null;for(const p of next.players){if(!p||typeof p!=='object')return null;C.reconcileTactician(p,previous.players.find(old=>old.id===p.id));}
    if(!next.matchStats)next.matchStats=state.matchStats;
    if(!C.validate(next))return null;return next;
   }

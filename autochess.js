@@ -15,7 +15,30 @@
  function uniform(s,a){if(!a.length)return null;const limit=Math.floor(0xffffffff/a.length)*a.length;let value;do{random(s);value=(s.rng>>>0)-1;}while(value>=limit);return a[value%a.length];}
  const teamCap=p=>Math.min(11,p.level+(host.AutoChessAugments?.effects(p).bonusSlots||0));
  const tier=u=>RARITIES.indexOf(card(u)?.rarity),price=u=>COSTS[tier(u)]||1;
- function player(id,name,bot=false){return{id,name,bot,hp:100,gold:10,level:1,xp:0,streak:0,winStreak:0,lossStreak:0,pendingLossGold:0,pendingStreakRelics:[],units:[],relics:Array(10).fill(null),loot:[],shop:Array(5).fill(null),locked:false,autoFuse:false,anvil:[],augments:[],econ:{round:'1-1',bonus:0,card:0,freeRefresh:0},rank:null,history:[],lastIncome:null};}
+ function player(id,name,bot=false){return{id,name,bot,hp:100,eliminated:false,lastStandUsed:false,gold:10,level:1,xp:0,streak:0,winStreak:0,lossStreak:0,pendingLossGold:0,pendingStreakRelics:[],units:[],relics:Array(10).fill(null),loot:[],shop:Array(5).fill(null),locked:false,autoFuse:false,anvil:[],augments:[],econ:{round:'1-1',bonus:0,card:0,freeRefresh:0},rank:null,history:[],lastIncome:null};}
+ // Match-lifetime state: a replay, stale room snapshot or legacy state may set
+ // these facts, but can never clear them. The top-level bit survives rebuilding
+ // augmentState; the legacy mirror preserves existing saves and UI metadata.
+ const lastStandSpent=p=>p?.lastStandUsed===true||p?.augmentState?.lastStandUsed===true||!!p?.lastStandRound;
+ function consumeLastStand(p){p.lastStandUsed=true;(p.augmentState ||= {}).lastStandUsed=true;}
+ function reconcileTactician(p,previous=null){
+  if(lastStandSpent(p)||lastStandSpent(previous))consumeLastStand(p);else p.lastStandUsed=false;
+  if(!p.lastStandRound&&previous?.lastStandRound)p.lastStandRound=previous.lastStandRound;
+  if(previous?.rank!=null)p.rank=previous.rank;
+  if(Number.isFinite(previous?.hp))p.hp=Math.min(p.hp,previous.hp);
+  p.eliminated=p.eliminated===true||previous?.eliminated===true||p.hp<=0||previous?.hp<=0||p.rank>1;
+  if(p.eliminated)p.hp=0;return p;
+ }
+ function damageTactician(s,p,amount){
+  reconcileTactician(p);if(p.hp<=0||p.rank!=null||!Number.isFinite(amount)||amount<=0)return 0;
+  const before=p.hp;p.hp=Math.max(0,p.hp-Math.floor(amount));
+  if(p.hp===0)host.AutoChessAugments?.lastStand(s,p);
+  if(p.hp<=0){p.hp=0;p.eliminated=true;}return Math.max(0,before-p.hp);
+ }
+ function placeEliminated(s,ordered=[]){
+  const rows=[...new Set([...ordered,...s.players])];let rank=s.players.filter(p=>p.rank===null).length;
+  for(const p of rows){reconcileTactician(p);if(p.hp>0||p.rank!==null)continue;p.eliminated=true;p.hp=0;p.rank=rank--;host.AutoChessTelemetry?.snapshot(s,p);}
+ }
  function unit(s,c){return{uid:'u'+(++s.serial),cardId:c.id,board:null,bench:null,reserve:false,relic:null,keep:false};}
  function relic(s,rarity='common',unique=false,kind=null){const d=kind||choose(s,host.RelicSystem.DEFINITIONS).kind;return{uid:'r'+(++s.serial),roll:host.RelicSystem.rollAtTier(d,rarity,unique,()=>random(s))};}
  function stash(p,r){if(!r)return;const free=p.relics.indexOf(null);if(free>=0)p.relics[free]=r;else p.loot.push(r);}
@@ -29,7 +52,7 @@
  }
  function roundKind(s){return s.round===1&&s.stage===1||s.stage>1&&s.round===4?'carousel':s.stage===1&&[2,3].includes(s.round)?'creep':s.stage>1&&s.round===6?'boss':'pvp';}
  function label(s){return s.stage+'-'+s.round;}
- function alive(s){return s.players.filter(p=>p.hp>0&&p.rank===null);}
+ function alive(s){return s.players.filter(p=>p.hp>0&&!p.eliminated&&p.rank===null);}
  function get(s,id=s.localPlayerId||'human'){host.AutoChessTelemetry?.ensure(s);return s.players.find(p=>p.id===id);}
  function deployed(p){return p.units.filter(u=>u.board!==null);}
  function economyRound(s,p){const key=label(s);if(p.econ?.round!==key)p.econ={round:key,bonus:0,card:0,freeRefresh:host.AutoChessAugments?.effects(p).freeRefresh||0};return p.econ;}
@@ -124,7 +147,7 @@
  function finishAtLimit(s){
   if(s.finished||s.stage!==100||s.round!==6)return false;
   const rows=alive(s).sort((a,b)=>b.hp-a.hp||(s.matchStats?.tacticians[b.id]?.totalDamageDealt||0)-(s.matchStats?.tacticians[a.id]?.totalDamageDealt||0)||b.level-a.level||seedOf(s.seed,a.id)-seedOf(s.seed,b.id));
-  rows.forEach((p,index)=>{p.rank=index+1;if(index)p.hp=0;});s.lobbyTiebreak='stage-limit';s.finished=true;s.phase='complete';s.remaining=0;s.finishReason=get(s).rank===1?'victory':'eliminated';host.AutoChessTelemetry?.finish(s);s.revision++;return true;
+  rows.forEach((p,index)=>{p.rank=index+1;if(index){p.hp=0;p.eliminated=true;}});s.lobbyTiebreak='stage-limit';s.finished=true;s.phase='complete';s.remaining=0;s.finishReason=get(s).rank===1?'victory':'eliminated';host.AutoChessTelemetry?.finish(s);s.revision++;return true;
  }
  function advance(s){if(s.finished||finishAtLimit(s))return;if(s.round===(s.stage===1?4:6)){s.stage++;s.round=1;}else s.round++;s.lastResults=[];if(roundKind(s)==='carousel')carousel(s);else plan(s);s.revision++;}
  function apply(s,playerId,action){
@@ -176,9 +199,10 @@
  const groupLocked=s=>Boolean(s?.hybrid?.humanPlayers>1&&!s.finished&&alive(s).length>1);
  function finalize(s,reason=null){
   const p=get(s);if(!p)return false;
+  placeEliminated(s);
   if(groupLocked(s))return false;
-  if(s.hybrid?.humanPlayers>1){const remaining=alive(s);if(remaining.length===1)remaining[0].rank=1;else if(!remaining.length){const winner=s.players.find(v=>v.rank===1);if(winner&&winner.hp<=0)winner.hp=1;}}
-  if(reason==='forfeit'&&!s.finished&&p.hp>0){p.rank=alive(s).length||1;p.hp=0;}
+  if(s.hybrid?.humanPlayers>1){const remaining=alive(s);if(remaining.length===1)remaining[0].rank=1;}
+  if(reason==='forfeit'&&!s.finished&&p.hp>0){p.rank=alive(s).length||1;p.hp=0;p.eliminated=true;}
   const champion=p.rank===1||alive(s).length===1&&alive(s)[0]===p;
   if(!s.finished&&p.hp>0&&!champion)return false;
   if(p.rank===null)p.rank=champion?1:Math.min(8,alive(s).length+1);
@@ -197,6 +221,7 @@
   if(s.reward!==undefined&&!validReward(s.reward,get(s)?.rank))return false;
   if(s.finished&&get(s)?.rank===null||s.paid&&!s.finished)return false;
   if(host.AutoChessAugments?.valid(s)===false||host.AutoChessTelemetry?.valid(s)===false)return false;
+  for(const p of s.players)if(p.lastStandUsed!==undefined&&typeof p.lastStandUsed!=='boolean'||p.eliminated!==undefined&&(typeof p.eliminated!=='boolean'||p.eliminated&&p.hp!==0))return false;
   for(const p of s.players)if(['winStreak','lossStreak','pendingLossGold'].some(key=>p[key]!==undefined&&!int(p[key],0,key==='pendingLossGold'?3:600)))return false;
   for(const p of s.players)if(p.econ&&(!Number.isInteger(p.econ.bonus)||p.econ.bonus<0||p.econ.bonus>16||!Number.isInteger(p.econ.card)||p.econ.card<0||p.econ.card>2||!int(p.econ.freeRefresh,0,3)))return false;
   const ids=new Set(),unitIds=new Set(),relicIds=new Set();
@@ -213,5 +238,5 @@
  // Startup invalidates the former recovery key; Worker runtimes have no storage.
  if(host.document)purgeCheckpoint();
 
- host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,uniform,teamCap,tier,price,create,player,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,sell,soloCombat,combatForge,fusionEligible,fusionGroup,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
+ host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,clone,random,seedOf,choose,uniform,teamCap,tier,price,create,player,lastStandSpent,consumeLastStand,reconcileTactician,damageTactician,placeEliminated,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,sell,soloCombat,combatForge,fusionEligible,fusionGroup,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
 })(window);
