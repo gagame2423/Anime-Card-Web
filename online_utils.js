@@ -28,7 +28,7 @@
   if(credential&&credential!=='PASTE_YOUR_PASSWORD_HERE'){
    iceServers.push({urls:[...TURN_SERVER.urls],username:TURN_SERVER.username,credential});
   }else{
-   host.console?.warn?.('TURN chưa được cấu hình: điền credential trong TURN_SERVER của online_utils.js. Chỉ sử dụng STUN.');
+   host.console?.warn?.('TURN is not configured. Add TURN credentials in online_utils.js to support relayed connections. Using STUN only.');
   }
   return{config:{iceServers},debug:1};
  }

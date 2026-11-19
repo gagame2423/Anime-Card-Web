@@ -7,7 +7,7 @@
  const object=v=>Boolean(v&&typeof v==='object'&&!Array.isArray(v)),el=id=>doc?.getElementById(id);
  let bridge={},configured=false,auth=null,db=null,account=null,verified=false,enabled=false,sdkReady=false,initializing=null,identityJob=null,identityTarget=null,epoch=0;
  let busy=false,restoring=false,popupBusy=false,disconnecting=false,capturing=false,dirty=0,timer=null,lastWrite=0,pendingRevision=0,watch=null,recoveryBlocked=false;
- let pendingCredential=null,autoChessHold=false;
+ let pendingCredential=null,autoChessHold=false,cloudResumePending=false;
  let status='Local save active. Account sync is optional.';
  function localProfile(){
   try{const saved=JSON.parse(host.localStorage.getItem(PROFILE_KEY)||'null');if(saved?.version===1&&/^local_[a-zA-Z0-9_-]{8,80}$/.test(saved.uid)&&typeof saved.name==='string'&&saved.name.length>0)return saved;}catch(_){}
@@ -96,7 +96,9 @@
   let tokenReady=false;
   const job=(async()=>{try{
    if(host.navigator.onLine===false){update('Offline · local progress is active.');return;}await verifyToken(user);if(ticket!==epoch||auth.currentUser?.uid!==user.uid)return;verified=true;tokenReady=true;host.dispatchEvent(new host.CustomEvent('cloud-session-ready'));
-   if(!configured)return;const remote=await readRemote(user.uid);if(!current(ticket,user.uid))return;
+   if(!configured)return;
+   if(autoChessHold){cloudResumePending=true;return;}
+   const remote=await readRemote(user.uid);if(!current(ticket,user.uid))return;
    if(!remote){meta={...meta,uid:user.uid,revision:0,digest:'',dirty:true,autoSync:true};saveMeta();enabled=true;update('Account connected · backing up this local profile');await flush(true);return;}
    if(!validRemote(remote))throw Error('Cloud save is invalid; local progress is unchanged.');
    if(meta.uid===user.uid&&meta.revision===remote.revision&&meta.digest===remote.digest){enabled=true;meta.autoSync=true;saveMeta();listen(user.uid);update('Account connected · local-first sync enabled');if(meta.dirty)schedule(1500);}
@@ -209,10 +211,16 @@
   }
  });
  function holdAutoChess(){autoChessHold=true;clearTimer();stopWatch();}
- function releaseAutoChess(){autoChessHold=false;if(cloudReady()&&meta.uid===account?.uid)listen(account.uid);afterActivity();}
+ function releaseAutoChess(){autoChessHold=false;if(cloudResumePending){cloudResumePending=false;resumeOnlineCloud();}else if(cloudReady()&&meta.uid===account?.uid)listen(account.uid);afterActivity();}
+ function resumeOnlineCloud(){
+  if(host.navigator.onLine===false)return;
+  if(autoChessHold){cloudResumePending=true;return;}
+  if(meta.autoSync&&meta.uid||auth?.currentUser)void initialize().then(sdk=>{if(sdk.currentUser)void observeUser(sdk.currentUser);}).catch(()=>{});
+  else update('Online · local save active.');
+ }
  function afterActivity(){update();if(meta.dirty)schedule(1500);}
  function mount(){el('cloudLoginOpenButton')?.addEventListener('click',()=>{bridge.open?.('cloudAccountModal');update();});el('cloudGoogleButton')?.addEventListener('click',google);for(const [id,mode]of [['cloudEmailRegister','register'],['cloudEmailLink','link']])el(id)?.addEventListener('click',()=>emailAction(mode));el('cloudPasswordReset')?.addEventListener('click',passwordReset);el('cloudEmailForm')?.addEventListener('submit',event=>{event.preventDefault();void emailAction(account?'link':'login');});el('cloudSyncButton')?.addEventListener('click',retry);el('cloudLogoutButton')?.addEventListener('click',logout);el('cloudReloadButton')?.addEventListener('click',loadCloud);el('cloudDisplayName')?.addEventListener('change',event=>{meta.displayName=event.target.value.trim().slice(0,40);markDirty();update();});update();}
- host.addEventListener('online',()=>{if(meta.autoSync&&meta.uid)void initialize().then(()=>{if(auth.currentUser)void observeUser(auth.currentUser);}).catch(()=>{});else update('Online · local save active.');});
+ host.addEventListener('online',resumeOnlineCloud);
  host.addEventListener('offline',()=>pauseCloud('Offline · gameplay and local saving continue.'));
  host.addEventListener('storage',event=>{if(event.key===META_KEY&&event.newValue){try{const other=JSON.parse(event.newValue);if(other.uid!==meta.uid||other.revision!==meta.revision||other.digest!==meta.digest)pauseCloud('Another tab synced this profile. This tab keeps its local gameplay active.');}catch(_){}}});
  host.CloudSaveSystem=Object.freeze({CONFIG,META_KEY,RESTORE_KEY,BOOT_KEY,PROFILE_KEY,recovered,autoChessService,holdAutoChess,releaseAutoChess,markDirty,start,initialize,retry,flush,google,emailAction,passwordReset,logout,loadCloud,leaderboardView,leaderboard:async metric=>(await leaderboardView(metric)).rows,afterActivity,blockForRecovery(message){recoveryBlocked=true;pauseCloud(message);},get authVerified(){return canUseCloud();},get googleVerified(){return canUseCloud();},get cloudReady(){return cloudReady();},get ready(){return cloudReady();},get firestore(){return canUseCloud()?db:null;},get activeUser(){return account||guest;},get publicName(){return(meta.displayName||account?.displayName||profile.name).trim().slice(0,40);},get playAllowed(){return !host.GameStartup?.failed;},get blocking(){return false;},get recoveryBlocked(){return recoveryBlocked;},get status(){return status;},configure(options){bridge=options||{};configured=true;mount();}});

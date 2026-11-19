@@ -751,3 +751,11 @@
 #autochessModal.ac-compact .ac-invite-network{gap:2px}
 #autochessModal.ac-compact :is(.ac-connection-modes button,.ac-link-fallback,.ac-connection-row .ac-link-badge){font-size:9px;padding:3px 5px}
 #autochessModal.ac-compact .ac-arena-caption .ac-link-badge{font-size:7px;padding:1px 3px}
+
+/* Always reachable from the match toolbar, including when the side drawers are closed. */
+#autochessModal .ac-live-resync{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;white-space:nowrap;min-height:29px;padding:3px 8px;border:1px solid #6bb2ba8c;border-radius:7px;color:#bde7eb;background:#12333c;font-size:10px;transition:background-color 160ms,border-color 160ms}
+#autochessModal .ac-live-resync:hover,#autochessModal .ac-live-resync:focus-visible{background:#24515a;border-color:#9be0e8}
+#autochessModal .ac-live-resync>span:first-child{font-size:16px;line-height:1}
+#autochessModal .ac-live-resync[hidden]{display:none}
+#autochessModal.ac-drawers .ac-live-resync{min-width:28px;padding:2px 4px}
+#autochessModal.ac-drawers .ac-live-resync .ac-resync-text{display:none}
