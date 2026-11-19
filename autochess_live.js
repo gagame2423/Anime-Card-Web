@@ -64,7 +64,7 @@
   function startBarrier(){
    if(allowCombat)return true;if(barrier)return false;
    barrier={token:C.label(state)+'/'+(++arrival),pending:new Set(living().filter(h=>h.uid!==link.self).map(h=>h.uid)),until:now()+LOCK_WAIT};
-   state.live.locked=true;state.revision++;publish();safeSend({type:'lock',token:barrier.token});return false;
+   state.live.locked=true;C.autoDeployBench(state);state.revision++;publish();safeSend({type:'lock',token:barrier.token});return false;
   }
   function openManifest(){
    const key=C.label(state);manifest={key,roundSeed:state.roundSeed,pairs:C.clone(state.pairs),startsAt:now()+600};startAt=manifest.startsAt;

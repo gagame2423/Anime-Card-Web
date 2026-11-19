@@ -93,6 +93,27 @@
    const old={board:u.board,bench:u.bench,reserve:u.reserve};u.board=index;u.bench=null;u.reserve=false;if(other&&other!==u)Object.assign(other,old);
   }else if(where==='bench'){if(!int(index,0,8))throw Error('Choose a bench slot.');const other=p.units.find(v=>v.bench===index),old={board:u.board,bench:u.bench,reserve:u.reserve};u.board=null;u.bench=index;u.reserve=false;if(other&&other!==u)Object.assign(other,old);}else throw Error('Invalid destination.');p.anvil=p.anvil.filter(id=>p.units.some(v=>v.uid===id&&v.board===null));drain(p);
  }
+ // Edge cells first. Row 0 is the front of a player's half.
+ const AUTO_DEPLOY_TILES=[0,6,21,27,2,4,23,25,7,13,14,20,1,5,22,26,3,24,8,12,15,19,9,11,16,18,10,17];
+ function autoDeployBench(s){
+  if(s.finished||s.phase!=='planning')return 0;
+  let total=0;
+  for(const p of alive(s)){
+   if(p.bot)continue;
+   const field=deployed(p),open=teamCap(p)-field.length;
+   if(open<=0)continue;
+   const bench=p.units.filter(u=>int(u.bench,0,RULES.bench-1)&&u.board===null&&!u.reserve).sort((a,b)=>a.bench-b.bench);
+   if(!bench.length)continue;
+   const occupied=new Set(field.map(u=>u.board)),tiles=AUTO_DEPLOY_TILES.filter(tile=>!occupied.has(tile));
+   const count=Math.min(open,bench.length,tiles.length);
+   if(!count)continue;
+   for(let i=0;i<count;i++)move(p,bench[i].uid,'board',tiles[i]);
+   p.lastAutoDeploy={round:label(s),count};
+   total+=count;
+  }
+  if(total)s.revision++;
+  return total;
+ }
  function sell(p,uid){const u=p.units.find(u=>u.uid===uid);if(!u)throw Error('Unit unavailable.');earn(p,price(u));stash(p,u.relic);p.units=p.units.filter(v=>v!==u);p.anvil=p.anvil.filter(id=>id!==uid);drain(p);}
  const soloCombat=s=>s.phase==='combat'&&!s.live&&(s.hybrid?.humanPlayers??1)===1;
  const combatForge=(s,p)=>soloCombat(s)&&p===get(s)&&p.hp>0&&!s.finished;
@@ -240,5 +261,5 @@
  // Startup invalidates the former recovery key; Worker runtimes have no storage.
  if(host.document)purgeCheckpoint();
 
- host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,poolFor,clone,random,seedOf,choose,uniform,teamCap,tier,price,create,player,lastStandSpent,consumeLastStand,reconcileTactician,damageTactician,placeEliminated,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,sell,soloCombat,combatForge,fusionEligible,fusionGroup,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
+ host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,poolFor,clone,random,seedOf,choose,uniform,teamCap,tier,price,create,player,lastStandSpent,consumeLastStand,reconcileTactician,damageTactician,placeEliminated,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,autoDeployBench,sell,soloCombat,combatForge,fusionEligible,fusionGroup,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
 })(window);

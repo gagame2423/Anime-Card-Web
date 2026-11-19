@@ -711,3 +711,26 @@
 @media(max-height:340px){#autochessModal.ac-board-focus{--ac-header-size:34px;--ac-bench-size:36px;--ac-full-dock-size:108px}#autochessModal.ac-board-focus .ac-top{height:34px}#autochessModal.ac-board-focus .ac-arena{grid-template-rows:10px minmax(0,1fr) 11px var(--ac-bench-size) auto}#autochessModal.ac-board-focus .ac-arena-caption{height:10px}#autochessModal.ac-board-focus .ac-bench-label{height:11px}#autochessModal.ac-board-focus .ac-token{min-height:20px}#autochessModal.ac-board-focus .ac-token-name{font-size:9px;line-height:9px;max-height:18px;padding-inline:5px}#autochessModal.ac-board-focus .ac-unit-card>strong{font-size:9px;line-height:10px;top:8px}#autochessModal.ac-board-focus .ac-token-relic{width:13px;height:13px;min-width:13px;min-height:13px}#autochessModal .ac-result-copy{padding:8px}}
 @container (height < 170px){#autochessModal.ac-board-focus .ac-token-name{-webkit-line-clamp:1;max-height:11px}}
 @media(prefers-reduced-motion:reduce){#autochessModal :is(.ac-travel-unit,.ac-travel-orb,.ac-venue-shift,.ac-travel-label,.ac-result-copy,.ac-result-wave,.ac-result-particles>i,.ac-level-burst,.ac-forge-flash:after,.ac-dock){animation:none!important}#autochessModal .ac-travel-unit{transform:translate3d(var(--ac-from-x),var(--ac-from-y),0) translate(-50%,-50%)}#autochessModal :is(.ac-travel-orb,.ac-venue-shift,.ac-result-wave,.ac-result-particles){display:none}#autochessModal :is(.ac-offer,.ac-unit-card,.ac-planner-card,.ac-plan-slot,.ac-draft-unit){transition:none}}
+
+/* Fold the unused opponent half only on narrow screens and only at home in Planning. */
+@property --ac-board-fold{syntax:"<number>";inherits:true;initial-value:0}
+#autochessModal.ac-narrow-board .ac-field{
+ --ac-board-fold:0;
+ --ac-away-row:calc(12.5% * (1 - var(--ac-board-fold)));
+ --ac-home-row:calc(12.5% * (1 + var(--ac-board-fold)));
+ transition:--ac-board-fold 180ms ease;
+}
+#autochessModal.ac-narrow-board.ac-home-planning .ac-field{--ac-board-fold:1}
+#autochessModal.ac-narrow-board .ac-tiles{
+ padding:0;gap:0;
+ grid-template-rows:repeat(4,minmax(0,var(--ac-away-row))) repeat(4,minmax(0,var(--ac-home-row)));
+}
+#autochessModal.ac-narrow-board .ac-tile{min-height:0;overflow:hidden;box-shadow:inset 0 0 0 1px #0b262a60}
+#autochessModal.ac-narrow-board .ac-tile.is-enemy{opacity:calc(1 - var(--ac-board-fold))}
+#autochessModal.ac-narrow-board.ac-home-planning .ac-tile.is-enemy{visibility:hidden;pointer-events:none}
+#autochessModal.ac-narrow-board .ac-token:not(.is-enemy){height:calc(12.5cqh * (1 + var(--ac-board-fold)) - 3px)}
+#autochessModal.ac-narrow-board .ac-midline{top:calc(50% * (1 - var(--ac-board-fold)));opacity:calc(1 - var(--ac-board-fold))}
+@media(prefers-reduced-motion:reduce){#autochessModal.ac-narrow-board .ac-field{transition:none}}
+/* Hover previews stay transparent to input; a pinned preview can be scrolled. */
+.ac-rich-relic.is-pinned,.ac-rich-relic.is-pinned *{pointer-events:auto!important}
+.ac-rich-relic .ac-relic-matches>span{min-width:0}
