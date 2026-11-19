@@ -81,7 +81,7 @@
  // It imports only source modules, owns no browser storage and dies on Save & Exit.
  function createWorkerPool(){
   const modules=['cards','skins','category','elements','grimoire','yuno','requiem','reagan','fate','spooky_passives','gomen','shibuya','companions','combat_stats','dragon_skills','relic_combat','tower_200_passives','ragna_passives','mourner','akatsuki_passives','enten','titan_passives','turn_phase','baller_passives','tensura_passives','sins_passives','bleach_passives','hextech_passives','content_passives','passives','relics','autochess_ranked','autochess','autochess_synergies','autochess_telemetry','autochess_augments','autochess_ai','autochess_strategy','autochess_bots','autochess_combat'];
-  const urls=modules.map(name=>new URL(name+'.js?v='+(['autochess','autochess_combat'].includes(name)?'20261119-ac-formation-1':'20261119-hextech-1'),host.document.baseURI).href);
+  const urls=modules.map(name=>new URL(name+'.js?v='+(['autochess','autochess_combat'].includes(name)?'20261119-ac-live-reconcile-1':'20261119-hextech-1'),host.document.baseURI).href);
   const bootstrap=`self.window=self;self.InventorySystem={registerItem(){}};self.OnlineUtils={stable:JSON.stringify};self.localStorage={getItem(){return null},setItem(){throw Error('Combat workers cannot write storage')}};\nimportScripts(...${JSON.stringify(urls)});\nconst fights=new Map();\nfunction visual(u){const r=u.passiveState||{},c=u.card,g=u.grid;return {card:{id:c.id,skinId:c.skinId||null,name:c.name,element:c.element,rarity:c.rarity,image:c.image,category:c.category||[],passive:{name:c.passive?.name||'No Passive'}},hp:u.hp,maxHp:u.maxHp,atk:u.atk,defeated:u.defeated,isClone:u.isClone,isSummoned:u.isSummoned,relic:u.relic||null,grid:g?{uid:g.uid,serial:g.serial,side:g.side,fusionDepth:g.fusionDepth||0,x:g.x,y:g.y,mana:g.mana}:null,passiveState:{hextechSkills:r.hextechSkills||null,shield:r.shield||0,freezeTurns:r.freezeTurns||0,stunTurns:r.stunTurns||0,hypnosisTurns:r.hypnosisTurns||0,fearTurns:r.fearTurns||0,voidTurns:r.contentSkills?.['vanilla-ice']?.voidTurns||0,poison:r.poison?.length?[{}]:[],burn:r.burn?.length?[{}]:[],bleed:r.bleed?.length?[{}]:[],bleach:r.bleach?{hakka:r.bleach.hakka,vista:r.bleach.vista}:null,tensura:r.tensura?{sage:r.tensura.sage}:null}};}\nfunction publish(id,row){const f=row.fight,events=f.events.filter(e=>e.id>row.event);if(events.length)row.event=events.at(-1).id;postMessage({id,type:'frame',done:f.done,time:f.time,remaining:f.remaining,outcome:f.outcome(),metrics:f.telemetryFrame(),playerTeam:f.battle.playerTeam.map(visual),enemyTeam:f.battle.enemyTeam.map(visual),events});}\nonmessage=event=>{const m=event.data;try{if(m.type==='init'){const row={fight:AutoChessCombat.create(m.a,m.b,m.seed,m.options),event:0};fights.set(m.id,row);publish(m.id,row);}else if(m.type==='step'){const row=fights.get(m.id);if(row){row.fight.step(m.dt);publish(m.id,row);}}else if(m.type==='dispose'){fights.get(m.id)?.fight.dispose();fights.delete(m.id);}}catch(e){postMessage({id:m.id,type:'error',message:e.message});}};postMessage({type:'ready'});`;
   const url=host.URL.createObjectURL(new Blob([bootstrap],{type:'application/javascript'})),worker=new Worker(url),listeners=new Map();let next=0,closed=false,failed=false;
   worker.onmessage=e=>{if(e.data.type==='ready'){host.URL.revokeObjectURL(url);return;}listeners.get(e.data.id)?.(e.data);};
@@ -100,14 +100,14 @@
 
  function createSession(initial,options={}){
   if(initial.live&&!initial.finished&&!options.authority)return host.AutoChessLive.createSession(initial,options);
-  let state=clone(initial),jobs=[],current=null,disposed=false,speed=1,saveClock=0,botClock=0,pool=null,claiming=false;
+  let state=clone(initial),jobs=[],current=null,disposed=false,speed=1,saveClock=0,botClock=0,pool=null,claiming=false,combatStarted=0,firstHumanFinish=null,recoverRound=false;
   T.ensure(state);A.initialize(state);for(const p of state.players)C.economyRound(state,p);
   function error(e){options.onError?.(e.message||String(e));}
   function checkpoint(){if(disposed)return false;if(!C.save(state)){error('Unable to save Auto Chess. Free browser storage before continuing.');return false;}return true;}
   function change(fn){if(disposed)return false;const previous=clone(state);try{fn();if(!C.save(state))throw Error('Unable to save this action; nothing was consumed.');options.onChange?.();return true;}catch(e){state=previous;T.ensure(state);error(e);return false;}}
   function disposeJobs(){for(const job of jobs)job.combat?.dispose();jobs=[];current=null;}
   function descriptors(){const kind=C.roundKind(state);if(['creep','boss'].includes(kind))return C.alive(state).map(p=>({a:p.id,b:'creeps',ghost:true,creep:true,boss:kind==='boss'}));return state.pairs;}
-  function prepareCombat(){disposeJobs();jobs=descriptors().map((p,i)=>({...p,seed:C.seedOf(state.roundSeed,p.a,p.b,i),rosterA:clone(C.get(state,p.a)),rosterB:p.creep?null:clone(C.get(state,p.b)),combat:null,result:null}));}
+  function prepareCombat(){disposeJobs();combatStarted=host.performance.now();firstHumanFinish=null;recoverRound=false;jobs=descriptors().map((p,i)=>({...p,seed:C.seedOf(state.roundSeed,p.a,p.b,i),rosterA:clone(C.get(state,p.a)),rosterB:p.creep?null:clone(C.get(state,p.b)),combat:null,result:null}));}
   function startCombat(){if(disposed||state.finished||state.phase!=='planning'||options.beforeCombat?.()===false)return;if(!change(()=>{host.AutoChessOnline?.prepareRound(state);if(C.finalize(state)){quoteReward();return;}for(const p of C.alive(state).filter(p=>p.bot))B.plan(state,p,24);if(!state.live)C.autoDeployBench(state);host.AutoChessOnline?.record(state);if(C.roundKind(state)==='pvp')B.pair(state);state.phase='combat';state.remaining=0;state.revision++;}))return;if(state.finished){stopFights();claim();}else prepareCombat();}
   function ready(){if(state.live&&!options.allowAdvance)return;if(disposed||state.finished||C.groupLocked(state)&&C.get(state).hp<=0)return;switch(state.phase){case'carousel':if(C.get(state).hp>0&&!state.carousel.some(u=>u.claimedBy===C.get(state).id)){error('Choose your carousel card first.');return;}change(()=>{for(const p of state.draftOrder.map(id=>C.get(state,id)).filter(p=>p.hp>0))if(!state.carousel.some(u=>u.claimedBy===p.id)){state.draftWave=4;B.draft(state,p);}C.advance(state);});break;case'augment':error('Choose one Augment first.');break;case'planning':startCombat();break;case'results':change(()=>C.advance(state));break;}if(state.finished)finish();}
   function dispatchFor(id,action){return change(()=>C.apply(state,id,action));}
@@ -131,11 +131,55 @@
    if(!change(()=>{for(const job of jobs){const m=job.result?.metrics||job.combat?.telemetry?.();if(!m)continue;T.commit(state,C.get(state,job.a),m.player,C.label(state),job.rosterA);if(!job.ghost&&!job.creep)T.commit(state,C.get(state,job.b),m.enemy,C.label(state),job.rosterB);}if(!C.finalize(state,reason))throw Error('The match is still active.');quoteReward();}))return false;
    stopFights();return claim();
   }
+  const combatArgs=job=>[job.rosterA,job.rosterB,job.seed,{creep:job.creep,boss:job.boss,stage:state.stage}];
+  function finishJob(job,result){job.result={a:job.a,b:job.b,ghost:job.ghost,...result};}
+  function nativeRecovery(job){job.combat?.dispose();job.combat=create(...combatArgs(job));job.recovering=true;if(job.a===C.get(state).id||!job.ghost&&job.b===C.get(state).id)current=job.combat;}
+  function combatTick(dt){
+   const liveHost=!!state.live&&options.authority,now=host.performance.now();
+   // Reconcile only on the authority, from frozen boards and their original seeds.
+   // A guest finishing its visual replay never changes damage or rewards.
+   if(liveHost&&!recoverRound){
+    const humans=state.live.humans.filter(h=>h.connected&&!h.reconnecting&&C.get(state,h.id).hp>0);
+    const finished=humans.filter(h=>jobs.some(j=>j.result&&(j.a===h.id||!j.ghost&&j.b===h.id))).length;
+    if(finished&&firstHumanFinish===null)firstHumanFinish=now;
+    recoverRound=(finished>0&&finished===humans.length)||(firstHumanFinish!==null&&now-firstHumanFinish>=4000)||now-combatStarted>=(LIMIT+8)*1000;
+   }
+   const budget=now+8;let openedJob=false;
+   for(const job of jobs)if(!job.result){
+    if(recoverRound&&host.performance.now()>=budget)break;
+    try{
+     if(job.needsRecovery||recoverRound&&(!job.combat||job.combat.remote===true))nativeRecovery(job);
+     if(!job.combat){
+      if(openedJob)continue;openedJob=true;
+      const args=combatArgs(job);
+      if(options.worker&&host.Worker&&/^https?:$/.test(host.location.protocol)&&!pool?.failed){
+       try{pool ||= createWorkerPool();job.combat=remoteCombat(pool,...args);}catch(_){job.combat=create(...args);}
+      }else job.combat=create(...args);
+      if(job.a===C.get(state).id||!job.ghost&&job.b===C.get(state).id)current=job.combat;
+     }
+     if(job.recovering||recoverRound){for(let n=0;n<24&&!job.combat.done&&host.performance.now()<budget;n++)job.combat.step(.5);}
+     else job.combat.step(dt*speed);
+     job.combat.interpolate(dt);
+     if(job.combat.done)finishJob(job,job.combat.outcome());
+    }catch(e){
+     if(!liveHost)throw e;
+     if(!job.recovering&&!job.needsRecovery){job.needsRecovery=true;continue;}
+     // A repeat simulation error cannot hold the room or award a false win.
+     finishJob(job,{winner:'draw',playerSurvivors:0,enemySurvivors:0,time:job.combat?.time||0,recovered:true});
+     error('A fight could not be replayed and was settled as a draw.');
+    }finally{if(job.recovering)job.needsRecovery=false;}
+   }
+   if(jobs.length&&jobs.every(j=>j.result)){
+    const results=jobs.map(j=>j.result);
+    if(change(()=>{
+     const rosters={};for(const j of jobs){rosters[j.a]=j.rosterA;if(!j.ghost&&!j.creep)rosters[j.b]=j.rosterB;}
+     B.settle(state,results,rosters);C.clearLiveRound(state);if(C.finalize(state))quoteReward();
+    })){disposeJobs();if(state.finished){stopFights();claim();}}
+   }
+  }
+  function advanceResults(){return !disposed&&!state.finished&&state.phase==='results'&&change(()=>C.advance(state));}
   function tick(dt){if(disposed||state.finished||!(dt>0))return;if(terminal()){finish();return;}dt=Math.min(.5,dt);saveClock+=dt;
-   if(state.phase==='combat'){
-    for(const job of jobs){if(!job.combat){const args=[job.rosterA,job.rosterB,job.seed,{creep:job.creep,boss:job.boss,stage:state.stage}];if(options.worker&&host.Worker&&/^https?:$/.test(host.location.protocol)&&!pool?.failed){try{pool ||= createWorkerPool();job.combat=remoteCombat(pool,...args);}catch(_){job.combat=create(...args);}}else job.combat=create(...args);if(job.a===C.get(state).id||job.b===C.get(state).id)current=job.combat;break;}}
-    for(const job of jobs)if(job.combat&&!job.result){job.combat.step(dt*speed);job.combat.interpolate(dt);if(job.combat.done)job.result={a:job.a,b:job.b,ghost:job.ghost,...job.combat.outcome()};}
-    if(jobs.length&&jobs.every(j=>j.result)){const results=jobs.map(j=>j.result);if(change(()=>{const rosters={};for(const j of jobs){rosters[j.a]=j.rosterA;if(!j.ghost&&!j.creep)rosters[j.b]=j.rosterB;}B.settle(state,results,rosters);if(C.finalize(state))quoteReward();})){disposeJobs();if(state.finished){stopFights();claim();}}}
+   if(state.phase==='combat'){combatTick(dt);
    }else if(state.phase!=='complete'){
     state.remaining=Math.max(0,state.remaining-dt);botClock+=dt;
     if(state.phase==='carousel'){
@@ -146,14 +190,14 @@
     }else if(state.phase==='planning'){
      if(botClock>=.6){botClock=0;change(()=>{for(const p of C.alive(state).filter(p=>p.bot))B.plan(state,p,3);state.revision++;});}
      if(!state.remaining)startCombat();
-    }else if(state.phase==='results'&&!state.remaining)change(()=>C.advance(state));
+    }else if(state.phase==='results'&&!state.remaining)advanceResults();
    }
    if(state.finished){finish();return;}
    if(saveClock>=1){saveClock=0;checkpoint();}
   }
   if(state.phase==='carousel')B.prepareDraft(state);
   if(terminal())finish();else if(state.phase==='combat')prepareCombat();else checkpoint();
-  return{get state(){return state;},get speed(){return speed;},set speed(v){speed=[1,2,3].includes(v)?v:1;},get workerCount(){return pool&&!pool.failed?1:0;},get combat(){return current||jobs.find(j=>j.combat)?.combat;},dispatch,dispatchFor,startCombat,ready,tick,claim,abandon,forfeit:abandon,checkpoint,opponentLabel(id){const job=jobs.find(j=>j.a===id||!j.ghost&&j.b===id);if(!job)return C.roundKind(state)==='carousel'?'A card and Relic for every tactician':C.roundKind(state)==='boss'?'Neutral Boss Round':'Planning · '+C.roundKind(state).toUpperCase();return 'VS '+(job.creep?'Arcane Guardians':C.get(state,job.a===id?job.b:job.a)?.name)+(job.ghost?' · Echo':'');},combatFor(id){return jobs.find(j=>j.a===id||!j.ghost&&j.b===id)?.combat||null;},dispose(){if(disposed)return;disposed=true;disposeJobs();pool?.dispose();pool=null;}};
+  return{get state(){return state;},get speed(){return speed;},set speed(v){speed=[1,2,3].includes(v)?v:1;},get workerCount(){return pool&&!pool.failed?1:0;},get combat(){return current||jobs.find(j=>j.combat)?.combat;},dispatch,dispatchFor,startCombat,advanceResults,ready,tick,claim,abandon,forfeit:abandon,checkpoint,opponentLabel(id){const job=jobs.find(j=>j.a===id||!j.ghost&&j.b===id);if(!job)return C.roundKind(state)==='carousel'?'A card and Relic for every tactician':C.roundKind(state)==='boss'?'Neutral Boss Round':'Planning · '+C.roundKind(state).toUpperCase();return 'VS '+(job.creep?'Arcane Guardians':C.get(state,job.a===id?job.b:job.a)?.name)+(job.ghost?' · Echo':'');},combatFor(id){return jobs.find(j=>j.a===id||!j.ghost&&j.b===id)?.combat||null;},dispose(){if(disposed)return;disposed=true;disposeJobs();pool?.dispose();pool=null;}};
  }
  function rangeOf(card){return Number(card?.attackRange)>0?Math.min(4,Math.max(1,Math.floor(card.attackRange))):B.ranged(card)?card.category.includes('Gunner')?4:3:1;}
  host.AutoChessCombat=Object.freeze({rangeOf,STEP,LIMIT,overtimeAt,timeoutDecision,stats,makeUnit,creeps,create,createSession,createWorkerPool,remoteCombat});

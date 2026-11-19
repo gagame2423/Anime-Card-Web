@@ -165,13 +165,15 @@
  }
  function released(s,id){const i=s.draftOrder.indexOf(id);return i>=0&&(s.stage===1||i<(s.draftWave+1)*2);}
  function draft(s,p,uid){const u=s.carousel.find(v=>v.uid===uid);if(!u||u.claimedBy||!released(s,p.id)||s.carousel.some(v=>v.claimedBy===p.id))throw Error('Wait for your release pair or choose an unclaimed unit.');u.claimedBy=p.id;const result=clone(u);delete result.claimedBy;acquire(p,result);return result;}
- function plan(s){s.draftPlan=null;s.phase='planning';s.remaining=RULES.planningSeconds;s.pairs=[];s.roundSeed=seedOf(s.seed,s.stage,s.round);for(const p of alive(s)){economyRound(s,p);const lossGold=bonus(s,p,p.pendingLossGold||0,'lossStreak');p.pendingLossGold=0;if(lossGold){p.lastIncome ||= {};p.lastIncome.lossStreak=lossGold;}if(p.locked)p.locked=false;else shop(s,p);drain(p);}host.AutoChessAugments?.begin(s);s.revision++;}
+ // Ready, lock and board receipts belong only to the round that issued them.
+ function clearLiveRound(s){if(!s.live)return;s.live.ready={};s.live.locked=false;delete s.live.lockHashes;}
+ function plan(s){clearLiveRound(s);s.draftPlan=null;s.phase='planning';s.remaining=RULES.planningSeconds;s.pairs=[];s.roundSeed=seedOf(s.seed,s.stage,s.round);for(const p of alive(s)){economyRound(s,p);const lossGold=bonus(s,p,p.pendingLossGold||0,'lossStreak');p.pendingLossGold=0;if(lossGold){p.lastIncome ||= {};p.lastIncome.lossStreak=lossGold;}if(p.locked)p.locked=false;else shop(s,p);drain(p);}host.AutoChessAugments?.begin(s);s.revision++;}
  function finishAtLimit(s){
   if(s.finished||s.stage!==100||s.round!==6)return false;
   const rows=alive(s).sort((a,b)=>b.hp-a.hp||(s.matchStats?.tacticians[b.id]?.totalDamageDealt||0)-(s.matchStats?.tacticians[a.id]?.totalDamageDealt||0)||b.level-a.level||seedOf(s.seed,a.id)-seedOf(s.seed,b.id));
   rows.forEach((p,index)=>{p.rank=index+1;if(index){p.hp=0;p.eliminated=true;}});s.lobbyTiebreak='stage-limit';s.finished=true;s.phase='complete';s.remaining=0;s.finishReason=get(s).rank===1?'victory':'eliminated';host.AutoChessTelemetry?.finish(s);s.revision++;return true;
  }
- function advance(s){if(s.finished||finishAtLimit(s))return;if(s.round===(s.stage===1?4:6)){s.stage++;s.round=1;}else s.round++;s.lastResults=[];if(roundKind(s)==='carousel')carousel(s);else plan(s);s.revision++;}
+ function advance(s){if(s.finished||finishAtLimit(s))return;clearLiveRound(s);if(s.round===(s.stage===1?4:6)){s.stage++;s.round=1;}else s.round++;s.lastResults=[];if(roundKind(s)==='carousel')carousel(s);else plan(s);s.revision++;}
  function apply(s,playerId,action){
   const p=get(s,playerId);if(!p||p.hp<=0||s.finished)throw Error('This tactician is eliminated.');
   if(!['planning','carousel','augment'].includes(s.phase)&&!combatForge(s,p))throw Error('Wait for the planning phase.');
@@ -238,7 +240,7 @@
  function validate(s){
   if(!s||s.version!==1||typeof s.id!=='string'||!/^chess_[a-z0-9]+_[a-z0-9]+$/.test(s.id)||typeof s.finished!=='boolean'||typeof s.paid!=='boolean'||!Number.isFinite(s.remaining)||s.remaining<0||s.remaining>35||!int(s.seed,1,4294967295)||!int(s.rng,1,4294967295)||!int(s.serial,0,1e7)||!int(s.stage,1,100)||!int(s.round,1,s.stage===1?4:6)||!['planning','carousel','augment','combat','results','complete'].includes(s.phase)||!Array.isArray(s.players)||s.players.length!==8)return false;
   if(s.localPlayerId!==undefined&&!s.players.some(p=>p.id===s.localPlayerId))return false;
-  if(s.live!==undefined){const l=s.live;if(!l||l.version!==1||!Array.isArray(l.humans)||l.humans.length<2||l.humans.length>8||new Set(l.humans.map(h=>h?.id)).size!==l.humans.length||new Set(l.humans.map(h=>h?.uid)).size!==l.humans.length||l.humans.some(h=>!h||!s.players.some(p=>p.id===h.id)||typeof h.uid!=='string'||!h.uid.length||h.uid.length>128||typeof h.connected!=='boolean')||l.owner!==l.humans[0].uid||!l.humans.some(h=>h.id===(s.localPlayerId||'human'))||typeof l.locked!=='boolean'||!l.ready||typeof l.ready!=='object'||Array.isArray(l.ready)||Object.entries(l.ready).some(([id,value])=>!l.humans.some(h=>h.id===id)||typeof value!=='boolean')||s.hybrid?.humanPlayers!==l.humans.length)return false;}
+  if(s.live!==undefined){const l=s.live;if(!l||l.version!==1||l.mode!==undefined&&!['lan','relay'].includes(l.mode)||!Array.isArray(l.humans)||l.humans.length<2||l.humans.length>8||new Set(l.humans.map(h=>h?.id)).size!==l.humans.length||new Set(l.humans.map(h=>h?.uid)).size!==l.humans.length||l.humans.some(h=>!h||!s.players.some(p=>p.id===h.id)||typeof h.uid!=='string'||!h.uid.length||h.uid.length>128||typeof h.connected!=='boolean')||l.owner!==l.humans[0].uid||!l.humans.some(h=>h.id===(s.localPlayerId||'human'))||typeof l.locked!=='boolean'||!l.ready||typeof l.ready!=='object'||Array.isArray(l.ready)||Object.entries(l.ready).some(([id,value])=>!l.humans.some(h=>h.id===id)||typeof value!=='boolean')||s.hybrid?.humanPlayers!==l.humans.length)return false;}
   if(s.finishReason!==undefined&&!['victory','eliminated','forfeit'].includes(s.finishReason))return false;
   if(s.reward!==undefined&&!validReward(s.reward,get(s)?.rank))return false;
   if(s.finished&&get(s)?.rank===null||s.paid&&!s.finished)return false;
@@ -261,5 +263,5 @@
  // Startup invalidates the former recovery key; Worker runtimes have no storage.
  if(host.document)purgeCheckpoint();
 
- host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,poolFor,clone,random,seedOf,choose,uniform,teamCap,tier,price,create,player,lastStandSpent,consumeLastStand,reconcileTactician,damageTactician,placeEliminated,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,autoDeployBench,sell,soloCombat,combatForge,fusionEligible,fusionGroup,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
+ host.AutoChessSystem=Object.freeze({KEY,PENDING_KEY,RULES,RARITIES,COSTS,XP,ODDS,card,pools,poolFor,clone,random,seedOf,choose,uniform,teamCap,tier,price,create,player,lastStandSpent,consumeLastStand,reconcileTactician,damageTactician,placeEliminated,get,alive,deployed,freeBench,unit,relic,stash,drain,acquire,shop,economyRound,earn,spend,bonus,xpCost,creepRelics,streakResult,income,levelUp,buy,move,autoDeployBench,sell,soloCombat,combatForge,fusionEligible,fusionGroup,fuse,autoFuse,equip,canFuseRelics,fuseRelics,roundKind,label,carousel,released,draft,clearLiveRound,plan,advance,finishAtLimit,apply,PLACEMENT_REWARDS,reward,validReward,groupLocked,finalize,clear,validate,save,load,pendingResults,purgeCheckpoint});
 })(window);
