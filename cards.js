@@ -3691,6 +3691,271 @@ const CARDS = [
       description: "Each attack has a 30% chance to strike for either 3x damage, or 1.5x damage ignoring Shields (equal chance)."
     },
     image: "assets/cards/tungtungsahur.png"
+  },
+  {
+    "id": "tulen",
+    "name": "Tulen",
+    "element": "Electric",
+    "rarity": "Mythic",
+    "chance": 18300000,
+    "category": [
+      "VideoGame",
+      "Unhuman",
+      "Brutal",
+      "AntiHero",
+      "Magician"
+    ],
+    "requiredWeather": "Heavenly",
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 72300,
+      "atk": 17700
+    },
+    "passive": {
+      "name": "God of Thunder",
+      "description": "Every 3 attacks, fire 3 bolts: each has a 65% chance to hit a random enemy for 30% ATK and grant 1 Bolt Mark (cap 5). 5% dodge; dodging inflicts Hindered for 5 turns and grants 1 Mark. At 5 Marks, being hit consumes them for five 20% ATK counters, each with 10% chance to stun for 3 turns. Every 5 attacks, or at 5 Marks (consumed), replace the attack with LoiDieu: 20% of target missing HP. A LoiDieu kill splashes 10% of victim max HP to one nearby enemy and grants 3 Marks.",
+      "tags": [
+        "special_attack",
+        "counter",
+        "execute",
+        "dodge"
+      ]
+    },
+    "image": "assets/cards/tulen.png"
+  },
+  {
+    "id": "veera",
+    "name": "Veera",
+    "element": "Dark",
+    "rarity": "Secret",
+    "chance": 99000000,
+    "category": [
+      "VideoGame",
+      "Brutal",
+      "PureEvil",
+      "AntiVillian"
+    ],
+    "requiredWeather": "Malevolent",
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 132000,
+      "atk": 32300
+    },
+    "passive": {
+      "name": "Blood Chain",
+      "description": "Each attack grants 1 Bhain, or 2 against a bleeding target (cap 4). At 4, consume all stacks for a special attack hitting up to 4 nearby enemies for 50% ATK each; heal 50% of total damage dealt. Each attack has 44% chance to inflict Bleed for 3 turns at 33% ATK per turn.",
+      "tags": [
+        "special_attack",
+        "bleed",
+        "sustain"
+      ]
+    },
+    "image": "assets/cards/veera.png"
+  },
+  {
+    "id": "jinx",
+    "name": "Jinx",
+    "element": "Fire",
+    "rarity": "Secret",
+    "chance": 125000000,
+    "category": [
+      "VideoGame",
+      "Gunner",
+      "Hero",
+      "Human"
+    ],
+    "requiredWeather": null,
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 106000,
+      "atk": 40500
+    },
+    "passive": {
+      "name": "Fishbones",
+      "description": "Each attack has 35% chance for a 30% ATK follow-up; chained follow-ups add 1 percentage point per chain, capped at +10. Kills grant +5 percentage points follow-up chance for the battle, capped at +25. Every 4 attacks, blast up to 5 enemies for 150% ATK, breaking an existing Shield or stunning an unshielded victim for 2 turns.",
+      "tags": [
+        "special_attack",
+        "follow_up",
+        "scaling",
+        "shield_break"
+      ]
+    },
+    "image": "assets/cards/jinx.png"
+  },
+  {
+    "id": "ahri",
+    "name": "Ahri",
+    "element": "Water",
+    "rarity": "Secret",
+    "chance": 100000000,
+    "category": [
+      "VideoGame",
+      "Magician",
+      "AntiVillian",
+      "Animal",
+      "Unhuman"
+    ],
+    "requiredWeather": "Tsukuyomi",
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 121000,
+      "atk": 29600
+    },
+    "passive": {
+      "name": "Essence Fox",
+      "description": "Auto Chess only: each attack has 20% chance for +40% Attack Speed for 3 own turns. Each kill grants 10 Fox Spirit and heals 10% max HP. Outside Fox Theft, each attack grants 1–5 Spirit (cap 100), then spends 1 to heal 35–95% of damage dealt. At 100 Spirit enter Fox Theft: no Spirit gains, consume 1–3 per own turn until 0; each attack inflicts Hindered for 2 turns or Hypnosis for 1 turn, and heals 75–105% of damage dealt without extra Spirit costs.",
+      "tags": [
+        "sustain",
+        "scaling",
+        "crowd_control"
+      ]
+    },
+    "image": "assets/cards/ahri.png"
+  },
+  {
+    "id": "krixi",
+    "name": "Krixi",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 136000000,
+    "category": [
+      "VideoGame",
+      "Magician",
+      "Hero"
+    ],
+    "requiredWeather": "Wind",
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 120000,
+      "atk": 45800
+    },
+    "passive": {
+      "name": "Nature Wrath",
+      "description": "Every 3 attacks, pierce the enemy team: each subsequent hit loses 10 percentage points of damage (minimum 10%); each hit has 50% chance to stun for 1 turn. Every 5 attacks, randomly distribute 12 meteors across living enemies, each dealing 25% ATK with 10% chance to stun for 1 turn.",
+      "tags": [
+        "special_attack",
+        "pierce",
+        "aoe",
+        "stun"
+      ]
+    },
+    "image": "assets/cards/krixi.png"
+  },
+  {
+    "id": "neeko",
+    "name": "Neeko",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 88000000,
+    "category": [
+      "VideoGame",
+      "Animal",
+      "Magician"
+    ],
+    "requiredWeather": "Eclipse",
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 126000,
+      "atk": 30800
+    },
+    "passive": {
+      "name": "Blooming Burst",
+      "description": "Every 3 attacks, deal an extra 20% ATK ignoring Shields and gain +30% dodge for 2 own turns. Each attack has 20% chance to stun for 1 turn and 50% chance to pierce the next enemy for 50% ATK; a successful pierce doubles that attack stun duration. When Neeko Shield breaks, inflict Hindered on all enemies for 2 turns and reduce their ATK by 20%.",
+      "tags": [
+        "special_attack",
+        "pierce",
+        "shield_reactive",
+        "stun"
+      ]
+    },
+    "image": "assets/cards/neeko.png"
+  },
+  {
+    "id": "sonic",
+    "name": "Sonic",
+    "element": "Electric",
+    "rarity": "Secret",
+    "chance": 200000000,
+    "category": [
+      "VideoGame",
+      "Animal"
+    ],
+    "requiredWeather": "Wind",
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 175000,
+      "atk": 42800
+    },
+    "passive": {
+      "name": "Aerokinesis",
+      "description": "Each attack has 90% chance for a 10% ATK follow-up; each chained follow-up reduces the next chance by 10 percentage points. Each follow-up has 10% chance to gain 1 Chaos E (cap 7). After chaining 5 follow-ups, if at least 1 Chaos E is available, freeze all enemies for 2 turns and consume 1. Instantly cleanse an incoming Stun or Freeze with a 5-own-turn cooldown.",
+      "tags": [
+        "follow_up",
+        "crowd_control",
+        "cleanse"
+      ]
+    },
+    "image": "assets/cards/sonic.png"
+  },
+  {
+    "id": "yasuo",
+    "name": "Yasuo",
+    "element": "Nature",
+    "rarity": "Secret",
+    "chance": 175000000,
+    "category": [
+      "VideoGame",
+      "Swordman",
+      "Human",
+      "AntiHero",
+      "Protagonist"
+    ],
+    "requiredWeather": "Wind",
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 133000,
+      "atk": 50700
+    },
+    "passive": {
+      "name": "Wanderer Way",
+      "description": "Gain +20% Crit Chance if no other ally is a Swordman. Each attack grants 1 Flow Wind (cap 2). At 2, consume both stacks to replace the attack with Steel Tempest: 150% ATK, stun for 1 turn, and 33% chance for immunity to passive damage and effects for 3 own turns. Against an already stunned target, use Last Breath instead: 200% ATK and stun all other enemies for 2 turns; a kill restores 2 Flow Wind. With Yone on the team, grant him +10% ATK and +10% Crit Chance.",
+      "tags": [
+        "special_attack",
+        "stun",
+        "support"
+      ]
+    },
+    "image": "assets/cards/yasuo.png"
+  },
+  {
+    "id": "yone",
+    "name": "Yone",
+    "element": "Dark",
+    "rarity": "Secret",
+    "chance": 165000000,
+    "category": [
+      "Swordman",
+      "Human",
+      "AntiHero",
+      "VideoGame"
+    ],
+    "requiredWeather": "Malevolent",
+    "hextechExclusive": true,
+    "stats": {
+      "hp": 119000,
+      "atk": 45300
+    },
+    "passive": {
+      "name": "Twin Blades",
+      "description": "Alternate attacks: Wind Blade deals 110% ATK with 30% chance to stun for 1 turn; Azakana Blade deals 50% ATK normally and 50% ATK directly through Shields. Every 4 attacks, enter Soul Unbound for 2 own turns; attacks also hit all other enemies at 50% damage. At expiration, gain flat ATK equal to 25% of actual Soul Unbound damage for 2 own turns. With Yasuo on the team, grant him +50% Crit Damage and +25% max HP.",
+      "tags": [
+        "special_attack",
+        "aoe",
+        "scaling",
+        "support"
+      ]
+    },
+    "image": "assets/cards/yone.png"
   }
 ];
 

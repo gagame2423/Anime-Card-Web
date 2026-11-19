@@ -86,7 +86,7 @@
   const e=effects(p);if(e.giftRarity<0)return;const state=p.augmentState ||= {};state.giftedLevels ||= [];
   for(let level=from+1;level<=p.level;level++){if(state.giftedLevels.includes(level))continue;state.giftedLevels.push(level);
    if(p.units.length>=100){C.bonus(s,p,C.COSTS[e.giftRarity],'augment');continue;}
-   const result=C.acquire(p,C.unit(s,C.uniform(s,C.pools[e.giftRarity])));p.lastAugmentGift={round:C.label(s),level,uid:result.uid,cardId:result.cardId};
+   const result=C.acquire(p,C.unit(s,C.uniform(s,C.poolFor(s,p,e.giftRarity))));p.lastAugmentGift={round:C.label(s),level,uid:result.uid,cardId:result.cardId};
   }
  }
  function endRound(s,p){

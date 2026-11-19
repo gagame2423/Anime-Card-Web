@@ -267,6 +267,8 @@
   const m=classify(c),matching=R.matchingUnit({card:c,relic:r},r),high=skill(p)>=7,threat=high?contexts.get(p)?.scout:null,tank=m.tank>2.5,carry=m.carry>1.2;
   let value=matching?((r.atk||0)*(carry?145:75)+(r.hp||0)*(tank?145:65)+(r.followChance||0)*(m.follow?200:0)):0;
   if(r.unique){
+   if(r.kind==='fate_scythe'&&R.uniqueEligible(c,r))value+=(r.fatalAtk||0)*(carry?65:45);
+   if(r.kind==='rabadon_hat'&&R.uniqueEligible(c,r))value+=(r.summonBonus||0)*210;
    if(r.kind==='jackal_guns')value+=(r.perEnemyAtk||0)*Math.min(14,Math.max(1,threat?.units||p.level||1)+Math.min(5,(threat?.swarm||0)*2))*(carry?125:60);
    if(r.kind==='god_leaf'&&m.baseDodge<=.80)value+=Math.min(r.dodge,.80-m.baseDodge)*(tank?160:110)*(threat?.burst?1.7:1);
    if(r.kind==='nail')value+=(r.critChance*150+r.critDamage*60)*(carry?1.35:.75);

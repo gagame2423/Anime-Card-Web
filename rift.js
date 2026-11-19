@@ -35,7 +35,7 @@
  let bridge={};
  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();return true;}catch(_){return false;}}
  function register(){
-  inv().registerItem({id:'rift_shard',name:'Rift Shard',type:'material',tier:'rare',icon:'◇',description:'Universal Rift currency. Win any Rift: 1–5 shards. Spend in the Rift Shop.'});
+  inv().registerItem({id:'rift_shard',name:'Rift Shard',image:'assets/items/rshard.png',type:'material',tier:'rare',icon:'◇',description:'Universal Rift currency. Win any Rift: 1–5 shards. Spend in the Rift Shop.'});
   inv().registerItem({id:'guarantee_shard',name:'Guarantee Shard',type:'material',tier:'legendary',icon:'◆',image:'assets/items/gshard.png',description:'Rift Shop: 1,000 Rift Shards. Consume on entry to guarantee one Rift special drop on victory.'});
  }
  register();
@@ -113,8 +113,8 @@
  }
  function renderShop(){
   const grid=host.document?.getElementById('riftShopGrid');if(!grid)return;
-  host.document.getElementById('riftShopBalance').textContent=inv().quantity('rift_shard').toLocaleString('en-US')+' Rift Shards';grid.replaceChildren();
-  for(const offer of SHOP){const item=inv().getItem(offer.id),box=host.document.createElement('article');box.className='module-item';const name=host.document.createElement('strong'),text=host.document.createElement('p'),button=host.document.createElement('button');name.textContent=item.name;text.textContent=item.description;button.type='button';button.textContent=offer.cost.toLocaleString('en-US')+' Rift Shards';button.addEventListener('click',()=>{if(purchase(item.id,host.ShopBulkSystem.requested(grid)))renderShop();});if(item.image){const image=host.document.createElement('img');image.src=item.image;image.alt=item.name;image.width=48;image.height=48;image.loading='lazy';box.append(image);}box.append(name,text,button);grid.append(box);}
+  inv().renderAmount(host.document.getElementById('riftShopBalance'),'rift_shard',inv().quantity('rift_shard'),'Rift Shards');grid.replaceChildren();
+  for(const offer of SHOP){const item=inv().getItem(offer.id),box=host.document.createElement('article');box.className='module-item';const name=host.document.createElement('strong'),text=host.document.createElement('p'),button=host.document.createElement('button');name.textContent=item.name;text.textContent=item.description;button.type='button';inv().renderAmount(button,'rift_shard',offer.cost,'Rift Shards');button.addEventListener('click',()=>{if(purchase(item.id,host.ShopBulkSystem.requested(grid)))renderShop();});if(item.image){const image=host.document.createElement('img');image.src=item.image;image.alt=item.name;image.width=48;image.height=48;image.loading='lazy';box.append(image);}box.append(name,text,button);grid.append(box);}
  }
  function renderControls(active=false){
   const doc=host.document,box=doc?.getElementById('riftControls');if(!box)return;box.classList.toggle('hidden',!active);
@@ -122,7 +122,7 @@
   doc.getElementById('riftRotationHint').textContent=label;if(!active)return;
   const battle=bridge.getBattle?.(),showBattle=battle?.mode===MODE&&battle.rift&&(battle.isBattling||battle.finished),type=showBattle?battle.rift.type:r.type,view=preview(type);box.dataset.riftType=view.type;doc.getElementById('riftAvailability').textContent=(showBattle?view.name+' • '+(battle.finished?'RESULT':'IN BATTLE'):label)+' • '+dropText(type);const drops=doc.getElementById('riftDropPreview');if(drops){drops.dataset.riftType=view.type;drops.textContent=view.text;}
   const start=doc.getElementById('battleStartButton');if(start&&!host.document.getElementById('battleSetup')?.classList.contains('hidden'))start.textContent='Enter '+definition(r.type).name+' • 5 cards';
-  doc.getElementById('riftBalance').textContent=inv().quantity('rift_shard').toLocaleString('en-US')+' Rift Shards';
+  inv().renderAmount(doc.getElementById('riftBalance'),'rift_shard',inv().quantity('rift_shard'),'Rift Shards');
   const toggle=doc.getElementById('riftAutoGuarantee'),owned=inv().quantity('guarantee_shard');if(!owned&&data.autoGuarantee)setAutoGuarantee(false);toggle.checked=data.autoGuarantee;toggle.disabled=!owned;doc.getElementById('riftGuaranteeCount').textContent=owned+' Guarantee Shards';
  }
  function configure(options={}){bridge=options;const doc=host.document;doc?.getElementById('riftAutoGuarantee')?.addEventListener('change',e=>{setAutoGuarantee(e.target.checked);renderControls(true);});host.ShopBulkSystem.mountHeader(doc?.getElementById('riftShopModal'));if(data.pendingReward){try{commitPending();bridge.onChange?.();}catch(e){host.console.warn(e.message);}}}

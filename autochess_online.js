@@ -6,7 +6,7 @@
  let backendOverride=null;const uploadStatuses=new Map();
  function uploadStatus(id,value){if(value){uploadStatuses.set(id,value);if(uploadStatuses.size>32)uploadStatuses.delete(uploadStatuses.keys().next().value);}return uploadStatuses.get(id)||null;}
  const service=()=>backendOverride||host.CloudSaveSystem?.autoChessService||null;
- function identity(){const user=host.CloudSaveSystem?.activeUser;return{uid:user?.uid||'local_player',name:R.name(host.CloudSaveSystem?.publicName||'You'),elo:host.AutoChessRanked?.current()?.elo||0,wins:host.AutoChessRanked?.current()?.wins||0,run:R.last()};}
+ function identity(){const user=host.CloudSaveSystem?.activeUser;return{hextechUnlocks:host.HextechSystem.unlocks(),equippedSkins:Object.fromEntries(host.CardSkinSystem.DEFINITIONS.filter(d=>host.CardSkinSystem.equipped(d.cardId)===d.id).map(d=>[d.cardId,d.id])),uid:user?.uid||'local_player',name:R.name(host.CloudSaveSystem?.publicName||'You'),elo:host.AutoChessRanked?.current()?.elo||0,wins:host.AutoChessRanked?.current()?.wins||0,run:R.last()};}
  function cached(){try{const data=JSON.parse(host.sessionStorage.getItem(CACHE_KEY)||'null');if(data?.version!==1||!Number.isFinite(data.at)||Date.now()-data.at<0||Date.now()-data.at>=CACHE_TTL||!Array.isArray(data.rows)||!data.rows.length||data.rows.length>8)return null;return data.rows.map(R.decode).filter(Boolean).map(r=>r.wire);}catch(_){return null;}}
  function storePool(rows){if(!rows?.length){try{host.sessionStorage.removeItem(CACHE_KEY);}catch(_){}return;}try{host.sessionStorage.setItem(CACHE_KEY,JSON.stringify({version:1,at:Date.now(),rows}));}catch(_){} }
  const usable=run=>!!run&&Object.values(run.stages).some(stage=>stage.board.length>0);
@@ -50,7 +50,7 @@
    C.reconcileTactician(p,{hp:snapshot.hp,lastStandUsed:snapshot.lastStandUsed});
    if(p.hp<=0){ended.push(p);continue;}if(!snapshot.board.length)continue;
    p.level=snapshot.level;p.xp=0;p.augments=[...snapshot.augments];p.units=[];p.anvil=[];p.relics=Array(10).fill(null);p.loot=[];
-   for(const row of snapshot.board){const u=C.unit(s,C.card(row.cardId));u.board=row.position;u.bench=null;if(row.relic)u.relic={uid:'r'+(++s.serial),roll:C.clone(row.relic)};p.units.push(u);}
+   for(const row of snapshot.board){const u=C.unit(s,C.card(row.cardId));u.board=row.position;u.bench=null;u.skinId=row.skinId||null;if(row.relic)u.relic={uid:'r'+(++s.serial),roll:C.clone(row.relic)};p.units.push(u);}
    p.replayStage=snapshot.stageKey;p.replaySynergies=snapshot.synergies;p.replaySampled=run.sampled;if(!p.hp)ended.push(p);
   }
   C.placeEliminated(s,ended);
@@ -91,7 +91,7 @@
   const later=(fn,ms)=>{const t=host.setTimeout(()=>{timers.delete(t);fn();},ms);timers.add(t);return t;};
   const view=()=>({room,owner,members:C.clone(members),self:me.uid,isHost:owner===me.uid,ready,joining,started,status});
   const update=message=>{if(message)status=message;if(active)options.onChange?.(view());};
-  const validMember=x=>x&&R.uid(x.uid)&&typeof x.name==='string'&&x.name.length<=40&&Number.isSafeInteger(x.elo)&&x.elo>=0&&Number.isSafeInteger(x.wins)&&x.wins>=0&&(!x.run||R.decode(x.run)?.uid===x.uid);
+  const validMember=x=>x&&(!x.hextechUnlocks||Array.isArray(x.hextechUnlocks)&&x.hextechUnlocks.length<=9&&x.hextechUnlocks.every(id=>C.card(id)?.hextechExclusive))&&(!x.equippedSkins||Object.keys(x.equippedSkins).length<=10&&Object.entries(x.equippedSkins).every(([id,skin])=>host.CardSkinSystem.get(skin)?.cardId===id))&&R.uid(x.uid)&&typeof x.name==='string'&&x.name.length<=40&&Number.isSafeInteger(x.elo)&&x.elo>=0&&Number.isSafeInteger(x.wins)&&x.wins>=0&&(!x.run||R.decode(x.run)?.uid===x.uid);
   function send(c,type,data={}){if(!c?.open)return false;try{c.send(JSON.parse(JSON.stringify({protocol:PROTOCOL,type,room,...data})));return true;}catch(_){return false;}}
   function broadcast(type,data={}){for(const c of connections.values())send(c,type,data);}
   function rosterValid(rows){return Array.isArray(rows)&&rows.length>=1&&rows.length<=8&&rows.every(validMember)&&new Set(rows.map(r=>r.uid)).size===rows.length&&rows.some(r=>r.uid===me.uid);}

@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./pvp.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./infinity.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./autochess.css?v=20261117-ac-friends-cloud-1" />
+  <link rel="stylesheet" href="./hextech.css?v=20261119-hextech-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
 </head>
 <body>
@@ -285,7 +286,7 @@
     <section class="modal-panel card-preview-modal index-details-modal">
       <header class="modal-header"><div><p class="eyebrow">CARD INDEX</p><h2 id="cardPreviewTitle">Card Details</h2></div><button class="modal-close" data-close-modal="cardPreviewModal" type="button" aria-label="Close card details">×</button></header>
       <article id="previewCard" class="index-details-card">
-        <header class="tcg-card__header details-heading"><div><h2 id="previewName">—</h2><span id="previewLevel">Lv. 1</span> · <span id="previewRarity">—</span></div><strong id="previewVariantCount" class="details-quantity">x0</strong><button id="previewEquipButton" type="button" class="battle-primary-button">EQUIP</button></header>
+        <header class="tcg-card__header details-heading"><div><h2 id="previewName">—</h2><span id="previewLevel">Lv. 1</span> · <span id="previewRarity">—</span></div><button type="button" id="previewSkinButton" class="hx-skin-trigger" hidden>✦ Skins</button><strong id="previewVariantCount" class="details-quantity">x0</strong><button id="previewEquipButton" type="button" class="battle-primary-button">EQUIP</button></header>
         <div class="details-hero">
           <div class="tcg-art-frame details-art"><div class="art-backdrop" aria-hidden="true"></div><img id="previewImage" class="tcg-art" alt="Card artwork"><div class="image-fallback"><span>✦</span><small>ARTWORK</small></div><button id="previewRelicSlot" class="details-relic-slot" type="button" aria-label="Equipped Relic">◆</button></div>
           <div class="details-tools"><button id="previewLockButton" type="button" aria-pressed="false" class="details-lock">Unlock</button><button id="previewFeedButton" class="preview-action-button preview-action-button--feed" type="button">Feed</button><label class="details-mutation">Mutation<select id="previewMutationSelect" aria-label="Preview owned mutation"></select></label><div class="details-variant-actions"><div class="details-variant-info"><strong id="previewVariantLabel">Normal</strong><div id="previewMutationBadges" class="result-mutation-badges"></div><span id="previewCollectedCount"></span></div><button id="previewEvolveButton" class="details-evolve-button" type="button" aria-haspopup="dialog" aria-controls="evolutionModal" hidden>Evolve</button></div></div>
@@ -343,7 +344,7 @@
   <!-- ITEMS: separate persistence from card ownership -->
   <div id="inventoryModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="inventoryModalTitle">
     <section class="modal-panel module-modal storage-modal">
-      <header class="modal-header storage-header"><div><p class="eyebrow">PERSISTENT STORAGE</p><h2 id="inventoryModalTitle">Item Storage</h2></div><button data-close-modal="inventoryModal" class="modal-close" type="button" aria-label="Close inventory">×</button></header>
+      <header class="modal-header storage-header"><div><p class="eyebrow">PERSISTENT STORAGE</p><h2 id="inventoryModalTitle">Item Storage</h2></div><button type="button" id="inventoryHextechButton" class="hx-skin-trigger">✦ Hextech Vault</button><button data-close-modal="inventoryModal" class="modal-close" type="button" aria-label="Close inventory">×</button></header>
       <div class="storage-body">
         <nav class="storage-sidebar" aria-label="Storage categories" role="tablist">
           <button type="button" role="tab" class="is-active" aria-selected="true" data-storage-tab="items">Items</button>
@@ -1001,7 +1002,10 @@
   </div>
   <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./skins.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./hextech.js?v=20261119-hextech-1"></script>
+
   <script type="application/x-game-script" data-game-script src="./category.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./elements.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261117-content-1"></script>
@@ -1016,32 +1020,34 @@
   <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./fate.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./companions.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./enten.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./titan_passives.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./titan_passives.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./turn_phase.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./baller_passives.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tensura_passives.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./sins_passives.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./bleach_passives.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261117-ac-polish-augments-3"></script>
+  <script type="application/x-game-script" data-game-script src="./baller_passives.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tensura_passives.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sins_passives.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./bleach_passives.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./hextech_passives.js?v=20261119-hextech-1"></script>
+
+  <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261117-god-leaf-human-2"></script>
+  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relics.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./relic_fusion.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./tower.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./training_dummy.js?v=20261117-content-1"></script>
@@ -1049,7 +1055,7 @@
   <script type="application/x-game-script" data-game-script src="./raid.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./boss_rotation.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./boss_event.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./rift.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./rift.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./penalty_stats.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./penalty_game.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./penalty_sprites.js?v=20261117-content-1"></script>
@@ -1084,25 +1090,25 @@
   <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./index_filters.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_audio.js?v=20261117-ac-polish-augments-3"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_audio.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_ranked.js?v=20261117-ac-friends-cloud-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess.js?v=20261118-ac-last-stand-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_synergies.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_telemetry.js?v=20261117-ac-polish-augments-3"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_augments.js?v=20261118-ac-last-stand-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_runs.js?v=20261118-ac-last-stand-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_ai.js?v=20261117-ac-polish-augments-3"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_augments.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_runs.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_ai.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_strategy.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_profile.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261118-ac-last-stand-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261118-ac-last-stand-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_report.js?v=20261117-ac-polish-augments-3"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261118-ac-last-stand-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261117-ac-friends-cloud-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_lobby.js?v=20261117-ac-polish-augments-3"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261118-ac-last-stand-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_relic_view.js?v=20261117-ac-polish-augments-3"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261117-ac-friends-cloud-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_lobby.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_relic_view.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261119-hextech-1"></script>
 </body>
 </html>

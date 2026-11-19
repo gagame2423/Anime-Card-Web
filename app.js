@@ -10,7 +10,7 @@
 // ============================================================
 
 function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active||window.AutoChessView?.active);}
-function gameInputLocked(){return Boolean(window.PenaltyView?.active)||isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed);}
+function gameInputLocked(){return Boolean(window.PenaltyView?.active)||isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed)||Boolean(window.HextechSystem?.active);}
 
 const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
@@ -79,6 +79,10 @@ const defaultState = {
   spookyRewardReceipt: '',
   achievementRewardReceipts: {},
   unlocked: {},
+  unlockedSkins: {},
+  equippedSkins: {},
+  hextechUnlocks: {},
+  hextechReceipt: '',
   mutations: {},
   equipment: [],
   upgrades: { rollSpeed: 0, luck: 0, expMulti: 0, coinMulti: 0 },
@@ -318,6 +322,10 @@ function cloneDefaultState() {
     spookyRewardReceipt: '',
   achievementRewardReceipts: {},
     unlocked: {},
+  unlockedSkins: {},
+  equippedSkins: {},
+  hextechUnlocks: {},
+  hextechReceipt: '',
     mutations: {},
     inventory: {},
     equipment: [],
@@ -802,6 +810,9 @@ function normalizeState(parsed = {}) {
     }
   };
 
+  Object.assign(normalized,window.CardSkinSystem.normalise(parsed));
+  normalized.hextechUnlocks=Object.fromEntries(Object.entries(parsed.hextechUnlocks||{}).filter(([id,v])=>v===true&&getCardById(id)?.hextechExclusive));
+  normalized.hextechReceipt=typeof parsed.hextechReceipt==='string'&&/^[a-f0-9]{32}$/.test(parsed.hextechReceipt)?parsed.hextechReceipt:'';
   normalized.schemaVersion = SAVE_SCHEMA_VERSION;
   normalized.teamLoadouts = window.StorageSystem.normalizeTeamLoadouts(parsed.teamLoadouts);
   normalized.cardLocks = Object.fromEntries(Object.entries(parsed.cardLocks||{}).filter(([id,locked])=>locked===true&&getCardById(id)).map(([id])=>[id,true]));
@@ -1452,6 +1463,7 @@ function startCooldown() {
 // ============================================================
 
 function isCardRollUnlocked(card) {
+  if(card.hextechExclusive&&state.hextechUnlocks?.[card.id]!==true)return false;
   if (card.evolutionOnly || card.riftOnly || card.capsuleOnly || card.raidOnly || card.bossEventOnly || !(Number(card.chance) > 0)) return false;
   if(card.spookyExclusive&&!window.SpookySystem.unlocked())return false;
   return !card.unlockRequirement || window.AchievementSystem?.isUnlocked(card.unlockRequirement) || state.achievementRewardReceipts?.[card.unlockRequirement] === true;
@@ -1841,7 +1853,7 @@ function showCurrencyToast(amount, message = "") {
 }
 
 function setArtwork(img, fallback, backdrop, src, alt) {
-  const safeSrc = src || FALLBACK_ART_DATA_URL;
+  const safeSrc = window.CardSkinSystem.resolvePath(src) || FALLBACK_ART_DATA_URL;
   if(img&&img.dataset.artSource===safeSrc){if(img.alt!==(alt||'Card artwork'))img.alt=alt||'Card artwork';return;}
   if(img){img.dataset.artSource=safeSrc;img.decoding='async';}
   if (backdrop) backdrop.style.setProperty("--art-bg-image", `url("${escapeCssUrl(safeSrc)}")`);
@@ -2548,6 +2560,8 @@ function renderPreview() {
   if(feedButton)feedButton.disabled=levelInfo.maxed||!canEvolveNow();
   if (els.previewSalvageButton) els.previewSalvageButton.disabled = isCardLocked(card.id) || variant.count <= 1;
   if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = isCardLocked(card.id) || !getPreviewVariants(card.id).some(entry => entry.count > 1);
+  const skinButton=document.getElementById('previewSkinButton'),skinRows=window.CardSkinSystem.DEFINITIONS.filter(d=>d.cardId===card.id);
+  if(skinButton){skinButton.textContent='✦ Skins '+(1+skinRows.filter(d=>window.CardSkinSystem.owned(d.id)).length)+'/'+(1+skinRows.length);skinButton.hidden=false;}
   els.previewName.textContent = card.name;
   window.ElementSystem.renderBadge(els.previewCard?.querySelector(".details-art"), card);
   els.previewRarity.textContent = card.rarity;
@@ -2561,7 +2575,7 @@ function renderPreview() {
     ? previewMutations.map(mutation => String(mutation?.name || "")).filter(Boolean).join(" + ")
     : "Normal Variant";
   els.previewCollectedCount.textContent = `x${getOwnedCardCount(card.id).toLocaleString("en-US")} total`;
-  els.previewRequirement.textContent = card.riftOnly ? window.RiftSystem.cardSource(card.id)+' exclusive • Never available in normal RNG' : card.bossEventOnly ? `${getBossEventCardSource(card)} exclusive • Never available in normal RNG` : card.raidOnly ? `${card.id==='pain'?'Akatsuki':['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Once per card • Never available in normal RNG` : card.unlockRequirement
+  els.previewRequirement.textContent = card.hextechExclusive ? (state.hextechUnlocks?.[card.id]?'Hextech unlocked · '+(card.requiredWeather?'Requires '+card.requiredWeather:'Available in normal rolls'):'Hextech Chest exclusive · Unlock once to enter normal weather-eligible rolls') : card.riftOnly ? window.RiftSystem.cardSource(card.id)+' exclusive • Never available in normal RNG' : card.bossEventOnly ? `${getBossEventCardSource(card)} exclusive • Never available in normal RNG` : card.raidOnly ? `${card.id==='pain'?'Akatsuki':['jogo','haruta'].includes(card.id)?'Shibuya':'Marine Ford'} Raid exclusive • Once per card • Never available in normal RNG` : card.unlockRequirement
     ? `${card.questOnly ? 'Complete Quest Cards in the utility menu' : window.AchievementSystem?.requirementLabel(card.unlockRequirement) || card.unlockRequirement} • Permanently unlocked in the standard pool`
     : card.requiredWeather ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}` : 'Available in the standard pool';
 
@@ -4320,7 +4334,7 @@ function finishRiftBattle(won){
   document.getElementById('riftSummary').classList.remove('hidden');document.getElementById('riftResultShopButton').classList.remove('hidden');
   els.battleResultTitle.textContent=summary.won?'RIFT CLEARED':'RIFT ATTEMPT ENDED';els.battleResultText.textContent=summary.error||(summary.won?'Rewards saved to Storage.':'Your cards are preserved.');els.battleResultPower.textContent=getBattleModeLabel();
   setViewText('battleResultBaseLabel','Rift Shards');setViewText('battleResultTimeLabel','Enemies');setViewText('battleResultLevelLabel','Special drops');
-  els.battleResultBaseValue.textContent=String(summary.shards);els.battleResultTimeBonus.textContent='5';els.battleResultLevelDiff.textContent=summary.guaranteed?'Guaranteed':window.RiftSystem.dropText(summary.type||battleState.rift.type);
+  window.InventorySystem.renderAmount(els.battleResultBaseValue,'rift_shard',summary.shards,'');els.battleResultTimeBonus.textContent='5';els.battleResultLevelDiff.textContent=summary.guaranteed?'Guaranteed':window.RiftSystem.dropText(summary.type||battleState.rift.type);
   els.battleResultCash.textContent='0 VNĐ';els.battleResultExp.textContent='0 EXP';els.battleResultDropRate.textContent='0%';els.battleResultLossStatus.textContent='NONE';
   refreshAchievements();updateStats();renderCollection();renderPotionInventory();window.RiftSystem.renderControls(true);
   els.battleArena.classList.add('hidden');setBattleModalLock(false);els.battleVictory.classList.remove('hidden','battle-result--neutral','battle-result--victory','battle-result--defeat');els.battleVictory.classList.add(summary.won?'battle-result--victory':'battle-result--defeat');els.battleVictory.setAttribute('aria-hidden','false');
@@ -4743,6 +4757,7 @@ function setSaveTransferStatus(message, failed = false) {
   if (status) { status.textContent = message; status.classList.toggle('is-error', failed); }
 }
 function buildCloudSaveBundle() {
+  if(window.InventorySystem.pendingHextech()&&!window.HextechSystem.recover().ok)throw new Error('Recover your paid Hextech reward in the Vault before transferring this save.');
   syncGameClockToNow(); refreshAchievements(); window.InventorySystem?.tick();
   if (![window.PenaltyStatsSystem.flush(),window.RiftSystem.flush(),window.PortalsSystem.flush(),window.ExpFoodSystem.flush(), window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.EquipmentSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush(),window.SpookySystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
   if (!window.InfinitySystem.flush() || !window.ShopBulkSystem.flush() || !saveState()) throw new Error('Your progress could not be saved. Please try again.');
@@ -4775,6 +4790,9 @@ function validateSaveRecord(key, value) {
       ensure(object(value[field]) || Array.isArray(value[field]), `${field} must contain card records.`);
       if (object(value[field])) for (const n of Object.values(value[field])) if (n !== true && n !== false) number(n, field);
     }
+    ensure(window.CardSkinSystem.valid(value),'invalid cosmetic ownership or equipped skin');
+    if('hextechUnlocks' in value){flags(value.hextechUnlocks,'Hextech unlocks');ensure(Object.keys(value.hextechUnlocks).every(id=>getCardById(id)?.hextechExclusive),'unknown Hextech card');}
+    if('hextechReceipt' in value)ensure(typeof value.hextechReceipt==='string'&&/^(?:[a-f0-9]{32})?$/.test(value.hextechReceipt),'invalid Hextech receipt');
     if('teamLoadouts' in value)ensure(window.StorageSystem.validTeamLoadouts(value.teamLoadouts),'invalid team presets');
     if('trainingDummyRewardReceipt' in value)ensure(typeof value.trainingDummyRewardReceipt==='string'&&/^[a-zA-Z0-9_-]{0,100}$/.test(value.trainingDummyRewardReceipt),'invalid training EXP receipt');
     if ('mutations' in value) counts(value.mutations, 'mutations');
@@ -4813,6 +4831,7 @@ function validateSaveRecord(key, value) {
         for (const field of ['id', 'name', 'description', 'type', 'icon', 'image', 'tier']) if (field in entry) ensure(typeof entry[field] === 'string', `${field} must be text.`);
       } else number(entry, 'item quantity');
     }
+    if(value.hextechPending!=null)ensure(window.HextechSystem.validPlan(value.hextechPending),'invalid paid Hextech reward');
     ensure(window.RelicSystem.validItems(value.items),'invalid or duplicate Relic binding');
     if ('buffs' in value) counts(value.buffs, 'potion expiry');
     if ('receipts' in value) { ensure(object(value.receipts),'invalid item receipts'); for(const [stream,receipt]of Object.entries(value.receipts))ensure(/^[a-z0-9_]{1,40}$/.test(stream)&&typeof receipt==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(receipt),'invalid item receipt'); }
@@ -5833,6 +5852,27 @@ window.ExpFoodSystem.configure({
 });
 document.getElementById('previewFeedButton')?.addEventListener('click',()=>{if(previewSelection)window.ExpFoodSystem.open(previewSelection.cardId);});
 window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished){if(['time-trial','material-time-trial'].includes(getBattleMode()))window.TimeTrialSystem.remaining(battleState);else if(!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}}});
+// Cosmetic ownership and Hextech unlocks stay in the canonical account save.
+window.CardSkinSystem.configure({get:()=>state,equip:(cardId,skinId)=>{
+ const previous={...state.equippedSkins};if(skinId)state.equippedSkins[cardId]=skinId;else delete state.equippedSkins[cardId];
+ if(saveGame(AUTO_CHESS_REWARD_SAVE))return true;state.equippedSkins=previous;return false;
+},onChange:()=>{collectionNeedsRefresh=true;renderCollection();if(previewSelection)renderPreview();if(!isBattleMatchActive())renderBattleTeamSlots();window.AutoChessView?.render();}});
+window.HextechSystem.configure({get:()=>state,refresh:()=>{const saved=localStorage.getItem(STORAGE_KEY);if(saved)state=normalizeState(JSON.parse(saved));},owner:()=>window.CloudSaveSystem.activeUser?.uid||'local',mutations:rollMutations,
+ canBuy:()=>!window.PenaltyView?.active&&!window.PortalsSystem?.active&&!window.InfinitySystem?.active&&!window.SandboxSystem?.active&&!window.PvPSystem?.active&&!isBattleMatchActive()&&!isImportingSave&&!saveTransferBusy&&!window.ExpFoodSystem?.blocked&&!window.EquipmentSystem?.blocked&&!window.ShopBulkSystem?.blocked,
+ grant:plan=>{
+  if(state.hextechReceipt===plan.id)return true;const previous=JSON.parse(JSON.stringify(state));
+  try{if(plan.type==='skin')state.unlockedSkins[plan.rewardId]=true;
+   else {const card=getCardById(plan.rewardId);if(!card?.hextechExclusive)return false;const ids=normalizeCardMutations(plan.mutationIds),key=canonicalVariantKey(card.id,ids);
+    state.hextechUnlocks[card.id]=true;state.unlocked[card.id]=getUnlockedCountById(card.id)+1;state.mutations[key]=(Number(state.mutations[key])||0)+1;
+    state.inventory[key]={id:card.id,cardId:card.id,mutationIds:ids,mutation:ids.join('+'),count:(Number(state.inventory[key]?.count)||0)+1};ensureCardProgress(card.id);
+   }state.hextechReceipt=plan.id;if(!saveGame(AUTO_CHESS_REWARD_SAVE))throw Error('Unable to save Hextech reward.');return true;
+  }catch(_){state=previous;return false;}
+ },onChange:()=>{collectionNeedsRefresh=true;renderCollection();renderPotionInventory();updateStats();if(previewSelection)renderPreview();}
+});
+document.getElementById('previewSkinButton')?.addEventListener('click',()=>{if(previewSelection)window.CardSkinSystem.open(previewSelection.cardId);});
+document.getElementById('inventoryHextechButton')?.addEventListener('click',()=>window.HextechSystem.open());
+// Resume only a paid purchase receipt, never an unfinished Auto Chess match.
+if(window.InventorySystem.pendingHextech())window.HextechSystem.recover();
 window.RelicSystem.configure({count:getOwnedCardCount,canAct:canEvolveNow,cards:()=>ALL_CARDS.filter(card=>isCardOwned(card.id)),variants:getVariantEntries,onChange:()=>{renderPotionInventory();if(previewSelection)renderPreview();if(!isBattleMatchActive())populateBattleFighterSelect();}});
 window.StorageSales.configure({canAct:canEvolveNow,onChange:()=>{renderPotionInventory();}});
 window.RelicFusionSystem.configure({canAct:canEvolveNow,begin:id=>window.StorageSystem.beginFusion(id),end:id=>window.StorageSystem.endFusion(id),refresh:()=>window.StorageSystem.refresh()});

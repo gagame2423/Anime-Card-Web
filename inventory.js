@@ -54,12 +54,12 @@
     const entry = raw && typeof raw === 'object' ? raw : {}, base = definitions.get(id) || {};
     return { id, name: String(base.name ?? entry.name ?? id), description: String(base.description ?? entry.description ?? ''),
       type: String(base.type ?? entry.type ?? 'material').trim().toLowerCase() || 'material',
-      icon: String(base.icon ?? entry.icon ?? '📦'), image: String(base.image ?? entry.image ?? ''),
+      icon: String(base.icon ?? entry.icon ?? '📦'), image: String(({gems:'assets/items/gem.png',rift_shard:'assets/items/rshard.png'})[id] ?? base.image ?? entry.image ?? ''),
       tier: String(base.tier ?? entry.tier ?? 'common').trim().toLowerCase(),
       quantity: countOf(typeof raw === 'number' || typeof raw === 'string' ? raw : entry.quantity ?? entry.count),
       metadata: entry.metadata && typeof entry.metadata === 'object' ? entry.metadata : {} };
   }
-  function blank() { return { version: 3, receipts: {}, paused: {}, items: Object.fromEntries(Object.keys(POTIONS).map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
+  function blank() { return { version: 3, hextechPending:null, receipts: {}, paused: {}, items: Object.fromEntries(Object.keys(POTIONS).map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
   function read() {
     let saved;
     try { saved = sanitizeSave(JSON.parse(host.localStorage?.getItem(KEY) || 'null')); } catch (_) { saved = null; }
@@ -74,6 +74,7 @@
       for(const id of Object.values(SUPER_BASE)) { const ms=Number(saved.paused?.[id]); if(Number.isSafeInteger(ms)&&ms>0)result.paused[id]=ms; }
       for(const [stream,receipt]of Object.entries(saved.receipts||{}))if(/^[a-z0-9_]{1,40}$/.test(stream)&&typeof receipt==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(receipt))result.receipts[stream]=receipt;
       result.misses = Math.min(10, countOf(saved.misses));
+      result.hextechPending = saved.hextechPending && typeof saved.hextechPending==='object' ? saved.hextechPending : null;
     }
     return result;
   }
@@ -98,6 +99,7 @@
     const entry = data.items[id];
     return { ...entry, ...(entry.type==='portal'&&host.PortalRules?{image:host.PortalRules.image(entry)}:{}), metadata: { ...entry.metadata }, ...POTIONS[id], quantity: entry.quantity, until: data.buffs[id] || 0, remaining: Math.max(0, (data.buffs[id] || 0) - at), pausedRemaining: data.paused[id] || 0, usable: hasOwn(POTIONS, id) };
   }
+  function renderAmount(node,id,amount,label=null){if(!node)return;const item=getItem(id),image=host.document.createElement('img');image.className='hx-item-icon';image.src=item?.image||'';image.alt='';image.width=19;image.height=19;image.addEventListener('error',()=>image.remove(),{once:true});node.replaceChildren(...(item?.image?[image]:[]),host.document.createTextNode(' '+Number(amount||0).toLocaleString('en-US')+(label===null?' '+(item?.name||id):label?' '+label:'')));}
   function list() { return Object.keys(data.items).map(id => getItem(id)); }
   // Pure HUD snapshot: expired Super timers can be resolved without writing a save in Sandbox.
   function activeEffects(at=Date.now()) {
@@ -152,6 +154,16 @@
     data.receipts[stream]=receipt;
     if(persist())return true;data=JSON.parse(before);return false;
   }
+  // Debit and pre-rolled reward commit together. The main save owns the matching
+  // reward receipt, so recovering a paid chest cannot grant the same reward twice.
+  function buyHextech(plan){
+    if(!host.HextechSystem?.validPlan(plan)||data.hextechPending||quantity('gems')<500)return false;
+    const before=JSON.stringify(data);data.items.gems.quantity-=500;
+    if(plan.duplicate)data.items.gems.quantity+=150;
+    data.hextechPending=JSON.parse(JSON.stringify(plan));
+    if(persist()){revision++;return true;}data=JSON.parse(before);return false;
+  }
+  function settleHextech(id){if(data.hextechPending?.id!==id)return false;const before=data.hextechPending;data.hextechPending=null;if(persist()){revision++;return true;}data.hextechPending=before;return false;}
   // Material costs, Relic metadata and unique instances commit together.
   let revision=0;
   function transactItems(change,receipt=null){
@@ -263,5 +275,5 @@
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); revision++; persist(); }
-  host.InventorySystem = Object.freeze({ KEY, transactItems, get revision(){return revision;}, flush: persist, reload: () => { data = read(); revision++; settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, transactOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  host.InventorySystem = Object.freeze({ KEY, renderAmount,buyHextech,settleHextech,pendingHextech:()=>data.hextechPending?JSON.parse(JSON.stringify(data.hextechPending)):null, transactItems, get revision(){return revision;}, flush: persist, reload: () => { data = read(); revision++; settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, transactOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

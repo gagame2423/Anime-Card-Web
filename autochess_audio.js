@@ -2,8 +2,8 @@
 (function(host){
  'use strict';
  const RANK_FILES=Object.freeze(['itob','btos','stog','gtop','ptoe','etod','dtom','mtogm','gmtoc']);
- const FILES=Object.freeze({refresh:'shop',xp:'exp',level:'levelup',fuse:'fuse',victory:'win',defeat:'lose',buy:'buy',sell:'sell',deploy:'deploy',draft:'draft',travel:'travel'});
- const OPTIONAL=Object.freeze(['buy','sell','deploy','draft','travel']);
+ const FILES=Object.freeze({hextech:'hextech_open',refresh:'shop',xp:'exp',level:'levelup',fuse:'fuse',victory:'win',defeat:'lose',buy:'buy',sell:'sell',deploy:'deploy',draft:'draft',travel:'travel'});
+ const OPTIONAL=Object.freeze(['buy','sell','deploy','draft','travel','hextech']);
  const WARNING_SECONDS=10,MAX_ACTIVE=5,POOLS=new Map(),playing=new Set(),warned=new Set(),lastPlayed=new Map();
  let activated=false,wanted=false,epoch=0,serial=0;
  const settings=()=>({enabled:host.DropAudioSystem?.enabled!==false,volume:Math.max(0,Math.min(1,Number(host.DropAudioSystem?.volume??.8)||0))});

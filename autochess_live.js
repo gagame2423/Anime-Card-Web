@@ -9,10 +9,10 @@
   s.id=packet.matchId;s.localPlayerId=s.players[roster.findIndex(m=>m.uid===me.uid)]?.id||'human';
   s.live={version:1,room:packet.room,owner:roster[0].uid,humans:roster.map((m,i)=>({id:s.players[i].id,uid:m.uid,connected:true})),ready:{},locked:false};
   s.hybrid={version:1,uid:me.uid,room:packet.room,humanPlayers:roster.length,mode:'live',runs:{},stages:{},readRequested:false,queryCount:0,writeAttempted:false,writeCount:0,cloudStatus:'local'};
-  for(const [i,m]of roster.entries()){const p=s.players[i];p.name=host.AutoChessRuns.name(m.name);p.bot=false;p.source={kind:'live-human',uid:m.uid};}
+  for(const [i,m]of roster.entries()){const p=s.players[i];p.name=host.AutoChessRuns.name(m.name);p.bot=false;p.hextechUnlocks=[...(m.hextechUnlocks||[])];p.equippedSkins={...(m.equippedSkins||{})};p.source={kind:'live-human',uid:m.uid};}
   const used=new Set(roster.map(m=>m.uid));let slot=roster.length;
   for(const wire of host.AutoChessOnline.distinct(host.AutoChessOnline.cached()||[],me.uid)){if(slot>=8||used.has(wire.uid))continue;used.add(wire.uid);const p=s.players[slot++];p.name=wire.name;p.source={kind:'recorded',uid:wire.uid};s.hybrid.runs[p.id]=wire;}
-  if(packet.link)links.set(s.id,packet.link);return s;
+  C.carousel(s);if(packet.link)links.set(s.id,packet.link);return s;
  }
  const stage=s=>C.label(s)+'/'+s.phase;
  function createSession(initial,options={}){
