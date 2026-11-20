@@ -15,10 +15,17 @@
  function rankOf(value){const elo=safe(value)?value:0,tier=TIERS.slice().reverse().find(t=>elo>=t.base)||TIERS[0],division=tier.divisions?Math.max(0,tier.divisions-1-Math.floor((elo-tier.base)/100)):null,roman=division===null?'':['I','II','III','IV'][division];return{...tier,division:roman,label:tier.name+(roman?' '+roman:''),elo,progress:tier.divisions?elo%100:null,milestone:Math.min(33,Math.floor(elo/100))};}
  function deltaFor(elo,placement){if(!Number.isInteger(placement)||placement<1||placement>8)throw Error('Invalid Elo placement.');const tier=rankOf(elo).index;return TABLES[tier<=2?0:tier<=4?1:tier<=6?2:tier<=8?3:4][placement-1];}
  function tacticalSummary(value){if(value===undefined||value===null)return{cohesion:0,itemization:0,fusion:0,total:0};if(!value||!['cohesion','itemization','fusion','total'].every(k=>Number.isInteger(value[k]))||value.cohesion<0||value.cohesion>3||value.itemization<0||value.itemization>2||value.fusion<0||value.fusion>1||value.total!==value.cohesion+value.itemization+value.fusion)throw Error('Invalid tactical score.');return Object.fromEntries(['cohesion','itemization','fusion','total'].map(k=>[k,value[k]]));}
- function quoteElo(placement,before=current().elo,tactical=null){if(!safe(before))throw Error('Invalid starting Elo.');const rule=deltaFor(before,placement),bonus=tacticalSummary(tactical),after=Math.max(0,Math.min(MAX,before+rule+bonus.total));return{before,after,delta:after-before,rule,placement,tableVersion:3,tactical:bonus};}
+ const ONLINE_ELO_MULTIPLIER=3;
+ function quoteElo(placement,before=current().elo,tactical=null,online=false){
+  if(!safe(before))throw Error('Invalid starting Elo.');
+  const rule=deltaFor(before,placement),bonus=tacticalSummary(tactical),net=rule+bonus.total;
+  const after=Math.max(0,Math.min(MAX,before+(online&&net>0?net*ONLINE_ELO_MULTIPLIER:net)));
+  return{before,after,delta:after-before,rule,placement,tableVersion:online?4:3,tactical:bonus};
+ }
+ function rebaseQuote(q,before){return quoteElo(q.placement,before,q.tableVersion>=3?q.tactical:null,q.tableVersion===4);}
  function validQuote(q,placement=q?.placement){
-  if(!q||!safe(q.before)||!Number.isInteger(placement)||placement<1||placement>8||![undefined,2,3].includes(q.tableVersion))return false;
-  let expected;if(q.tableVersion===3){try{expected=quoteElo(placement,q.before,q.tactical);}catch(_){return false;}return Object.entries(expected).every(([k,v])=>k==='tactical'?JSON.stringify(v)===JSON.stringify(tacticalSummary(q.tactical)):q[k]===v);}
+  if(!q||!safe(q.before)||!Number.isInteger(placement)||placement<1||placement>8||![undefined,2,3,4].includes(q.tableVersion))return false;
+  let expected;if(q.tableVersion>=3){try{expected=quoteElo(placement,q.before,q.tactical,q.tableVersion===4);}catch(_){return false;}return Object.keys(expected).every(k=>k==='tactical'||q[k]===expected[k]);}
   const tier=rankOf(q.before).index,rule=q.tableVersion===2?deltaFor(q.before,placement):LEGACY_TABLES[tier<=3?0:tier<=6?1:tier<=8?2:3][placement-1],after=Math.max(0,Math.min(MAX,q.before+rule));expected={before:q.before,after,delta:after-q.before,rule,placement};return Object.keys(expected).every(k=>q[k]===expected[k]);
  }
  function normalise(raw){const result=fresh();if(!raw||typeof raw!=='object'||Array.isArray(raw))return result;for(const key of ['elo','wins','matches'])if(safe(raw[key]))result[key]=raw[key];for(const [id,quote]of Object.entries(raw.receipts||{}).slice(-10000))if(/^chess_[a-z0-9]+_[a-z0-9]+$/.test(id)&&validQuote(quote))result.receipts[id]={...quote};result.peakElo=Math.max(result.elo,safe(raw.peakElo)?raw.peakElo:0,...Object.values(result.receipts).flatMap(q=>[q.before,q.after]));result.peakRank=rankOf(result.peakElo).label;result.matches=Math.max(result.matches,result.wins,Object.keys(result.receipts).length);return result;}
@@ -85,5 +92,5 @@
   if(duringMatch())void load();else if(freshCache)mark('Cached global standings · your current local rating is refreshed. Use Refresh for the latest cloud results.','cached');else void load();
  }
  function disposeUI(){cleanup(promotion);cleanup(overlay);promotion=overlay=null;}
- host.AutoChessRanked=Object.freeze({TIERS,TABLES,CACHE_KEY,fresh,rankOf,deltaFor,quoteElo,validQuote,normalise,validProfile,current,snapshot,applyProfile,showPromotion,showLeaderboard,mergedRows,entry,invalidateLeaderboard,disposeUI,configure(options={}){bridge=options;}});
+ host.AutoChessRanked=Object.freeze({TIERS,TABLES,CACHE_KEY,fresh,rankOf,deltaFor,quoteElo,rebaseQuote,ONLINE_ELO_MULTIPLIER,validQuote,normalise,validProfile,current,snapshot,applyProfile,showPromotion,showLeaderboard,mergedRows,entry,invalidateLeaderboard,disposeUI,configure(options={}){bridge=options;}});
 })(window);

@@ -8,7 +8,7 @@
     'PlanetDestroyer', 'Ninja', 'Unhuman', 'Human', 'Captain', 'Brutal',
     'PureEvil', 'DemonSlayer', 'Sins', 'Alternative', 'Army', 'Swordman',
     'Supporter', 'Magician', 'Reaper', 'Hunter', 'Titan', 'TitanSlayer',
-    'Animal', 'Mastermind', 'Baller', 'Isekai', 'Draconic', 'Bleach', 'Gunner'
+    'Animal', 'Mastermind', 'Baller', 'Isekai', 'Draconic', 'Bleach', 'Gunner', 'Cartoon'
   ]);
   const ALIASES = Object.freeze({
     Villain: 'Villian',

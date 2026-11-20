@@ -48,6 +48,7 @@
   Isekai:{icon:'⟡',bonus:{hp:.055},proc:'secondlife',power:.05,text:'Once below 25% HP, heal 10/20/30/40% max HP; every fifth strike grants Energy.'},
   Draconic:{icon:'♞',bonus:{atk:.06},proc:'roar',power:.22,text:'Every fifth attack roars at three enemies, dealing damage and one-turn Stun.'},
   Bleach:{icon:'卍',bonus:{mana:3},proc:'reiatsu',power:.20,text:'Every fourth attack unleashes Reiatsu, damaging two enemies and shielding the caster.'},
+  Cartoon:{icon:'✧',bonus:{hp:.06,reduction:.03},proc:'command',power:.06,text:'Every third attack shields the Cartoon unit and adjacent allies.'},
   Gunner:{icon:'⌁',bonus:{speed:.05},proc:'ricochet',power:.25,text:'Every third ranged attack ricochets to the two nearest other enemies.'}
  };
  const registry=[...new Set([...host.ElementSystem.TYPES,...host.CategorySystem.TYPES,...(host.ALL_CARDS||[]).flatMap(c=>c.category||[])])];

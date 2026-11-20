@@ -21,7 +21,7 @@
   const MAX_SLASHES = 16;
 
   let host = { ...initialHost };
-  const combatStats = window.createCombatStats({allow:(u,stat,delta,key)=>sins?.allowStat(u,stat,delta,key)!==false&&tensura?.allowGain(activeCombat,u,delta)!==false,lease:()=>passiveScopes.get(statusSource)?.copy?.yuukiLease||null});
+  const combatStats = window.createCombatStats({allow:(u,stat,delta,key,value=delta)=>(value>=0||!content?.debuffImmune(u))&&sins?.allowStat(u,stat,delta,key)!==false&&tensura?.allowGain(activeCombat,u,delta)!==false,lease:()=>passiveScopes.get(statusSource)?.copy?.yuukiLease||null});
   const phases=window.createTurnPhases();
   let passiveLogSequence = 0;
   const passiveScopes = new WeakMap();
@@ -385,6 +385,7 @@
       hitRecursionDepth++;if(source)activeHitSources.add(source);try{
       if((options.isFollowUp||options.fateSupport||options.requiemSupport||options.followOwner)&&(!spooky.canFollow(source)||!spooky.canFollow(options.followOwner)))return {damage:0,killed:false,hit:false,skipped:true,hindered:true};
       if (!isAlive(target) || !(damage > 0)) return { damage: 0, killed: false };
+      ({target,options}=stretchTarget(bs,source,target,options));
       recordFollowUp(bs,source,options);
       markAttackTarget(bs,source,target,options);if(attackMisses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,specialAttack:options.specialAttack!==false,fearChecked:true};
       const amount = options.akatsukiRawDamage?Math.max(0,damage):window.ElementSystem.damage(source, target, Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1) * yuno.offensive(source,target))));
@@ -394,7 +395,7 @@
         if (reflected.killed) { onKill(bs, target, source); onTeammateDeath(bs, source); }
         return { damage: 0, killed: false, reflected: true };
       }
-      if (!hasPassive(source,'the-mourner') && amount >= target.hp && tower200.offensive(bs,source,target)===1 && relic.attackMultiplier(source,{championSkill:true,...options})===1 && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, amount, options)) return { damage: 0, killed: false };
+      if (!options.stretchyScale&&!options.adventureSword && !hasPassive(source,'the-mourner') && amount >= target.hp && tower200.offensive(bs,source,target)===1 && relic.attackMultiplier(source,{championSkill:true,...options})===1 && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, amount, options)) return { damage: 0, killed: false };
       const result = damageUnit(bs, source, target, amount, { passiveAttack: true, championSkill: true, ...options, raidBlockChecked: true, elementApplied: true, yunoDamageApplied:true });
       if(result.absorbed || (result.dodged&&yuno.dodgeChance(target)))return result;
       onHitTaken(bs, target, source, { hit: true, damage: result.damage, championCounter: options.championCounter });
@@ -1295,7 +1296,8 @@
       if(Math.random()<getDodgeChance(target,source,bs,{})){onDodge(bs,target,source,{incomingDamage:amount});return {hit:false,damage:0,killed:false,dodged:true};}
       const stats=getCritStats(source),critical=Math.random()<stats.chance;
       const result=champions.hit(bs,source,target,amount*(critical?stats.multiplier:1),{spookyPrimary:true,specialAttack:true,passiveAttack:false,dodgeChecked:true});
-      const outcome={...result,hit:!result.dodged&&!result.reflected,critical};ragna.critical(bs,source,target,outcome);return outcome;
+      const blocked=options.adventureSword&&(result.raidBlocked||result.absorbed||result.invincible);
+    const outcome={...result,target,hit:!blocked&&!result.dodged&&!result.reflected,critical};ragna.critical(bs,source,target,outcome);return outcome;
     },
     execute:(bs,source,target)=>champions.execute?champions.execute(bs,source,target):executeSpookyTarget(bs,source,target),
     death:(bs,unit)=>onTeammateDeath(bs,unit),indices:ensureCurrentIndices,attack:(...args)=>performAttack(...args),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),
@@ -1366,7 +1368,7 @@
     disable(u,turns,bs,source){if(sourcePassiveAllowed(u,source)){const r=ensureRuntime(u);r.passiveSuppressionTurns=Math.max(r.passiveSuppressionTurns||0,turns);r.suppressionAppliedTurn=bs.turnCount;}},
     assist(bs,u,target,amount,owner){return primarySkillHit(bs,u,target,amount,{isFollowUp:true,followOwner:owner,linkedAttack:true,specialAttack:false});},
     reflect(bs,u,target,amount){const result=damageUnit(bs,u,target,amount,{passiveAttack:true,akatsukiReflect:true,akatsukiRawDamage:true,grimoireReflection:true,elementApplied:true,yunoDamageApplied:true,dodgeChecked:true});if(result.killed){onKill(bs,u,target);onTeammateDeath(bs,target);}return result;},
-    poisonDamage(bs,u,target,amount){if(!isAlive(target))return;const before=target.hp;target.hp=Math.max(1,target.hp-Math.max(0,Math.floor(amount*sins.dotFactor(bs))));recordBattleDamage(bs,u,target,before,{dot:'poison'});akatsuki.damaged(bs,target,u,before-target.hp,{dot:true});refreshUnitDisplay(target);},
+    poisonDamage(bs,u,target,amount){if(!isAlive(target)||content?.debuffImmune(target))return;const before=target.hp;target.hp=Math.max(1,target.hp-Math.max(0,Math.floor(amount*sins.dotFactor(bs))));recordBattleDamage(bs,u,target,before,{dot:'poison'});akatsuki.damaged(bs,target,u,before-target.hp,{dot:true});refreshUnitDisplay(target);},
     forceDeath(bs,source,target){if(!isAlive(target))return;const before=target.hp;target.hp=0;target.defeated=true;recordBattleDamage(bs,source,target,before);champions.death(bs,target,source);if(!isAlive(target)){onKill(bs,source,target);onTeammateDeath(bs,target);}refreshUnitDisplay(target);},
     seal(bs,source,target){if(!isAlive(target))return;target.akatsukiSealed=true;target.championPermanentDeath=true;const before=target.hp;target.hp=0;target.defeated=true;recordBattleDamage(bs,source,target,before);champions.death(bs,target,source);onKill(bs,source,target);onTeammateDeath(bs,target);ensureCurrentIndices(bs);},
     summon(bs,owner,kind,hpScale,atkScale,label){if(!canCreateCompanion(owner)||!companions.canSpawn(bs,owner,kind))return null;
@@ -1485,6 +1487,10 @@
   function markAttackTarget(bs,u,target,meta={}){sins?.target(bs,u,target,meta);spooky.attackTarget(bs,u,target);}
   content=window.createContentSkills({
     id:getEffectivePassiveCardId,has:hasPassive,passiveRuntimeFor,runtime:ensureRuntime,alive:isAlive,all:allUnits,enemies:enemiesOf,team:teamOf,atk:computeWeakenedAtk,random:()=>Math.random(),
+    owns:(u,id)=>passiveIds(u,true).includes(id),canAct:u=>!isUnitStunned(u)&&spooky.canFollow(u),
+    frontline:(u,bs)=>!isGeneratedUnit(u)&&(bs.mode==='auto-chess'?u.grid?.frontline===true:ensureRuntime(u).initialLineupIndex===0),
+    cleanseDebuffs:cleanLastHero,dispel:dispelCombatBuffs,
+    intercept(jake,ally){safeLog('[PASSIVE] Stretchy Bodyguard: Jake intercepted the hit aimed at '+ally.card.name+'.','support');host.showBattleFloatingText?.(jake,'INTERCEPT','support');},
     category:(u,key)=>window.CategorySystem.has(u,key),allowed:(bs,u,v)=>tensura.effectAllowed(bs,u,v),attackToken:phases.attackToken,ownTurns:phases.ownTurns,attackCount:getCardAttackCount,
     scope(u,id,fn){const copy=u.passiveState?.grimoire?.copies?.find(c=>c.id===id),previous=statusSource;statusSource=u;try{return copy?withPassive(u,copy,fn):fn();}finally{statusSource=previous;}},
     percent(u,stat,key,n,fill=false){if(n<0&&statusSource&&!sourcePassiveAllowed(u,statusSource))return;combatStats.set(u,stat,key,n,fill&&!isBleeding(u));refreshUnitDisplay(u);},
@@ -1505,13 +1511,47 @@
   const revivalReceipts=new WeakMap(),fatalReceipts=new WeakMap();
   function recordRevival(bs,u){const r=ensureRuntime(u);if(r.champion)r.champion.akatsukiPermanentHandled=false;r.akatsukiDeathHandled=false;revivalReceipts.set(u,(revivalReceipts.get(u)||0)+1);window.QuestSystem?.trackCombat('summon',bs,u);relic.survived(u,currentDamageMeta||{});}
   function recordFatal(bs,u,revived=false){fatalReceipts.set(u,(fatalReceipts.get(u)||0)+1);window.QuestSystem?.trackCombat('fatal',bs,u);if(!revived)relic.survived(u,currentDamageMeta||{});}
+  const HERO_DEBUFFS=['stunTurns','freezeTurns','fearTurns','snailTurns','hindredTurns','hypnosisTurns','shibuyaHypnosis','sinsHypnosisTurns','sinsHypnosisOwner','tensuraHypnosis','deadlightsHypnosis','spookyFrogTurns','spookyStolenPassives','weakenAttackTurns','weakenAttackPct','noDodgeTurns','noDodgeAgainstUnit','incomingVulnerabilityTurns','incomingVulnerabilityPct','passiveSuppressionTurns','passiveSuppressedUntilDeath','passiveDisabled','timeDilationPending','akatsukiPoison','akatsukiVoodoo','akatsukiMiss','akatsukiHypnosis','akatsukiHealBlock','burn','bleed','poison','atkBonusPct','maxHpBonusPct','critChanceBonus','critDamageBonus'];
+  const DEBUFF_ARRAYS=new Set(['burn','bleed','poison','akatsukiPoison','akatsukiVoodoo']);
+  const SIGNED_BONUSES=new Set(['atkBonusPct','maxHpBonusPct','critChanceBonus','critDamageBonus']);
+  const POSITIVE_STATUS=new Set(['invincibleTurns','immuneTurns','incomingImmuneTurns','hakariInvincible']);
+  function cleanLastHero(bs,u){
+    const r=ensureRuntime(u),paper=r.akatsukiPaper;akatsuki.cleanse(u,true);if(paper)r.akatsukiPaper=paper;
+    for(const k of HERO_DEBUFFS){if(k==='spookyStolenPassives')r[k]={};else if(DEBUFF_ARRAYS.has(k))r[k]=[];else if(SIGNED_BONUSES.has(k))r[k]=Math.max(0,Number(r[k])||0);else r[k]=0;}
+    const champion=champions.state(u);champion.heresy=0;
+    observeRuntime(bs,u,champion,'last-hero-heresy',['heresy'],()=>content.debuffImmune(u)?{value:0}:null);
+    combatStats.clearNegative(u,'atk');combatStats.clearNegative(u,'hp');
+    // Copies and direct legacy writes still share this status record. Return
+    // fresh empty collections so in-place pushes cannot persist a debuff.
+    const empty=(k,value)=>DEBUFF_ARRAYS.has(k)?[]:k==='spookyStolenPassives'?{}:value;
+    observeRuntime(bs,u,r,'last-hero',HERO_DEBUFFS,(_,k,value)=>content.debuffImmune(u)?{value:empty(k,SIGNED_BONUSES.has(k)?Math.max(0,Number(value)||0):0)}:null,(_,k,value)=>content.debuffImmune(u)?empty(k,value):value);
+    refreshUnitDisplay(u);
+  }
+  function dispelCombatBuffs(bs,source,target){
+    if(!isAlive(target)||teamOf(bs,source)===teamOf(bs,target)||content.debuffImmune(target)||!tensura.effectAllowed(bs,source,target))return false;
+    // A dispel removes gained buffs, not the unit's base/equipment or team build.
+    const retain=key=>/^(synergy|augment|chess):/.test(key);
+    for(const stat of ['hp','atk'])combatStats.clear(target,stat,true,retain);
+    const r=ensureRuntime(target);
+    for(const k of ['atkBonusPct','maxHpBonusPct','critChanceBonus','critDamageBonus','postReviveDodgeBonus','damageReductionPct','damageReductionTurns','invincibleTurns','incomingImmuneTurns','immuneTurns','hakariInvincible','auraStacks','atkBoostTurns','raidHakiReduction','absorbedAttack','builderTowerAtk','nextAttackBonus','shield','waterShield','weatherShield','weatherShieldExpiresAt'])r[k]=Math.min(0,Number(r[k])||0);
+    r.nextAttackMultiplier=Math.min(1,r.nextAttackMultiplier||1);r.nextAttackCritGuaranteed=false;r.nextAttackIsBuffed=false;r.jackpotBoost='';r.yunoShields=[];r.shieldKind='';r.fateBoon=null;
+    for(const k of ['displayAtkBonusPct','displayHpBonusPct','flatAtkBonusDisplay','temporaryStatsTurns','temporaryAtkBonusPct','temporaryMaxHpBonusPct','temporaryAtkDelta','temporaryMaxHpDelta','stormAtkDelta','stormTurns'])r[k]=0;
+    r.hamonActive=false;r.buffStacks=0;r.activeTags=[];akatsuki.clearBuffs(target);content.dispel(target);refreshUnitDisplay(target);return true;
+  }
+  function stretchTarget(bs,source,target,options){
+    if(!bs||!source||!isAlive(target)||options.stretchyChecked||options.dot||options.isCounter||options.championCounter||options.championRedirect||options.ballerRedirect||options.fateAbsorb||options.grimoireReflection||options.entenReflect||options.akatsukiReflect)return {target,options};
+    const guard=content?.guard(bs,source,target);
+    return {target:guard?.target||target,options:{...options,stretchyChecked:true,...(guard?{stretchyScale:guard.scale}:{})}};
+  }
   function primarySkillHit(bs,source,target,amount,options={}){
+    ({target,options}=stretchTarget(bs,source,target,options));
     sins?.prepare(bs,source,target,options);
     baller?.attacking(bs,source,target,options);
     markAttackTarget(bs,source,target,options);if(attackMisses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,specialAttack:options.specialAttack!==false,fearChecked:true};
     if(options.isFollowUp&&!spooky.canFollow(source))return {hit:false,damage:0,killed:false,skipped:true};
-    if(!options.ignoreDodge&&Math.random()<getDodgeChance(target,source,bs,options)*(options.enemyDodgeMultiplier??1)){onDodge(bs,target,source,{incomingDamage:amount,meta:options});return {hit:false,damage:0,killed:false,dodged:true};}
-    const stats=getCritStats(source),critical=!options.noCritical&&Math.random()<stats.chance;
+    if(!options.ignoreDodge&&Math.random()<getDodgeChance(target,source,bs,options)*(options.enemyDodgeMultiplier??1)){onDodge(bs,target,source,{incomingDamage:amount*(options.stretchyScale??1),meta:options});return {hit:false,damage:0,killed:false,dodged:true,target};}
+    const stats=getCritStats(source),critical=!options.noCritical&&Math.random()<Math.min(1,stats.chance+(options.adventureCrit||0));
+    if(options.adventureSword)ensureRuntime(source).lastCrit=critical;
     const result=champions.hit(bs,source,target,amount*(Number(options.damageMultiplier)||1)*(critical?stats.multiplier:1),{...options,passiveAttack:Boolean(options.passiveAttack),dodgeChecked:true});
     const outcome={...result,hit:!result.dodged&&!result.reflected&&!result.skipped&&!result.immune&&!result.missed,critical};dragon.critical(bs,source,target,outcome,options);ragna.critical(bs,source,target,outcome);sins?.after(bs,source,target,outcome,options);return outcome;
   }
@@ -1589,6 +1629,7 @@
   function applyMaxHpBonus(unit, percent, healToNewMax = true) {
     if (!unit) return 0;
     const pct = Number(percent) || 0;
+    if(pct<0&&content?.debuffImmune(unit))return 0;
     const bonus = combatStats.add(unit, 'hp', pct, healToNewMax && !isBleeding(unit));
     const runtime = ensureRuntime(unit);
     runtime.maxHpBonusPct += pct;
@@ -1685,7 +1726,7 @@
   }
 
   function setStatus(unit, key, turns, source = null) {
-    if(content?.immune(unit)&&source||content?.status(activeCombat,unit,key))return false;
+    if(content?.debuffImmune(unit)&&!POSITIVE_STATUS.has(key)||content?.immune(unit)&&source||content?.status(activeCombat,unit,key))return false;
     if(bleach?.status(activeCombat,unit,key,source))return false;
     if(baller?.immune(unit,key)||sins?.immune(unit,key)||tensura.onStatusInflicted(unit,key))return false;
     if (!unit || ragna.immune(unit,key) || tower200.blocked(activeCombat,unit,key) || shibuya.immuneStatus(unit,key) || (source&&hasPassive(unit,'hanami')&&ensureRuntime(unit).shield>0) || mourner.status(activeCombat,unit,key)) return;
@@ -1710,7 +1751,7 @@
   }
 
   function addDot(unit, kind, turns, damagePerTurn, source, options = {}) {
-    if(source&&content?.immune(unit))return;
+    if(content?.debuffImmune(unit)||source&&content?.immune(unit))return;
     if (!unit || tensura.onStatusInflicted(unit,kind,options.uncleansable) || tower200.blocked(activeCombat,unit,kind) || (source&&hasPassive(unit,'hanami')&&ensureRuntime(unit).shield>0) || (!options.uncleansable&&shibuya.dot(activeCombat,unit,kind,turns,damagePerTurn,source,options))) return;
     const runtime = ensureRuntime(unit);
     const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
@@ -1719,7 +1760,7 @@
     const incoming={turns:safeTurns,damage:safeDamage,source};
     if(bleach.status(activeCombat,unit,kind,source,{uncleansable:options.uncleansable,effects:[...list,incoming]}))return;
     const lease=passiveScopes.get(statusSource)?.copy?.yuukiLease;
-    const effect={turns:safeTurns,damage:safeDamage,source:source||null,...(lease?{yuukiLease:lease}:{}),...(options.tensuraSuppression?{tensuraSuppression:true}:{}),...(options.uncleansable?{uncleansable:true}:{})};
+    const effect={turns:safeTurns,damage:safeDamage,source:source||null,...(lease?{yuukiLease:lease}:{}),...(options.tensuraSuppression?{tensuraSuppression:true}:{}),...(options.adventureSword===2?{adventureSword:2}:{}),...(options.uncleansable?{uncleansable:true}:{})};
     list.push(effect);if(options.uncleansable)akatsuki.rememberBurn(unit,effect);
     runtime[kind] = list;
     tower200.statusApplied(activeCombat,unit,source);
@@ -1923,7 +1964,7 @@
       const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
       const remaining = [];
       for (const effect of list) {
-        const dmg = !tensura.effectAllowed(battleState,effect.source,unit)||tensura.passiveImmune(unit,{dot:true})?0:Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (battleState?.mode==='auto-chess'?1+(effect?.source?.grid?.traits?.dot||0):1) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : tower200.dotFactor(battleState,effect?.source,kind))) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)*ragna.dotFactor(unit,kind)*mourner.incoming(unit)*mourner.outgoing(effect?.source)*sins.dotFactor(battleState)*(1-sins.reduction(unit))));
+        const dmg = content.debuffImmune(unit)||!tensura.effectAllowed(battleState,effect.source,unit)||tensura.passiveImmune(unit,{dot:true})?0:Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (battleState?.mode==='auto-chess'?1+(effect?.source?.grid?.traits?.dot||0):1) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : tower200.dotFactor(battleState,effect?.source,kind))) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)*ragna.dotFactor(unit,kind)*mourner.incoming(unit)*mourner.outgoing(effect?.source)*sins.dotFactor(battleState)*(1-sins.reduction(unit))));
         if (dmg > 0 && isAlive(unit)) {
           const before = unit.hp;
           let absorbed = absorbShieldDamage(unit, dmg, battleState, effect.source);
@@ -1948,7 +1989,7 @@
           if (unit.hp <= 0) {
             unit.defeated = true;
             champions.death(battleState, unit, effect.source);
-            if(!isAlive(unit)){content.killed(battleState,effect.source,unit);bleach.killed(battleState,effect.source,unit,{dot:kind});tensura.onKill(battleState,effect.source,unit);tower200.killed(battleState,unit);tower200.died(battleState,unit);}
+            if(!isAlive(unit)){content.killed(battleState,effect.source,unit,effect);content.lastHero(battleState,teamOf(battleState,unit));bleach.killed(battleState,effect.source,unit,{dot:kind});tensura.onKill(battleState,effect.source,unit);tower200.killed(battleState,unit);tower200.died(battleState,unit);}
             break;
           }
         }
@@ -2149,7 +2190,7 @@
     const targetRuntime = ensureRuntime(target);
     content.attacked(battleState,target,attacker,meta);
     targetRuntime.lastAttacker=attacker;
-    const fatalityDeferred = meta.mournerUnreducedDamage>0 || hasPassive(attacker,'the-mourner') || mourner.incoming(target)!==1 || relic.attackMultiplier(attacker,meta)!==1 || deferFatality(battleState, target) || yuno.offensive(attacker,target)!==1 || tower200.offensive(battleState,attacker,target)!==1;
+    const fatalityDeferred = meta.stretchyScale||meta.adventureSword||meta.mournerUnreducedDamage>0 || hasPassive(attacker,'the-mourner') || mourner.incoming(target)!==1 || relic.attackMultiplier(attacker,meta)!==1 || deferFatality(battleState, target) || yuno.offensive(attacker,target)!==1 || tower200.offensive(battleState,attacker,target)!==1;
     const source = attacker || null;
 
     if (targetRuntime.invincibleTurns > 0 || targetRuntime.hakariInvincible > 0) {
@@ -3202,13 +3243,13 @@
     const yuuki=passiveRuntimeFor(victim,'yuuki-kagurazaka').tensura;if(yuuki?.copy){expireYuukiCopy(battleState,victim,yuuki.copy);yuuki.copy=null;}
     tower200.died(battleState,victim);
     requiem.checkLastStand(battleState);
-    if(champions.uncloneable(victim))return;
     const team = teamOf(battleState, victim);
-    if (isGeneratedUnit(victim)) return;
+    if(champions.uncloneable(victim)||isGeneratedUnit(victim)){content.lastHero(battleState,team);return;}
     const jinUnits = aliveUnits(team).filter(unit => canCreateCompanion(unit) && hasPassive(unit,'jin-mori'));
     for (const jin of jinUnits) {
       createJinMoriCloneForDeadTeammate(battleState, jin, victim);
     }
+    content.lastHero(battleState,team);
   }
 
   function onKill(battleState, killer, victim, context = {}) {
@@ -3605,7 +3646,8 @@
     // are the only other legal out-of-turn combat actions.
     const passiveId = getEffectivePassiveCardId(attacker);
     const isLinkedFollowUp = Boolean(options.isFollowUp) && (isScheduledTurnAttacker(battleState, attacker) || alucard.linked(battleState,attacker,options) || questSkills.linked(battleState,attacker,options) || grimoire.linked(attacker,options) || spooky.linked(battleState,attacker,options) || gomen.linked(attacker,options));
-    const isExplicitSupportAction = Boolean(options.outOfTurnPassive || options.linkedAttack) && OUT_OF_TURN_SUPPORT_IDS.has(passiveId);
+    const isExplicitSupportAction = Boolean(options.outOfTurnPassive || options.linkedAttack) && OUT_OF_TURN_SUPPORT_IDS.has(passiveId) ||
+      options.adventureAssist===true&&attacker.card?.id==='jake-the-dog'&&hasPassive(options.followOwner,'finn-the-human')&&teamOf(battleState,attacker).includes(options.followOwner);
     const isRootAttack = (Number(options.chainDepth) || 0) === 0 && !options.isFollowUp && !options.isCounter;
     const isCounter = Boolean(options.isCounter);
 
@@ -3695,6 +3737,7 @@
       : target;
     ensureRuntime(attacker).overrideTarget = null;
     target = effectiveTarget;
+    ({target,options}=stretchTarget(battleState,attacker,target,options));
 
     markAttackTarget(battleState,attacker,target,options);
     champions.beforeAttack(battleState, attacker, target, options);
@@ -3717,7 +3760,7 @@
       incomingDamage *= questSkills.multiplier(attacker, target) * expansion.multiplier(attacker, target, battleState) * champions.multiplier(attacker, target, options) * (Number(options.damageMultiplier) || 1);
       if (champions.state(attacker).heresy > 0) incomingDamage *= .91;
       incomingDamage = window.ElementSystem.damage(attacker, target, (incomingDamage+yuno.nextDamage(attacker,false))*yuno.offensive(attacker,target));
-      onDodge(battleState, target, attacker, { chainDepth: options.chainDepth || 0, incomingDamage, meta:options });
+      onDodge(battleState, target, attacker, { chainDepth: options.chainDepth || 0, incomingDamage:incomingDamage*(options.stretchyScale??1), meta:options });
       champions.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
       expansion.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
       raidSecrets.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false, attackDamage: incomingDamage }, options);
@@ -3769,7 +3812,7 @@
 
     let result = { damage: 0, killed: false };
     if (raidSecrets.block(battleState, attacker, target, options)) { requiem.after(battleState,attacker,target,{hit:false,damage:0},options); expansion.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); questSkills.afterAttack(battleState,attacker,target,{hit:false,damage:0},options); ensureCurrentIndices(battleState); return { hit: false, damage: 0, killed: false, raidBlocked: true, target, attacker }; }
-    const fatalityPrevented = previousHp > 0 && rawDamage >= previousHp && tower200.offensive(battleState,attacker,target)===1 && relic.attackMultiplier(attacker,options)===1 && !deferFatality(battleState, target)
+    const fatalityPrevented = !options.stretchyScale && previousHp > 0 && rawDamage >= previousHp && tower200.offensive(battleState,attacker,target)===1 && relic.attackMultiplier(attacker,options)===1 && !deferFatality(battleState, target)
       ? onFatalityAttempt(battleState, target, attacker, rawDamage, options)
       : false;
 
@@ -4124,6 +4167,7 @@
     if(!battleState||battleState.finished)return {ended:true,winner:null};
     ensureCurrentIndices(battleState);const actor=battleState.turn==='enemy'?battleState.enemy:battleState.player;
     if(!actor){const winner=checkBattleWinner(battleState);return {ended:Boolean(winner),winner};}
+    content.lastHero(battleState,teamOf(battleState,actor));
     const previous=statusSource;statusSource=actor;try{return phases.withTurn(battleState,actor,()=>resolveTurnBody(battleState));}finally{statusSource=previous;}
   }
   function getPassiveStatusBadges(unit) {
@@ -4764,14 +4808,17 @@
   {const original=champions.death;champions.death=function(bs,u,...args){const dead=!isAlive(u),serial=revivalReceipts.get(u)||0,fatal=fatalReceipts.get(u)||0;if(dead&&bleach.forbidden(u))u.championPermanentDeath=true;const result=original(bs,u,...args);if(dead&&!isAlive(u)){bleach.died(bs,u);content.died(bs,u);}if(dead&&isAlive(u)){if(serial===(revivalReceipts.get(u)||0))recordRevival(bs,u);if(fatal===(fatalReceipts.get(u)||0))recordFatal(bs,u,true);}return result;};}
   {const original=damageUnit;damageUnit=function(bs,source,target,amount,meta={}){
     if(damageRecursionDepth>2||source&&activeDamageSources.has(source))return stoppedChain();
-    const previous=currentDamageMeta;currentDamageMeta=meta;damageRecursionDepth++;if(source)activeDamageSources.add(source);
+    const previous=currentDamageMeta,originalTarget=target;({target,options:meta}=stretchTarget(bs,source,target,meta));currentDamageMeta=meta;damageRecursionDepth++;if(source)activeDamageSources.add(source);
     try{
       if(bs?.mode==='auto-chess'){
         meta={...meta,autochessTrueDamage:Math.max(0,Math.min(.4,source?.grid?.traits?.trueDamage||0))};
         if(bs.tactical?.overtime)amount*=bs.tactical.overtime;amount*=bs.tactical?.damageMultiplier?.(source,target,meta)??1;
       }
-      const out=original(bs,source,target,amount,meta);
-      if(bs?.mode==='auto-chess')bs.tactical?.onDamage?.(source,target,out.damage||0,meta,out);return out;
+      const out=original(bs,source,target,amount*(meta.stretchyScale??1),meta);
+      if(bs?.mode==='auto-chess')bs.tactical?.onDamage?.(source,target,out.damage||0,meta,out);
+      if(originalTarget!==target){if(out.killed){onKill(bs,source,target);onTeammateDeath(bs,target);}return{damage:0,killed:false,intercepted:true};}
+      if(out.killed&&!meta.raidBlockChecked)content.lastHero(bs,teamOf(bs,target));
+      return out;
     }finally{damageRecursionDepth--;if(source)activeDamageSources.delete(source);currentDamageMeta=previous;}
   };}
 
@@ -4841,6 +4888,7 @@
         expansion.entry(battleState, unit);
       }
 
+      content.lastHero(battleState,battleState.playerTeam);content.lastHero(battleState,battleState.enemyTeam);
       questSkills.turn(battleState);
       ensureCurrentIndices(battleState);
       host.renderBattleStats?.();

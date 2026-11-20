@@ -3956,6 +3956,38 @@ const CARDS = [
       ]
     },
     "image": "assets/cards/yone.png"
+  },
+  {
+    id: "finn-the-human",
+    name: "Finn The Human",
+    element: "Nature",
+    rarity: "Secret",
+    chance: 235000000,
+    category: ["Hero", "Human", "Protagonist", "Swordman", "Cartoon"],
+    requiredWeather: "Wind",
+    stats: { hp: 149000, atk: 57000 },
+    passive: {
+      name: "Adventure Sword",
+      description: "Start with Golden Sword. After each attack, randomly choose the next sword. Golden Sword deals 100% ATK through Shields; each kill grants +10% ATK for the battle. Grass Sword deals 90% ATK and Stuns for 1 turn; each kill adds +40% to Grass Sword damage for the battle. Demon Blood Sword deals 100% ATK and inflicts Bleed for 2 turns at 30% ATK per turn; its kills heal 15% max HP. When Finn is the only living ally, gain +50% ATK and immunity to all debuffs for the battle. With Jake The Dog alive, each attack has a 50% chance to call one Jake follow-up; when Jake follows up, Finn gains +20 percentage points of Critical Chance on his next attack.",
+      tags: ["special_attack", "shield_pierce", "stun", "bleed", "scaling", "follow_up"]
+    },
+    image: "assets/cards/finn.png"
+  },
+  {
+    id: "jake-the-dog",
+    name: "Jake The Dog",
+    element: "Holy",
+    rarity: "Secret",
+    chance: 234000000,
+    category: ["Animal", "Hero", "Magician", "Cartoon", "Supporter"],
+    requiredWeather: "Bizare",
+    stats: { hp: 307000, atk: 18700 },
+    passive: {
+      name: "Stretchy Magic",
+      description: "When an enemy attacks a teammate, Jake has a 40% chance to take the hit instead at 50% damage. While a living Finn The Human was deployed in the front slot (main battle) or first friendly row (Auto Chess), this becomes an 80% chance to take the hit at 20% damage. Each attack has a 30% chance to pierce up to 3 enemies for 120%, 90%, then 60% ATK. Every third attack dispels the primary target's active buffs.",
+      tags: ["support", "damage_reduction", "pierce", "special_attack"]
+    },
+    image: "assets/cards/jake.png"
   }
 ];
 

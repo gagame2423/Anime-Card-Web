@@ -2,7 +2,7 @@
 (function(host){
  'use strict';
  const C=host.AutoChessSystem,R=host.AutoChessRuns,U=host.OnlineUtils;
- const CACHE_KEY='ac_ghost_pool_cache',CACHE_TTL=600000,ATTEMPTS_KEY='anime_card_rng_ac_cloud_published_v2',PENDING_KEY='anime_card_rng_ac_cloud_pending_v1',PROTOCOL='ac-live-4';
+ const CACHE_KEY='ac_ghost_pool_cache',CACHE_TTL=600000,ATTEMPTS_KEY='anime_card_rng_ac_cloud_published_v2',PENDING_KEY='anime_card_rng_ac_cloud_pending_v1',PROTOCOL='ac-live-5';
  let backendOverride=null;const uploadStatuses=new Map();
  function uploadStatus(id,value){if(value){uploadStatuses.set(id,value);if(uploadStatuses.size>32)uploadStatuses.delete(uploadStatuses.keys().next().value);}return uploadStatuses.get(id)||null;}
  const service=()=>backendOverride||host.CloudSaveSystem?.autoChessService||null;

@@ -6123,10 +6123,10 @@ window.AutoChessView.configure({
  name:()=>window.CloudSaveSystem?.publicName||'You',
  onEnter:()=>{window.CloudSaveSystem.holdAutoChess();clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();saveState();},
  onExit:()=>{document.getElementById('battleModal')?.classList.remove('hidden');document.body.classList.add('modal-open');window.CloudSaveSystem.releaseAutoChess();resumeGameRuntime();updateStats();},
- rewardQuote:(rank,match)=>window.AutoChessSystem.reward(rank,{vnd:getCoinMultiplier(true,'autochess'),drop:window.InventorySystem.getDropMultiplier(),tactical:window.AutoChessStrategy.forPlayer(match)}),
+ rewardQuote:(rank,match)=>window.AutoChessSystem.reward(rank,{vnd:getCoinMultiplier(true,'autochess'),drop:window.InventorySystem.getDropMultiplier(),tactical:window.AutoChessStrategy.forPlayer(match)},match),
  reward:(match,rewards)=>{
   const chess=window.AutoChessSystem;
-  if(!match.finished||!chess.validate(match)||!chess.validReward(rewards,chess.get(match).rank))return false;
+  if(!match.finished||!chess.validate(match)||!chess.validReward(rewards,chess.get(match).rank,match))return false;
   // Inventory grants/receipt share one write. A failed main-save write can retry safely.
   const grants=[{id:'star_orb',quantity:rewards.orbs.total},...(rewards.gems?[{id:'gems',quantity:rewards.gems}]:[])];
   const receipt='autochess_'+match.id,accountPaid=state.achievementRewardReceipts?.[receipt]===true;
@@ -6139,7 +6139,7 @@ window.AutoChessView.configure({
   }
   // Only Elo is rebased if another completed run changed the rating; currency
   // multipliers remain the original frozen quote. Save before account mutation.
-  if(rewards.version===2){rewards.elo=window.AutoChessRanked.quoteElo(rewards.rank,state.autochessRank?.elo||0,rewards.elo.tableVersion===3?rewards.elo.tactical:null);match.reward.elo={...rewards.elo};if(!chess.save(match))return false;}
+  if(rewards.version===2){rewards.elo=window.AutoChessRanked.rebaseQuote(rewards.elo,state.autochessRank?.elo||0);match.reward.elo={...rewards.elo};if(!chess.save(match))return false;}
   const before=JSON.parse(JSON.stringify(state));
   state.currency=Math.min(Number.MAX_SAFE_INTEGER,state.currency+rewards.vnd.total);
   state.experience=Math.min(Number.MAX_SAFE_INTEGER,state.experience+(rewards.exp||0));

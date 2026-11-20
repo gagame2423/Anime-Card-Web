@@ -2,10 +2,12 @@
 (function(host){
  'use strict';
  if(host.createContentSkills?.version===1)return;
+ const FINN='finn-the-human',JAKE='jake-the-dog';
+ const SWORDS=Object.freeze(['Golden Sword','Grass Sword','Demon Blood Sword']);
  const IDS=Object.freeze(['yoshino-junpei','n-doul','oingo','d-arby','hogus-eagle','vanilla-ice','bakugo','askeladd','pochita','kon','iggy','pikachu','ender-dragon','onana','zenitsu','antony-mu','tung-tung-sahur']);
  host.createContentSkills=function(api){
   const hex=host.createHextechSkills(api);
-  const {has,alive,runtime,all,enemies,team,random,atk}=api,seenKills=new WeakMap();
+  const {has,alive,runtime,all,enemies,team,random,atk}=api,seenKills=new WeakMap(),lastHeroes=new WeakMap(),following=new WeakSet();
   const state=(u,id)=>((api.passiveRuntimeFor(u,id).contentSkills ||= {})[id] ||= {entered:false,attacks:0,voidTurns:0,failedDodges:0,shieldUsed:false,shieldTurns:0,copy:null,copyTurns:0});
   const scope=(u,id,fn)=>api.scope(u,id,fn),pick=rows=>rows.length?rows[Math.floor(random()*rows.length)]:null;
   const skillHit=(bs,u,v,n,meta={})=>api.hit(bs,u,v,n,{passiveAttack:true,specialAttack:true,contentSkill:true,...meta});
@@ -17,8 +19,86 @@
   }
   function entry(bs,u){hex.entry(bs,u);for(const id of IDS)if(has(u,id)){const c=state(u,id);if(c.entered)continue;c.entered=true;if(id==='vanilla-ice')c.voidTurns=3;if(id==='pochita')scope(u,id,()=>contract(bs,u));}}
   function matchStart(bs){for(const u of [...all(bs)])if(has(u,'pochita'))entry(bs,u);}
+  const debuffImmune=u=>lastHeroes.has(u)&&lastHeroes.get(u)===api.passiveRuntimeFor(u,FINN);
+  function lastHero(bs,line){
+   if(!line)return;
+   let only=null;
+   for(const u of line)if(alive(u)){if(only)return;only=u;}
+   if(!only||debuffImmune(only)||!api.owns(only,FINN))return;
+   lastHeroes.set(only,api.passiveRuntimeFor(only,FINN));
+   api.cleanseDebuffs(bs,only);
+   scope(only,FINN,()=>api.percent(only,'atk','adventure:last-hero',.50));
+   api.log('[PASSIVE] Last Hero Standing: Finn gains +50% ATK and debuff immunity.');
+  }
+  function guard(bs,source,target){
+   const line=team(bs,target);
+   if(line.length<2||line.includes(source))return null;
+   const jake=line.find(u=>u!==target&&alive(u)&&has(u,JAKE)&&api.allowed(bs,source,u)&&api.allowed(bs,u,target));
+   if(!jake)return null;
+   const finn=line.some(u=>alive(u)&&u.card?.id===FINN&&api.frontline(u,bs));
+   if(random()>=(finn?.80:.40))return null;
+   api.intercept(jake,target);
+   return {target:jake,scale:finn?.20:.50};
+  }
+  function swordKill(bs,u,stance){
+   if(!alive(u)||!has(u,FINN))return;
+   scope(u,FINN,()=>{const c=state(u,FINN);
+    if(stance===0){c.golden=(c.golden||0)+1;api.percent(u,'atk','adventure:golden',.10*c.golden);}
+    else if(stance===1)c.grass=(c.grass||0)+1;
+    else if(stance===2)api.heal(bs,u,u,u.maxHp*.15,'Demon Blood Sword');
+   });
+  }
+  function finnAttack(bs,u,v,options){
+   const c=state(u,FINN),stance=c.stance||0,attack=atk(u);
+   const hit=api.primary(bs,u,v,attack*(stance===1?.90*(1+.40*(c.grass||0)):1),
+    {...options,specialAttack:true,adventureSword:true,ignoreShield:stance===0||options.ignoreShield});
+   const target=hit.target||v;
+   api.log('[PASSIVE] Adventure Sword: '+SWORDS[stance]+'.');
+   if(hit.killed)swordKill(bs,u,stance);
+   if(hit.hit&&alive(target)){
+    if(stance===1)api.status(target,'stunTurns',1,u);
+    if(stance===2)api.dot(target,'bleed',2,attack*.30,u,{adventureSword:2});
+   }
+   return {...hit,attacker:u,target};
+  }
+  function jakePierce(bs,u,v,options){
+   const others=enemies(bs,u).filter(x=>x!==v),targets=[v,...others].slice(0,3),attack=atk(u);
+   const out={attacker:u,target:v,hit:false,killed:false,damage:0};
+   for(let i=0;i<targets.length&&alive(u);i++)if(alive(targets[i])){
+    const hit=api.primary(bs,u,targets[i],attack*[1.2,.9,.6][i],{...options,specialAttack:true,fearChecked:true});
+    if(i===0)out.target=hit.target||v;
+    out.hit ||= hit.hit;out.killed ||= hit.killed;out.damage+=hit.damage||0;
+   }
+   api.log('[PASSIVE] Stretchy Pierce swept through up to three enemies.');
+   return out;
+  }
+  function adventureAfter(bs,u,target,options){
+   if(!has(u,FINN)||options.adventureAssist||options.isCounter)return;
+   scope(u,FINN,()=>{
+    const c=state(u,FINN);c.stance=Math.floor(random()*SWORDS.length);
+    if(following.has(u)||!api.canFollow(u))return;
+    const buddy=team(bs,u).find(v=>v.card?.id===JAKE&&alive(v)&&api.canAct(v)&&api.allowed(bs,u,v));
+    const victim=alive(target)?target:enemies(bs,u)[0];
+    if(!buddy||!victim||random()>=.50)return;
+    following.add(u);
+    try{
+     const follow=api.follow(bs,buddy,victim,1,{adventureAssist:true,followOwner:u,linkedAttack:true});
+     if(!follow.skipped&&!follow.outOfTurn){c.critReady=true;api.log('[PASSIVE] Jake followed up. Finn gains +20% Critical Chance on his next attack.');}
+    }finally{following.delete(u);}
+   });
+  }
+  function dispel(u){
+   if(has(u,FINN)){const c=state(u,FINN);c.golden=0;c.grass=0;c.critReady=false;}
+   if(has(u,'vanilla-ice'))state(u,'vanilla-ice').voidTurns=0;
+   if(has(u,'onana'))state(u,'onana').failedDodges=0;
+   for(const [id,keys]of [['ahri',['speedTurns','fox']],['neeko',['dodgeTurns']],['yasuo',['immuneTurns']],['yone',['soulTurns','soulDamage','atkTurns']]]){
+    if(has(u,id))for(const key of keys)hex.state(u,id)[key]=key==='fox'?false:0;
+   }
+  }
   function prepare(bs,u,target,options){
    options=hex.prepare(bs,u,target,options);
+   if(has(u,FINN)){const c=state(u,FINN);if(c.critReady){c.critReady=false;options={...options,adventureCrit:.20};}}
+   if(has(u,JAKE)&&(api.attackCount(u)+1)%3===0&&api.dispel(bs,u,target))api.log('[PASSIVE] Stretchy Magic dispelled '+target.card.name+'’s active buffs.');
    if(!options.isFollowUp&&has(u,'tung-tung-sahur')&&random()<.30){const pierce=random()<.5;return{...options,damageMultiplier:(options.damageMultiplier||1)*(pierce?1.5:3),ignoreShield:pierce||options.ignoreShield,specialAttack:true};}return options;
   }
   function pierce(bs,u,target,options={}){
@@ -28,10 +108,11 @@
     out.hit ||= result.hit;out.damage+=result.damage||0;out.killed ||= result.killed;
    }return out;
   }
-  function attack(bs,u,target,options={}){const replacement=hex.attack(bs,u,target,options);if(replacement)return replacement;return api.id(u)==='zenitsu'&&(state(u,'zenitsu').attacks+1)%3===0?scope(u,'zenitsu',()=>pierce(bs,u,target,options)):null;}
+  function attack(bs,u,target,options={}){const replacement=hex.attack(bs,u,target,options);if(replacement)return replacement;if(has(u,FINN))return scope(u,FINN,()=>finnAttack(bs,u,target,options));if(has(u,JAKE)&&random()<.30)return scope(u,JAKE,()=>jakePierce(bs,u,target,options));return api.id(u)==='zenitsu'&&(state(u,'zenitsu').attacks+1)%3===0?scope(u,'zenitsu',()=>pierce(bs,u,target,options)):null;}
   function afterAttack(bs,u,target,out,options={}){
    hex.afterAttack(bs,u,target,out,options);
    if(!u||!alive(u)||out.skipped||out.outOfTurn)return;
+   adventureAfter(bs,u,target,options);
    for(const id of IDS)if(has(u,id))scope(u,id,()=>{
     const c=state(u,id),count=api.attackCount(u);if(c.processedCount===count)return;c.processedCount=count;c.attacks++;
     if(id==='vanilla-ice'&&random()<.10)c.voidTurns++;
@@ -77,9 +158,10 @@
    const s=state(u,'yoshino-junpei');if(s.shieldTurns>0&&api.ownTurns(bs,u)>s.shieldApplied&&--s.shieldTurns===0){s.shieldArmed=false;api.clearShield(u,s.shieldTag);}
    const c=state(u,'oingo');if(c.copy&&(!alive(u)||api.ownTurns(bs,u)>c.copyApplied&&--c.copyTurns<=0)){api.removeCopy(bs,u,c.copy);c.copy=null;}
   }
-  function killed(bs,u,victim){
+  function killed(bs,u,victim,meta){
    hex.killed(bs,u,victim);
    if(!u||!victim||alive(victim)||team(bs,u)===team(bs,victim))return;let seen=seenKills.get(u);if(!seen){seen=new WeakMap();seenKills.set(u,seen);}const life=api.life(victim);if(seen.get(victim)===life)return;seen.set(victim,life);
+   if(meta?.adventureSword===2)swordKill(bs,u,2);
    if(has(u,'d-arby')&&!enemies(bs,u).length)(bs.contentRewardWinners ||= {})[api.side(bs,u)]=2;
    if(has(u,'oingo')&&!api.copyBlocked(u)&&alive(u))scope(u,'oingo',()=>{
     const c=state(u,'oingo');if(c.copy)api.removeCopy(bs,u,c.copy);c.copy=null;
@@ -87,8 +169,8 @@
    });
   }
   function died(bs,u){const c=api.passiveRuntimeFor(u,'oingo').contentSkills?.oingo;if(c?.copy){api.removeCopy(bs,u,c.copy);c.copy=null;}}
-  function badges(u){const r=runtime(u),rows=hex.badges(u);if(r.fearTurns>0)rows.push({icon:'◉',label:'FEAR '+r.fearTurns+'t · 15% MISS',tone:'debuff'});if(r.poison?.length)rows.push({icon:'☠',label:'POISON '+r.poison.length,tone:'debuff'});if(r.sawContractMiss)rows.push({icon:'⚒',label:'SAW CONTRACT · 20% MISS',tone:'buff'});if(has(u,'vanilla-ice')&&state(u,'vanilla-ice').voidTurns>0)rows.push({icon:'◌',label:'VOID DOMAIN '+state(u,'vanilla-ice').voidTurns+'t',tone:'form'});if(has(u,'onana')&&state(u,'onana').failedDodges)rows.push({icon:'⚽',label:'ONANA +'+state(u,'onana').failedDodges*4+'% ATK',tone:'buff'});if(has(u,'oingo')&&state(u,'oingo').copy)rows.push({icon:'♢',label:'KHNUM '+state(u,'oingo').copyTurns+'t',tone:'form'});return rows;}
-  return {IDS:Object.freeze([...IDS,...hex.IDS]),dodgeBonus:hex.dodgeBonus,crit:hex.crit,speed:hex.speed,immune:hex.immune,status:hex.status,damageDealt:hex.damageDealt,state,entry,matchStart,prepare,attack,afterAttack,attacked,damaged,shieldHit,dodge,onDodge,reduction,attackBonus,misses,turnStart,turnEnd,killed,died,badges,forbidden:u=>!!u?.contentSacrificed||u?.card?.id==='pochita'};
+  function badges(u){const r=runtime(u),rows=hex.badges(u);if(has(u,FINN)){const c=state(u,FINN);rows.push({icon:'⚔',label:SWORDS[c.stance||0]+' · NEXT',tone:'form'});if(c.critReady)rows.push({icon:'✦',label:'JAKE FOLLOW-UP · +20% NEXT CRIT',tone:'buff'});}if(debuffImmune(u))rows.push({icon:'✦',label:'LAST HERO STANDING',tone:'buff'});if(r.fearTurns>0)rows.push({icon:'◉',label:'FEAR '+r.fearTurns+'t · 15% MISS',tone:'debuff'});if(r.poison?.length)rows.push({icon:'☠',label:'POISON '+r.poison.length,tone:'debuff'});if(r.sawContractMiss)rows.push({icon:'⚒',label:'SAW CONTRACT · 20% MISS',tone:'buff'});if(has(u,'vanilla-ice')&&state(u,'vanilla-ice').voidTurns>0)rows.push({icon:'◌',label:'VOID DOMAIN '+state(u,'vanilla-ice').voidTurns+'t',tone:'form'});if(has(u,'onana')&&state(u,'onana').failedDodges)rows.push({icon:'⚽',label:'ONANA +'+state(u,'onana').failedDodges*4+'% ATK',tone:'buff'});if(has(u,'oingo')&&state(u,'oingo').copy)rows.push({icon:'♢',label:'KHNUM '+state(u,'oingo').copyTurns+'t',tone:'form'});return rows;}
+  return {IDS:Object.freeze([...IDS,...hex.IDS,FINN,JAKE]),guard,lastHero,dispel,debuffImmune,dodgeBonus:hex.dodgeBonus,crit:hex.crit,speed:hex.speed,immune:hex.immune,status:hex.status,damageDealt:hex.damageDealt,state,entry,matchStart,prepare,attack,afterAttack,attacked,damaged,shieldHit,dodge,onDodge,reduction,attackBonus,misses,turnStart,turnEnd,killed,died,badges,forbidden:u=>!!u?.contentSacrificed||u?.card?.id==='pochita'};
  };
  host.createContentSkills.version=1;
 })(window);

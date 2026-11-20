@@ -759,3 +759,10 @@
 #autochessModal .ac-live-resync[hidden]{display:none}
 #autochessModal.ac-drawers .ac-live-resync{min-width:28px;padding:2px 4px}
 #autochessModal.ac-drawers .ac-live-resync .ac-resync-text{display:none}
+
+#autochessModal .ac-online-rewards{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:4px 0}
+#autochessModal .ac-online-rewards[hidden]{display:none}
+#autochessModal .ac-online-rewards span{display:inline-block;padding:3px 7px;border:1px solid #e8c47785;border-radius:999px;background:linear-gradient(110deg,#46321a,#241d1f);color:#fff0b8;font:800 9px/1.25 system-ui;letter-spacing:.055em;white-space:nowrap}
+#autochessModal .ac-online-rewards span:last-child{border-color:#6bb6c28c;background:linear-gradient(110deg,#183c46,#172839);color:#b6f7ff}
+#autochessModal .ac-lobby-brand .ac-online-rewards{display:inline-flex;margin:0}
+#autochessModal.ac-compact .ac-online-rewards span{font-size:8px;padding:2px 5px}
