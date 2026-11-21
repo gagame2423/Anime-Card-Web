@@ -86,7 +86,7 @@
  function quota(){return host.PortalParty?.active?host.PortalParty.quota:4;}
  function owned(){return bridge.cards?.()||[];}
  function variants(id){return bridge.variants?.(id)||[];}
- function wire(slot){const card=owned().find(c=>c.id===slot.cardId),variant=variants(slot.cardId).find(v=>v.key===slot.variantKey);if(!card||!variant)throw Error('Selected card variant is no longer owned.');return{cardId:card.id,level:bridge.describe(card,variant).level,mutationIds:variant.mutations.map(m=>m.id),copy:slot.copy||0,relic:host.RelicSystem.snapshotFor(card.id,variant.key,slot.copy||0)};}
+ function wire(slot){const card=owned().find(c=>c.id===slot.cardId),variant=variants(slot.cardId).find(v=>v.key===slot.variantKey);if(!card||!variant)throw Error('Selected card variant is no longer owned.');return{cardId:card.id,level:bridge.describe(card,variant).level,mutationIds:variant.mutations.map(m=>m.id),copy:slot.copy||0,relic:host.RelicSystem.snapshotFor(card.id,variant.key,slot.copy||0),...(card.id==='gumball'?{mimicPool:host.PassiveSystem.ownedMimicPool()}: {})};}
  function cardsReady(){try{return bridge.selection?.().length===quota()&&bridge.selection().every(Boolean);}catch(_){return false;}}
  function getWires(){const slots=bridge.selection?.()||[];if(slots.length!==quota()||!slots.every(Boolean))throw Error('Fill all team slots first.');return slots.map(wire);}
  function resetSelection(){bridge.selector?.(quota(),true);renderPicker();}

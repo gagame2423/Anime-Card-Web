@@ -137,6 +137,7 @@
         // No reward, quest, ownership, weather-write or save callbacks.
       });
       battle = {mode:'sandbox',sandbox:true,weatherIds:[...weatherIds],playerTeam:setup.player.map(c=>unit(c,'player')),enemyTeam:setup.enemy.map(c=>unit(c,'enemy')),turn:'player',playerIndex:0,enemyIndex:0,finished:false,championChoices:{aqua:el('sandboxAquaMode')?.value || 'hp'},startedAt:Date.now()};
+      if(battle.playerTeam.some(u=>u.card.id==='gumball'))battle.mimicPools={player:host.PassiveSystem.ownedMimicPool()};
       engine.beginBattle(battle);
       const winner = engine.checkBattleWinner(battle);
       if (winner) { battle.finished = true; battle.outcome = winner === 'player' ? 'PLAYER WINS' : 'OPPONENT WINS'; }

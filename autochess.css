@@ -766,3 +766,7 @@
 #autochessModal .ac-online-rewards span:last-child{border-color:#6bb6c28c;background:linear-gradient(110deg,#183c46,#172839);color:#b6f7ff}
 #autochessModal .ac-lobby-brand .ac-online-rewards{display:inline-flex;margin:0}
 #autochessModal.ac-compact .ac-online-rewards span{font-size:8px;padding:2px 5px}
+
+/* Shared palette only; the board, mobile fold and tooltip layers own their layout. */
+#autochessModal #acTimer,#autochessModal #acGold,#autochessModal #acStage,#autochessModal .ac-standing,#autochessModal .ac-reward-line {font-variant-numeric:tabular-nums;}
+#autochessModal .ac-invite-tools button:focus-visible,#autochessModal .ac-invite-start:focus-visible {outline:2px solid var(--game-energy,#0ac8b9);outline-offset:3px;}

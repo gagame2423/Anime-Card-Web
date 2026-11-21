@@ -2,7 +2,7 @@
 (function(host){
  'use strict';
  const C=host.AutoChessSystem,R=host.AutoChessRuns,U=host.OnlineUtils;
- const CACHE_KEY='ac_ghost_pool_cache',CACHE_TTL=600000,ATTEMPTS_KEY='anime_card_rng_ac_cloud_published_v2',PENDING_KEY='anime_card_rng_ac_cloud_pending_v1',PROTOCOL='ac-live-5';
+ const CACHE_KEY='ac_ghost_pool_cache',CACHE_TTL=600000,ATTEMPTS_KEY='anime_card_rng_ac_cloud_published_v2',PENDING_KEY='anime_card_rng_ac_cloud_pending_v1',PROTOCOL='ac-live-6';
  let backendOverride=null;const uploadStatuses=new Map();
  function uploadStatus(id,value){if(value){uploadStatuses.set(id,value);if(uploadStatuses.size>32)uploadStatuses.delete(uploadStatuses.keys().next().value);}return uploadStatuses.get(id)||null;}
  const service=()=>backendOverride||host.CloudSaveSystem?.autoChessService||null;
@@ -20,7 +20,8 @@
   if(packet?.roster?.length>=2)return host.AutoChessLive.seed(s,packet);
   const me=identity(),roster=(packet?.roster||[]).filter(p=>p.uid!==me.uid),seen=new Set([me.uid]);
   s.hybrid={version:1,uid:me.uid,room:packet?.room||'',humanPlayers:Math.max(1,new Set((packet?.roster||[]).map(p=>p.uid).filter(R.uid)).size),mode:'recorded',runs:{},stages:{},readRequested:false,queryCount:0,writeAttempted:false,writeCount:0,cloudStatus:'local'};
-  C.get(s).source={kind:'human',uid:me.uid,elo:me.elo};let slot=1;const pool=distinct(cached()||[],me.uid),byUid=new Map(pool.map(wire=>[wire.uid,wire]));
+  const local=C.get(s);local.source={kind:'human',uid:me.uid,elo:me.elo};local.mimicPool=host.PassiveSystem.ownedMimicPool();
+  let slot=1;const pool=distinct(cached()||[],me.uid),byUid=new Map(pool.map(wire=>[wire.uid,wire]));
   for(const member of roster){if(slot>7||!R.uid(member.uid)||seen.has(member.uid))continue;seen.add(member.uid);const direct=member.run&&R.decode(member.run);install(s,slot++,{...member,run:direct?.uid===member.uid?member.run:byUid.get(member.uid)||null},true);}
   for(const wire of pool){if(slot>7||seen.has(wire.uid))continue;seen.add(wire.uid);install(s,slot++,{uid:wire.uid,name:wire.name,elo:wire.elo,run:wire});}
   return s;
@@ -96,6 +97,7 @@
  }
  function createLobby(options={}){
   syncPending();const {run,...me}=identity(),validToken=v=>typeof v==='string'&&/^[a-f0-9]{32}$/.test(v);
+  me.mimicPool=host.PassiveSystem.ownedMimicPool();
   let mode=['lan','relay'].includes(options.mode)?options.mode:savedMode(),room=newCode(mode),joinCode=null,token='',owner=me.uid,members=[me],match=null;
   let active=true,generation=0,ready=false,joining=false,activated=false,lanFallback=false,relayConfigured=true,status='Preparing invite code…';
   let peer=null,upstream=null,dial=null,opened=false,startedAt=0,nextDial=0,nextSignal=0,listener=null;
@@ -115,7 +117,7 @@
   function update(message){if(message)status=message;if(active&&!match)options.onChange?.(view());}
   function prefer(next){mode=next;try{host.localStorage.setItem(MODE_KEY,next);}catch(_){}}
   function offerRelay(message){if(mode!=='lan'||match||lanFallback)return;lanFallback=true;update(message);}
-  const validMember=m=>m&&R.uid(m.uid)&&typeof m.name==='string'&&m.name.length<=40&&Number.isSafeInteger(m.elo)&&m.elo>=0&&Number.isSafeInteger(m.wins)&&m.wins>=0&&Array.isArray(m.hextechUnlocks)&&m.hextechUnlocks.length<=9&&m.hextechUnlocks.every(id=>C.card(id)?.hextechExclusive)&&m.equippedSkins&&typeof m.equippedSkins==='object'&&!Array.isArray(m.equippedSkins)&&Object.entries(m.equippedSkins).every(([id,skin])=>host.CardSkinSystem.get(skin)?.cardId===id);
+  const validMember=m=>m&&R.uid(m.uid)&&typeof m.name==='string'&&m.name.length<=40&&Number.isSafeInteger(m.elo)&&m.elo>=0&&Number.isSafeInteger(m.wins)&&m.wins>=0&&Array.isArray(m.hextechUnlocks)&&m.hextechUnlocks.length<=9&&m.hextechUnlocks.every(id=>C.card(id)?.hextechExclusive)&&host.PassiveSystem.validMimicPool(m.mimicPool)&&m.equippedSkins&&typeof m.equippedSkins==='object'&&!Array.isArray(m.equippedSkins)&&Object.entries(m.equippedSkins).every(([id,skin])=>host.CardSkinSystem.get(skin)?.cardId===id);
   const validRoster=rows=>Array.isArray(rows)&&rows.length>=1&&rows.length<=8&&rows.every(validMember)&&new Set(rows.map(m=>m.uid)).size===rows.length&&rows.some(m=>m.uid===me.uid);
   const validMatch=m=>m&&validRoster(m.roster)&&m.roster[0].uid===owner&&m.room===room&&typeof m.matchId==='string'&&/^chess_[a-z0-9]+_[a-z0-9]+$/.test(m.matchId)&&Number.isSafeInteger(m.seed)&&m.seed>0&&m.seed<=0xffffffff;
   const usable=c=>channels.has(c)&&canSend(c);
@@ -182,7 +184,7 @@
    if(message.matchId&&message.matchId!==match?.matchId||seat&&seat.token!==message.token||match&&(!seat||seat.left))return send(c,'ERROR',{message:'This room seat is already reserved.'});
    if(!seat){
     if(members.length>=8)return send(c,'ERROR',{message:'This room is full.'});
-    const member={uid,name:R.name(message.member.name),elo:message.member.elo,wins:message.member.wins,hextechUnlocks:message.member.hextechUnlocks,equippedSkins:message.member.equippedSkins};
+    const member={uid,name:R.name(message.member.name),elo:message.member.elo,wins:message.member.wins,hextechUnlocks:message.member.hextechUnlocks,equippedSkins:message.member.equippedSkins,mimicPool:message.member.mimicPool};
     seat={member,token:message.token,conn:null,up:false,downSince:null,offline:false,left:false};
     seats.set(uid,seat);members.push(member);
    }

@@ -11,7 +11,7 @@
   s.id=packet.matchId;s.localPlayerId=s.players[roster.findIndex(m=>m.uid===uid)]?.id||'human';
   s.live={version:1,mode:link?.mode==='lan'?'lan':'relay',room:packet.room,owner:roster[0].uid,humans:roster.map((m,i)=>({id:s.players[i].id,uid:m.uid,connected:true,reconnecting:false})),ready:{}};
   s.hybrid={version:1,uid,room:packet.room,humanPlayers:roster.length,mode:'live',runs:{},stages:{},readRequested:false,queryCount:0,writeAttempted:false,writeCount:0,cloudStatus:'local'};
-  for(const [i,m]of roster.entries()){const p=s.players[i];p.name=host.AutoChessRuns.name(m.name);p.bot=false;p.hextechUnlocks=[...(m.hextechUnlocks||[])];p.equippedSkins={...m.equippedSkins};p.source={kind:'live-human',uid:m.uid};}
+  for(const [i,m]of roster.entries()){const p=s.players[i];p.name=host.AutoChessRuns.name(m.name);p.bot=false;p.hextechUnlocks=[...(m.hextechUnlocks||[])];p.equippedSkins={...m.equippedSkins};p.mimicPool=[...(m.mimicPool||[])];p.source={kind:'live-human',uid:m.uid};}
   if(link?.isHost){
    const used=new Set(roster.map(m=>m.uid));let slot=roster.length;
    for(const wire of host.AutoChessOnline.distinct(host.AutoChessOnline.cached()||[],uid)){

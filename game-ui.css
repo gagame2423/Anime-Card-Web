@@ -1,0 +1,425 @@
+/* Obsidian Convergence. Legacy screens only; see GAME_UI_SKILL.md. */
+:root {
+  --game-void:#070a10; --game-surface:#111827; --game-gold:#c8aa6e;
+  --game-ivory:#f0e6d2; --game-energy:#0ac8b9; --game-danger:#f0758a;
+  --game-quiet:#9daebe; --game-rule:#5f5039; --game-tap:120ms;
+  --game-rarity: #9cb1c3;
+  --game-engraving: inset 0 1px #f0e6d225, inset 0 0 0 3px #0a0d1585;
+  --game-heading: Georgia, "Times New Roman", serif;
+}
+body {
+  background:
+    radial-gradient(ellipse at 55% 0%, #182133 0, transparent 56%),
+    radial-gradient(ellipse at 100% 86%, #0f272d 0, transparent 49%),
+    var(--game-void);
+}
+#app,
+:is(#collectionModal,#inventoryModal,#craftingModal,#upgradesModal,#timeTrialModeModal,#battleModal) {
+  font-variant-numeric: tabular-nums;
+}
+:is(#app,#battleModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal,#timeTrialModeModal)
+:is(button,summary):focus-visible {
+  outline:2px solid #80fff0; outline-offset:2px;
+}
+:is(#app,#battleModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal,#timeTrialModeModal)
+:is(button,summary) {
+  touch-action: manipulation;
+}
+#app :is(.nav-button,.utility-menu__trigger,.hub-command__item,.roll-button),
+:is(#battleModal,#timeTrialModeModal) :is(.battle-mode-option,#battleStartButton,.battle-auto-continue__track),
+:is(#collectionModal,#inventoryModal,#craftingModal,#upgradesModal) .modal-close {
+  transition:transform var(--game-tap) ease, border-color var(--game-tap) ease,
+    background-color var(--game-tap) ease, color var(--game-tap) ease, box-shadow var(--game-tap) ease;
+}
+#app :is(.nav-button,.utility-menu__trigger,.hub-command__item,.roll-button):not(:disabled):active,
+:is(#battleModal,#timeTrialModeModal) :is(.battle-mode-option,#battleStartButton):not(:disabled):active,
+:is(#collectionModal,#inventoryModal,#craftingModal,#upgradesModal) .modal-close:active {
+  transform:scale(.96);
+}
+
+/* Home: world crest, compact wallet and a fixed operations rail. */
+#app.app-shell {
+  width:min(1440px,100%); padding:max(12px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left)); gap:9px;
+}
+#app .topbar {
+  position:relative; z-index:4; min-height:62px; padding:6px 11px;
+  border:1px solid #645539; border-radius:11px 11px 4px 4px;
+  background:linear-gradient(104deg,#192532,#101621 48%,#141b25);
+  box-shadow:var(--game-engraving),0 6px 26px #0008;
+}
+#app .brand {display:flex; align-items:center; gap:10px; white-space:nowrap;}
+#app .brand>.game-mark {width:42px;height:46px;flex:0 0 42px;fill:#0d1b22;stroke:var(--game-gold);stroke-width:1.3;}
+#app .game-mark .game-mark__core {fill:#255d62;stroke:#86ecda;filter:drop-shadow(0 0 4px #63dcc275);}
+#app .brand .eyebrow {color:#ddc698;font-size:8px;letter-spacing:.24em;}
+#app .brand h1 {font:700 clamp(22px,2.48vw,36px)/1.03 var(--game-heading);letter-spacing:-.035em;color:var(--game-ivory);}
+#app .brand h1 span {color:#b9f7ec;text-shadow:0 0 18px #4ecec04d;}
+#app .top-actions {gap:7px;flex-wrap:nowrap;align-items:stretch;}
+#app .top-actions :is(.currency-box,.game-clock-box,.nav-button,.utility-menu__trigger), #app .hub-resource {
+  min-height:42px; border:1px solid #5c5b49; border-radius:7px;
+  background:linear-gradient(155deg,#1b2730,#121923 70%); box-shadow:inset 0 1px #fff1;
+}
+#app .top-actions .currency-box {min-width:0; padding:4px 8px;}
+#app .top-actions .currency-icon {background:#253b39;color:#bff9df;box-shadow:none;border-radius:4px;}
+#app .top-actions .currency-box strong {min-width:0;color:#e2f6e3;}
+#app .top-actions .game-clock-box {min-width:0;width:auto;padding:4px 7px;}
+#app .top-actions .game-clock-copy :is(strong,span) {color:#abebdf;}
+#app .top-actions .nav-button:hover,#app .top-actions .utility-menu__trigger:hover {border-color:#b39155;background-color:#42361f;}
+#app .hub-wallet {display:flex;gap:5px;min-width:0;}
+#app .hub-resource {display:flex;align-items:center;gap:5px;min-width:0;padding:4px 7px;color:#f1e7d3;}
+#app .hub-resource>span+span {display:grid;gap:2px;}
+#app .hub-resource small {color:#b2c1ce;white-space:nowrap;font-size:7px;letter-spacing:.08em;font-weight:800;}
+#app .hub-resource strong {font-size:12px;color:#f6eaca;white-space:nowrap;}
+#app .hub-resource__icon {display:grid;place-items:center;width:22px;height:22px;flex:0 0 22px;color:#83ddd8;}
+#app .hub-resource__icon img {grid-area:1/1; width:100%;height:100%;object-fit:contain;z-index:1;}
+#app .hub-resource__icon {position:relative;font-size:11px;}
+#app .hub-resource__icon img {position:absolute;inset:0;padding:1px;background:#17252c;border-radius:4px;}
+#app .utility-menu__panel {z-index:200;border-color:#786744;background:#121b28;box-shadow:var(--game-engraving),0 20px 48px #000c;}
+#app .hub-command {
+  display:grid; grid-template-columns:auto repeat(8,minmax(0,1fr)); align-items:stretch; gap:4px; min-width:0;
+  flex:0 0 auto; border:1px solid #5b503b;border-radius:5px;padding:4px;
+  background:linear-gradient(180deg,#202734,#10151e); box-shadow:var(--game-engraving);
+}
+#app .hub-command__index {align-self:center;padding:0 10px;color:#cdb57f;font-size:10px;white-space:nowrap;letter-spacing:.14em;}
+#app .hub-command__index b {margin-left:3px;font-size:8px;}
+#app .hub-command__item {
+  display:flex;align-items:center;justify-content:flex-start;gap:8px;min-width:0;min-height:42px;padding:5px 8px;
+  font-weight:800;text-align:left;color:#e6eaf0;background:#121a26;border:1px solid #323b48;border-radius:4px;cursor:pointer;
+}
+#app .hub-command__item i {display:grid;place-items:center;font:600 20px/1 var(--game-heading);color:#c5ab77;min-width:19px;}
+#app .hub-command__item>span {font-size:clamp(10px,1.1vw,14px);line-height:1.2;min-width:0;}
+#app .hub-command__item small {display:block;color:#a6b6c9;font-size:9px;font-weight:600;margin-top:2px;white-space:nowrap;}
+#app .hub-command__item:hover {border-color:#92764e;background:#23313c;color:#fff6df;}
+#app .hub-command__item.is-current {border-color:#b39357;color:#f9ebc9;background:linear-gradient(153deg,#314542,#1e252c 70%);box-shadow:inset 0 1px #f1db9866;}
+#app .hub-command__item.is-current i {color:#8af5df;text-shadow:0 0 10px #40c8b29e;}
+#app #hubSummonButton {justify-content:center;text-align:center;}
+#app footer {padding-inline:4px;color:#92a6b8;font-size:9px;letter-spacing:.055em;}
+#app footer span:first-child {color:#c7ac75;font-weight:750;}
+
+/* Summoning Altar. Decoration is below the bounded reveal slot and never handles input. */
+#app .game-layout {grid-template-columns:minmax(194px,245px) minmax(0,1fr);gap:9px;}
+#app :is(.game-panel,.available-panel) {border:1px solid #65553b;border-radius:10px;box-shadow:var(--game-engraving),0 16px 40px #0007;}
+#app .available-panel {background:linear-gradient(162deg,#192332,#0d131d 65%);padding:12px 9px;}
+#app .available-panel__header {flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:4px 4px 8px;border-color:#9d84563c;}
+#app .available-panel__header h2 {font:700 19px/1.05 var(--game-heading);color:var(--game-ivory);}
+#app .available-panel__header .eyebrow {color:#d6be90;}
+#app .available-panel__mode {border-color:#75979070;background:#1a3237;color:#b2f2e0;}
+#app .available-card-row {border-color:#3b4650;background:linear-gradient(125deg,#1d2736,#101824);border-radius:5px;}
+#app .available-card-row__name {font-size:11px;}
+#app .available-card-row__meta {gap:5px;color:#a7b9c8;}
+#app .available-requirement {font-size:7px;}
+#app .game-panel {padding:9px;gap:6px;background:linear-gradient(170deg,#131c29,#0b1019 68%);backdrop-filter:none;}
+#app .weather-hud {border:1px solid #6b5b3d;border-radius:6px;background:linear-gradient(110deg,#272838,#171f2e 48%,#152933);box-shadow:inset 0 1px #ffe0a32e;}
+#app .active-weather__heading {height:auto;justify-content:center;text-align:center;}
+#app .weather-label {color:#f1daac;letter-spacing:.16em;}
+#app .weather-label i {color:#8ee4d8;font-style:normal;font-size:12px;vertical-align:middle;margin-right:3px;}
+#app .weather-empty {color:#d4f1eb;white-space:nowrap;}
+#app .weather-hud:has(.active-weather__list:empty) .active-weather {justify-content:center;}
+#app .weather-hud:has(.active-weather__list:empty) .active-weather__list {display:none;}
+#app .weather-hud:has(.active-weather__list:empty) .weather-empty {
+  padding:3px 10px;border:1px solid #65887a83;border-radius:3px;background:#132e37;font:700 13px/1 var(--game-heading);
+}
+#app .active-weather__list {align-content:safe center;overflow:auto;scrollbar-width:thin;}
+#app .weather-chip {border-radius:5px;}
+#app .stats-bar {display:grid;flex:none;min-height:0;max-height:none;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(130px,1.35fr);gap:5px;padding:0;background:none;border:0;}
+#app .stats-bar .stat {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;padding:6px 8px;text-align:center;border:1px solid #4c5458;border-radius:5px;
+  background:linear-gradient(145deg,#1a2b35,#142029);box-shadow:inset 0 1px #cfede51b;}
+#app .stat-label {color:#bfc5b6;font-size:8px;}
+#app .stats-bar strong {margin:0;color:#f4e7ca;font-size:15px;line-height:1.16;overflow-wrap:anywhere;}
+#app .hide-roll-toggle {margin:0;text-align:center;line-height:1.15;}
+#app :is(#luckValue,#hubDropValue) {color:#b9f7eb;}
+#app .result-stage {
+  position:relative;isolation:isolate;border:1px solid #4e554e;border-radius:6px;
+  grid-template:minmax(0,1fr) / minmax(0,1fr);
+  background:radial-gradient(ellipse at center,#69e9ce29,transparent 50%),
+    radial-gradient(ellipse at center,#2c363f,transparent 72%),
+    repeating-linear-gradient(132deg,#8ca5ad09 0 1px,transparent 1px 24px),#0b111b;
+  box-shadow:inset 0 1px #f5daa423,inset 0 0 85px #06101be6;overflow:hidden;
+}
+#app .result-stage::before {content:"";position:absolute;inset:9px;border:1px solid #a7926130;z-index:-1;pointer-events:none;}
+#app .result-stage::after {
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 32%,#070a10b8 100%);
+}
+#app .altar-sigil {
+  width:min(96%,560px);height:97%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:-1;
+  fill:none;stroke:#c8aa6e84;stroke-width:1;filter:drop-shadow(0 0 11px #5edec444);
+}
+#app .altar-sigil__marks {stroke-dasharray:1 8;stroke-width:4;stroke:#d9b97c91;}
+#app .altar-sigil__core {stroke:#86e0c7ad;}
+#app .altar-sigil__nodes {fill:#b0f3df;stroke:#c8aa6e;}
+#app .result-slot {z-index:2;grid-template:minmax(0,1fr) / minmax(0,1fr);}
+#app .empty-state {width:min(100%,340px);padding:4px 10px;filter:drop-shadow(0 2px 12px #060b10);}
+#app .empty-icon {width:64px;height:64px;margin:0 auto 10px;border:1px solid #b49763;background:linear-gradient(155deg,#326969,#132635);
+  border-radius:14px 5px;color:#defbec;box-shadow:inset 0 1px #e3ffeb80,0 0 35px #47e1bb3d;}
+#app .empty-state h2 {color:#fff0cf;font:700 clamp(20px,2.2vw,34px)/1 var(--game-heading);}
+#app .empty-state p {color:#d3e5e9;font-size:11px;}
+#app .roll-score {border-color:#9b815b;background:#151f2beb;color:#f5dfad;}
+#app .controls {display:flex;gap:8px;align-items:stretch;min-width:0;justify-content:center;flex:0 0 auto;min-height:49px;max-height:none;}
+#app .roll-button {width:auto;flex:1 1 325px;max-width:480px;min-height:48px;margin:0;border:1px solid #dab777;border-radius:5px;
+  background:linear-gradient(180deg,#ecd294 0%,#a77840 48%,#684624 50%,#37251a 100%);color:#fff3d8;
+  box-shadow:inset 0 1px #fff2c9,inset 0 0 0 3px #5b3d29,0 0 25px #ba874732;
+  text-shadow:0 1px 2px #2e1a0f;}
+#app .roll-button .roll-main {font:800 clamp(17px,2vw,23px)/1 var(--game-heading);letter-spacing:.1em;}
+#app #cooldownLabel {color:#ffebc0;font-size:9px;white-space:nowrap;}
+#app .roll-button:hover:not(:disabled) {border-color:#ffe3a8;box-shadow:inset 0 1px #fff8db,inset 0 0 0 3px #67432b,0 0 24px #c59a6e87;}
+#app .roll-button:disabled {filter:none;background:linear-gradient(#293139,#1d232e);border-color:#606255;box-shadow:inset 0 1px #fff1;color:#e2d5bf;}
+#app .controls .auto-toggle {
+  flex:0 1 150px; min-width:0; padding:5px 11px;border:1px solid #717051;border-radius:5px;
+  color:#eaf2e9;background:linear-gradient(155deg,#263941,#172128 72%);box-shadow:inset 0 1px #e7f7cd26;
+}
+#app .controls .auto-toggle {flex-basis:125px;justify-content:center;font-size:10px;}
+#app .controls .auto-toggle:hover {border-color:#a6aa79;background-color:#334b45;}
+#app .progress-wrap {margin:0 2px;min-height:13px;max-height:18px;}
+#app .progress-track {border:1px solid #3c524e;background:#101823;}
+#app .progress-fill {background:linear-gradient(90deg,#137e80,#60ecd0,#f2d191);}
+
+/* Rarity trim remains on all sides even when a mutation illuminates the art. */
+[data-game-rarity="Uncommon"] {--game-rarity:#6de2b4;}
+[data-game-rarity="Rare"] {--game-rarity:#6dbbf9;}
+[data-game-rarity="Epic"] {--game-rarity:#c696ff;}
+[data-game-rarity="Legendary"] {--game-rarity:#f7cc7d;}
+[data-game-rarity="Mythic"] {--game-rarity:#ff8ea7;}
+[data-game-rarity="Secret"] {--game-rarity:#ffe6b9;}
+#app .tcg-card {border:1px solid var(--game-rarity);border-radius:10px;background:linear-gradient(160deg,#223041,#101621 67%);
+  box-shadow:inset 0 1px #fff8,inset 0 0 0 3px #191c25,0 0 22px color-mix(in srgb,var(--game-rarity) 36%,transparent);}
+#app .tcg-card__header {border-color:#ae936648;}
+#app .rarity-badge {color:var(--game-rarity);border-color:var(--game-rarity);background:#101725;}
+#app .tcg-art-frame {border-color:color-mix(in srgb,var(--game-rarity) 60%,#302632);border-radius:5px;}
+#app .tcg-card__foil {opacity:0;}
+#app .tcg-card:is([data-game-rarity="Legendary"],[data-game-rarity="Mythic"],[data-game-rarity="Secret"]).pop-in .tcg-card__foil {
+  animation:game-reveal-sweep .65s ease-out both;background:linear-gradient(110deg,transparent 15%,#fff4cb50 48%,transparent 61%);pointer-events:none;
+}
+@keyframes game-reveal-sweep {from{transform:translateX(-80%);opacity:0}24%{opacity:.85}to{transform:translateX(85%);opacity:0}}
+
+/* Named legacy panels only. Their existing input, drawers and scroll regions stay intact. */
+:is(#battleModal,#timeTrialModeModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal) {
+  background:radial-gradient(ellipse at 50% 0%,#1935429c,transparent 68%),#070a10da;
+}
+:is(#battleModal,#timeTrialModeModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal)>.modal-panel {
+  border-color:#90774e;background:linear-gradient(160deg,#1a2332,#0d131f 68%);box-shadow:var(--game-engraving),0 18px 55px #000b;
+}
+:is(#battleModal,#timeTrialModeModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal)>.modal-panel>.modal-header {
+  background:linear-gradient(105deg,#21323f,#171f2c 52%,#252637);border-bottom:1px solid #8d794f;box-shadow:inset 0 1px #f4dba136;
+}
+:is(#battleModal,#timeTrialModeModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal) .modal-header h2 {
+  font-family:var(--game-heading);color:var(--game-ivory);letter-spacing:.01em;
+}
+:is(#battleModal,#timeTrialModeModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal) .modal-header .eyebrow {color:#cdb78e;}
+:is(#battleModal,#timeTrialModeModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal) .modal-close {background:#202633;border-color:#8c754d;color:#eedab7;}
+:is(#battleModal,#timeTrialModeModal,#collectionModal,#inventoryModal,#craftingModal,#upgradesModal) .modal-close:hover {background:#502f36;border-color:#f7a5a4;color:#fff0e7;}
+#collectionModal :is(.collection-toolbar,.collection-card),#inventoryModal :is(.storage-sidebar,.storage-center,.storage-detail,.storage-slot),
+#craftingModal :is(.crafting-selector,.crafting-details,.crafting-card),#upgradesModal .upgrade-card {
+  background-color:#111b29;border-color:#706445;
+}
+#collectionModal .collection-card:not(.locked) {box-shadow:inset 0 1px #fff2;}
+#collectionModal .collection-card:not(.locked)[data-game-rarity],#battleModal :is(.battle-fighter-option,.battle-team-slot)[data-game-rarity] {
+  border-color:var(--game-rarity);box-shadow:inset 0 1px #ffebc344,0 0 9px color-mix(in srgb,var(--game-rarity) 14%,transparent);
+}
+#collectionModal :is(select,input),#inventoryModal .storage-search input,#craftingModal input {
+  background:#101a26;border-color:#5c6e72;color:#f0eee1;
+}
+#inventoryModal .storage-sidebar button {border-color:#465864;background:linear-gradient(150deg,#24343c,#16202b);}
+#inventoryModal .storage-sidebar button.is-active {
+  border-color:#8ba69a;background:linear-gradient(145deg,#2f4a4b,#20383d);color:#d5fff3;
+}
+#inventoryModal .storage-detail {background:linear-gradient(145deg,#192735,#0e1623);}
+#craftingModal .crafting-selector {background:linear-gradient(145deg,#202937,#111b2b);}
+#craftingModal .crafting-details {background:radial-gradient(ellipse at 70% 0%,#38304689,transparent 55%),#141b2a;}
+
+/* Arena: side-specific lighting and readable, compact condition indicators. */
+#battleModal .battle-setup-card {border-color:#726449;background:linear-gradient(145deg,#1b2837,#111927);box-shadow:var(--game-engraving);}
+:is(#battleModal,#timeTrialModeModal) .battle-mode-option {
+  min-height:48px;border-color:#6a6753;border-radius:6px;
+  color:#f1e8d4;background:linear-gradient(144deg,#233140,#151d2b 67%);box-shadow:inset 0 1px #fff2;
+}
+:is(#battleModal,#timeTrialModeModal) .battle-mode-option span {color:#bfcbda;}
+:is(#battleModal,#timeTrialModeModal) .battle-mode-option:hover {border-color:#e2c387;color:#fff3ce;}
+:is(#battleModal,#timeTrialModeModal) .battle-mode-option.is-selected {
+  border-color:#d8b675;background:linear-gradient(140deg,#304845,#252d37 70%);box-shadow:inset 0 1px #fff4,0 0 16px #67b5a22a;
+}
+#battleModal .battle-mode-option#autochessOpenButton {border-color:#668e86;}
+#battleModal :is(#battleStartButton,.battle-result-actions .primary-button) {
+  border-color:#dbb976;color:#fff0cb;background:linear-gradient(160deg,#496354,#24423e);
+  box-shadow:inset 0 1px #f9df9f59;
+}
+#battleModal .battle-arena {
+  border:1px solid #806d48;border-radius:6px;min-width:0;gap:9px;
+  background:
+    radial-gradient(ellipse at 13% 12%,#247f7733,transparent 54%),
+    radial-gradient(ellipse at 85% 18%,#7c3b4f35,transparent 65%),
+    repeating-linear-gradient(145deg,#afbfbd09 0 1px,transparent 1px 30px),#0d1521;
+  box-shadow:inset 0 1px #d9bd824a;
+}
+#battleModal :is(.battle-arena__header,.battle-team-power-strip) {border-color:#8f795047;background:#141f2ed9;}
+#battleModal .battle-arena__header h3 {font:700 23px/1 var(--game-heading);color:var(--game-ivory);}
+#battleModal .battle-arena__header .eyebrow {color:#bbab8c;}
+#battleModal #battleStatus {border-color:#90ac943f;background:#19363a;color:#c3ffec;}
+#battleModal .battle-modal>.modal-header {padding-block:max(8px,env(safe-area-inset-top)) 8px;}
+#battleModal .arena-element-chart {width:auto;min-height:38px;display:flex;align-items:center;padding:3px 7px;gap:5px;border-color:#817657;}
+#battleModal .arena-element-chart img {width:26px;height:26px;}
+#battleModal .arena-element-chart span {font-size:8px;}
+#battleModal.battle-modal--active #sandboxOpenButton {display:none;}
+#battleModal .battle-arena__header {flex-wrap:nowrap;min-width:0;}
+#battleModal .battle-arena__header>div:first-child {flex-shrink:0;}
+#battleModal .arena-weather-slot {min-width:0;max-width:min(52%,630px);}
+#battleModal .arena-weather-slot:empty {display:none;}
+#battleModal .arena-weather-slot .battle-weather-hud {
+  position:relative;inset:auto;z-index:auto;width:100%;max-width:100%;height:auto;min-height:30px;padding-block:2px;
+}
+#battleModal .battle-combatants {grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);gap:7px;align-items:stretch;}
+#battleModal .battle-vs i {width:100%;}
+#battleModal .battle-vs span {background:#1b242f;border-color:#d5ae70;color:#ffdfa0;box-shadow:inset 0 1px #ffe2ad47,0 0 28px #b68b3055;}
+#battleModal .battle-player {--fighter-accent:#7cd9c7;}
+#battleModal .battle-enemy {--fighter-accent:#ee91a1;}
+#battleModal .battle-visual-card {
+  display:grid;grid-template-columns:minmax(84px,40%) minmax(0,1fr);grid-template-areas:"side side" "art stats";align-content:start;gap:7px;
+  border:1px solid var(--game-rarity);border-radius:7px;background:linear-gradient(150deg,#1b2a38,#131a27);
+  box-shadow:inset 0 1px #fff4,0 0 16px color-mix(in srgb,var(--fighter-accent) 24%,transparent);
+}
+#battleModal .battle-visual-card__glow {inset:0;}
+#battleModal .battle-card-info {grid-area:stats;min-width:0;padding:0;align-self:center;}
+#battleModal .battle-card-info h3 {font-family:var(--game-heading);color:#f7e9d2;line-height:1.12;overflow-wrap:anywhere;}
+#battleModal .battle-visual-card .battle-side-label {grid-area:side;margin:0;color:var(--fighter-accent);letter-spacing:.14em;}
+#battleModal .battle-art-frame {grid-area:art;height:clamp(140px,26dvh,244px);border-color:#526270;background:#131e2d;}
+#battleModal :is(.battle-team-power-strip,.battle-lineups,.battle-lineups>div,.battle-lineup,.battle-auto-note,.battle-log) {min-width:0;max-width:100%;}
+#battleModal .battle-team-power-strip {white-space:normal;font-size:8px;}
+#battleModal :is(.battle-hp-track,.battle-shield__track) {background:#0c1520;border-color:#a6bec346;border-radius:4px;}
+#battleModal :is(.battle-hp-fill,.battle-shield__fill) {width:100%;transform-origin:left;transform:scaleX(var(--game-meter,0));transition:transform .14s ease-out;}
+#battleModal .battle-hp-fill {background:linear-gradient(90deg,#187776,#77e8b5);}
+#battleModal .battle-enemy .battle-hp-fill {background:linear-gradient(90deg,#962f56,#fc8794);}
+#battleModal .battle-shield__fill {background:linear-gradient(90deg,#2b8bb8,#b7eafe);box-shadow:0 0 9px #65ccff59;}
+#battleModal .battle-lineup-card {border-color:var(--game-rarity);}
+#battleModal .battle-lineup-card.is-active {box-shadow:inset 0 1px #fbe4b051,0 0 12px #e0ce8749;}
+#battleModal :is(.battle-effect-badge,.passive-status-badge,.battle-auto-note,.battle-timing-controls) {border-color:#6b788068;}
+#battleModal .battle-log {background:#0a111d;border-color:#66583e;scrollbar-color:#6b604b #121a24;}
+.battle-weather-hud .battle-weather-chip {border-radius:5px;background:linear-gradient(145deg,#21303c,#111c29);box-shadow:inset 0 1px #f5e5bd38,0 2px 10px #0007;}
+
+@media(max-width:760px) {
+  #battleModal .battle-combatants {grid-template-columns:minmax(0,1fr);}
+  #battleModal .battle-visual-card {grid-template-columns:clamp(72px,29vw,140px) minmax(0,1fr);}
+  #battleModal .battle-art-frame {height:clamp(135px,24dvh,190px);}
+  #battleModal .battle-team-power-strip {display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:4px;}
+  #battleModal .battle-team-power-strip span {white-space:normal;overflow-wrap:anywhere;}
+}
+@media(max-width:540px) {
+  #battleModal.battle-modal--active .battle-modal>.modal-header {min-height:50px;padding-inline:8px;gap:4px;flex-wrap:nowrap;align-items:center;}
+  #battleModal.battle-modal--active .modal-header .eyebrow {display:none;}
+  #battleModal.battle-modal--active .modal-header h2 {font-size:15px;line-height:1.05;}
+  #battleModal .battle-header-controls {gap:5px;}
+  #battleModal .battle-auto-continue {min-width:0;line-height:1.1;}
+  #battleModal .battle-header-controls .battle-auto-continue>span:first-child {max-width:54px;}
+  #battleModal .arena-element-chart {width:42px;min-height:42px;display:grid;gap:0;padding:2px;}
+  #battleModal .arena-element-chart img {width:22px;height:22px;}
+  #battleModal .arena-element-chart span {font-size:6px;}
+  #battleModal .battle-arena {gap:6px;padding-inline:6px;}
+  #battleModal .battle-arena__header {flex-wrap:wrap;gap:4px;}
+  #battleModal .arena-weather-slot {max-width:45%;}
+  #battleModal .battle-arena__header h3 {font-size:16px;}
+  #battleModal .battle-arena__header .eyebrow {font-size:7px;}
+  #battleModal .battle-status {font-size:8px;letter-spacing:.04em;padding-inline:5px;}
+  #battleModal .battle-visual-card {padding:6px;}
+}
+@media(max-height:520px) and (orientation:landscape) {
+  #battleModal .battle-arena {gap:6px;padding:6px 8px;}
+  #battleModal .battle-visual-card {padding:6px;}
+  #battleModal .battle-art-frame {height:clamp(112px,40dvh,164px);}
+  #battleModal .battle-visual-card .battle-side-label .element-badge {width:21px;height:21px;flex-basis:21px;}
+  #battleModal .battle-card-info .battle-passive-status {min-height:31px;}
+  #battleModal .battle-card-info .battle-stats-row {margin-top:4px;}
+  #battleModal .battle-card-info .battle-hp-track {height:8px;}
+}
+
+@media(max-width:1080px) {
+  #app .hub-command {grid-template-columns:repeat(8,minmax(0,1fr));}
+  #app .hub-command__index {display:none;}
+  #app .hub-command__item {gap:5px;}
+}
+@media(max-width:900px) {
+  #app .topbar {min-height:0;gap:6px;}
+  #app .top-actions {justify-content:center;}
+  #app .game-layout {grid-template-columns:minmax(0,1fr);}
+  #app .available-panel {display:none;}
+}
+@media(max-width:640px) {
+  #app.app-shell {padding-inline:max(7px,env(safe-area-inset-left)) max(7px,env(safe-area-inset-right));padding-top:max(6px,env(safe-area-inset-top));gap:5px;}
+  #app .topbar {padding:5px 6px;}
+  #app .brand {justify-content:center;gap:7px;}
+  #app .brand>.game-mark {width:28px;height:31px;flex-basis:28px;}
+  #app .brand h1 {margin-top:2px;}
+  #app .top-actions {gap:4px;width:100%;}
+  #app .top-actions :is(.currency-box,.game-clock-box,.nav-button,.utility-menu__trigger), #app .hub-resource {min-height:34px;}
+  #app .top-actions :is(.currency-icon,.game-clock-icon) {display:none;}
+  #app .top-actions .nav-button, #app .utility-menu__trigger {min-width:33px;padding-inline:5px;}
+  #app .game-clock-copy #gameClockStatus {display:none;}
+  #app .hub-resource {padding-inline:4px;gap:3px;}
+  #app .hub-resource__icon {width:14px;height:14px;flex-basis:14px;}
+  #app .hub-resource strong {font-size:10px;}
+  #app .hub-resource small {font-size:6px;letter-spacing:0;}
+  #app .hub-resource--ore {display:none;}
+  #app .hub-wallet {gap:4px;}
+  #app .hub-command {grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:3px;}
+  #app .hub-command__item {min-height:42px;padding:2px 3px;justify-content:center;gap:3px;}
+  #app .hub-command__item i {font-size:15px;min-width:12px;}
+  #app .hub-command__item small {display:none;}
+  #app .hub-command__item>span {font-size:10px;}
+  #app .game-panel {padding:5px;gap:5px;}
+  #app .weather-hud {min-height:50px;max-height:50px;flex-basis:50px;}
+  #app .stats-bar {grid-template-columns:repeat(3,minmax(0,.9fr)) minmax(91px,1.25fr);gap:3px;}
+  #app .stats-bar .stat {padding:4px;gap:2px;}
+  #app .stats-bar strong {font-size:13px;}
+  #app .stat-label {font-size:7px;letter-spacing:.025em;}
+  #app .hide-roll-toggle {font-size:7px;white-space:normal;}
+  #app .controls {min-height:44px;gap:4px;}
+  #app .roll-button {flex:1 1 40%;min-height:44px;padding:2px 5px;}
+  #app .controls .auto-toggle {flex:0 1 auto;padding-inline:8px;white-space:nowrap;}
+  #app .controls .auto-toggle {font-size:9px;gap:4px;}
+  #app .controls .switch {transform:scale(.85);}
+  #app footer {font-size:7px;}
+  #app .tcg-card__header h2 {font-size:clamp(15px,5vw,24px);}
+}
+@media(max-width:360px) {
+  #app .top-actions .currency-box {padding-inline:4px;}
+  #app .top-actions .game-clock-box {padding-inline:4px;}
+  #app .hub-resource small {display:none;}
+  #app .hub-command__item {min-height:39px;}
+}
+@media(max-height:580px) and (max-width:1100px) and (orientation:landscape) {
+  #app.app-shell {padding-block:4px;gap:4px;}
+  #app .topbar {padding-block:2px;flex-flow:row nowrap;align-items:center;min-height:37px;}
+  #app .brand {gap:5px;}
+  #app .brand>.game-mark {width:25px;height:28px;flex-basis:25px;}
+  #app .brand h1 {font-size:20px;}
+  #app .brand .eyebrow,#app .game-clock-copy #gameClockStatus,#app .hub-resource--ore {display:none;}
+  #app .top-actions {justify-content:flex-end;width:auto;gap:4px;}
+  #app .top-actions :is(.currency-box,.game-clock-box,.nav-button,.utility-menu__trigger), #app .hub-resource {min-height:31px;}
+  #app .hub-command {padding:2px;gap:3px;}
+  #app .hub-command__item {min-height:30px;padding-block:2px;}
+  #app .hub-command__item small,#app footer {display:none;}
+  #app .game-panel {padding:4px;gap:3px;}
+  #app .weather-hud {min-height:38px;max-height:38px;flex-basis:38px;padding-block:2px;}
+  #app .weather-hud:has(.weather-chip) .active-weather {flex-direction:row;align-items:stretch;}
+  #app .weather-hud:has(.weather-chip) .active-weather__heading {flex-direction:column;gap:1px;}
+  #app .stats-bar .stat {padding-block:3px;}
+  #app .stats-bar strong {font-size:12px;}
+  #app .controls,#app .roll-button {min-height:37px;}
+  #app .empty-icon {width:37px;height:37px;margin-bottom:4px;font-size:19px;}
+  #app .empty-state p {font-size:9px;}
+  #app .result-slot {width:min(46vw,315px);}
+  #app .tcg-card {padding:4px;gap:2px;}
+  #app .tcg-card__header {padding-block:1px;}
+  #app .stat-box {min-height:20px;padding-block:0;}
+}
+@media(max-width:420px) and (max-height:600px) and (orientation:portrait) {
+  #app .empty-icon {width:43px;height:43px;margin-bottom:6px;font-size:21px;}
+  #app .empty-state p {font-size:10px;}
+}
+@media(max-height:400px) and (max-width:1100px) and (orientation:landscape) {
+  #app .empty-state {padding-block:2px;}
+  #app .empty-icon {width:30px;height:30px;margin-bottom:2px;}
+  #app .empty-state h2 {margin-bottom:3px;font-size:18px;}
+  #app .empty-state p {line-height:1.35;}
+}
+@media(prefers-reduced-motion:reduce) {
+  #app :is(.tcg-card,.tcg-card__foil,.miss-state,.hub-command__item,.roll-button),
+  #battleModal :is(.battle-mode-option,.battle-hp-fill,.battle-shield__fill,.battle-visual-card,.battle-floating-text) {animation:none!important;transition:none!important;}
+}

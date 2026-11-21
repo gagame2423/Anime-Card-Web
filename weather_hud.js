@@ -1,13 +1,17 @@
 /* Cached battle weather overlay. Driven by existing game/Sandbox renders. */
 (function(host){
   'use strict';
-  let bridge={},root=null,signature='',rows=new Map(),lastSecond=-1;
+  let bridge={},root=null,arenaSlot=null,signature='',rows=new Map(),lastSecond=-1;
   const text=(node,value)=>{if(node&&node.textContent!==value)node.textContent=value;};
   function render(){
     root ||= host.document?.getElementById('battleWeatherHud');if(!root)return;
     const snapshot=bridge.snapshot?.(),visible=Boolean(snapshot?.active);
+    arenaSlot ||= host.document.getElementById('arenaWeatherSlot');
+    const inline=visible&&!snapshot.sandbox&&arenaSlot&&!arenaSlot.closest('.battle-arena')?.classList.contains('hidden');
+    const container=inline?arenaSlot:host.document.body;
+    if(root.parentElement!==container)container.append(root);
     if(root.hidden===visible)root.hidden=!visible;
-    host.document.body.classList.toggle('battle-weather-visible',visible);
+    host.document.body.classList.toggle('battle-weather-visible',visible&&!inline);
     if(!visible)return;
     const entries=snapshot.weathers?.length?snapshot.weathers:[{id:'normal',name:'Normal',icon:'◯',color:'#bac8d8'}];
     const key=entries.map(e=>e.id).join('|'),second=Math.floor(snapshot.seconds||0);

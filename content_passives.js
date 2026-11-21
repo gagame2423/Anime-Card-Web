@@ -2,7 +2,7 @@
 (function(host){
  'use strict';
  if(host.createContentSkills?.version===1)return;
- const FINN='finn-the-human',JAKE='jake-the-dog';
+ const FINN='finn-the-human',JAKE='jake-the-dog',REGULAR='mordecai-rigby',GUMBALL='gumball';
  const SWORDS=Object.freeze(['Golden Sword','Grass Sword','Demon Blood Sword']);
  const IDS=Object.freeze(['yoshino-junpei','n-doul','oingo','d-arby','hogus-eagle','vanilla-ice','bakugo','askeladd','pochita','kon','iggy','pikachu','ender-dragon','onana','zenitsu','antony-mu','tung-tung-sahur']);
  host.createContentSkills=function(api){
@@ -17,7 +17,45 @@
    api.sacrifice(bs,u);
    if(ally){api.percent(ally,'atk','content:saw-contract',.20);runtime(ally).sawContractMiss=true;api.log('[PASSIVE] Saw Contract empowered '+ally.card.name+'; attacks have a 20% miss chance.');}
   }
-  function entry(bs,u){hex.entry(bs,u);for(const id of IDS)if(has(u,id)){const c=state(u,id);if(c.entered)continue;c.entered=true;if(id==='vanilla-ice')c.voidTurns=3;if(id==='pochita')scope(u,id,()=>contract(bs,u));}}
+  function changeRegularMode(u){
+   const c=state(u,REGULAR);c.mode=random()<.50?'Mordecai':'Rigby';
+   api.log('[PASSIVE] Regular Show: '+c.mode+' took the lead.');
+  }
+  function regularSerious(u,carry=false){
+   if(!alive(u)||!has(u,REGULAR)||!carry&&u.hp>=u.maxHp*.50)return;
+   const c=state(u,REGULAR);if(c.serious)return;c.serious=true;c.mode='Mordecai';
+   if(u.card?.id===REGULAR)(u.cartoonProgress ||= {}).serious=true;
+   scope(u,REGULAR,()=>api.seriousBuff(u));
+   api.log('[PASSIVE] Serious Mode: Mordecai gains +50% ATK and +25% max HP.');
+  }
+  function skipAttack(bs,u,options){
+   if(!has(u,REGULAR)||options.isFollowUp||options.isCounter)return false;
+   regularSerious(u);
+   if(state(u,REGULAR).mode!=='Rigby'||random()>=.30)return false;
+   api.heal(bs,u,u,u.maxHp*.20,'Regular Show');
+   api.log('[PASSIVE] Rigby rested instead of attacking.');
+   return true;
+  }
+  function regularAttack(bs,u,v,options){
+   const c=state(u,REGULAR),rigby=options.regularAssist||c.mode==='Rigby';
+   const hit=api.primary(bs,u,v,atk(u)*(rigby?.80:1),{...options,specialAttack:false});
+   const target=hit.target||v;
+   if(rigby&&hit.hit&&alive(target)&&random()<.50)api.status(target,'stunTurns',1,u);
+   if(!rigby&&!c.serious&&!options.isFollowUp&&alive(u)&&api.canFollow(u)){
+    const victim=alive(target)?target:enemies(bs,u)[0];
+    if(victim&&random()<.40)api.follow(bs,u,victim,1,{regularAssist:true});
+   }
+   return {...hit,attacker:u,target};
+  }
+  function entry(bs,u){
+   hex.entry(bs,u);
+   if(u.card?.id===GUMBALL)api.amazingEnter(bs,u);
+   if(has(u,REGULAR)&&!state(u,REGULAR).mode){
+    if(u.card?.id===REGULAR&&u.cartoonProgress?.serious)regularSerious(u,true);
+    else{changeRegularMode(u);regularSerious(u);}
+   }
+   for(const id of IDS)if(has(u,id)){const c=state(u,id);if(c.entered)continue;c.entered=true;if(id==='vanilla-ice')c.voidTurns=3;if(id==='pochita')scope(u,id,()=>contract(bs,u));}
+  }
   function matchStart(bs){for(const u of [...all(bs)])if(has(u,'pochita'))entry(bs,u);}
   const debuffImmune=u=>lastHeroes.has(u)&&lastHeroes.get(u)===api.passiveRuntimeFor(u,FINN);
   function lastHero(bs,line){
@@ -108,7 +146,7 @@
     out.hit ||= result.hit;out.damage+=result.damage||0;out.killed ||= result.killed;
    }return out;
   }
-  function attack(bs,u,target,options={}){const replacement=hex.attack(bs,u,target,options);if(replacement)return replacement;if(has(u,FINN))return scope(u,FINN,()=>finnAttack(bs,u,target,options));if(has(u,JAKE)&&random()<.30)return scope(u,JAKE,()=>jakePierce(bs,u,target,options));return api.id(u)==='zenitsu'&&(state(u,'zenitsu').attacks+1)%3===0?scope(u,'zenitsu',()=>pierce(bs,u,target,options)):null;}
+  function attack(bs,u,target,options={}){const replacement=hex.attack(bs,u,target,options);if(replacement)return replacement;if(has(u,REGULAR))return scope(u,REGULAR,()=>regularAttack(bs,u,target,options));if(has(u,FINN))return scope(u,FINN,()=>finnAttack(bs,u,target,options));if(has(u,JAKE)&&random()<.30)return scope(u,JAKE,()=>jakePierce(bs,u,target,options));return api.id(u)==='zenitsu'&&(state(u,'zenitsu').attacks+1)%3===0?scope(u,'zenitsu',()=>pierce(bs,u,target,options)):null;}
   function afterAttack(bs,u,target,out,options={}){
    hex.afterAttack(bs,u,target,out,options);
    if(!u||!alive(u)||out.skipped||out.outOfTurn)return;
@@ -135,7 +173,7 @@
    if(has(u,'onana')){const c=state(u,'onana');if(c.failedToken!==token){c.failedToken=token;c.failedDodges++;scope(u,'onana',()=>api.percent(u,'atk','content:onana',.04*c.failedDodges));}}
    if(has(u,'antony-mu')){const c=state(u,'antony-mu');if(c.fearToken!==token){c.fearToken=token;if(random()<.15)scope(u,'antony-mu',()=>api.status(source,'fearTurns',3,u));}}
   }
-  function damaged(bs,u){if(!alive(u)||!has(u,'yoshino-junpei'))return;const c=state(u,'yoshino-junpei');if(c.shieldUsed||u.hp>=u.maxHp*.50)return;
+  function damaged(bs,u){regularSerious(u);if(!alive(u)||!has(u,'yoshino-junpei'))return;const c=state(u,'yoshino-junpei');if(c.shieldUsed||u.hp>=u.maxHp*.50)return;
    c.shieldUsed=true;c.shieldTurns=3;c.shieldApplied=api.ownTurns(bs,u);c.shieldTag='content:moon-dregs';scope(u,'yoshino-junpei',()=>api.shield(u,atk(u)*1.5,c.shieldTag));c.shieldArmed=api.shieldValue(u,c.shieldTag)>0;
   }
   function shieldHit(bs,u,source,before){hex.shieldHit(bs,u,source,before);const c=api.passiveRuntimeFor(u,'yoshino-junpei').contentSkills?.['yoshino-junpei'];if(!c?.shieldArmed||api.shieldValue(u,c.shieldTag)>0)return;c.shieldArmed=false;c.shieldTurns=0;
@@ -161,6 +199,8 @@
   function killed(bs,u,victim,meta){
    hex.killed(bs,u,victim);
    if(!u||!victim||alive(victim)||team(bs,u)===team(bs,victim))return;let seen=seenKills.get(u);if(!seen){seen=new WeakMap();seenKills.set(u,seen);}const life=api.life(victim);if(seen.get(victim)===life)return;seen.set(victim,life);
+   if(alive(u)&&has(u,REGULAR)&&!state(u,REGULAR).serious&&u.hp>u.maxHp*.50)changeRegularMode(u);
+   if(alive(u)&&u.card?.id===GUMBALL)api.amazingKill(bs,u);
    if(meta?.adventureSword===2)swordKill(bs,u,2);
    if(has(u,'d-arby')&&!enemies(bs,u).length)(bs.contentRewardWinners ||= {})[api.side(bs,u)]=2;
    if(has(u,'oingo')&&!api.copyBlocked(u)&&alive(u))scope(u,'oingo',()=>{
@@ -170,7 +210,13 @@
   }
   function died(bs,u){const c=api.passiveRuntimeFor(u,'oingo').contentSkills?.oingo;if(c?.copy){api.removeCopy(bs,u,c.copy);c.copy=null;}}
   function badges(u){const r=runtime(u),rows=hex.badges(u);if(has(u,FINN)){const c=state(u,FINN);rows.push({icon:'⚔',label:SWORDS[c.stance||0]+' · NEXT',tone:'form'});if(c.critReady)rows.push({icon:'✦',label:'JAKE FOLLOW-UP · +20% NEXT CRIT',tone:'buff'});}if(debuffImmune(u))rows.push({icon:'✦',label:'LAST HERO STANDING',tone:'buff'});if(r.fearTurns>0)rows.push({icon:'◉',label:'FEAR '+r.fearTurns+'t · 15% MISS',tone:'debuff'});if(r.poison?.length)rows.push({icon:'☠',label:'POISON '+r.poison.length,tone:'debuff'});if(r.sawContractMiss)rows.push({icon:'⚒',label:'SAW CONTRACT · 20% MISS',tone:'buff'});if(has(u,'vanilla-ice')&&state(u,'vanilla-ice').voidTurns>0)rows.push({icon:'◌',label:'VOID DOMAIN '+state(u,'vanilla-ice').voidTurns+'t',tone:'form'});if(has(u,'onana')&&state(u,'onana').failedDodges)rows.push({icon:'⚽',label:'ONANA +'+state(u,'onana').failedDodges*4+'% ATK',tone:'buff'});if(has(u,'oingo')&&state(u,'oingo').copy)rows.push({icon:'♢',label:'KHNUM '+state(u,'oingo').copyTurns+'t',tone:'form'});return rows;}
-  return {IDS:Object.freeze([...IDS,...hex.IDS,FINN,JAKE]),guard,lastHero,dispel,debuffImmune,dodgeBonus:hex.dodgeBonus,crit:hex.crit,speed:hex.speed,immune:hex.immune,status:hex.status,damageDealt:hex.damageDealt,state,entry,matchStart,prepare,attack,afterAttack,attacked,damaged,shieldHit,dodge,onDodge,reduction,attackBonus,misses,turnStart,turnEnd,killed,died,badges,forbidden:u=>!!u?.contentSacrificed||u?.card?.id==='pochita'};
+  function cartoonBadges(u){
+   const rows=[];
+   if(has(u,REGULAR)){const c=state(u,REGULAR);if(c.mode)rows.push({icon:'⚔',label:c.serious?'SERIOUS MODE':c.mode.toUpperCase()+' MODE',tone:'form'});}
+   if(u.card?.id===GUMBALL){const a=api.amazingStatus(u);if(a){rows.push({icon:'✦',label:(9-a.used)+'/9 LIVES LEFT',tone:'form'});if(a.name)rows.push({icon:'✧',label:a.name.toUpperCase(),tone:'buff'});}}
+   return rows;
+  }
+  return {IDS:Object.freeze([...IDS,...hex.IDS,FINN,JAKE,REGULAR,GUMBALL]),guard,lastHero,dispel,debuffImmune,dodgeBonus:hex.dodgeBonus,crit:hex.crit,speed:hex.speed,immune:hex.immune,status:hex.status,damageDealt:hex.damageDealt,state,entry,matchStart,skipAttack,prepare,attack,afterAttack,attacked,damaged,shieldHit,dodge,onDodge,reduction,attackBonus,misses,turnStart,turnEnd,killed,died,badges:u=>[...badges(u),...cartoonBadges(u)],forbidden:u=>!!u?.contentSacrificed||u?.card?.id==='pochita'};
  };
  host.createContentSkills.version=1;
 })(window);

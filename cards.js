@@ -3988,6 +3988,38 @@ const CARDS = [
       tags: ["support", "damage_reduction", "pierce", "special_attack"]
     },
     image: "assets/cards/jake.png"
+  },
+  {
+    id: "mordecai-rigby",
+    name: "Mordecai & Rigby",
+    element: "Water",
+    rarity: "Secret",
+    chance: 250000000,
+    category: ["Cartoon", "Animal", "Brutal", "Hero"],
+    stats: { hp: 206000, atk: 50300 },
+    passive: {
+      name: "Regular Show",
+      description: "Enter as Mordecai or Rigby at random. Reroll the mode after each kill while above 50% max HP. Mordecai attacks for 100% ATK and has a 40% chance to call one Rigby follow-up. Rigby attacks for 80% ATK with a 50% chance to Stun for 1 turn, and has a 30% chance on his turn to heal 20% max HP instead of attacking. The first time HP falls below 50%, lock into Mordecai for the rest of the battle, lose the follow-up, and gain +50% ATK and +25% max HP (added to current HP as well).",
+      tags: ["follow_up", "stun", "healing", "scaling"]
+    },
+    image: "assets/cards/mordecai-rigby.png"
+  },
+  {
+    id: "gumball",
+    name: "Gumball",
+    element: "Water",
+    rarity: "Secret",
+    chance: 300000000,
+    requiredWeather: "Bizare",
+    category: ["Cartoon", "Animal", "Hero", "AntiHero", "Brutal", "Magician"],
+    stats: { hp: 155000, atk: 37900 },
+    passive: {
+      name: "Amazing World",
+      description: "Copy one eligible passive from cards you own at battle entry. Replace it with a fresh roll after each kill. Survive up to 9 lethal hits per battle, returning to 30% max HP and replacing the copied passive each time. Neither Amazing World nor the current copy can be stolen, copied, imitated, or silenced.",
+      tags: ["revival", "scaling", "mimic"],
+      uncopyable: true
+    },
+    image: "assets/cards/gumball.png"
   }
 ];
 

@@ -14,3 +14,8 @@
 .hx-chest-display{overflow:clip;border-radius:16px}.hx-layer [data-rarity]{--hx-rarity:#a4b8c8;border-color:var(--hx-rarity)}.hx-layer [data-rarity="Rare"]{--hx-rarity:#419eff}.hx-layer [data-rarity="Epic"]{--hx-rarity:#b16cff}.hx-layer [data-rarity="Legendary"]{--hx-rarity:#edc75d}.hx-layer [data-rarity="Mythic"]{--hx-rarity:#f06191}.hx-layer [data-rarity="Secret"]{--hx-rarity:#62e9df}.hx-layer .hx-skin-card.is-equipped{border-color:#ead492}.hx-layer img.hx-icon-missing{display:none}
 
 .details-heading h2{overflow-wrap:anywhere}
+
+/* Use the shared numeric and metallic treatments without changing gallery or reveal geometry. */
+.hx-layer {--hx-gold:var(--game-gold,#c8aa6e);font-variant-numeric:tabular-nums;}
+.hx-layer .hx-wallet {color:var(--game-ivory,#f0e6d2);}
+.hx-layer button:focus-visible,.hx-skin-trigger:focus-visible {outline:2px solid var(--game-energy,#0ac8b9);outline-offset:3px;}

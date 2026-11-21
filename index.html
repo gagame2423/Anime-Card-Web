@@ -3,22 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#070811" />
+  <meta name="theme-color" content="#070a10" />
   <title>Anime Card RNG</title>
   <link rel="stylesheet" href="./styles.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./passives.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./pvp.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./infinity.css?v=20261117-content-1" />
-  <link rel="stylesheet" href="./autochess.css?v=20261120-ac-adventure-1" />
-  <link rel="stylesheet" href="./hextech.css?v=20261119-hextech-1" />
+  <link rel="stylesheet" href="./autochess.css?v=20261121-ui-cartoon-1" />
+  <link rel="stylesheet" href="./hextech.css?v=20261121-ui-cartoon-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
+  <link rel="stylesheet" href="./game-ui.css?v=20261121-summon-align-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <p class="eyebrow">LOCAL SAVE • PLAY INSTANTLY</p>
-        <h1>ANIME CARD <span>RNG</span></h1>
+        <svg class="game-mark" viewBox="0 0 44 48" aria-hidden="true"><path d="M22 2 41 13v22L22 46 3 35V13Z"/><path d="m22 8 13 8v16l-13 8-13-8V16Z"/><path class="game-mark__core" d="m22 13 8 11-8 11-8-11Z"/><path d="M22 19v10m-5-5h10"/></svg>
+        <div><p class="eyebrow">THE CONVERGENCE</p><h1>Anime Card <span>RNG</span></h1></div>
       </div>
 
       <nav class="top-actions" aria-label="Game navigation">
@@ -39,13 +40,11 @@
           </div>
         </div>
 
-        <button id="collectionButton" class="nav-button" type="button" aria-label="Open collection">
-          <span class="nav-icon">▦</span>
-          <span>
-            <small>COLLECTION</small>
-            <strong id="collectionSummary">Cards: 0/0</strong>
-          </span>
-        </button>
+        <div class="hub-wallet" aria-label="Account resources">
+          <span class="hub-resource"><span class="hub-resource__icon" aria-hidden="true">◆<img src="assets/items/gem.png" alt="" /></span><span><small>GEMS</small><strong id="hubGems">0</strong></span></span>
+          <span class="hub-resource"><span class="hub-resource__icon" aria-hidden="true">◇<img src="assets/items/rshard.png" alt="" /></span><span><small>RIFT SHARDS</small><strong id="hubRiftShards">0</strong></span></span>
+          <span class="hub-resource hub-resource--ore"><span class="hub-resource__icon" aria-hidden="true">◈<img src="assets/items/silverore.png" alt="" /></span><span><small>SILVER ORE</small><strong id="hubOre">0</strong></span></span>
+        </div>
 
         <button id="upgradesButton" class="nav-button accent-button" type="button" aria-label="Open upgrade shop">
           <span class="nav-icon">↑</span>
@@ -55,22 +54,12 @@
           </span>
         </button>
 
-        <button id="battleButton" class="nav-button battle-button" type="button" aria-haspopup="dialog">
-          <span class="nav-icon">⚔</span>
-          <span>
-            <small>BATTLE</small>
-            <strong>Arena</strong>
-          </span>
-        </button>
-
         <details id="utilityMenu" class="utility-menu">
           <summary class="ghost-button utility-menu__trigger" aria-label="More game actions" title="More game actions">⋯</summary>
           <div class="utility-menu__panel" aria-label="Game utilities">
-            <button id="inventoryOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">🧪</span><span><small>STORAGE</small><strong>Items</strong></span></button>
             <button id="achievementOpenButton" class="nav-button" type="button" aria-haspopup="dialog" aria-label="Open achievements"><span class="nav-icon">🏆</span><span><small>MILESTONES</small><strong>Achievements <b id="achievementReadyCount" class="achievement-ready-count" hidden></b></strong></span></button>
             <button id="cloudLoginOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">☁</span><span><small id="cloudSyncIndicator">Local saved</small><strong>Login</strong></span></button>
             <button id="leaderboardOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">♛</span><span><small>GLOBAL</small><strong>Leaderboard</strong></span></button>
-            <button id="craftingOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚗</span><span><small>UPGRADE</small><strong>Crafting</strong></span></button>
             <button id="questOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">?</span><span><small>DISCOVER</small><strong>Quests</strong></span></button>
             <button id="settingsOpenButton" class="nav-button" type="button" aria-haspopup="dialog"><span class="nav-icon">⚙</span><span><small>PREFERENCES</small><strong>Game Settings</strong></span></button>
             <button id="resetButton" class="ghost-button" type="button">Reset</button>
@@ -78,6 +67,18 @@
         </details>
       </nav>
     </header>
+
+    <nav class="hub-command" aria-label="Game modes and collection">
+      <span class="hub-command__index" aria-hidden="true">◇ <b>OPERATIONS</b></span>
+      <button id="hubSummonButton" type="button" class="hub-command__item is-current" aria-current="page"><i aria-hidden="true">✦</i><span>Summon</span></button>
+      <button id="hubNormalButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="battleModal"><i aria-hidden="true">◇</i><span>Normal<small>4v4 Lineup</small></span></button>
+      <button id="hubTrialButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="timeTrialModeModal"><i aria-hidden="true">◷</i><span>Time Trial<small>Normal &amp; More</small></span></button>
+      <button id="battleButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">⚔</i><span>Arena<small>Combat Modes</small></span></button>
+      <button id="hubChessButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="autochessModal"><i aria-hidden="true">♜</i><span>Auto Chess<small>Tactical Grid</small></span></button>
+      <button id="inventoryOpenButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">▣</i><span>Inventory<small>Vault &amp; Relics</small></span></button>
+      <button id="craftingOpenButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">⬡</i><span>Craft<small>Forge Relics</small></span></button>
+      <button id="collectionButton" type="button" class="hub-command__item" aria-label="Open collection"><i aria-hidden="true">▦</i><span>Card Index<small id="collectionSummary">Cards: 0/0</small></span></button>
+    </nav>
 
     <main class="main-stage">
       <section class="game-layout">
@@ -96,7 +97,7 @@
           <section class="weather-hud" aria-label="Active weather">
             <div class="active-weather">
               <div class="active-weather__heading">
-                <span class="weather-label">ACTIVE WEATHER</span>
+                <span class="weather-label"><i aria-hidden="true">☼</i> ACTIVE WEATHER</span>
                 <span id="weatherHudEmpty" class="weather-empty">Normal</span>
               </div>
               <div id="activeWeatherList" class="active-weather__list"></div>
@@ -113,6 +114,10 @@
               <strong id="luckValue">1.00x</strong>
             </div>
             <div class="stat">
+              <span class="stat-label">DROP BOOST</span>
+              <strong id="hubDropValue">1.00x</strong>
+            </div>
+            <div class="stat">
               <span class="stat-label">COOLDOWN</span>
               <strong id="cooldownValue">1.50s</strong>
               <label class="hide-roll-toggle" for="hideRollingCardToggle"><span>Hide Rolling Card</span><input id="hideRollingCardToggle" type="checkbox" role="switch" aria-describedby="hideRollingCardHint"><span class="hide-roll-track" aria-hidden="true"></span><b id="hideRollingCardState" aria-hidden="true">OFF</b></label>
@@ -122,12 +127,18 @@
 
           <!-- Reserved flex area: the roll slot absorbs all remaining height. -->
           <div id="resultStage" class="result-stage">
+            <svg class="altar-sigil" viewBox="0 0 480 480" aria-hidden="true" focusable="false">
+              <circle cx="240" cy="240" r="216"/><circle class="altar-sigil__marks" cx="240" cy="240" r="202"/><circle cx="240" cy="240" r="187"/><circle class="altar-sigil__core" cx="240" cy="240" r="164"/>
+              <path d="m240 35 205 205-205 205L35 240Z M240 87l153 153-153 153L87 240Z M30 240h75m270 0h75M240 30v73m0 274v73"/>
+              <path class="altar-sigil__core" d="m240 126 114 114-114 114-114-114Z m0 70 44 44-44 44-44-44Z"/>
+              <g class="altar-sigil__nodes"><path d="m240 16 6 10-6 10-6-10Z M240 444l6 10-6 10-6-10Z M16 240l10-6 10 6-10 6Z M444 240l10-6 10 6-10 6Z"/><circle cx="102" cy="102" r="3"/><circle cx="378" cy="102" r="3"/><circle cx="102" cy="378" r="3"/><circle cx="378" cy="378" r="3"/></g>
+            </svg>
             <div id="resultSlot" class="result-slot">
               <div id="rollHiddenState" class="empty-state hidden"><div class="empty-icon">◇</div><h2>Card visuals hidden</h2><p>Rolling continues in the background.<br>New cards and new mutations appear here.<br>Counters refresh on a new result or when paused.</p></div>
               <div id="emptyState" class="empty-state">
                 <div class="empty-icon">✦</div>
-                <h2>Ready to Roll</h2>
-                <p>Hit the button below and test your luck.</p>
+                <h2>Summoning Altar</h2>
+                <p>Open the gate to summon cards. Active weather can unlock rare encounters.</p>
               </div>
 
               <article id="resultCard" class="tcg-card hidden" aria-live="polite">
@@ -195,7 +206,7 @@
 
           <div class="controls">
             <button id="rollButton" class="roll-button" type="button" aria-disabled="false">
-              <span class="roll-main">ROLL</span>
+              <span class="roll-main"><span aria-hidden="true">✦</span> ROLL</span>
               <span id="cooldownLabel" aria-live="polite">READY</span>
             </button>
 
@@ -219,8 +230,8 @@
     </main>
 
     <footer>
-      <span>Pure HTML5 • CSS3 • Vanilla JS</span>
-      <span>Game Time runs 1:1 with real elapsed time.</span>
+      <span>◆ CONVERGENCE GATE</span>
+      <span>Weather and game time follow the real-time clock.</span>
     </footer>
   </div>
 
@@ -382,7 +393,7 @@
     <section class="modal-panel battle-modal">
       <header class="modal-header">
         <div>
-          <p class="eyebrow">SOLO COMBAT</p>
+          <p class="eyebrow">COMBAT OPERATIONS</p>
           <div class="arena-title-row"><h2 id="battleModalTitle">⚔ Battle Arena</h2><button id="sandboxOpenButton" type="button" class="ghost-button sandbox-entry" aria-haspopup="dialog" aria-controls="sandboxModal">SANDBOX MODE</button></div>
         </div>
         <div class="battle-header-controls">
@@ -403,19 +414,19 @@
           <div class="battle-setup-head">
             <div>
               <span class="battle-field-label">CHOOSE BATTLE MODE</span>
-              <p>Pick 1v1 for adaptive solo combat or 4v4 for the full team battle.</p>
+              <p>Choose an encounter, then deploy your lineup.</p>
             </div>
             <span class="battle-setup-hint">TEAM <b id="battleTeamCount">0/4</b></span>
           </div>
 
           <div id="battleModePicker" class="battle-mode-picker" role="group" aria-label="Battle mode">
             <button type="button" class="battle-mode-option is-selected" data-battle-mode="4v4" aria-pressed="true">
-              <strong>4v4</strong>
+              <strong>Normal · 4v4</strong>
               <span>Full team combat • boosted rewards</span>
             </button>
             <button type="button" class="battle-mode-option" data-battle-mode="1v1" aria-pressed="false">
-              <strong>1v1</strong>
-              <span>Adaptive enemy • anti-inflation scaling</span>
+              <strong>Duel · 1v1</strong>
+              <span>Adaptive enemy • Single fighter</span>
             </button>
             <button type="button" class="battle-mode-option" data-battle-mode="tower" aria-pressed="false"><strong>🏰 TOWER</strong><span>Infinite floors • 4v4 • Tower Coins</span></button>
             <button id="timeTrialOpenButton" type="button" class="battle-mode-option" aria-pressed="false" aria-haspopup="dialog" aria-controls="timeTrialModeModal"><strong>⏱ TIME TRIAL</strong><span id="timeTrialModeHint">Choose Normal or EXP</span></button>
@@ -545,9 +556,10 @@
         </section>
         <div class="battle-arena__header">
           <div>
-            <span class="eyebrow">ANIME CARD CLASH</span>
-            <h3>Standoff</h3>
+            <span class="eyebrow">ACTIVE ENCOUNTER</span>
+            <h3>Clash Arena</h3>
           </div>
+          <div id="arenaWeatherSlot" class="arena-weather-slot"></div>
           <button id="spookyInfoBattleButton" class="ghost-button spooky-info-button hidden" type="button" aria-label="View active Spooky run modifiers" aria-haspopup="dialog" aria-controls="spookyInfoModal">...</button><strong id="spookyLiveCoins" class="hidden"></strong>
           <strong id="timeTrialTimer" class="trial-timer hidden" aria-live="off"></strong>
           <div class="battle-timing-controls"><div id="battleStatus" class="battle-status" aria-live="polite">PLAYER STRIKE IN 3s</div><label id="spookySpeedUpControl" class="spooky-speed-switch hidden" for="spookySpeedUpToggle"><span>Speed Up <small id="spookySpeedUpState">OFF • 2s / turn</small></span><input id="spookySpeedUpToggle" type="checkbox" role="switch"></label></div>
@@ -1002,7 +1014,7 @@
   </div>
   <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261120-ac-adventure-1"></script>
+  <script type="application/x-game-script" data-game-script src="./cards.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./skins.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./hextech.js?v=20261119-hextech-1"></script>
 
@@ -1041,8 +1053,8 @@
   <script type="application/x-game-script" data-game-script src="./bleach_passives.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./hextech_passives.js?v=20261119-hextech-1"></script>
 
-  <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261120-ac-adventure-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261120-ac-adventure-1"></script>
+  <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261121-ui-cartoon-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261117-content-1"></script>
@@ -1067,24 +1079,24 @@
   <script type="application/x-game-script" data-game-script src="./quests.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261121-ui-cartoon-1"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261121-ui-cartoon-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
   <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./settings.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./storage.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261117-content-1"></script>
@@ -1092,7 +1104,7 @@
   <script type="application/x-game-script" data-game-script src="./index_filters.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_audio.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_ranked.js?v=20261120-ac-adventure-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess.js?v=20261120-ac-adventure-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_synergies.js?v=20261120-ac-adventure-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_telemetry.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_augments.js?v=20261119-hextech-1"></script>
@@ -1101,14 +1113,14 @@
   <script type="application/x-game-script" data-game-script src="./autochess_strategy.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_profile.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261118-ac-last-stand-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261120-ac-adventure-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_report.js?v=20261117-ac-polish-augments-3"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261120-ac-adventure-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261120-ac-adventure-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_lobby.js?v=20261120-ac-adventure-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261119-ac-peer-state-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_relic_view.js?v=20261119-ac-formation-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261120-ac-adventure-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261120-ac-adventure-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261121-ui-cartoon-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261121-ui-cartoon-1"></script>
 </body>
 </html>
