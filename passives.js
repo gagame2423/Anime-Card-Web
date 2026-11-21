@@ -12,7 +12,7 @@
 // ============================================================
 
 (() => {
- if(window.PassiveSystem?.hookVersion==='20261121-ui-cartoon-1')return;
+ if(window.PassiveSystem?.hookVersion==='20261121-combat-hotfix-1')return;
  function createPassiveRuntime(initialHost = {}) {
   const Math = initialHost.random ? Object.assign(Object.create(globalThis.Math), {random:initialHost.random}) : globalThis.Math;
   const BASE_CRIT_CHANCE = 0.05;
@@ -408,6 +408,7 @@
     }
     function hit(bs, source, target, damage, options = {}) {
       if(hitRecursionDepth>2||source&&activeHitSources.has(source))return stoppedChain();
+      options=attackOptions(options);
       hitRecursionDepth++;if(source)activeHitSources.add(source);try{
       if((options.isFollowUp||options.fateSupport||options.requiemSupport||options.followOwner)&&(!spooky.canFollow(source)||!spooky.canFollow(options.followOwner)))return {damage:0,killed:false,hit:false,skipped:true,hindered:true};
       if (!isAlive(target) || !(damage > 0)) return { damage: 0, killed: false };
@@ -1329,12 +1330,12 @@
     random:()=>Math.random(),hit:(...args)=>champions.hit(...args),status:setStatus,dot:addDot,heal,refresh:refreshUnitDisplay,log:safeLog,
     allowed:sourcePassiveAllowed,passiveIds:stealablePassiveIds,addCopy:addPassiveCopy,activateCopy,
     removeCopy(unit,copy){const r=unit.passiveState;if(r?.grimoire)r.grimoire.copies=r.grimoire.copies.filter(item=>item!==copy);},
-    primary(bs,source,target,amount){
-      if(Math.random()<getDodgeChance(target,source,bs,{})){onDodge(bs,target,source,{incomingDamage:amount});return {hit:false,damage:0,killed:false,dodged:true};}
-      const stats=getCritStats(source),critical=Math.random()<stats.chance;
-      const result=champions.hit(bs,source,target,amount*(critical?stats.multiplier:1),{spookyPrimary:true,specialAttack:true,passiveAttack:false,dodgeChecked:true});
-      const blocked=options.adventureSword&&(result.raidBlocked||result.absorbed||result.invincible);
-    const outcome={...result,target,hit:!blocked&&!result.dodged&&!result.reflected,critical};ragna.critical(bs,source,target,outcome);return outcome;
+    primary(bs,source,target,amount,options={}){
+      options=attackOptions(options);
+      if(!options.ignoreDodge&&Math.random()<getDodgeChance(target,source,bs,options)){onDodge(bs,target,source,{incomingDamage:amount});return {hit:false,damage:0,killed:false,dodged:true,target};}
+      const stats=getCritStats(source),critical=!options.noCritical&&Math.random()<stats.chance;
+      const result=champions.hit(bs,source,target,amount*(critical?stats.multiplier:1),{...options,spookyPrimary:true,specialAttack:true,passiveAttack:false,dodgeChecked:true});
+      const outcome={...result,target,hit:!result.dodged&&!result.reflected,critical};ragna.critical(bs,source,target,outcome);return outcome;
     },
     execute:(bs,source,target)=>champions.execute?champions.execute(bs,source,target):executeSpookyTarget(bs,source,target),
     death:(bs,unit)=>onTeammateDeath(bs,unit),indices:ensureCurrentIndices,attack:(...args)=>performAttack(...args),followChance:(bs,u,n,secondary=false,cap=1)=>fate.followChance(bs,u,n,secondary,cap),
@@ -1649,13 +1650,14 @@
     for(const k of ['displayAtkBonusPct','displayHpBonusPct','flatAtkBonusDisplay','temporaryStatsTurns','temporaryAtkBonusPct','temporaryMaxHpBonusPct','temporaryAtkDelta','temporaryMaxHpDelta','stormAtkDelta','stormTurns'])r[k]=0;
     r.hamonActive=false;r.buffStacks=0;r.activeTags=[];akatsuki.clearBuffs(target);content.dispel(target);refreshUnitDisplay(target);return true;
   }
+  function attackOptions(value){return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}
   function stretchTarget(bs,source,target,options){
     if(!bs||!source||!isAlive(target)||options.stretchyChecked||options.dot||options.isCounter||options.championCounter||options.championRedirect||options.ballerRedirect||options.fateAbsorb||options.grimoireReflection||options.entenReflect||options.akatsukiReflect)return {target,options};
     const guard=content?.guard(bs,source,target);
     return {target:guard?.target||target,options:{...options,stretchyChecked:true,...(guard?{stretchyScale:guard.scale}:{})}};
   }
   function primarySkillHit(bs,source,target,amount,options={}){
-    ({target,options}=stretchTarget(bs,source,target,options));
+    ({target,options}=stretchTarget(bs,source,target,attackOptions(options)));
     sins?.prepare(bs,source,target,options);
     baller?.attacking(bs,source,target,options);
     markAttackTarget(bs,source,target,options);if(attackMisses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,specialAttack:options.specialAttack!==false,fearChecked:true};
@@ -1664,7 +1666,8 @@
     const stats=getCritStats(source),critical=!options.noCritical&&Math.random()<Math.min(1,stats.chance+(options.adventureCrit||0));
     if(options.adventureSword)ensureRuntime(source).lastCrit=critical;
     const result=champions.hit(bs,source,target,amount*(Number(options.damageMultiplier)||1)*(critical?stats.multiplier:1),{...options,passiveAttack:Boolean(options.passiveAttack),dodgeChecked:true});
-    const outcome={...result,hit:!result.dodged&&!result.reflected&&!result.skipped&&!result.immune&&!result.missed,critical};dragon.critical(bs,source,target,outcome,options);ragna.critical(bs,source,target,outcome);sins?.after(bs,source,target,outcome,options);return outcome;
+    const blocked=options.adventureSword&&(result.raidBlocked||result.absorbed||result.invincible);
+    const outcome={...result,target,hit:!blocked&&!result.dodged&&!result.reflected&&!result.skipped&&!result.immune&&!result.missed,critical};dragon.critical(bs,source,target,outcome,options);ragna.critical(bs,source,target,outcome);sins?.after(bs,source,target,outcome,options);return outcome;
   }
   function recordFollowUp(battle,source,meta={}){
     if(!source||meta.questFollowTracked||!(meta.isFollowUp||meta.fateSupport||meta.requiemSupport))return;
@@ -3680,6 +3683,7 @@
   // Per-loop caps alone do not bound nested loops (for example 16 slashes x 16).
   let tacticalAttackDepth=0,tacticalAttacksRemaining=64,attackResolutionDepth=0;
   function performAttack(battleState,attacker,requestedTarget,options={}) {
+    options=attackOptions(options);
     const tactical=battleState?.mode==='auto-chess';
     if(tactical){if(tacticalAttackDepth===0)tacticalAttacksRemaining=64;if(tacticalAttacksRemaining--<=0)return {...stoppedChain(),skipped:true};tacticalAttackDepth++;}
     attackResolutionDepth++;
@@ -4925,7 +4929,7 @@
   {const original=champions.death;champions.death=function(bs,u,...args){const dead=!isAlive(u),serial=revivalReceipts.get(u)||0,fatal=fatalReceipts.get(u)||0;if(dead&&bleach.forbidden(u))u.championPermanentDeath=true;const result=original(bs,u,...args);if(dead&&!isAlive(u)){bleach.died(bs,u);content.died(bs,u);}if(dead&&isAlive(u)&&!mimicProtected(u)){if(serial===(revivalReceipts.get(u)||0))recordRevival(bs,u);if(fatal===(fatalReceipts.get(u)||0))recordFatal(bs,u,true);}return result;};}
   {const original=damageUnit;damageUnit=function(bs,source,target,amount,meta={}){
     if(damageRecursionDepth>2||source&&activeDamageSources.has(source))return stoppedChain();
-    const previous=currentDamageMeta,originalTarget=target;({target,options:meta}=stretchTarget(bs,source,target,meta));currentDamageMeta=meta;damageRecursionDepth++;if(source)activeDamageSources.add(source);
+    const previous=currentDamageMeta,originalTarget=target;({target,options:meta}=stretchTarget(bs,source,target,attackOptions(meta)));currentDamageMeta=meta;damageRecursionDepth++;if(source)activeDamageSources.add(source);
     try{
       if(bs?.mode==='auto-chess'){
         meta={...meta,autochessTrueDamage:Math.max(0,Math.min(.4,source?.grid?.traits?.trueDamage||0))};
@@ -4941,6 +4945,7 @@
 
   function tacticalEffect(bs,source,target,type,amount=0,options={}){
     if(bs?.mode!=='auto-chess'||!target)return null;activeCombat=bs;
+    options=attackOptions(options);
     const previous=statusSource;statusSource=source;
     try{switch(type){
       case'hit':return champions.hit(bs,source,target,amount,{...options,passiveAttack:true,specialAttack:true});
@@ -4962,7 +4967,7 @@
   }
 
   return Object.freeze({
-    hookVersion:'20261121-ui-cartoon-1',
+    hookVersion:'20261121-combat-hotfix-1',
     damageDiagnostics:()=>({damageRecursionDepth,hitRecursionDepth,tacticalAttackDepth}),
     createIsolated: options => createPassiveRuntime(options),
     BASE_CRIT_CHANCE,

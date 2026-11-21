@@ -9,6 +9,7 @@
   return{winner:Math.abs(player-enemy)>1e-9?(player>enemy?'player':'enemy'):Math.abs(a-b)>1e-6?(a>b?'player':'enemy'):'draw',playerHpPercent:player,enemyHpPercent:enemy,playerDamage:a,enemyDamage:b};
  }
  const alive=u=>u&&u.hp>0&&!u.defeated,clone=C.clone;
+ const combatOptions=value=>value&&typeof value==='object'&&!Array.isArray(value)?value:{};
  function rng(seed){const s={rng:seed>>>0||1};return()=>C.random(s);}
  const distance=(a,b)=>Math.max(Math.abs(a.grid.x-b.grid.x),Math.abs(a.grid.y-b.grid.y));
  function stats(card){const t=Math.max(0,C.RARITIES.indexOf(card.rarity)),weight=Math.max(.15,Math.min(.85,card.stats.hp/(card.stats.hp+card.stats.atk*5))),hp=Math.round([900,1250,1650,2200,2800,3600][t]*(.7+weight*.6)),atk=Math.round([100,140,185,245,315,410][t]*(1.3-weight*.6));return{hp,atk};}
@@ -19,6 +20,7 @@
  }
  function creeps(stage,boss=false){const count=Math.min(6,stage+1),source=C.card(boss?'armored-titan':'dumb-titan')||C.pools[0][0],rows=[];for(let i=0;i<count;i++){const value={hp:Math.round((boss?850:510)*(1+stage*.3)),atk:Math.round((boss?80:45)*(1+stage*.18))},card={...clone(source),id:'chess-creep-'+i,name:boss&&i===0?'Arcane Sentinel':'Stone Construct',element:i%2?'Holy':'Nature',category:['Unhuman'],stats:value,passive:{name:'Construct',description:'A neutral convergence guardian.'}};rows.push({card,display:{...value,name:card.name,image:card.image},hp:value.hp,maxHp:value.hp,atk:value.atk,level:1,mutations:[],defeated:false,relicPrepared:true,side:'enemy',grid:{uid:'creep'+i,side:'enemy',serial:100+i,x:1+i%5,y:i<5?2:1,renderX:1+i%5,renderY:i<5?2:1,mana:0,next:.6}});}return rows;}
  function create(a,b,seed,options={}){
+  options=combatOptions(options);
   const random=rng(seed),events=[],logs=[],metrics=T.recorder(),augmentSets={player:A.effects(a),enemy:A.effects(b)};let effectDepth=0;const effectSources=new Set(),killStacks=new WeakMap(),augmented=new WeakSet();let time=0,accumulator=0,done=false,winner=null,serial=200,eventSerial=0,lastSecond=0,disposed=false;
   const unitsA=C.deployed(a).sort((x,y)=>x.board-y.board).map((u,i)=>makeUnit(u,'player',i)),unitsB=options.creep?creeps(options.stage,options.boss):C.deployed(b).sort((x,y)=>x.board-y.board).map((u,i)=>makeUnit(u,'enemy',100+i));
   const battle={mode:'auto-chess',sandbox:true,playerTeam:unitsA,enemyTeam:unitsB,mimicPools:{player:a.mimicPool||[],enemy:b?.mimicPool||[]},playerIndex:0,enemyIndex:0,turn:'player',finished:false,isBattling:true,championChoices:{aqua:'hp'}};
@@ -83,16 +85,18 @@
  // It imports only source modules, owns no browser storage and dies on Save & Exit.
  function createWorkerPool(){
   const modules=['cards','skins','category','elements','grimoire','yuno','requiem','reagan','fate','spooky_passives','gomen','shibuya','companions','combat_stats','dragon_skills','relic_combat','tower_200_passives','ragna_passives','mourner','akatsuki_passives','enten','titan_passives','turn_phase','baller_passives','tensura_passives','sins_passives','bleach_passives','hextech_passives','content_passives','passives','relics','autochess_ranked','autochess','autochess_synergies','autochess_telemetry','autochess_augments','autochess_ai','autochess_strategy','autochess_bots','autochess_combat'];
-  const updated=new Set(['cards','passives','content_passives','autochess','autochess_combat']);
+  const hotfix=new Set(['passives','content_passives','autochess_combat']);
+  const updated=new Set(['cards','autochess']);
   const adventure=new Set(['category','combat_stats','autochess_ranked','autochess_synergies']);
-  const urls=modules.map(name=>new URL(name+'.js?v='+(updated.has(name)?'20261121-ui-cartoon-1':adventure.has(name)?'20261120-ac-adventure-1':'20261119-hextech-1'),host.document.baseURI).href);
+  const urls=modules.map(name=>new URL(name+'.js?v='+(hotfix.has(name)?'20261121-combat-hotfix-1':updated.has(name)?'20261121-ui-cartoon-1':adventure.has(name)?'20261120-ac-adventure-1':'20261119-hextech-1'),host.document.baseURI).href);
   const bootstrap=`self.window=self;self.InventorySystem={registerItem(){}};self.OnlineUtils={stable:JSON.stringify};self.localStorage={getItem(){return null},setItem(){throw Error('Combat workers cannot write storage')}};\nimportScripts(...${JSON.stringify(urls)});\nconst fights=new Map();\nfunction visual(u){const r=u.passiveState||{},c=u.card,g=u.grid;return {card:{id:c.id,skinId:c.skinId||null,name:c.name,element:c.element,rarity:c.rarity,image:c.image,category:c.category||[],passive:{name:c.passive?.name||'No Passive'}},hp:u.hp,maxHp:u.maxHp,atk:u.atk,defeated:u.defeated,isClone:u.isClone,isSummoned:u.isSummoned,cartoonProgress:u.cartoonProgress||null,relic:u.relic||null,grid:g?{uid:g.uid,serial:g.serial,side:g.side,fusionDepth:g.fusionDepth||0,x:g.x,y:g.y,mana:g.mana}:null,passiveState:{cartoonMode:r.contentSkills?.['mordecai-rigby']?.mode||null,hextechSkills:r.hextechSkills||null,shield:r.shield||0,freezeTurns:r.freezeTurns||0,stunTurns:r.stunTurns||0,hypnosisTurns:r.hypnosisTurns||0,fearTurns:r.fearTurns||0,voidTurns:r.contentSkills?.['vanilla-ice']?.voidTurns||0,poison:r.poison?.length?[{}]:[],burn:r.burn?.length?[{}]:[],bleed:r.bleed?.length?[{}]:[],bleach:r.bleach?{hakka:r.bleach.hakka,vista:r.bleach.vista}:null,tensura:r.tensura?{sage:r.tensura.sage}:null}};}\nfunction publish(id,row){const f=row.fight,events=f.events.filter(e=>e.id>row.event);if(events.length)row.event=events.at(-1).id;postMessage({id,type:'frame',done:f.done,time:f.time,remaining:f.remaining,outcome:f.outcome(),metrics:f.telemetryFrame(),playerTeam:f.battle.playerTeam.map(visual),enemyTeam:f.battle.enemyTeam.map(visual),events});}\nonmessage=event=>{const m=event.data;try{if(m.type==='init'){const row={fight:AutoChessCombat.create(m.a,m.b,m.seed,m.options),event:0};fights.set(m.id,row);publish(m.id,row);}else if(m.type==='step'){const row=fights.get(m.id);if(row){row.fight.step(m.dt);publish(m.id,row);}}else if(m.type==='dispose'){fights.get(m.id)?.fight.dispose();fights.delete(m.id);}}catch(e){postMessage({id:m.id,type:'error',message:e.message});}};postMessage({type:'ready'});`;
   const url=host.URL.createObjectURL(new Blob([bootstrap],{type:'application/javascript'})),worker=new Worker(url),listeners=new Map();let next=0,closed=false,failed=false;
   worker.onmessage=e=>{if(e.data.type==='ready'){host.URL.revokeObjectURL(url);return;}listeners.get(e.data.id)?.(e.data);};
   worker.onerror=e=>{e.preventDefault();failed=true;closed=true;worker.terminate();host.URL.revokeObjectURL(url);for(const fn of [...listeners.values()])fn({type:'error',message:e.message});};
   return{register(fn){const id='fight'+(++next);listeners.set(id,fn);return id;},send(m){if(!closed)worker.postMessage(m);},remove(id){listeners.delete(id);if(!closed)worker.postMessage({id,type:'dispose'});},dispose(){closed=true;listeners.clear();worker.terminate();host.URL.revokeObjectURL(url);},get failed(){return failed;},get size(){return listeners.size;}};
  }
- function remoteCombat(pool,a,b,seed,options){
+ function remoteCombat(pool,a,b,seed,options={}){
+  options=combatOptions(options);
   let native=null,busy=true,done=false,time=0,remaining=LIMIT,lastOutcome=null,lastMetrics=null,pending=0,lastProgress=host.performance.now(),disposed=false,failure=null;
   const events=[],battle={playerTeam:C.deployed(a).map((u,i)=>makeUnit(u,'player',i)),enemyTeam:options.creep?creeps(options.stage,options.boss):C.deployed(b).map((u,i)=>makeUnit(u,'enemy',100+i))};
   function merge(list,previous){const map=new Map(previous.filter(u=>u.grid).map(u=>[u.grid.uid,u]));return list.map(u=>{if(!u.grid)return u;const old=map.get(u.grid.uid);u.grid.renderX=old?.grid.renderX??u.grid.x;u.grid.renderY=old?.grid.renderY??u.grid.y;const original=C.card(u.card.id);if(original)u.card={...original,element:u.card.element};return u;});}
@@ -103,6 +107,7 @@
  }
 
  function createSession(initial,options={}){
+  options=combatOptions(options);
   if(initial.live&&!initial.finished&&!options.authority)return host.AutoChessLive.createSession(initial,options);
   let state=clone(initial),jobs=[],current=null,disposed=false,speed=1,saveClock=0,botClock=0,pool=null,claiming=false,combatStarted=0,firstHumanFinish=null,recoverRound=false;
   T.ensure(state);A.initialize(state);for(const p of state.players)C.economyRound(state,p);
@@ -179,6 +184,7 @@
      job.combat.interpolate(dt);
      if(job.combat.done)finishJob(job,job.combat.outcome());
     }catch(e){
+     // Solo combat surfaces the original simulation error; this is its rethrow site.
      if(!liveHost)throw e;
      if(!job.recovering&&!job.needsRecovery){job.needsRecovery=true;continue;}
      // A repeat simulation error cannot hold the room or award a false win.

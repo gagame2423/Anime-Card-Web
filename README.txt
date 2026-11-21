@@ -1,18 +1,32 @@
-ANIME CARD RNG — CĂN CHỈNH MÀN HÌNH SUMMON
-Phiên bản: 20261121-summon-align-1
+ANIME CARD RNG — BẢN VÁ LỖI COMBAT
+Phiên bản: 20261121-combat-hotfix-1
 
-• Bỏ cụm tiêu đề bên trái khu quay thẻ và dòng phụ “Void Altar” trên tab
-  Summon. Biểu tượng và tên tab Summon được căn giữa.
-• Căn vòng triệu hồi và các trạng thái hiển thị vào chính giữa khu quay
-  thẻ theo cả chiều ngang lẫn chiều dọc. Ở trạng thái “Card visuals hidden”,
-  biểu tượng, tiêu đề và nội dung hướng dẫn nằm cùng một trục giữa.
-• Căn giữa nhãn, giá trị và công tắc “Hide Rolling Card” trong bốn ô chỉ số.
-  Chiều cao hàng chỉ số theo nội dung để giảm khoảng trống phía dưới.
-  Tiêu đề Roll Pool và cụm trạng thái thời tiết cũng được căn lại.
-• Giữ nguyên cách quay từng lượt, Auto Roll, thời gian chờ và điều kiện
-  hiển thị thẻ. Không thêm nút hoặc tính năng mới.
+Nguyên nhân
+• Khi Jason 13th dùng đòn phóng lao, hàm primary trong passives.js đọc
+  options dù không nhận tham số này. Lỗi “ReferenceError: options is not
+  defined” có thể xảy ra trong cả Combat chính và Auto Chess.
+• Dòng 182 của autochess_combat.js trong bản cũ là nơi chuyển tiếp lỗi
+  từ mô phỏng trận đấu. Đây không phải là một lỗi khai báo riêng
+  trong Auto Chess.
 
-Cài đặt:
-1. Giải nén bản vá vào thư mục gốc của game và ghi đè index.html,
-   game-ui.css. Giữ nguyên các tệp khác, thư mục assets và dữ liệu lưu.
-2. Mở lại game và nhấn Ctrl + F5 để tải lại giao diện từ bản mới.
+Bản sửa
+• Hook phóng lao nhận tùy chọn hợp lệ và vẫn hoạt động khi bên gọi không
+  truyền tùy chọn. Các điểm vào chiến đấu và hook nội tại cũng xử lý
+  giá trị thiếu hoặc null.
+• Đưa kiểm tra chặn đòn Adventure Sword về đúng hàm xử lý. Đòn bị chặn
+  không gây Bleed hay Stun. Nếu Jake chặn thay đồng đội, hiệu ứng trúng
+  đòn của Finn áp lên đúng mục tiêu đã nhận đòn.
+• Trang chính và Web Worker của Auto Chess cùng tải phiên bản mới của
+  ba mô-đun đã sửa. Giữ nguyên bố cục Summon và cách quay từng lượt.
+
+Kiểm tra
+• Chạy 247 thẻ trong Combat chính và Auto Chess. Kiểm tra riêng đòn phóng
+  lao khi Jason đang mượn nội tại, các thẻ Cartoon và Hextech, cùng
+  kết quả mô phỏng chạy trực tiếp so với Web Worker.
+
+Cài đặt
+1. Giải nén vào thư mục gốc của game, ghi đè autochess_combat.js,
+   passives.js, content_passives.js và index.html. Giữ nguyên các tệp
+   khác, thư mục assets và dữ liệu lưu.
+2. Mở lại game, nhấn Ctrl + F5. Nếu chơi cùng bạn bè, hãy cập nhật
+   và tải lại trên cả máy Host và Guest trước khi tạo phòng mới.

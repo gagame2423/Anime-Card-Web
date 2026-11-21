@@ -1,13 +1,14 @@
 /* Content skills share the existing isolated runtime. No global listeners, timers or Proxy wrappers. */
 (function(host){
  'use strict';
- if(host.createContentSkills?.version===1)return;
+ if(host.createContentSkills?.version===2)return;
  const FINN='finn-the-human',JAKE='jake-the-dog',REGULAR='mordecai-rigby',GUMBALL='gumball';
  const SWORDS=Object.freeze(['Golden Sword','Grass Sword','Demon Blood Sword']);
  const IDS=Object.freeze(['yoshino-junpei','n-doul','oingo','d-arby','hogus-eagle','vanilla-ice','bakugo','askeladd','pochita','kon','iggy','pikachu','ender-dragon','onana','zenitsu','antony-mu','tung-tung-sahur']);
  host.createContentSkills=function(api){
   const hex=host.createHextechSkills(api);
   const {has,alive,runtime,all,enemies,team,random,atk}=api,seenKills=new WeakMap(),lastHeroes=new WeakMap(),following=new WeakSet();
+  const hookOptions=value=>value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const state=(u,id)=>((api.passiveRuntimeFor(u,id).contentSkills ||= {})[id] ||= {entered:false,attacks:0,voidTurns:0,failedDodges:0,shieldUsed:false,shieldTurns:0,copy:null,copyTurns:0});
   const scope=(u,id,fn)=>api.scope(u,id,fn),pick=rows=>rows.length?rows[Math.floor(random()*rows.length)]:null;
   const skillHit=(bs,u,v,n,meta={})=>api.hit(bs,u,v,n,{passiveAttack:true,specialAttack:true,contentSkill:true,...meta});
@@ -29,6 +30,7 @@
    api.log('[PASSIVE] Serious Mode: Mordecai gains +50% ATK and +25% max HP.');
   }
   function skipAttack(bs,u,options){
+   options=hookOptions(options);
    if(!has(u,REGULAR)||options.isFollowUp||options.isCounter)return false;
    regularSerious(u);
    if(state(u,REGULAR).mode!=='Rigby'||random()>=.30)return false;
@@ -134,7 +136,7 @@
    }
   }
   function prepare(bs,u,target,options){
-   options=hex.prepare(bs,u,target,options);
+   options=hex.prepare(bs,u,target,hookOptions(options));
    if(has(u,FINN)){const c=state(u,FINN);if(c.critReady){c.critReady=false;options={...options,adventureCrit:.20};}}
    if(has(u,JAKE)&&(api.attackCount(u)+1)%3===0&&api.dispel(bs,u,target))api.log('[PASSIVE] Stretchy Magic dispelled '+target.card.name+'’s active buffs.');
    if(!options.isFollowUp&&has(u,'tung-tung-sahur')&&random()<.30){const pierce=random()<.5;return{...options,damageMultiplier:(options.damageMultiplier||1)*(pierce?1.5:3),ignoreShield:pierce||options.ignoreShield,specialAttack:true};}return options;
@@ -146,10 +148,12 @@
     out.hit ||= result.hit;out.damage+=result.damage||0;out.killed ||= result.killed;
    }return out;
   }
-  function attack(bs,u,target,options={}){const replacement=hex.attack(bs,u,target,options);if(replacement)return replacement;if(has(u,REGULAR))return scope(u,REGULAR,()=>regularAttack(bs,u,target,options));if(has(u,FINN))return scope(u,FINN,()=>finnAttack(bs,u,target,options));if(has(u,JAKE)&&random()<.30)return scope(u,JAKE,()=>jakePierce(bs,u,target,options));return api.id(u)==='zenitsu'&&(state(u,'zenitsu').attacks+1)%3===0?scope(u,'zenitsu',()=>pierce(bs,u,target,options)):null;}
-  function afterAttack(bs,u,target,out,options={}){
+  function attack(bs,u,target,options){options=hookOptions(options);const replacement=hex.attack(bs,u,target,options);if(replacement)return replacement;if(has(u,REGULAR))return scope(u,REGULAR,()=>regularAttack(bs,u,target,options));if(has(u,FINN))return scope(u,FINN,()=>finnAttack(bs,u,target,options));if(has(u,JAKE)&&random()<.30)return scope(u,JAKE,()=>jakePierce(bs,u,target,options));return api.id(u)==='zenitsu'&&(state(u,'zenitsu').attacks+1)%3===0?scope(u,'zenitsu',()=>pierce(bs,u,target,options)):null;}
+  function afterAttack(bs,u,target,out,options){
+   if(!u||!out)return;
+   options=hookOptions(options);
    hex.afterAttack(bs,u,target,out,options);
-   if(!u||!alive(u)||out.skipped||out.outOfTurn)return;
+   if(!alive(u)||out.skipped||out.outOfTurn)return;
    adventureAfter(bs,u,target,options);
    for(const id of IDS)if(has(u,id))scope(u,id,()=>{
     const c=state(u,id),count=api.attackCount(u);if(c.processedCount===count)return;c.processedCount=count;c.attacks++;
@@ -166,7 +170,8 @@
     }}
    });
   }
-  function attacked(bs,u,source,meta={}){
+  function attacked(bs,u,source,meta){
+   meta=hookOptions(meta);
    hex.attacked(bs,u,source,meta);
    if(!source||meta.dot||meta.isCounter||meta.contentCounter||!alive(u))return;
    const token=api.attackToken(bs,source,meta);
@@ -180,14 +185,15 @@
    if(alive(source)&&has(u,'yoshino-junpei'))scope(u,'yoshino-junpei',()=>api.dot(source,'poison',2,atk(u)*.10,u));
   }
   function dodge(u){return Math.max(hex.dodge(u),has(u,'onana')?.04:0,has(u,'vanilla-ice')&&state(u,'vanilla-ice').voidTurns>0?.50:0);}
-  function onDodge(bs,u,source,out={}){
+  function onDodge(bs,u,source,out){
+   out=hookOptions(out);
    hex.onDodge(bs,u,source,out);
    if(has(u,'onana')){state(u,'onana').failedDodges=0;scope(u,'onana',()=>api.percent(u,'atk','content:onana',0));}
    if(has(u,'vanilla-ice')&&state(u,'vanilla-ice').voidTurns>0&&alive(source)&&!out.meta?.isCounter&&!out.meta?.contentCounter&&out.incomingDamage>0)scope(u,'vanilla-ice',()=>skillHit(bs,u,source,out.incomingDamage*.80,{isCounter:true,contentCounter:true,specialAttack:false,elementApplied:true}));
   }
-  function reduction(u,source,meta){return !meta.dot&&has(u,'kon')&&(api.category(source,'Reaper')||api.category(source,'Bleach'))?.50:0;}
+  function reduction(u,source,meta){return !meta?.dot&&has(u,'kon')&&(api.category(source,'Reaper')||api.category(source,'Bleach'))?.50:0;}
   function attackBonus(bs,u){return has(u,'hogus-eagle')?enemies(bs,u).filter(v=>runtime(v).freezeTurns>0).length*.05:0;}
-  function misses(bs,u,options={}){return !options.fearChecked&&!options.dot&&!options.isCounter&&((runtime(u).fearTurns>0&&random()<.15)||(runtime(u).sawContractMiss&&random()<.20));}
+  function misses(bs,u,options){return !options?.fearChecked&&!options?.dot&&!options?.isCounter&&((runtime(u).fearTurns>0&&random()<.15)||(runtime(u).sawContractMiss&&random()<.20));}
   function turnStart(bs,actor){
    for(const u of [...all(bs)])if(alive(u)&&u!==actor&&has(u,'n-doul')){const c=state(u,'n-doul');if(c.offTurn===bs.turnCount)continue;c.offTurn=bs.turnCount;c.offTurns=(c.offTurns||0)+1;if(c.offTurns%2===0){const v=pick(enemies(bs,u));if(v)scope(u,'n-doul',()=>skillHit(bs,u,v,atk(u)*.50));}}
   }
@@ -218,5 +224,5 @@
   }
   return {IDS:Object.freeze([...IDS,...hex.IDS,FINN,JAKE,REGULAR,GUMBALL]),guard,lastHero,dispel,debuffImmune,dodgeBonus:hex.dodgeBonus,crit:hex.crit,speed:hex.speed,immune:hex.immune,status:hex.status,damageDealt:hex.damageDealt,state,entry,matchStart,skipAttack,prepare,attack,afterAttack,attacked,damaged,shieldHit,dodge,onDodge,reduction,attackBonus,misses,turnStart,turnEnd,killed,died,badges:u=>[...badges(u),...cartoonBadges(u)],forbidden:u=>!!u?.contentSacrificed||u?.card?.id==='pochita'};
  };
- host.createContentSkills.version=1;
+ host.createContentSkills.version=2;
 })(window);
