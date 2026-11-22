@@ -22,7 +22,7 @@
   function clearBuffs(u){for(const id of IDS){const c=api.passiveRuntimeFor(u,id)?.akatsuki;if(c){c.healBuffs=[];c.yata=false;}}}
   function hasClone(u){return api.passiveIds(u).some(id=>cloneSkills.has(id));}
   function cloneChance(u,base){return Math.min(1,base+(runtime(u).akatsukiPuppets?.some(p=>alive(p.owner)&&has(p.owner,'sasori'))?.10:0));}
-  function paper(u,n,owner){if(!api.allowed(u,owner))return;const r=runtime(u);r.akatsukiPaper=Math.min(Number.MAX_SAFE_INTEGER,(r.akatsukiPaper||0)+n);r.akatsukiPaperOwner=owner;refresh(u);}
+  function paper(u,n,owner){if(!api.allowed(u,owner))return;const r=runtime(u);r.akatsukiPaper=Math.min(Number.MAX_SAFE_INTEGER,(r.akatsukiPaper||0)+(api.watch?.gain(owner,n)??n));r.akatsukiPaperOwner=owner;refresh(u);}
   function shieldGranted(u){const r=runtime(u);if((r.akatsukiPaper||0)<5||!(r.shield>0))return;r.akatsukiPaper-=5;state(u,'itachi-awakened').yata=false;api.breakShield(u,r.akatsukiPaperOwner);log('[PASSIVE] Paper consumed 5 stacks and broke a new shield.','passive');}
   const paperReduction=u=>(runtime(u).akatsukiPaper||0)*.01;
   function puppet(bs,owner,skills=[]){
@@ -38,7 +38,7 @@
   function painState(u){if(u.akatsukiPath){const c=runtime(u).akatsukiPathState ||= {path:u.akatsukiPath,charge:0,attacks:0,entered:false};return c;}return state(u,'pain');}
   const hasLife=u=>['itachi-awakened','kakuzu','orochimaru'].some(id=>has(u,id));
   const isPain=u=>has(u,'pain')||Boolean(u.akatsukiPath);
-  function path(bs,u,name){const c=painState(u);c.path=name;c.charge=0;api.percent(u,'atk','rinnegan-asura',name==='Asura'?.25:0);api.percent(u,'hp','rinnegan-asura',name==='Asura'?.25:0,true);log('[PASSIVE] Rinnegan · '+name+' Path.','passive');}
+  function path(bs,u,name){const c=painState(u),previous=c.path;c.path=name;c.charge=0;api.percent(u,'atk','rinnegan-asura',name==='Asura'?.25:0);api.percent(u,'hp','rinnegan-asura',name==='Asura'?.25:0,true);if(previous)api.watch?.change(u,previous,name);log('[PASSIVE] Rinnegan · '+name+' Path.','passive');}
   function entry(bs,u){
    u.akatsukiBaseStats ||= api.base(u);
    for(const id of IDS)if(has(u,id)){const c=state(u,id);if(c.entered)continue;c.entered=true;
@@ -65,7 +65,7 @@
    api.percent(u,'atk','hidan-healing',c.healBuffs.reduce((n,b)=>n+b.percent,0));return true;
   }
   function dodgeChance(u){return u?.akatsukiCrow?.30:has(u,'konan')?.20:0;}
-  function dodge(bs,u){if(has(u,'konan')){api.heal(u,u.maxHp*.10,'Paper Genkai',bs,u);api.add(u,'atk',.05);}}
+  function dodge(bs,u){if(has(u,'konan')){api.heal(u,u.maxHp*.10,'Paper Genkai',bs,u);api.add(u,'atk',api.watch?.gain(u,.05)??.05);}}
   function misses(bs,u,options={}){if(options.akatsukiMissChecked)return false;options.akatsukiMissChecked=true;return runtime(u).akatsukiMiss?.turns>0&&random()<.15;}
   function immune(u,meta){return Boolean((meta.passiveAttack||meta.specialAttack)&&isPain(u)&&painState(u).path==='Deva'&&!painState(u).nagato);}
   function incoming(bs,attacker,u,meta){
@@ -85,7 +85,7 @@
    if(has(u,'itachi-awakened')){const c=state(u,'itachi-awakened');if((c.revives||0)<2){c.revives=(c.revives||0)+1;u.defeated=false;u.hp=Math.max(1,Math.round(u.maxHp*(c.revives===1?.50:.30)));
     if(c.revives===1&&source){api.clearBuffs(source);clearBuffs(source);api.status(source,'stunTurns',2,u);}else if(c.revives===2){api.cleanse(u);cleanse(u,true);api.baseAttack(u);}
     refresh(u);return true;}}
-   if(has(u,'kakuzu')){const c=state(u,'kakuzu');if(c.hearts>0){c.hearts--;const lost=pick(c.stolen||[]);if(lost){api.removeCopy(u,lost);c.stolen=c.stolen.filter(id=>id!==lost);}const element=pick(u.akatsukiElements||[]);u.akatsukiElements=(u.akatsukiElements||[]).filter(e=>e!==element);u.hp=Math.max(1,Math.round(u.maxHp*.50));u.defeated=false;refresh(u);return true;}}
+   if(has(u,'kakuzu')){const c=state(u,'kakuzu');if(c.hearts>=1){c.hearts--;const lost=pick(c.stolen||[]);if(lost){api.removeCopy(u,lost);c.stolen=c.stolen.filter(id=>id!==lost);}const element=pick(u.akatsukiElements||[]);u.akatsukiElements=(u.akatsukiElements||[]).filter(e=>e!==element);u.hp=Math.max(1,Math.round(u.maxHp*.50));u.defeated=false;refresh(u);return true;}}
    if(has(u,'orochimaru')){const c=state(u,'orochimaru');if(!c.revived){c.revived=true;u.hp=Math.max(1,Math.round(u.maxHp*.50));u.defeated=false;api.back(bs,u);refresh(u);return true;}}
    return false;
   }
@@ -99,10 +99,10 @@
    if(has(u,'sasori')){const victim=state(u,'sasori').puppet;releasePuppet(u);if(alive(victim))api.forceDeath(bs,u,victim);}
   }
   function advancePain(bs,u){
-   if(has(u,'pain')&&!u.akatsukiPath){const c=painState(u);if(!c.nagato){c.completed ||= [];if(!c.completed.includes(c.path))c.completed.push(c.path);if(c.completed.length===6){c.nagato=true;c.path='Nagato';api.percent(u,'atk','rinnegan-asura',0);api.percent(u,'hp','rinnegan-asura',0);c.clones=[];for(const name of PATHS){const clone=api.summon(bs,u,'nagato',.20,.20,name);if(clone){clone.akatsukiPath=name;c.clones.push(clone);entry(bs,clone);}}log('[PASSIVE] Pain transformed into Nagato.','passive');}else path(bs,u,pick(PATHS.filter(p=>!c.completed.includes(p))));}}
+   if(has(u,'pain')&&!u.akatsukiPath){const c=painState(u);if(!c.nagato){c.completed ||= [];if(!c.completed.includes(c.path))c.completed.push(c.path);if(c.completed.length===6){c.nagato=true;const previous=c.path;c.path='Nagato';api.percent(u,'atk','rinnegan-asura',0);api.percent(u,'hp','rinnegan-asura',0);api.watch?.change(u,previous,c.path);c.clones=[];for(const name of PATHS){const clone=api.summon(bs,u,'nagato',.20,.20,name);if(clone){clone.akatsukiPath=name;c.clones.push(clone);entry(bs,clone);}}log('[PASSIVE] Pain transformed into Nagato.','passive');}else path(bs,u,pick(PATHS.filter(p=>!c.completed.includes(p))));}}
   }
   function killed(bs,u,victim){
-   if(has(u,'kakuzu')){const c=state(u,'kakuzu');c.hearts=Math.min(5,(c.hearts||0)+1);c.stolen ||= [];
+   if(has(u,'kakuzu')){const c=state(u,'kakuzu');c.hearts=Math.min(5,(c.hearts||0)+(api.watch?.gain(u,1)??1));c.stolen ||= [];
     if(random()<.33){const id=pick(api.passiveIds(victim,true));if(id&&api.copy(bs,u,id))c.stolen.push(id);}
     if(random()<.66){const options=[victim.card.element,...(victim.akatsukiElements||[])].filter(e=>e!==u.card.element&&!(u.akatsukiElements||[]).includes(e)),element=pick(options);if(element)(u.akatsukiElements ||= []).push(element);}
    }
@@ -115,7 +115,7 @@
   function painAttack(bs,u,target,options={}){
    const c=painState(u),mode=c.path,out=result(u,target),special={...options,specialAttack:true};
    if(c.nagato){hitResult(bs,u,target,1,{...options,specialAttack:false},out);const clones=(c.clones||[]).filter(alive),n=Math.min(clones.length,1+Math.floor(random()*6));for(const clone of shuffle(clones).slice(0,n)){if(!alive(u))break;const enemy=alive(target)?target:enemies(bs,u)[0];if(!enemy)break;const shot=painAttack(bs,clone,enemy,{isFollowUp:true,followOwner:u,linkedAttack:true});out.damage+=shot.damage||0;out.killed ||= shot.killed;}return out;}
-   if(mode==='Deva'){if(!api.ownTurn(bs,u,options))return {...out,skipped:true,charging:true};c.charge=(c.charge||0)+1;if(c.charge<3)return {...out,skipped:true,charging:true};for(const enemy of [...enemies(bs,u)])hitResult(bs,u,enemy,2,special,out);c.charge=0;return out;}
+   if(mode==='Deva'){if(!api.ownTurn(bs,u,options))return {...out,skipped:true,charging:true};c.charge=(c.charge||0)+(api.watch?.gain(u,1)??1);if(c.charge<3)return {...out,skipped:true,charging:true};for(const enemy of [...enemies(bs,u)])hitResult(bs,u,enemy,2,special,out);c.charge=0;return out;}
    hitResult(bs,u,target,1,{...options,specialAttack:false},out);
    if(mode==='Preta')api.heal(u,out.damage*.25,'Preta Path',bs,u);
    if(mode==='Animal'&&alive(u)&&random()<api.followChance(bs,u,.50)){const line=team(bs,u),behind=bs.mode==='auto-chess'&&u.grid?line.filter(v=>v!==u&&alive(v)&&v.grid&&(line===bs.playerTeam?v.grid.y>u.grid.y:v.grid.y<u.grid.y)).sort((a,b)=>Math.max(Math.abs(a.grid.x-u.grid.x),Math.abs(a.grid.y-u.grid.y))-Math.max(Math.abs(b.grid.x-u.grid.x),Math.abs(b.grid.y-u.grid.y)))[0]:line.slice(line.indexOf(u)+1).find(alive),enemy=alive(target)?target:enemies(bs,u)[0];if(behind&&enemy)api.assist(bs,behind,enemy,atk(behind),u);}
@@ -150,7 +150,7 @@
    const out=result(u,target),special={...options,specialAttack:true},c=state(u,id);
    if(id==='kisame-hoshigaki'){
     if(runtime(target).shield>0)api.shield(u,atk(u)*.50,(bs.turnCount||0)+5);
-    if((bs.turnCount||0)<=c.domainUntil){api.add(u,'atk',.03);api.add(u,'hp',.03,true);}
+    if((bs.turnCount||0)<=c.domainUntil){const n=api.watch?.gain(u,.03)??.03;api.add(u,'atk',n);api.add(u,'hp',n,true);}
    }
    hitResult(bs,u,target,1,{...options,specialAttack:false},out);
    if(id==='konan'&&out.hit&&alive(target))paper(target,1,u);

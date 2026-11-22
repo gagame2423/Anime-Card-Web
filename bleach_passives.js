@@ -29,7 +29,7 @@
     api.hit(bs,u,enemy,atk(u)*5,{specialAttack:true,bleachAbsolute:true});
    }api.log('[PASSIVE] Hakka no Togame · Absolute Zero.','passive');}finally{c.absoluteBusy=false;}
   }
-  function hakka(bs,u,n){const c=state(u,RUK);c.hakka=Math.min(100,c.hakka+n);absolute(bs,u);}
+  function hakka(bs,u,n){const c=state(u,RUK);c.hakka=Math.min(100,c.hakka+(api.watch?.gain(u,n)??n));absolute(bs,u);}
   const prepared=new WeakMap();
   function beforeAttack(bs,u,target,options={}){
    if(!u||!target||options.bleachAbsolute||options.bleachSkill)return;
@@ -42,19 +42,19 @@
    const c=state(u,ULQ);
    if(c.form==='resurreccion')return;
    if(c.vista>=100){
-    c.vista=0;c.firstRelease=false;c.form='resurreccion';c.modeTurns=15;c.shieldTurns=9;
+    c.vista=0;c.firstRelease=false;const previous=c.form;c.form='resurreccion';api.watch?.change(u,previous,c.form);c.modeTurns=15;c.shieldTurns=9;
     api.percent(u,'atk','bleach:release',1);
     const amount=Math.min(u.maxHp*10,api.all(bs).filter(v=>team(bs,v)!==team(bs,u)).reduce((n,v)=>n+v.maxHp,0)*.50);
     c.shieldTag ||= api.token('segunda');c.shieldCap=api.shield(u,amount,c.shieldTag);
     cleanseNormal(u);api.log('[PASSIVE] Resurrección Segunda Etapa.','passive');
-   }else if(c.vista>=50&&!c.firstRelease){c.firstRelease=true;c.form='murcielago';c.modeTurns=10;api.percent(u,'atk','bleach:release',.50);}
+   }else if(c.vista>=50&&!c.firstRelease){c.firstRelease=true;const previous=c.form;c.form='murcielago';api.watch?.change(u,previous,c.form);c.modeTurns=10;api.percent(u,'atk','bleach:release',.50);}
   }
   function counted(bs,u,target,options={}){
    if(options.isCounter)return;
    for(const id of IDS)if(has(u,id))scope(u,id,()=>{
     const c=state(u,id);c.attacks++;
     if(id===STA&&c.attacks%2===0)api.summon(bs,u,'bleach_wolf',null,.10,.10,'Wolf');
-    if(id===URA&&c.attacks>=10&&!c.bankaiUsed){c.bankaiUsed=true;c.bankai=5;for(const ally of allies(bs,u))cleanseNormal(ally,true);}
+    if(id===URA&&c.attacks>=10&&!c.bankaiUsed){c.bankaiUsed=true;c.bankai=5;api.watch?.change(u,'base','bankai');for(const ally of allies(bs,u))cleanseNormal(ally,true);}
    });
   }
   function afterAttack(bs,u,target,out,options={}){
@@ -84,7 +84,7 @@
     const enemy=alive(target)?target:enemies(bs,u)[0];if(!enemy)break;
     const segunda=c.form==='resurreccion',out=api.follow(bs,u,enemy,segunda?.50:.30,{bleachChain:true});if(out.skipped||out.outOfTurn)break;
     if(segunda){api.heal(u,u.maxHp*.003,'Segunda Etapa',bs,u);if(c.shieldTurns>0&&c.shieldCap>0){const missing=c.shieldCap-api.shieldValue(u,c.shieldTag);if(missing>0)api.shield(u,Math.min(missing,u.maxHp*.03),c.shieldTag);}}
-    else{c.vista=Math.min(100,c.vista+1);release(bs,u);}
+    else{c.vista=Math.min(100,c.vista+(api.watch?.gain(u,1)??1));release(bs,u);}
    }
   }
   function result(u,target){return{hit:false,damage:0,killed:false,target,attacker:u};}
@@ -137,8 +137,8 @@
   function startTurn(bs){for(const u of [...all(bs)])if(alive(u)&&u.bleachExpiresAt!==undefined&&turn(bs)>=u.bleachExpiresAt){u.bleachExpired=true;api.forceDeath(bs,u.companionOwner,u);}for(const u of all(bs)){if(!alive(u))continue;if(bankaiOwner(bs,u))cleanseNormal(u,true);else if(has(u,ULQ)&&state(u,ULQ).form==='resurreccion'&&runtime(u).shield>0)cleanseNormal(u);const pending=runtime(u).bleed;if(pending?.length)status(bs,u,'bleed',pending[0].source,{effects:pending});}}
   function endTurn(bs,actor){
    if(actor&&api.ownTurn(bs,actor)){
-    if(api.passiveRuntimeFor(actor,ULQ).bleach){scope(actor,ULQ,()=>{const c=state(actor,ULQ);if(c.shieldTurns>0&&--c.shieldTurns===0)api.clearShield(actor,c.shieldTag);if(c.modeTurns>0&&--c.modeTurns===0){c.form='base';api.percent(actor,'atk','bleach:release',0);}});}
-    const bankai=api.passiveRuntimeFor(actor,URA).bleach;if(bankai?.bankai>0)bankai.bankai--;
+    if(api.passiveRuntimeFor(actor,ULQ).bleach){scope(actor,ULQ,()=>{const c=state(actor,ULQ);if(c.shieldTurns>0&&--c.shieldTurns===0)api.clearShield(actor,c.shieldTag);if(c.modeTurns>0&&--c.modeTurns===0){const previous=c.form;c.form='base';api.percent(actor,'atk','bleach:release',0);api.watch?.change(actor,previous,c.form);}});}
+    const bankai=api.passiveRuntimeFor(actor,URA).bleach;if(bankai?.bankai>0&&--bankai.bankai===0&&has(actor,URA))api.watch?.change(actor,'bankai','base');
    }
    if(actor){const pending=pendingFreeze.get(actor);if(pending&&runtime(actor).freezeTurns<=0){pendingFreeze.delete(actor);if(!pending.lease?.expired)hinder(bs,pending.source,actor,pending.turns);}}
    for(const u of [...all(bs)])if(alive(u)&&u.bleachExpiresAt!==undefined&&turn(bs)>=u.bleachExpiresAt){u.bleachExpired=true;api.forceDeath(bs,u.companionOwner,u);}

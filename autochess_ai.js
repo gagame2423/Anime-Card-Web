@@ -262,8 +262,12 @@
   return value;
  }
  function relicValue(relic,u,p) {
-  if(skill(p)<4)return legacyRelicValue(relic,u,p);
   if(!relic?.roll)return 0;const r=relic.roll,c=C.card(u);if(!c)return 0;
+  if(r.kind==='alien_watch'){
+   const match=R.compatibility(c,r);
+   return (match.base.active?r.stackGain*85:0)+(match.unique?.active?r.modeHp*65:0);
+  }
+  if(skill(p)<4)return legacyRelicValue(relic,u,p);
   const m=classify(c),matching=R.matchingUnit({card:c,relic:r},r),high=skill(p)>=7,threat=high?contexts.get(p)?.scout:null,tank=m.tank>2.5,carry=m.carry>1.2;
   let value=matching?((r.atk||0)*(carry?145:75)+(r.hp||0)*(tank?145:65)+(r.followChance||0)*(m.follow?200:0)):0;
   if(r.unique){

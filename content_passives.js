@@ -10,6 +10,7 @@
   const {has,alive,runtime,all,enemies,team,random,atk}=api,seenKills=new WeakMap(),lastHeroes=new WeakMap(),following=new WeakSet();
   const hookOptions=value=>value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const state=(u,id)=>((api.passiveRuntimeFor(u,id).contentSkills ||= {})[id] ||= {entered:false,attacks:0,voidTurns:0,failedDodges:0,shieldUsed:false,shieldTurns:0,copy:null,copyTurns:0});
+  const gain=(u,n)=>api.watch?.gain(u,n)??n;
   const scope=(u,id,fn)=>api.scope(u,id,fn),pick=rows=>rows.length?rows[Math.floor(random()*rows.length)]:null;
   const skillHit=(bs,u,v,n,meta={})=>api.hit(bs,u,v,n,{passiveAttack:true,specialAttack:true,contentSkill:true,...meta});
   function contract(bs,u){
@@ -19,14 +20,16 @@
    if(ally){api.percent(ally,'atk','content:saw-contract',.20);runtime(ally).sawContractMiss=true;api.log('[PASSIVE] Saw Contract empowered '+ally.card.name+'; attacks have a 20% miss chance.');}
   }
   function changeRegularMode(u){
-   const c=state(u,REGULAR);c.mode=random()<.50?'Mordecai':'Rigby';
+   const c=state(u,REGULAR),previous=c.mode;c.mode=random()<.50?'Mordecai':'Rigby';
+   if(previous)api.watch?.change(u,previous,c.mode);
    api.log('[PASSIVE] Regular Show: '+c.mode+' took the lead.');
   }
   function regularSerious(u,carry=false){
    if(!alive(u)||!has(u,REGULAR)||!carry&&u.hp>=u.maxHp*.50)return;
-   const c=state(u,REGULAR);if(c.serious)return;c.serious=true;c.mode='Mordecai';
+   const c=state(u,REGULAR);if(c.serious)return;const previous=c.mode;c.serious=true;c.mode='Mordecai';
    if(u.card?.id===REGULAR)(u.cartoonProgress ||= {}).serious=true;
    scope(u,REGULAR,()=>api.seriousBuff(u));
+   if(!carry)api.watch?.change(u,previous||'base','serious');
    api.log('[PASSIVE] Serious Mode: Mordecai gains +50% ATK and +25% max HP.');
   }
   function skipAttack(bs,u,options){
@@ -83,8 +86,8 @@
   function swordKill(bs,u,stance){
    if(!alive(u)||!has(u,FINN))return;
    scope(u,FINN,()=>{const c=state(u,FINN);
-    if(stance===0){c.golden=(c.golden||0)+1;api.percent(u,'atk','adventure:golden',.10*c.golden);}
-    else if(stance===1)c.grass=(c.grass||0)+1;
+    if(stance===0){c.golden=(c.golden||0)+gain(u,1);api.percent(u,'atk','adventure:golden',.10*c.golden);}
+    else if(stance===1)c.grass=(c.grass||0)+gain(u,1);
     else if(stance===2)api.heal(bs,u,u,u.maxHp*.15,'Demon Blood Sword');
    });
   }
@@ -115,7 +118,8 @@
   function adventureAfter(bs,u,target,options){
    if(!has(u,FINN)||options.adventureAssist||options.isCounter)return;
    scope(u,FINN,()=>{
-    const c=state(u,FINN);c.stance=Math.floor(random()*SWORDS.length);
+    const c=state(u,FINN),previous=c.stance||0;c.stance=Math.floor(random()*SWORDS.length);
+    api.watch?.change(u,previous,c.stance);
     if(following.has(u)||!api.canFollow(u))return;
     const buddy=team(bs,u).find(v=>v.card?.id===JAKE&&alive(v)&&api.canAct(v)&&api.allowed(bs,u,v));
     const victim=alive(target)?target:enemies(bs,u)[0];
@@ -175,7 +179,7 @@
    hex.attacked(bs,u,source,meta);
    if(!source||meta.dot||meta.isCounter||meta.contentCounter||!alive(u))return;
    const token=api.attackToken(bs,source,meta);
-   if(has(u,'onana')){const c=state(u,'onana');if(c.failedToken!==token){c.failedToken=token;c.failedDodges++;scope(u,'onana',()=>api.percent(u,'atk','content:onana',.04*c.failedDodges));}}
+   if(has(u,'onana')){const c=state(u,'onana');if(c.failedToken!==token){c.failedToken=token;c.failedDodges+=gain(u,1);scope(u,'onana',()=>api.percent(u,'atk','content:onana',.04*c.failedDodges));}}
    if(has(u,'antony-mu')){const c=state(u,'antony-mu');if(c.fearToken!==token){c.fearToken=token;if(random()<.15)scope(u,'antony-mu',()=>api.status(source,'fearTurns',3,u));}}
   }
   function damaged(bs,u){regularSerious(u);if(!alive(u)||!has(u,'yoshino-junpei'))return;const c=state(u,'yoshino-junpei');if(c.shieldUsed||u.hp>=u.maxHp*.50)return;
@@ -198,7 +202,7 @@
    for(const u of [...all(bs)])if(alive(u)&&u!==actor&&has(u,'n-doul')){const c=state(u,'n-doul');if(c.offTurn===bs.turnCount)continue;c.offTurn=bs.turnCount;c.offTurns=(c.offTurns||0)+1;if(c.offTurns%2===0){const v=pick(enemies(bs,u));if(v)scope(u,'n-doul',()=>skillHit(bs,u,v,atk(u)*.50));}}
   }
   function turnEnd(bs,u){if(!u)return;hex.turnEnd(bs,u);const r=runtime(u);if(r.fearTurns>0)r.fearTurns--;
-   const v=state(u,'vanilla-ice');if(v.voidTurns>0)v.voidTurns--;
+   const v=state(u,'vanilla-ice');if(v.voidTurns>0&&--v.voidTurns===0&&has(u,'vanilla-ice'))api.watch?.change(u,'void','base');
    const s=state(u,'yoshino-junpei');if(s.shieldTurns>0&&api.ownTurns(bs,u)>s.shieldApplied&&--s.shieldTurns===0){s.shieldArmed=false;api.clearShield(u,s.shieldTag);}
    const c=state(u,'oingo');if(c.copy&&(!alive(u)||api.ownTurns(bs,u)>c.copyApplied&&--c.copyTurns<=0)){api.removeCopy(bs,u,c.copy);c.copy=null;}
   }

@@ -37,7 +37,7 @@
       if(options.isCounter)return;
       for(const key of IDS)if(has(unit,key)){
         const c=state(unit,key);c.attacks++;
-        if(key==='saber-knight')c.excalibur++;
+        if(key==='saber-knight')c.excalibur+=api.watch?.gain(unit,1)??1;
         if(key==='cu-chalinn'&&c.revived)c.postRevive++;
       }
     }

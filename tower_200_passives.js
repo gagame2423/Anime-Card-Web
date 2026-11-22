@@ -68,7 +68,7 @@
   function offensive(bs,source,target){return bs&&has(source,YHWACH)&&allies(bs,source).length===1&&runtime(target).bleed?.some(e=>e.turns>0)?1.35:1;}
   function bled(bs,target,amount){if(!(amount>0)||!enabled(bs))return;for(const owner of all(bs))if(alive(owner)&&has(owner,YHWACH)&&api.team(bs,owner)!==api.team(bs,target))api.heal(owner,amount,'AUSWAHLEN',bs,owner);}
   function once(map,bs,victim){let seen=map.get(bs);if(!seen){seen=new WeakSet();map.set(bs,seen);}if(seen.has(victim))return false;seen.add(victim);return true;}
-  function killed(bs,victim){if(!enabled(bs)||alive(victim)||!once(kills,bs,victim))return;for(const owner of all(bs))if(alive(owner)&&has(owner,YHWACH)&&api.team(bs,owner)!==api.team(bs,victim))api.addAtk(owner,.10);}
+  function killed(bs,victim){if(!enabled(bs)||alive(victim)||!once(kills,bs,victim))return;for(const owner of all(bs))if(alive(owner)&&has(owner,YHWACH)&&api.team(bs,owner)!==api.team(bs,victim))api.addAtk(owner,api.watch?.gain(owner,.10)??.10);}
   function died(bs,victim){if(!enabled(bs)||alive(victim)||!once(deaths,bs,victim))return;for(const owner of allies(bs,victim,false))if(has(owner,YHWACH)){api.flat(owner,'hp',Math.max(0,victim.maxHp)*.10);api.flat(owner,'atk',Math.max(0,victim.atk)*.10);}}
   function startTurn(bs,actor){if(enabled(bs))bs.tower200Actor=actor;}
   const skills={IDS,entry,counted,replacement,after,offensive,bled,killed,died,blocked,statusApplied,dotFactor,observe,startTurn,enabled};instances.set(api,skills);return skills;

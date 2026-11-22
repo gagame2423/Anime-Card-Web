@@ -7,7 +7,8 @@
     const {has,id,runtime,alive,all,enemies,atk,random,refresh}=api;
     const state=(u,key)=>api.passiveRuntimeFor(u,key).gomen ||= {attacks:0,entered:false,streak:0,bonuses:[],ready:false};
     const pick=values=>values[Math.min(values.length-1,Math.floor(random()*values.length))];
-    function entry(bs,u){if(has(u,TOJI)){const c=state(u,TOJI);if(!c.entered){c.entered=true;c.mode=pick(['spear','katana','cloud','chains']);}}}
+    function changeMode(u){const c=state(u,TOJI),previous=c.mode;c.mode=pick(['spear','katana','cloud','chains']);if(previous)api.watch?.change(u,previous,c.mode);}
+    function entry(bs,u){if(has(u,TOJI)){const c=state(u,TOJI);if(!c.entered){c.entered=true;changeMode(u);}}}
     function counted(bs,u,options={}){if(!options.isCounter)for(const key of IDS)if(has(u,key))state(u,key).attacks++;}
     function prepare(bs,u,target,options){
       let multiplier=1,ignoreShield=false;
@@ -47,10 +48,10 @@
         return first;
       }finally{chains.delete(u);api.indices(bs);}
     }
-    function dodge(bs,u){if(has(u,GOJO)){const c=state(u,GOJO),bucket=c.bonuses.find(b=>b.turns===8);if(bucket)bucket.count++;else c.bonuses.push({turns:8,count:1});if(++c.streak===4){c.streak=0;c.ready=true;}refresh(u);}}
+    function dodge(bs,u){if(has(u,GOJO)){const c=state(u,GOJO),bucket=c.bonuses.find(b=>b.turns===8);const n=api.watch?.gain(u,1)??1;if(bucket)bucket.count+=n;else c.bonuses.push({turns:8,count:n});c.streak+=n;if(c.streak>=4){c.streak=0;c.ready=true;}refresh(u);}}
     function incoming(bs,source,target,meta){if(has(target,GOJO)&&!meta.dot){state(target,GOJO).streak=0;}}
-    function defeated(bs,victim){for(const u of all(bs))if(alive(u)&&has(u,TOJI)&&api.enemyTeam(bs,u).includes(victim)){const c=state(u,TOJI);if(api.ownTurn(bs,u))c.mode=pick(['spear','katana','cloud','chains']);else c.pendingMode=true;}}
-    function ownStart(bs,u){if(api.ownTurn(bs,u)&&has(u,TOJI)&&state(u,TOJI).pendingMode){const c=state(u,TOJI);c.pendingMode=false;c.mode=pick(['spear','katana','cloud','chains']);}}
+    function defeated(bs,victim){for(const u of all(bs))if(alive(u)&&has(u,TOJI)&&api.enemyTeam(bs,u).includes(victim)){const c=state(u,TOJI);if(api.ownTurn(bs,u))changeMode(u);else c.pendingMode=true;}}
+    function ownStart(bs,u){if(api.ownTurn(bs,u)&&has(u,TOJI)&&state(u,TOJI).pendingMode){const c=state(u,TOJI);c.pendingMode=false;changeMode(u);}}
     function endTurn(bs,actor){if(!actor)return;const c=api.passiveRuntimeFor(actor,GOJO).gomen;if(c)c.bonuses=c.bonuses.map(b=>({turns:b.turns-1,count:b.count})).filter(b=>b.turns>0);}
     const stacks=u=>state(u,GOJO).bonuses.reduce((n,b)=>n+b.count,0);
     const damageFactor=u=>has(u,GOJO)?1+stacks(u)*.08:1;

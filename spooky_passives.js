@@ -15,7 +15,7 @@
       if(!alive(target)||!api.allowed(target,source))return false;
       const r=runtime(target);r.hindredTurns=Math.max(r.hindredTurns||0,turns);r.hindredAppliedTurn=bs.turnCount||0;refresh(target);return true;
     }
-    function mode(unit){state(unit,'the-clown').mode=random()<.5?'haste':'hindred';}
+    function mode(unit){const c=state(unit,'the-clown'),previous=c.mode;c.mode=random()<.5?'haste':'hindred';if(previous)api.watch?.change(unit,previous,c.mode);}
     function entry(bs,unit){
       if(has(unit,'pennywise')){const c=state(unit,'pennywise');if(!c.entered){c.entered=true;c.domain=10;c.revives=0;c.openedTurn=bs.turnCount||0;}}
 
@@ -52,7 +52,7 @@
       if(api.ownTurn(bs,actor)&&has(actor,'the-clown')&&state(actor,'the-clown').pendingMode){state(actor,'the-clown').pendingMode=false;mode(actor);}
       for(const owner of all(bs))if(alive(owner)&&has(owner,'pennywise')&&state(owner,'pennywise').domain>0)for(const enemy of enemies(bs,owner)){runtime(enemy).deadlightsFearTurn=bs.turnCount;if(runtime(enemy).deadlightsFearTurn===bs.turnCount)api.onStatus?.(bs,enemy,owner);}
 
-      for(const owner of all(bs))if(alive(owner)&&has(owner,'myers')&&owner!==actor&&(bs.playerTeam.includes(owner)?'player':'enemy')===side){const c=state(owner,'myers');c.stalkAtk=Math.min(LIMIT,c.stalkAtk+.06);c.stalkHp=Math.min(LIMIT,c.stalkHp+.03);resizeMyers(owner,c);}
+      for(const owner of all(bs))if(alive(owner)&&has(owner,'myers')&&owner!==actor&&(bs.playerTeam.includes(owner)?'player':'enemy')===side){const c=state(owner,'myers');c.stalkAtk=Math.min(LIMIT,c.stalkAtk+(api.watch?.gain(owner,.06)??.06));c.stalkHp=Math.min(LIMIT,c.stalkHp+(api.watch?.gain(owner,.03)??.03));resizeMyers(owner,c);}
     }
     function counted(bs,unit,target,options={}){
       if(options.isCounter)return;

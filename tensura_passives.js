@@ -36,11 +36,11 @@
    if(has(u,VEL)){const c=state(u,VEL);if(!c.entered){c.entered=true;for(const v of [...enemies(bs,u)])if(alive(u)&&atk(v)<atk(u))api.hit(bs,u,v,atk(u)*2,{passiveAttack:true,specialAttack:true,tensuraEntry:true});}}
   }
   function beforeAttack(bs,u,target,options={}){
-   if(has(u,RIM)){const c=state(u,RIM);if(c.sage>40&&host.ElementSystem.multiplier(u,target)<=1){const element=host.ElementSystem.TYPES.find(e=>host.ElementSystem.COUNTERS[e]===target.card.element);if(element){c.sage-=40;c.shiftTarget=target;u.card={...u.card,element};}}}
+   if(has(u,RIM)){const c=state(u,RIM);if(c.sage>40&&host.ElementSystem.multiplier(u,target)<=1){const element=host.ElementSystem.TYPES.find(e=>host.ElementSystem.COUNTERS[e]===target.card.element);if(element){c.sage-=40;c.shiftTarget=target;const previous=u.card.element;u.card={...u.card,element};api.watch?.change(u,previous,element);}}}
   }
   function attack(bs,u,target,options={}){
    if(options.isCounter)return;
-   if(has(u,RIM))state(u,RIM).sage+=1+Math.floor(random()*10);
+   if(has(u,RIM)){const n=1+Math.floor(random()*10);state(u,RIM).sage+=api.watch?.gain(u,n)??n;}
    if(has(u,YUU)){const c=state(u,YUU);if(c.energy>=1){c.energy--;heal(u,u.maxHp*.005,'Soul Siphon',bs,u);}if(!options.isFollowUp)c.attacks++;}
    if(!options.isFollowUp)for(const id of [VEL,BEN])if(has(u,id))state(u,id).attacks++;
    if(has(u,BEN)&&state(u,BEN).attacks>=10)for(const v of enemies(bs,u))for(const e of runtime(v).burn)if(e.source===u&&e.turns>0)e.tensuraSuppression=true;
@@ -88,13 +88,13 @@
   function onKill(bs,u,victim){
    if(!u||!victim)return;
    let seen=killed.get(u);if(!seen){seen=new WeakSet();killed.set(u,seen);}if(seen.has(victim))return;seen.add(victim);
-   if(has(u,YUU))state(u,YUU).energy+=100;
-   for(const owner of all(bs)){const c=api.passiveRuntimeFor(owner,RIM).tensura;if(c?.shiftTarget===victim){c.shiftTarget=null;owner.card={...owner.card,element:'Dark'};}}
+   if(has(u,YUU))state(u,YUU).energy+=api.watch?.gain(u,100)??100;
+   for(const owner of all(bs)){const c=api.passiveRuntimeFor(owner,RIM).tensura;if(c?.shiftTarget===victim){c.shiftTarget=null;const previous=owner.card.element;owner.card={...owner.card,element:'Dark'};api.watch?.change(owner,previous,'Dark');}}
    const d=duel(bs);if(d&&participant(d,victim)&&!alive(victim))bs.tensuraDuel=null;
   }
   function beforeControl(bs,u){const r=runtime(u);if(has(u,VEL)&&r.stunTurns>0)heal(u,u.maxHp*.15,'Stun Recovery',bs,u);if(r.tensuraHypnosis>0){r.tensuraHypnosis--;return true;}return false;}
   function turnEnd(bs,u){const p=pending.get(u);if(p?.stage==='stun'&&runtime(u).stunTurns<=0){pending.delete(u);api.disable(u,1,bs,p.source);}const d=duel(bs);if(d&&(!alive(d.a)||!alive(d.b)))bs.tensuraDuel=null;if(!bs.tensuraDuel&&bs.tensuraWaiting?.length){const waiting=bs.tensuraWaiting;bs.tensuraWaiting=[];for(const v of waiting)if(alive(v)&&api.inBattle(bs,v))api.enter(bs,v);}}
-  function wave(bs,old){duel(bs);for(const u of bs.playerTeam||[]){const r=runtime(u);for(const key of ['lastFacingEnemy','lastAttacker','noDodgeAgainstUnit'])if(old.includes(r[key]))r[key]=null;if(has(u,RIM)&&old.includes(state(u,RIM).shiftTarget)){state(u,RIM).shiftTarget=null;u.card={...u.card,element:'Dark'};}}}
+  function wave(bs,old){duel(bs);for(const u of bs.playerTeam||[]){const r=runtime(u);for(const key of ['lastFacingEnemy','lastAttacker','noDodgeAgainstUnit'])if(old.includes(r[key]))r[key]=null;if(has(u,RIM)&&old.includes(state(u,RIM).shiftTarget)){state(u,RIM).shiftTarget=null;const previous=u.card.element;u.card={...u.card,element:'Dark'};api.watch?.change(u,previous,'Dark');}}}
   function badges(u){const rows=[];if(has(u,RIM))rows.push({icon:'◈',label:'SAGE '+state(u,RIM).sage,tone:'buff'});if(has(u,YUU))rows.push({icon:'◉',label:'SOUL '+state(u,YUU).energy,tone:'buff'});if(runtime(u).tensuraHypnosis>0)rows.push({icon:'⊘',label:'HYPNOSIS · SKIP',tone:'debuff'});return rows;}
   const skills={IDS,state,onMatchStart:start,onEntry:entry,beforeAttack,onAttack:attack,afterAttack,beforeDamageTaken:beforeDamage,onFatalHit:fatal,onKill,onStatusInflicted:cleanseIncoming,beforeControl,onTurnEnd:turnEnd,onWave:wave,observe,allowGain,passiveImmune,inactive,effectAllowed,allies,opponents,execute,badges,duel};instances.set(api,skills);return skills;
  };

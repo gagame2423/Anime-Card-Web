@@ -4,6 +4,7 @@
  const C=host.AutoChessSystem,A=host.AutoChessAugments,S=host.AutoChessSynergies,R=host.RelicSystem;
  const MAX_BYTES=5900,MAX_STAGES=600,KEY='anime_card_rng_ac_last_run_v1',elements=['Fire','Water','Nature','Electric','Dark','Holy'];
  const fields=['hp','atk','dodge','critChance','critDamage','expBonus','followChance','specialBonus','odmChainBonus','firstAttackBonus','perEnemyAtk','fatalAtk','summonBonus'];
+ const watchFields=['stackGain','modeHp'];
  const bytes=v=>host.OnlineUtils.bytes(JSON.stringify(v)).length;
  const stageNumber=key=>{const m=/^(\d{1,3})-([1-6])$/.exec(String(key));return m&&+m[1]>=1&&+m[1]<=100&&!(+m[1]===1&&+m[2]>4)?+m[1]*10+(+m[2]):-1;};
  const name=v=>String(v||'Player').replace(/[\u0000-\u001f]/g,'').slice(0,40);
@@ -13,11 +14,12 @@
  function toCloud(input){const output={...input,storageCodec:'ac-flat-1'};delete output.updatedAt;for(const key of ['relics','boards','augments'])output[key]=input[key].map(row=>JSON.stringify(row));return output;}
  function fromCloud(input){if(input?.storageCodec===undefined)return input;if(input.storageCodec!=='ac-flat-1'||bytes(input)>6144)throw Error('Unknown or oversized replay storage format.');const output={...input};delete output.storageCodec;for(const key of ['relics','boards','augments']){if(!Array.isArray(input[key])||input[key].length>MAX_STAGES)throw Error('Invalid replay table.');output[key]=input[key].map(row=>{if(typeof row!=='string'||row.length>5900)throw Error('Invalid replay row.');return JSON.parse(row);});}return output;}
  function publicFields(meta){const r=host.AutoChessRanked.rankOf(Number.isSafeInteger(meta.elo)&&meta.elo>=0?meta.elo:0),peakElo=Math.max(r.elo,Number.isSafeInteger(meta.peakElo)&&meta.peakElo>=0?meta.peakElo:0);return{rank:r.index,tier:r.id,division:r.division,avatar:r.image,bannerCardId:C.card(meta.bannerCardId)?.id||null,peakElo,peakRank:host.AutoChessRanked.rankOf(peakElo).label};}
- function packRelic(r){if(!R.validRoll(r))return null;r=R.normalizeRoll(r);return[R.DEFINITIONS.findIndex(d=>d.kind===r.kind),['common','rare','legendary'].indexOf(r.rarity),r.unique?1:0,elements.indexOf(r.element),...fields.map(k=>Math.round((r[k]||0)*1000))];}
+ function packRelic(r){if(!R.validRoll(r))return null;r=R.normalizeRoll(r);return[R.DEFINITIONS.findIndex(d=>d.kind===r.kind),['common','rare','legendary'].indexOf(r.rarity),r.unique?1:0,elements.indexOf(r.element),...(r.kind==='alien_watch'?[...fields,...watchFields]:fields).map(k=>Math.round((r[k]||0)*1000))];}
  function unpackRelic(row){
-  if(!Array.isArray(row)||![14,15,17].includes(row.length)||row.some(n=>!Number.isInteger(n)))return null;
+  if(!Array.isArray(row)||![14,15,17,19].includes(row.length)||row.some(n=>!Number.isInteger(n)))return null;
   const def=R.DEFINITIONS[row[0]],rarity=['common','rare','legendary'][row[1]];if(!def||!rarity||![0,1].includes(row[2])||row[3]<-1||row[3]>5)return null;
-  const result={kind:def.kind,rarity,unique:!!row[2],element:elements[row[3]]??null,...Object.fromEntries(fields.map((k,i)=>[k,(row[4+i]||0)/1000]))};
+  const watch=def.kind==='alien_watch';if(watch!==(row.length===19))return null;
+  const result={kind:def.kind,rarity,unique:!!row[2],element:elements[row[3]]??null,...Object.fromEntries((watch?[...fields,...watchFields]:fields).map((k,i)=>[k,(row[4+i]||0)/1000]))};
   if(def.kind==='bomb')result.bombVersion=2;if(def.kind==='god_leaf'&&row.length>=15)result.godLeafVersion=2;return R.validRoll(result)?R.normalizeRoll(result):null;
  }
  function record(s,final=false){

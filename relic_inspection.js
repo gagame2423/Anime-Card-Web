@@ -7,7 +7,7 @@
  const title=s=>s?String(s)[0].toUpperCase()+String(s).slice(1):'';
  const percent=n=>(n*100).toLocaleString('en-US',{maximumFractionDigits:4})+'%';
  const label=(value,extra='')=>'<span class="relic-condition '+extra+'">'+esc(value)+'</span>';
- const statNames={atk:'ATK',hp:'Max HP',followChance:'Follow-up chance'};
+ const statNames={atk:'ATK',hp:'Max HP',followChance:'Follow-up chance',stackGain:'Stack / Point Gain'};
  const pillars=parts=>parts.map(c=>c.type==='element'
   ?'<span class="relic-condition">'+host.ElementSystem.inlineMarkup(c.value)+'</span>'
   :label(c.label)).join('');
@@ -69,7 +69,7 @@
   const foot=opts.team?'Previews use your board and bench, including while scouting.':roll.template?'C: Common · R: Rare · L: Legendary. Exact values are rolled when crafted.':
    bound?'Equipped to '+(card?.name||bound.cardId)+' · all mutations.':opts.binding?'Unbound.':'';
   return '<article class="relic-inspect'+(opts.team?' is-tactical':'')+'" data-relic-tier="'+esc(tier)+'">'+header+profile+stats(roll,d)+
-   '<div class="relic-conditions">'+(pillars(rules.base.conditions)||label('All Cards'))+'</div>'+unique+
+   '<div class="relic-conditions" aria-label="Base Stat Conditions">'+(pillars(rules.base.conditions)||label('All Cards'))+'</div>'+unique+
    (opts.cards?related(roll,opts.cards,opts):'')+(foot?'<footer>'+esc(foot)+'</footer>':'')+'</article>';
  }
  host.RelicInspection=Object.freeze({badges,collection,related,markup});

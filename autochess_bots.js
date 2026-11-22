@@ -28,7 +28,10 @@
   const carries=C.deployed(p).slice().sort((a,b)=>C.tier(b)-C.tier(a)||a.uid.localeCompare(b.uid));
   for(const u of carries){if(u.relic)continue;const r=p.relics.filter(Boolean).sort((a,b)=>relicScore(b,u)-relicScore(a,u))[0];if(r)C.equip(p,r.uid,u.uid);}
  }
- function relicScore(r,u){const d=host.RelicSystem.DEFINITIONS.find(x=>x.kind===r.roll.kind),c=C.card(u),matches=host.RelicSystem.matching(c,r.roll);return(matches?4:0)+(['common','rare','legendary'].indexOf(r.roll.rarity)+1)+(r.roll.unique?4:0);}
+ function relicScore(r,u){const c=C.card(u),match=host.RelicSystem.compatibility(c,r.roll);
+  if(r.roll.kind==='alien_watch')return (match?.base.active?4:0)+(match?.unique?.active?5:0)+(['common','rare','legendary'].indexOf(r.roll.rarity)+1);
+  return(match?.base.active?4:0)+(['common','rare','legendary'].indexOf(r.roll.rarity)+1)+(r.roll.unique?4:0);
+ }
  function plan(s,p,budget=3){if(host.AutoChessOnline?.replay(p))return;if((p.aiTier||0)>=4)return host.AutoChessAI.plan(s,p,budget);
   if(!p.bot||p.hp<=0||s.phase!=='planning')return false;const key=C.label(s),d=profile(p);if(p.botRound!==key){p.botRound=key;p.botActions=0;p.botRerolls=0;p.botXp=0;}
   for(let step=0;step<budget&&p.botActions<24;step++,p.botActions++){

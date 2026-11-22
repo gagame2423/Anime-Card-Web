@@ -16,8 +16,8 @@
       if(options.isCounter)return;
       for(const key of IDS)if(has(u,key)){
         const c=state(u,key);c.attacks++;
-        if(key==='jogo'&&c.domain)c.meteor=(c.meteor||0)+1;
-        if(key==='sukuna-shibuya'){c.fuga=(c.fuga||0)+1;api.heal(u,u.maxHp*.03,'FUGA',bs,u);}
+        if(key==='jogo'&&c.domain)c.meteor=(c.meteor||0)+(api.watch?.gain(u,1)??1);
+        if(key==='sukuna-shibuya'){c.fuga=(c.fuga||0)+(api.watch?.gain(u,1)??1);api.heal(u,u.maxHp*.03,'FUGA',bs,u);}
       }
       if(u.shibuyaPuppet&&alive(u))api.heal(u,u.maxHp*.02,'PUPPET',bs,u);
     }
@@ -69,12 +69,12 @@
       }
       return false;
     }
-    function damaged(bs,u,damage){if(damage>0&&has(u,'jogo')&&u.hp<u.maxHp*.50)state(u,'jogo').domain=true;}
+    function damaged(bs,u,damage){if(damage>0&&has(u,'jogo')&&u.hp<u.maxHp*.50){const c=state(u,'jogo');if(!c.domain){c.domain=true;api.watch?.change(u,'base','domain');}}}
     function fatal(bs,u){
       if(has(u,'shibuya-fish')){const c=state(u,'shibuya-fish');if((c.survived||0)<3){c.survived=(c.survived||0)+1;u.hp=1;u.defeated=false;refresh(u);return true;}}
       if(has(u,'sukuna-shibuya')){
         const c=state(u,'sukuna-shibuya');if(c.revived)return false;c.revived=true;
-        u.hp=u.maxHp;u.defeated=false;c.domainTurns=c.fuga||0;c.domainStarted=bs.turnCount||0;
+        u.hp=u.maxHp;u.defeated=false;c.domainTurns=c.fuga||0;c.domainStarted=bs.turnCount||0;if(c.domainTurns>0)api.watch?.change(u,'base','domain');
         const line=team(bs,u),index=line.indexOf(u);if(index>=0){line.splice(index,1);line.unshift(u);}bs[line===bs.playerTeam?'playerIndex':'enemyIndex']=0;
         if((c.fuga||0)>9)for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*c.fuga,{shibuyaSkill:true});
         api.indices(bs);refresh(u);return true;
@@ -95,8 +95,8 @@
       if(!alive(u)||result?.skipped||result?.outOfTurn||options.isCounter)return;
       if(has(u,'true-mahito')){
         const c=state(u,'true-mahito');
-        c.doubleStreak=c.pendingDouble&&result.hit?(c.doubleStreak||0)+1:0;c.pendingDouble=false;
-        if(c.doubleStreak>=2&&!c.trueForm){c.trueForm=true;api.atkBonus(u,1);api.shield(u,u.maxHp);}
+        c.doubleStreak=c.pendingDouble&&result.hit?(c.doubleStreak||0)+(api.watch?.gain(u,1)??1):0;c.pendingDouble=false;
+        if(c.doubleStreak>=2&&!c.trueForm){c.trueForm=true;api.watch?.change(u,'base','true');api.atkBonus(u,1);api.shield(u,u.maxHp);}
         if(c.trueForm&&!options.isFollowUp&&!c.chaining){
           c.chaining=true;
           try{let count=0,chance=.24;let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,'true-mahito')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,chance,count>0))){
@@ -131,11 +131,11 @@
         if(alive(u)){
           if(has(u,'choso')&&(bs.playerTeam.includes(u)?'player':'enemy')===side){const c=state(u,'choso');if(c.cleanseCooldown>0&&c.cooldownTurn!==bs.turnCount)c.cleanseCooldown--;}
           if(has(u,'jogo')&&state(u,'jogo').domain)for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.20,{shibuyaDomain:true});
-          if(has(u,'sukuna-shibuya')){const c=state(u,'sukuna-shibuya');if(c.domainTurns>0&&c.domainStarted!==bs.turnCount){c.domainTurns--;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.09,{shibuyaDomain:true});}}
+          if(has(u,'sukuna-shibuya')){const c=state(u,'sukuna-shibuya');if(c.domainTurns>0&&c.domainStarted!==bs.turnCount){c.domainTurns=Math.max(0,c.domainTurns-1);if(!c.domainTurns)api.watch?.change(u,'domain','base');for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.09,{shibuyaDomain:true});}}
         }else{
           // Death effects are permanent runtime records, even if the passive was disabled later.
           const c=api.passiveRuntimeFor(u,'jogo').shibuya;
-          if(c?.meteorPending&&c.deathTurn!==bs.turnCount){if(c.countdown>0)c.countdown--;if(c.countdown===0){c.meteorPending=false;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*(c.meteor||0),{shibuyaMeteor:true});}}
+          if(c?.meteorPending&&c.deathTurn!==bs.turnCount){if(c.countdown>0)c.countdown=Math.max(0,c.countdown-1);if(c.countdown===0){c.meteorPending=false;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*(c.meteor||0),{shibuyaMeteor:true});}}
         }
       }
       api.indices(bs);

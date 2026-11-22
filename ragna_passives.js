@@ -8,7 +8,7 @@
   const RAGNA='boss-event-ragna',WOLTE='woltekamui',IDS=Object.freeze([RAGNA,WOLTE]);
   const {has,alive,allies,enemies,team,runtime,atk,random}=api;
   const state=(unit,id)=>api.passiveRuntimeFor(unit,id).ragna ||= {rage:0,nextBleed:false};
-  function counted(bs,u,options={}){if(has(u,RAGNA)&&!options.isCounter){const c=state(u,RAGNA);c.rage=Math.min(300,c.rage+1+Math.floor(Math.min(1-Number.EPSILON,random())*5));}}
+  function counted(bs,u,options={}){if(has(u,RAGNA)&&!options.isCounter){const c=state(u,RAGNA);const n=1+Math.floor(Math.min(1-Number.EPSILON,random())*5);c.rage=Math.min(300,c.rage+(api.watch?.gain(u,n)??n));}}
   function critical(bs,u,target,result){if(has(u,RAGNA)&&result?.critical&&result.hit&&!result.dodged&&!result.reflected&&alive(target)&&api.allowed(target,u))api.status(target,'freezeTurns',2,u);}
   function fatal(bs,u){
    if(!has(u,RAGNA)||api.reviveForbidden(u))return false;

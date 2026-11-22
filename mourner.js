@@ -6,7 +6,7 @@
   const owns=u=>api.has(u,ID);
   function debuffs(u){const r=api.runtime(u);let n=['burn','bleed'].filter(k=>r[k]?.some(e=>e.turns>0)).length;for(const k of ['stunTurns','freezeTurns','weakenAttackTurns','snailTurns','noDodgeTurns','incomingVulnerabilityTurns','passiveSuppressionTurns','hindredTurns'])if(r[k]>0)n++;if(r.shibuyaHypnosis?.turns>0||r.deadlightsHypnosis?.turns>0)n++;if(Number.isInteger(r.deadlightsFearTurn)&&r.deadlightsFearTurn===api.currentBattle()?.turnCount)n++;if((r.mourningMarks||[]).some(m=>m.normal+m.crystal>0))n++;return n;}
   const condition=u=>owns(u)&&debuffs(u)>=2;
-  function lament(u,delta){const c=state(u);c.lament=Math.max(0,Math.min(15,c.lament+delta));api.setAtk(u,'solemn-lament',c.lament*.03);if(c.lament===15&&!c.crystalUsed){c.crystalUsed=true;c.crystalPending=true;}api.refresh(u);}
+  function lament(u,delta){const c=state(u);c.lament=Math.max(0,Math.min(15,c.lament+(api.watch?.gain(u,delta)??delta)));api.setAtk(u,'solemn-lament',c.lament*.03);if(c.lament===15&&!c.crystalUsed){c.crystalUsed=true;c.crystalPending=true;}api.refresh(u);}
   const marks=u=>api.runtime(u).mourningMarks ||= [];
   function mark(u,owner){let row=marks(u).find(m=>m.owner===owner);if(!row){row={owner,normal:0,crystal:0};marks(u).push(row);}return row;}
   function incoming(u){return 1+marks(u).reduce((n,m)=>n+m.normal*.05+m.crystal*.10,0);}
@@ -50,7 +50,7 @@
    }
    const both=api.random()<.30,living=both||api.random()<.50,departed=both||!living;
    if(living){c.living--;const enemy=api.alive(target)?target:api.enemies(bs,u)[0];if(enemy){const altered=condition(u),shot=hit(enemy,.90,{mournerUnreducedDamage:altered?api.atk(u)*.20*1.25:0});if(shot?.hit&&api.alive(u)){if(!altered)api.heal(u,u.maxHp*(u.hp<u.maxHp*.50?.04:.02),'Living Ammo',bs,u);}}}
-   if(departed&&api.alive(u)){c.departed--;const enemy=api.alive(target)?target:api.enemies(bs,u)[0];if(enemy){const shot=hit(enemy,.80);if(shot?.hit&&api.alive(enemy)&&api.allowed(enemy,u)){const row=mark(enemy,u),added=Math.min(10-row.normal,condition(u)?2:1);row.normal+=added;for(let i=0;i<added;i++)api.dot(enemy,'bleed',1,api.atk(u)*.05,u);api.refresh(enemy);}}}
+   if(departed&&api.alive(u)){c.departed--;const enemy=api.alive(target)?target:api.enemies(bs,u)[0];if(enemy){const shot=hit(enemy,.80);if(shot?.hit&&api.alive(enemy)&&api.allowed(enemy,u)){const row=mark(enemy,u),added=Math.min(10-row.normal,api.watch?.gain(u,condition(u)?2:1)??(condition(u)?2:1));row.normal+=added;for(let i=0;i<added;i++)api.dot(enemy,'bleed',1,api.atk(u)*.05*Math.min(1,added-i),u);api.refresh(enemy);}}}
    c.reload=c.living<=0||c.departed<=0;api.refresh(u);return result;
   }
   function badges(u){const rows=[];if(owns(u)){const c=state(u);rows.push({icon:'◈',label:`AMMO ${c.living} / ${c.departed} · LAMENT ${c.lament}/15 · ATTACK ${c.attacks}`,tone:'passive',category:'passive'});if(c.reload)rows.push({icon:'↻',label:'RELOAD PENDING',tone:'status',category:'status'});if(condition(u))rows.push({icon:'◆',label:'LAMENT CONDITION',tone:'buff',category:'buff'});}const n=marks(u).reduce((t,m)=>t+m.normal,0),c=marks(u).reduce((t,m)=>t+m.crystal,0);if(n||c)rows.push({icon:'♧',label:`BUTTERFLY ${n} · CRYSTAL ${c}`,tone:'debuff',category:'status'});if(u.mournerTemporaryLife)rows.push({icon:'⌛',label:'REQUIEM · TEMPORARY LIFE',tone:'buff',category:'buff'});return rows;}

@@ -37,7 +37,7 @@
   }
   function turn(bs,actor){
    for(const u of all(bs))if(alive(u)){
-    if(u!==actor&&has(u,'beast-titan')){const c=state(u,'beast-titan');c.rocks=Math.min(Number.MAX_SAFE_INTEGER,c.rocks+1+Math.floor(random()*2));}
+    if(u!==actor&&has(u,'beast-titan')){const c=state(u,'beast-titan'),amount=1+Math.floor(random()*2);c.rocks=Math.min(Number.MAX_SAFE_INTEGER,c.rocks+(api.watch?.gain(u,amount)??amount));}
     if(linked(u))api.heal(u,u.hp*.01,'Crystal Heart',bs,u);
    }
   }
@@ -75,10 +75,10 @@
     if(!api.ownTurn(bs,u,options))return null;
     if(c.mode==='hammer'){const targets=[target,...enemies(bs,u).filter(v=>v!==target)].slice(0,2);for(const enemy of targets)hit(enemy,.60,{specialAttack:true});}
     else hit(target,1,c.mode==='spear'?{specialAttack:true,shieldPierceFraction:.50}:{specialAttack:false});
-    if(c.attacks%5===0)c.mode=random()<.50?'hammer':'spear';
+    if(c.attacks%5===0){const previous=c.mode;c.mode=random()<.50?'hammer':'spear';api.watch?.change(u,previous||'base',c.mode);}
    }else if(id==='beast-titan'){
     const rocks=c.rocks;c.rocks=0;
-    for(let n=0;n<rocks&&alive(u)&&enemies(bs,u).length;n++)hit(pick(enemies(bs,u)),.50,{specialAttack:true,shatterShield:true});
+    for(let n=0;n<rocks&&alive(u)&&enemies(bs,u).length;n++){const weight=Math.min(1,rocks-n);hit(pick(enemies(bs,u)),.50*weight,{specialAttack:true,shatterShield:weight===1});}
     if(!rocks)hit(target,1,{specialAttack:false});
    }else{
     hit(target,1,{specialAttack:false});

@@ -14,7 +14,7 @@
    bs.dragonActor=actor;
    for(const u of all(bs)){
     if(!alive(u))continue;
-    if(has(u,'broly')){const c=state(u,'broly');c.bonus+=u===actor?.03:.012;api.setAtk(u,'legendary-super-saiyan',c.bonus);}
+    if(has(u,'broly')){const c=state(u,'broly');const n=u===actor?.03:.012;c.bonus+=api.watch?.gain(u,n)??n;api.setAtk(u,'legendary-super-saiyan',c.bonus);}
     const aura=allies(bs,u).some(owner=>has(owner,'golden-frieza')&&owner!==actor);
     api.runtime(u).dragonAuraApplied=aura;api.setAtk(u,'supernova-aura',aura?.10:0);api.setHp(u,'supernova-aura',aura?.10:0);
    }

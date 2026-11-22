@@ -11,7 +11,7 @@
   const owners=(bs,u)=>allies(bs,u).filter(v=>alive(v)&&has(v,ISAGI));
   const read=(owner,target)=>state(owner,ISAGI).reads.get(target)||0;
   const marked=(bs,u,target)=>owners(bs,u).reduce((n,owner)=>Math.max(n,read(owner,target)),0);
-  function mark(bs,owner,target,token){if(!alive(owner)||!alive(target)||team(bs,owner)===team(bs,target))return;const c=state(owner,ISAGI);c.kills.delete(target);if(c.readActions.get(target)===token)return;c.readActions.set(target,token);c.reads.set(target,Math.min(3,read(owner,target)+1));refresh(target);}
+  function mark(bs,owner,target,token){if(!alive(owner)||!alive(target)||team(bs,owner)===team(bs,target))return;const c=state(owner,ISAGI);c.kills.delete(target);if(c.readActions.get(target)===token)return;c.readActions.set(target,token);c.reads.set(target,Math.min(3,read(owner,target)+(api.watch?.gain(owner,1)??1)));refresh(target);}
   function attacking(bs,u,target,meta={}){
    if(!u||meta.dot||meta.ballerRedirect||meta.ballerSplash||meta.grimoireReflection||meta.entenReflect||meta.fateAbsorb||meta.championRedirect||team(bs,u)===team(bs,target))return;
    const token=api.attackToken(bs,u,meta);for(const owner of owners(bs,u))mark(bs,owner,target,token);
@@ -19,7 +19,7 @@
   function prepare(bs,u,target,options={}){
    if(!has(u,KAISER)||api.id(u)!==KAISER||!api.ownTurn(bs,u,options))return null;
    if(!api.once(bs,u,'kaiser-choice',options))return null;
-   const c=state(u,KAISER);if(random()<.60){c.eye=Math.min(4,c.eye+1);refresh(u);api.log('[PASSIVE] Predator Instinct · EyE '+c.eye+'/4.','passive');return {hit:false,damage:0,killed:false,skipped:true,charging:true,target,attacker:u};}
+   const c=state(u,KAISER);if(random()<.60){c.eye=Math.min(4,c.eye+(api.watch?.gain(u,1)??1));refresh(u);api.log('[PASSIVE] Predator Instinct · EyE '+c.eye+'/4.','passive');return {hit:false,damage:0,killed:false,skipped:true,charging:true,target,attacker:u};}
    return null;
   }
   function attack(bs,u,target,options={}){
@@ -29,9 +29,9 @@
    const c=state(u,id);
    if(id===KAISER&&c.eye>0){const count=c.eye;c.eye=0;
     if(target.hp<target.maxHp*.10){const before=target.hp;if(api.execute(bs,u,target)!==false)return {...out,hit:true,killed:true,damage:before,executed:true};}
-    const shielded=runtime(target).shield>0,scale=[0,1.2,1.5,1.5,1.8][count];
-    const shot=api.primary(bs,u,target,atk(u)*scale,{...options,specialAttack:true,ignoreShield:count===3,ignoreReduction:count===4});Object.assign(out,shot,{target,attacker:u});
-    if(count===2&&shielded&&alive(u)&&alive(target)){const extra=api.primary(bs,u,target,atk(u)*.30,{...options,specialAttack:true,ignoreShield:true});out.damage+=(extra.damage||0);out.hit ||= extra.hit;out.killed ||= extra.killed;}
+    const shielded=runtime(target).shield>0,scale=count>=4?1.8:count>=2?1.5:1.2;
+    const shot=api.primary(bs,u,target,atk(u)*scale,{...options,specialAttack:true,ignoreShield:count>=3&&count<4,ignoreReduction:count>=4});Object.assign(out,shot,{target,attacker:u});
+    if(count>=2&&count<3&&shielded&&alive(u)&&alive(target)){const extra=api.primary(bs,u,target,atk(u)*.30,{...options,specialAttack:true,ignoreShield:true});out.damage+=(extra.damage||0);out.hit ||= extra.hit;out.killed ||= extra.killed;}
     refresh(u);return out;
    }
    if(id===LORENZO&&c.zombie>=10){c.zombie=0;for(const enemy of [...enemies(bs,u)]){if(!alive(u))break;const shot=api.primary(bs,u,enemy,c.absorbed*.50,{...options,specialAttack:true,noCritical:true,ballerRaw:true});out.damage+=shot.damage||0;out.hit ||= shot.hit;out.killed ||= shot.killed;}refresh(u);return out;}
@@ -45,7 +45,7 @@
   }
   function reduction(bs,source,target,meta={}){return (has(target,KAISER)&&state(target,KAISER).eye>0?.20:0)+(source&&!meta.ballerRedirect?marked(bs,target,source)*.01:0);}
   function incoming(bs,u,source,meta={}){
-   if(has(u,LORENZO)&&!meta.dot){const c=state(u,LORENZO);c.zombie=Math.min(10,c.zombie+1);}
+   if(has(u,LORENZO)&&!meta.dot){const c=state(u,LORENZO);c.zombie=Math.min(10,c.zombie+(api.watch?.gain(u,1)??1));}
   }
   function redirect(bs,source,target,amount,meta={}){
    if(!(amount>0)||meta.ballerRedirect||meta.fateAbsorb||meta.championRedirect||meta.grimoireReflection)return amount;
@@ -53,7 +53,7 @@
    const share=amount*.40,c=state(owner,LORENZO);c.absorbed=Math.min(Number.MAX_SAFE_INTEGER,c.absorbed+share);
    api.take(bs,source,owner,share,{...meta,ballerRedirect:true,elementApplied:true,yunoDamageApplied:true,akatsukiRawDamage:true,dodgeChecked:true});refresh(owner);return amount-share;
   }
-  function desperation(bs,u){if(!has(u,ISAGI)||u.hp>=u.maxHp*.35)return;const c=state(u,ISAGI);if(!c.desperate){c.desperate=true;c.immune=2;c.immuneApplied=api.ownTurns(bs,u);runtime(u).stunTurns=0;}}
+  function desperation(bs,u){if(!has(u,ISAGI)||u.hp>=u.maxHp*.35)return;const c=state(u,ISAGI);if(!c.desperate){c.desperate=true;api.watch?.change(u,'base','desperation');c.immune=2;c.immuneApplied=api.ownTurns(bs,u);runtime(u).stunTurns=0;}}
   function damaged(bs,u,source,amount){if(amount>0&&has(u,ISAGI)&&alive(source)&&team(bs,u)!==team(bs,source))mark(bs,u,source,{});desperation(bs,u);}
   function afterDamage(bs,u,target,damage,meta={}){
    if(!u||!(damage>0)||meta.dot||meta.ballerRedirect||meta.ballerSplash||meta.fateAbsorb||meta.championRedirect||meta.grimoireReflection)return;
@@ -63,7 +63,7 @@
   function killed(bs,killer,victim){
    for(const owner of all(bs))if(alive(owner)&&has(owner,ISAGI)&&team(bs,owner)!==team(bs,victim)){
     const c=state(owner,ISAGI);if(c.kills.has(victim))continue;c.kills.add(victim);
-    if(read(owner,victim)>=3){api.heal(owner,victim.maxHp*.15,'Egoist Growth',bs,owner);if(c.growth<5){c.growth++;api.addAtk(owner,.10);}refresh(owner);}c.reads.delete(victim);c.readActions.delete(victim);
+    if(read(owner,victim)>=3){api.heal(owner,victim.maxHp*.15,'Egoist Growth',bs,owner);if(c.growth<5){const next=Math.min(5,c.growth+(api.watch?.gain(owner,1)??1));api.addAtk(owner,.10*(next-c.growth));c.growth=next;}refresh(owner);}c.reads.delete(victim);c.readActions.delete(victim);
    }
   }
   function ownStart(bs,u){if(!api.ownTurn(bs,u))return;desperation(bs,u);if(has(u,LORENZO)){const c=state(u,LORENZO),ally=allies(bs,u).sort((a,b)=>a.hp-b.hp)[0];if(ally&&c.zombie>0)api.heal(ally,u.maxHp*.03*c.zombie,'Zombie Regeneration',bs,u);}}

@@ -16,7 +16,7 @@
   const one=u=>has(u,ESC)&&state(u,ESC).mode>0;
   function allowStat(u,stat,delta,key){
    if(!has(u,ESC))return true;
-   if(key==='sins:the-one')return true;
+   if(key==='sins:the-one'||key==='relic:alien-watch')return true;
    if(delta>0)return false;
    return !(stat==='atk'&&delta<0&&one(u));
   }
@@ -37,9 +37,9 @@
       if(key==='atkBonusPct'&&Number(value)<before&&one(u))return{block:true};
     }return{value};
   });}
-  function exitOne(u){const c=state(u,ESC);c.sun=0;c.mode=0;api.percent(u,'atk','sins:the-one',0);refresh(u);}
+  function exitOne(u){const c=state(u,ESC);c.sun=0;c.mode=0;api.percent(u,'atk','sins:the-one',0);api.watch?.change(u,'the-one','base');refresh(u);}
   function enterOne(u){
-   const c=state(u,ESC);c.mode=5;
+   const c=state(u,ESC);c.mode=5;api.watch?.change(u,'base','the-one');
    const r=runtime(u);r.stunTurns=0;r.freezeTurns=0;r.weakenAttackTurns=0;r.weakenAttackPct=0;
    if(r.atkBonusPct<0)r.atkBonusPct=0;
    api.clearAtkDebuffs(u);api.percent(u,'atk','sins:the-one',1.5);refresh(u);
@@ -62,7 +62,7 @@
    }
    if(actor&&has(actor,ESC)&&api.ownTurn(bs,actor)){
     const c=state(actor,ESC);
-    if(!c.mode){c.sun=Math.min(12,c.sun+1);if(c.sun===12)enterOne(actor);}
+    if(!c.mode){c.sun=Math.min(12,c.sun+(api.watch?.gain(actor,1)??1));if(c.sun===12)enterOne(actor);}
    }
   }
   function endTurn(bs,actor){
@@ -111,7 +111,7 @@
    if(!u||!target||!out?.hit||out.dodged||out.reflected||out.skipped||!alive(u))return;
    if(!has(u,GOW)&&!has(u,ESC))return;
    const records=actionRecord(finishedActions,u,target),token=api.attackToken(bs,u,options);if(records.get(target)===token)return;records.set(target,token);
-   if(has(u,GOW)&&alive(target)&&random()<.20&&api.allowed(target,u)){const r=runtime(target);if(api.status(target,'sinsHypnosisTurns',2,u)){r.sinsHypnosisApplied=bs.turnCount;r.sinsHypnosisOwner=u;state(u,GOW).lust=Math.min(Number.MAX_SAFE_INTEGER,state(u,GOW).lust+1);refresh(u);}}
+   if(has(u,GOW)&&alive(target)&&random()<.20&&api.allowed(target,u)){const r=runtime(target);if(api.status(target,'sinsHypnosisTurns',2,u)){r.sinsHypnosisApplied=bs.turnCount;r.sinsHypnosisOwner=u;state(u,GOW).lust=Math.min(Number.MAX_SAFE_INTEGER,state(u,GOW).lust+(api.watch?.gain(u,1)??1));refresh(u);}}
    if(has(u,ESC)&&!options.sinsOne&&options.sinsShieldBefore>0&&runtime(target).shield>0&&!options.sinsSplash){
     api.dot(target,'burn',2,api.atk(u)*.50,u);
     const damage=Math.max(0,out.damage||0)+Math.max(0,options.sinsShieldBefore-runtime(target).shield),line=enemies(bs,u),index=line.indexOf(target);
@@ -123,7 +123,7 @@
   function crit(bs,u){return {chance:(has(u,MELI)&&bs?team(bs,u).filter(v=>v!==u&&api.category(v,'Sins')).length*.10:0)+stolenBonus(u,'critChanceBonus'),damage:(has(u,MELI)?.50:0)+stolenBonus(u,'critDamageBonus')};}
   function dodge(u){return (has(u,GOW)&&state(u,GOW).lust>=4?.50:0)+stolenBonus(u,'postReviveDodgeBonus');}
   function reduction(u){return (has(u,GOW)&&state(u,GOW).lust>0?.50:0)+stolenBonus(u,'damageReductionPct');}
-  function consumeHit(u,meta){if(has(u,GOW)&&!meta.dot&&!meta.sinsRedirect&&state(u,GOW).lust>0)state(u,GOW).lust--;}
+  function consumeHit(u,meta){if(has(u,GOW)&&!meta.dot&&!meta.sinsRedirect&&state(u,GOW).lust>0)state(u,GOW).lust=Math.max(0,state(u,GOW).lust-1);}
   function counter(bs,source,u,amount,meta){
    if(!source||!has(u,MELI)||meta.dot||meta.sinsCounter||meta.sinsRedirect||meta.ballerRedirect||meta.championRedirect||meta.grimoireReflection||meta.akatsukiReflect||meta.entenReflect||!api.category(source,'Magician')||random()>=.50)return false;
    api.take(bs,u,source,amount*1.5,{passiveAttack:true,sinsCounter:true,elementApplied:Boolean(meta.elementApplied),dodgeChecked:true});return true;

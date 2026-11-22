@@ -51,6 +51,23 @@
    try{return callback();}finally{if(previous)actions.set(unit,previous);else actions.delete(unit);}
   }
   function burnTurns(source,turns){const r=trait(source);return r?.kind==='eternal_eye'&&host.RelicSystem.uniqueEligible(source,r)?turns*2:turns;}
-  return {prepareBattle,survived,dynamicAtk,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,chainChance,firstReady:u=>state(u).first,specialMultiplier,attackMultiplier,withAction};
+  const WATCH_HP='relic:alien-watch',WATCH_DURATION=3;
+  function stackGain(u,n){
+   const r=u?.relic;
+   return n>0&&r?.kind==='alien_watch'&&host.RelicSystem.matchingUnit(u,r)?n*(1+r.stackGain):n;
+  }
+  function modeChanged(bs,u,previous,next){
+   const r=trait(u);
+   if(previous===next||!(u?.hp>0)||u.defeated||r?.kind!=='alien_watch'||!host.RelicSystem.uniqueEligible(u,r))return;
+   const already=api.hasHpFactor(u,WATCH_HP);
+   if(!already&&!api.hpFactor(u,WATCH_HP,r.modeHp))return;
+   state(u).watchExpires=api.ownTurns(bs,u)+WATCH_DURATION;
+   api.log('[RELIC] Alien Watch: max and current HP +'+(r.modeHp*100).toFixed(1).replace(/\.0$/,'')+'% for 3 turns.','passive');
+  }
+  function watchTurns(bs,u){return u&&api.hasHpFactor(u,WATCH_HP)?Math.max(0,(states.get(u)?.watchExpires||0)-api.ownTurns(bs,u)):0;}
+  function turnEnd(bs,u){
+   if(u?.relic?.kind==='alien_watch'&&!watchTurns(bs,u)&&api.hasHpFactor(u,WATCH_HP))api.hpFactor(u,WATCH_HP,0);
+  }
+  return {stackGain,modeChanged,turnEnd,watchTurns,prepareBattle,survived,dynamicAtk,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,chainChance,firstReady:u=>state(u).first,specialMultiplier,attackMultiplier,withAction};
  };
 })(window);

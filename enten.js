@@ -4,7 +4,7 @@
  host.createEntenSkills=function(api){
   const ID='kagurabachi',FORMS=Object.freeze(['Nishiki','Kuro','Aka','Sai']);
   const state=u=>api.passiveRuntimeFor(u,ID).enten ||= {next:0,form:0,dodge:false,reflect:false,survived:false};
-  function counted(bs,u,options={}){if(api.id(u)!==ID||!api.once(bs,u,'enten-form',options))return;const c=state(u);c.form=c.next;c.next=(c.next+1)%4;}
+  function counted(bs,u,options={}){if(api.id(u)!==ID||!api.once(bs,u,'enten-form',options))return;const c=state(u),previous=c.form;c.form=c.next;c.next=(c.next+1)%4;api.watch?.change(u,previous,c.form);}
   function attack(bs,u,target,options={}){
    if(api.id(u)!==ID||!api.ownTurn(bs,u,options))return null;
    const c=state(u),form=c.form,result={hit:false,damage:0,killed:false,target,attacker:u};
