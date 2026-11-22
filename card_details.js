@@ -20,6 +20,32 @@
   ui.categories.replaceChildren(...(card.category||[]).map(c=>chip(c,'category')));ui.tags.replaceChildren(...tags(card).map(c=>chip(c,'ability-'+c.toLowerCase().replace(' ','-'))));
   const item=host.RelicSystem.equipped(card.id);ui.slot.replaceChildren();if(item){const image=host.document.createElement('img');image.src=item.image;image.alt=item.name;image.addEventListener('error',()=>{ui.slot.textContent='◆';},{once:true});ui.slot.append(image);ui.slot.title=host.RelicSystem.describe(item.metadata.relic,item.metadata.binding);}else{ui.slot.textContent='◆';ui.slot.title='No Relic equipped · choose a Relic';}ui.slot.setAttribute('aria-label',ui.slot.title);ui.equip.disabled=bridge.canAct?.()===false;
  }
- function openPicker(){if(!current||!mount())return;ui.status.textContent='';ui.list.replaceChildren();const equipped=host.RelicSystem.equipped(current.id);for(const item of host.RelicSystem.list()){const button=host.document.createElement('button');button.type='button';button.dataset.relicId=item.id;button.className='card-relic-option'+(item.id===equipped?.id?' is-equipped':'');const image=host.document.createElement('img');image.src=item.image;image.alt='';image.loading='lazy';const text=host.document.createElement('span');const title=host.document.createElement('strong');title.textContent=item.name+(item.id===equipped?.id?' · EQUIPPED':'');const description=host.document.createElement('small');description.textContent=host.RelicSystem.describe(item.metadata.relic,item.metadata.binding);text.append(title,description);button.append(image,text);button.disabled=bridge.canAct?.()===false;ui.list.append(button);}if(!ui.list.children.length){const empty=host.document.createElement('p');empty.textContent='No Relics owned. Craft a Relic to equip it.';ui.list.append(empty);}el('cardRelicUnequip').disabled=!equipped||bridge.canAct?.()===false;ui.picker.classList.remove('hidden');}
+ function openPicker(){
+  if(!current||!mount())return;
+  ui.status.textContent='';ui.list.replaceChildren();
+  const R=host.RelicSystem,V=host.RelicInspection,card=current,equipped=R.equipped(card.id),locked=bridge.canAct?.()===false;
+  const cards=[{card,owned:true}],items=R.list().map(item=>({item,match:R.compatibility(card,item)}));
+  const score=row=>Number(row.item.id===equipped?.id)*4+Number(row.match.unique?.active||false)*2+Number(row.match.base.active);
+  items.sort((a,b)=>score(b)-score(a));
+  for(const {item,match} of items){
+   const row=host.document.createElement('div');row.className='relic-picker-row';
+   const choice=host.document.createElement('button');choice.type='button';choice.dataset.relicId=item.id;
+   choice.className='card-relic-option'+(item.id===equipped?.id?' is-equipped':'')+
+    (match.base.active||match.unique?.active?' is-compatible':'')+(match.unique?.active?' is-unique-match':'');
+   const art=host.document.createElement('img');art.src=item.image;art.alt='';art.loading='lazy';
+   const labels=host.document.createElement('span'),title=host.document.createElement('strong'),tier=host.document.createElement('small');
+   title.textContent=item.name+(item.id===equipped?.id?' · EQUIPPED':'');
+   tier.textContent=item.metadata.relic.unique?'Unique Legendary':item.metadata.relic.rarity;
+   labels.append(title,tier);labels.insertAdjacentHTML('beforeend',V.badges(match));
+   choice.append(art,labels);choice.disabled=locked;row.append(choice);
+   const inspect=host.document.createElement('details'),summary=host.document.createElement('summary'),panel=host.document.createElement('div');
+   inspect.className='relic-picker-inspect';summary.textContent='Inspect '+item.name;inspect.append(summary,panel);
+   inspect.addEventListener('toggle',()=>{if(inspect.open&&!panel.firstChild)panel.innerHTML=V.markup(item,{card,cards,binding:true});});
+   row.append(inspect);ui.list.append(row);
+  }
+  if(!items.length){const empty=host.document.createElement('p');empty.textContent='No Relics owned. Craft a Relic to equip it.';ui.list.append(empty);}
+  el('cardRelicUnequip').disabled=!equipped||locked;
+  ui.picker.classList.remove('hidden');
+ }
  host.CardDetailsSystem=Object.freeze({tags,render,configure(options){bridge=options||{};mount();}});
 })(window);

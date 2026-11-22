@@ -3,12 +3,12 @@
  'use strict';
  const ELEMENTS=['Fire','Water','Nature','Electric','Dark','Holy'];
  const DEFINITIONS=Object.freeze([
-  {kind:'eternal_eye',name:'Eternal Eye',image:'assets/items/eeye.png',stat:'atk',ranges:[[2,5],[5,10],[8,15]],unique:'Burn inflicted by this card lasts x2 turns.',costs:{corundum:100,silver_ore:100,calcite:100,holy_dust:100,ancient_bone:10}},
+  {kind:'eternal_eye',name:'Eternal Eye',image:'assets/items/eeye.png',stat:'atk',ranges:[[2,5],[5,10],[8,15]],unique:'Burn inflicted by the wearer lasts x2 turns. Requires a Burn-inflicting passive.',costs:{corundum:100,silver_ore:100,calcite:100,holy_dust:100,ancient_bone:10}},
   {kind:'potara_earring',name:'Potara Earring',image:'assets/items/pearing.png',stat:'hp',ranges:[[2,5],[5,10],[8,15]],unique:'Two Unique Potara: Vegeta SSJ2 + Goku SSJ3 fuse into Vegito for this battle; combine HP/ATK and both passives.',costs:{aqua_tear:100,electric_ore:100,calcite:100,holy_dust:100,mineral_ore:10,unknown_dna:100,dragon_tooth:50,senzu_bean:1000}},
   {kind:'god_leaf',name:'God Leaf',image:'assets/items/gleaf.png',stat:'both',ranges:[[2,5],[4,10],[6,12]],unique:'+1–5% dodge, capped at 80% total; excluded when the card has >80% base dodge or forbids dodge bonuses.',costs:{god_flowers:100,leaf:100,calcite:100,holy_dust:100,mineral_ore:25,lapiz_ore:100}},
-  {kind:'nail',name:'Nail',image:'assets/items/nail.png',stat:'atk',category:'Swordman',ranges:[[2,5.5],[6,12],[10,22]],unique:'+10–20% Crit Chance and +15–30% Crit Damage.',costs:{silver_ore:100,chain:100,monster_egg:100,calcite:100,ancient_bone:10}},
+  {kind:'nail',name:'Nail',image:'assets/items/nail.png',stat:'atk',ranges:[[2,5.5],[6,12],[10,22]],unique:'+10–20% Crit Chance and +15–30% Crit Damage.',costs:{silver_ore:100,chain:100,monster_egg:100,calcite:100,ancient_bone:10}},
   {kind:'millennium_puzzle',name:'Millennium Puzzle',image:'assets/items/mpuzzle.png',stat:'atk',category:'VideoGame',ranges:[[2,5.5],[6,12],[10,18]],unique:'+10–30% EXP from all modes, including EXP Time Trial (one Relic bonus per card).',costs:{chain:100,monster_egg:100,calcite:100,ancient_bone:10,mineral_ore:10,holy_dust:100,god_flowers:100,gold_ore:100,dark_fragment:1}},
-  {kind:'enten_blade',name:'Enten Blade',image:'assets/items/entenblade.png',stat:'followChance',category:'Swordman',ranges:[[1,2.5],[2,5],[6,9]],unique:'+5–50% special attack damage. Works on any equipped card; excludes basic attacks, follow-ups/chains, DoT and reflected damage.',costs:{corundum:100,silver_ore:100,calcite:100,electric_ore:100,mineral_ore:50,icey:100,lapiz_ore:100,dark_fragment:10}},
+  {kind:'enten_blade',name:'Enten Blade',image:'assets/items/entenblade.png',stat:'followChance',category:'Swordman',ranges:[[1,2.5],[2,5],[6,9]],unique:'+5–50% special attack damage. Requires a special attack; excludes basic attacks, follow-ups/chains, DoT and reflected damage.',costs:{corundum:100,silver_ore:100,calcite:100,electric_ore:100,mineral_ore:50,icey:100,lapiz_ore:100,dark_fragment:10}},
   {kind:'odm',name:'O.D.M.',image:'assets/items/odm.png',stat:'atk',category:'Human',ranges:[[2,6],[5,10],[8,16]],unique:'+1–10 percentage points on secondary and later chained follow-up chances; non-stacking, total capped at 99%.',costs:{chain:150,silver_ore:100,calcite:100,mineral_ore:50,leaf:100,electric_ore:100,lapiz_ore:100}},
   {kind:'bomb',name:'Bomb',image:'assets/items/bomborb.png',stat:'atk',ranges:[[1,5],[5,8],[8,15]],unique:'+30–300% base ATK on the first attack only; requires the rolled element.',costs:{silver_ore:100,corundum:100,dark_dust:100,calcite:100,electric_ore:100}},
   {kind:'jackal_guns',name:'Jackal Guns',image:'assets/items/jackalguns.png',stat:'atk',category:'Gunner',ranges:[[3,8],[6,9],[10,20]],unique:'+5–30% ATK per living enemy; changes as enemies enter or die.',dropOnly:true,costs:{}},
@@ -18,17 +18,104 @@
  const FOLLOW_UP_IDS=Object.freeze(['askeladd','ulquiorra','coyote-starrk','benimaru-jura','pain','jotaro-kujo','denji','kamen-rider-kabuto','uchiha-itachi','uchiha-sasuke','weather-shadow-monarch','yuno','kiritsu','boss-event-alucard','alexander-anderson','madara-lubu','speed-wizard','tower-champion-bizare','tower-champion-shadow-200','tower-champion-heavenly-200','merlin','iskandar','the-legion','the-clown','toji','true-mahito','todo','goku-ssj3','ultimate-gohan','tower-champion-raining-200','tower-champion-sugar-200','woltekamui','funny-valentine','tower-champion-tsukuyomi']);
  const followIds=new Set(FOLLOW_UP_IDS);
  followIds.add('jinx');followIds.add('sonic');
+ const byKind=new Map(DEFINITIONS.map(row=>[row.kind,row])),RARITIES=['common','rare','legendary'];
+ // Burn here means an actual outgoing timed Burn. Damage to a burning
+ // target, immunity, and The Mourner's self-inflicted Burn do not qualify.
+ const burnIds=new Set(['starter-legendary','uchiha-itachi','uchiha-sasuke','hutao','tower-champion-sunny',
+  'tower-champion-tsukuyomi','raid-secret-ace','tower-champion-sunny-200','itachi-awakened','escanor-the-one','benimaru-jura','yamamoto']);
+ const chainIds=new Set(['jotaro-kujo','denji','kamen-rider-kabuto','uchiha-sasuke','askeladd','jinx','sonic','woltekamui','boss-event-alucard','the-legion','the-clown','toji']);
+ const noDodgeBonusIds=new Set(['gojo-young','gojo-revice']);
+ const catalog=()=>host.ALL_CARDS||[];
+ let knownCatalog,knownCards;
+ function cardById(id){
+  if(knownCatalog!==catalog()){knownCatalog=catalog();knownCards=new Map(knownCatalog.map(card=>[card.id,card]));}
+  return knownCards?.get(id);
+ }
  const capabilityCache=new WeakMap();
+ const EMPTY_CAPS=Object.freeze({special:false,revive:false,summon:false,follow:false,chain:false,burn:false,shield:false,stun:false,freeze:false,blocksDodge:false});
+ function cardCapabilities(card){
+  if(!card||typeof card!=='object')return EMPTY_CAPS;
+  let result=capabilityCache.get(card);
+  if(result)return result;
+  const id=card.id,tags=(card.passive?.tags||[]).map(tag=>String(tag).toLowerCase().replace(/[\s-]+/g,'_'));
+  const text=(card.passive?.description||'').toLowerCase().replace(/\b(?:cannot|can not|never|no)\b[^.;\n]{0,35}(?:reviv\w*|summon\w*|clon\w*)/g,'');
+  result=Object.freeze({
+   special:tags.includes('special_attack')||/special[ -]attack|blast|pierc|meteor|lightning bolt|cero|unleash/.test(text)||['finn-the-human','jason-13th','tower-champion-wind'].includes(id),
+   revive:tags.includes('revival')||/reviv|resurrect|reincarnat|surviv[^.;\n]{0,50}(?:fatal|lethal)|(?:fatal|lethal)[^.;\n]{0,50}surviv|cheat.death/.test(text),
+   summon:tags.includes('summon')||/\b(?:summon\w*|(?:create|spawn)\w*[^.;\n]{0,50}clon\w*)\b/.test(text),
+   follow:followIds.has(id),
+   chain:chainIds.has(id)||followIds.has(id)&&/chain|continuation|consecutive follow/.test(text),
+   burn:burnIds.has(id)||tags.includes('inflicts_burn')||tags.includes('burn'),
+   shield:tags.includes('shield')||/(?:gain|grant|create|apply)\w*[^.;\n]{0,40}\bshield/.test(text),
+   stun:tags.includes('stun')||/\bstuns?\s+(?:the|all|\d|up|a|enemies|for)|(?:apply|inflict)\w*[^.;\n]{0,22}\bstun/.test(text),
+   freeze:tags.includes('freeze')||/\bfreez(?:e|es)\s+(?:the|all|\d|up|a|enemies|for)|(?:apply|inflict)\w*[^.;\n]{0,22}\bfreeze/.test(text),
+   blocksDodge:noDodgeBonusIds.has(id)||/dodge bonuses cannot increase|cannot gain (?:additional )?dodge/.test(text)
+  });
+  capabilityCache.set(card,result);return result;
+ }
  function capabilities(value){
-  const root=value?.passiveState,card=value?.card||value;if(!card||root?.passiveSuppressedUntilDeath||root?.passiveSuppressionTurns>0)return {special:false,revive:false,summon:false,follow:false};
-  const ids=[root?.effectivePassiveId||card.id,...(root?.grimoire?.copies||[]).map(c=>c.id)].filter(id=>!root?.spookyStolenPassives?.[id]);
-  const result={special:false,revive:false,summon:false,follow:false};
-  for(const id of ids){const c=(host.ALL_CARDS||[]).find(c=>c.id===id)||card;let info=capabilityCache.get(c);if(!info){const text=((c.passive?.description||'')+' '+(c.passive?.tags||[]).join(' ')).toLowerCase().replace(/(?:cannot|can not|never|no)[^.]{0,35}(?:reviv\w*|summon\w*|clon\w*)/g,'');info={special:/special.attack|special_attack|blast|pierc|meteor|lightning bolt|cero|unleash/.test(text),revive:/reviv|resurrect|reincarnat|surviv[^.]{0,50}(?:fatal|lethal)|(?:fatal|lethal)[^.]{0,50}surviv|cheat.death/.test(text),summon:/\bsummon\w*|\bclon\w*/.test(text),follow:followIds.has(id)||/follow.up|follow_up/.test(text)};capabilityCache.set(c,info);}for(const key of Object.keys(result))result[key] ||= info[key];}
+  const card=value?.card||value,root=value?.passiveState;
+  if(value?.relicCapabilities)return value.relicCapabilities;
+  if(!root)return cardCapabilities(card);
+  if(root.passiveSuppressedUntilDeath||root.passiveSuppressionTurns>0)
+   return root.brotherSoul?{...EMPTY_CAPS,burn:true}:EMPTY_CAPS;
+  const native=root.effectivePassiveId||card?.id;
+  const copies=root.grimoire?.copies||[];
+  if(!copies.length&&!root.spookyStolenPassives?.[native]&&!root.brotherSoul)
+   return cardCapabilities(native===card?.id?card:cardById(native));
+  const result={...EMPTY_CAPS,burn:!!root.brotherSoul};
+  for(const id of [native,...copies.filter(c=>!c.expired).map(c=>c.id)])if(id&&!root.spookyStolenPassives?.[id]){
+   const caps=cardCapabilities(id===card?.id?card:cardById(id));
+   for(const key of Object.keys(EMPTY_CAPS))result[key] ||= caps[key];
+  }
   return result;
  }
- function uniqueEligible(card,r){const c=capabilities(card);return !!r?.unique&&({enten_blade:c.special,fate_scythe:c.revive,rabadon_hat:c.summon}[r.kind]??true);}
- function hasFollowUp(value){const root=value?.passiveState,card=value?.card||value;if(root?.passiveSuppressedUntilDeath||root?.passiveSuppressionTurns>0)return false;const ids=[root?.effectivePassiveId||card?.id,...(root?.grimoire?.copies||[]).map(copy=>copy.id)];return ids.some(id=>followIds.has(id)&&!root?.spookyStolenPassives?.[id]);}
- const byKind=new Map(DEFINITIONS.map(row=>[row.kind,row])),RARITIES=['common','rare','legendary'];
+ function hasFollowUp(value){return capabilities(value).follow;}
+ const condition=(type,value,label=value)=>({type,value,label});
+ function baseConditions(r){
+  const req=requirement(r),parts=[];
+  if(req.category)parts.push(condition('category',req.category));
+  if(req.element)parts.push(condition('element',req.element));
+  else if(r.template&&!req.category)parts.push(condition('rolled-element',null,'Rolled Element'));
+  if(r.kind==='enten_blade')parts.push(condition('capability','follow','Follow-up passive'));
+  return parts;
+ }
+ function uniqueConditions(r){
+  switch(r.kind){
+   case 'eternal_eye':return [condition('capability','burn','Burn-inflicting passive')];
+   case 'enten_blade':return [condition('capability','special','Special-attack passive')];
+   case 'odm':return [condition('capability','chain','Chained follow-up passive')];
+   case 'fate_scythe':return [condition('capability','revive','Revival / fatal-hit survival passive')];
+   case 'rabadon_hat':return [condition('capability','summon','Clone / summon passive')];
+   case 'god_leaf':return [condition('dodge',null,'Dodge below the 80% cap')];
+   case 'potara_earring':return [condition('pair',['goku-ssj3','vegeta-ssj2'],'Goku SSJ3 + Vegeta SSJ2'),condition('note',null,'Both need Unique Potara')];
+   case 'bomb':return baseConditions(r);
+   default:return []; // Nail crit, Jackal Guns and Millennium Puzzle have no wearer restriction.
+  }
+ }
+ function satisfies(value,conditions){
+  const card=value?.card||value;
+  if(!card)return false;
+  return conditions.every(c=>{
+   switch(c.type){
+    case 'category':{const categories=value?.relicCategory||card.category||[];const norm=host.CategorySystem?.normalize||(x=>x);return categories.some(tag=>norm(tag)===norm(c.value));}
+    case 'element':return card.element===c.value;
+    case 'rolled-element':return ELEMENTS.includes(card.element);
+    case 'capability':return capabilities(value)[c.value];
+    case 'dodge':return !capabilities(value).blocksDodge;
+    case 'pair':return c.value.includes(card.id);
+    default:return true;
+   }
+  });
+ }
+ function compatibility(value,r){
+  r=r?.metadata?.relic||r;
+  if(!byKind.has(r?.kind))return null;
+  const base=baseConditions(r),unique=r.unique?uniqueConditions(r):null;
+  return {base:{conditions:base,active:satisfies(value,base)},unique:unique?{conditions:unique,universal:!unique.length,active:satisfies(value,unique)}:null};
+ }
+ function uniqueEligible(value,r){return !!(r?.unique&&byKind.has(r.kind)&&satisfies(value,uniqueConditions(r)));}
+ function template(kind){return byKind.has(kind)?{kind,unique:true,template:true}:null;}
  let bridge={},indexRevision=-1,index=new Map(),expIndex=new Map(),ui=null,editing='';
  const recipeId=kind=>'relic_recipe_'+kind;
  const RECIPES=Object.freeze(DEFINITIONS.filter(d=>!d.dropOnly).map(d=>({id:recipeId(d.kind),kind:d.kind,cost:0,ingredients:Object.entries(d.costs).map(([id,quantity])=>({id,quantity}))})));
@@ -39,7 +126,11 @@
  const clone=v=>JSON.parse(JSON.stringify(v));
  const key=b=>b?String(b.cardId):'';
  function validRoll(r){
-  const d=byKind.get(r?.kind),tier=RARITIES.indexOf(r?.rarity);if(!d||tier<0||typeof r.unique!=='boolean'||r.unique&&tier!==2||(d.kind==='god_leaf'&&r.godLeafVersion===2&&tier<2?r.element!==null:d.category?r?.element!==null:!ELEMENTS.includes(r?.element)))return false;
+  const d=byKind.get(r?.kind),tier=RARITIES.indexOf(r?.rarity);
+  if(!d||tier<0||typeof r.unique!=='boolean'||r.unique&&tier!==2)return false;
+  // Keep existing Swordman Nail rolls without changing their stored requirement.
+  const usesCategory=d.category||(r.kind==='nail'&&r.element===null)||(r.kind==='god_leaf'&&r.godLeafVersion===2&&tier<2);
+  if(usesCategory?r.element!==null:!ELEMENTS.includes(r.element))return false;
   if(r.kind==='god_leaf'&&r.godLeafVersion!==undefined&&r.godLeafVersion!==2)return false;
   if(r.kind==='bomb'&&(r.bombVersion!==undefined&&r.bombVersion!==2||r.bombVersion===2&&!Number.isFinite(r.firstAttackBonus)))return false;
   const range=r.kind==='god_leaf'&&r.godLeafVersion===undefined?[[1,3],[3,6],[6,10]][tier]:r.kind==='bomb'&&r.bombVersion===undefined?[[2,8],[8,15],[15,30]][tier]:d.ranges[tier],inside=(n,min,max)=>Number.isFinite(n)&&n>=min-1e-8&&n<=max+1e-8;
@@ -80,7 +171,10 @@
   return {...r,godLeafVersion:2,element:tier<2?null:r.element,hp:convert(r.hp),atk:convert(r.atk)};
  }
  const normalizeRoll=r=>normalizeGodLeaf(normalizeBomb(r));
- function requirement(r){const d=byKind.get(r?.kind);return{category:d?.kind==='god_leaf'?'Human':d?.category||null,element:d?.kind==='god_leaf'?null:r?.element||null};}
+ function requirement(r){
+  const d=byKind.get(r?.kind),category=d?.kind==='god_leaf'?'Human':d?.kind==='nail'&&r.element===null&&!r.template?'Swordman':d?.category||null;
+  return {category,element:category?null:r?.element||null};
+ }
  function migrateGodLeaves(){
   const rows=host.InventorySystem.list().filter(i=>i.type==='relic'&&i.metadata?.relic?.kind==='god_leaf'&&i.metadata.relic.godLeafVersion===undefined&&validItem(i));
   if(!rows.length)return true;
@@ -92,7 +186,7 @@
  }
  function uniqueText(r){
   const p=n=>+(Number(n||0)*100).toFixed(1)+'%';if(!r.unique)return '';
-  return ({fate_scythe:`ATK +${p(r.fatalAtk)} per fatal-hit survival or revival this battle; stacks. Requires a survival or revival passive.`,rabadon_hat:`Clones and summons created by the wearer gain +${p(r.summonBonus)} HP and ATK. Requires a clone or summon passive.`,odm:`Secondary chained follow-up chance +${p(r.odmChainBonus)} points; once per roll, maximum 99%. Initial trigger unchanged.`,eternal_eye:'Burn duration x2.',potara_earring:'Unique Potara pair: Goku SSJ3 + Vegeta SSJ2 fuse. Vegito: 20% dodge; dodge grants +25% ATK on the next attack.',god_leaf:`Dodge +${p(r.dodge)} (maximum 80% total; skipped if existing dodge exceeds 80% or dodge bonuses are forbidden).`,jackal_guns:`ATK +${p(r.perEnemyAtk)} per living enemy (dynamic; works independently of the Gunner base-stat requirement).`,nail:`Crit Chance +${p(r.critChance)}; Crit Damage +${p(r.critDamage)}.`,millennium_puzzle:`EXP +${p(r.expBonus)} from all modes, including EXP Time Trial.`,enten_blade:`Special attack damage +${p(r.specialBonus)}; excludes basics, follow-ups/chains, DoT and reflected damage.`,bomb:`First main attack +${p(r.firstAttackBonus??.30)} base ATK; matching element only.`})[r.kind]||'';
+  return ({fate_scythe:`ATK +${p(r.fatalAtk)} per fatal-hit survival or revival this battle; stacks. Requires a survival or revival passive.`,rabadon_hat:`Clones and summons created by the wearer gain +${p(r.summonBonus)} HP and ATK. Requires a clone or summon passive.`,odm:`Secondary chained follow-up chance +${p(r.odmChainBonus)} points; once per roll, maximum 99%. Initial trigger unchanged.`,eternal_eye:'Burn duration x2. Requires a Burn-inflicting passive.',potara_earring:'Unique Potara pair: Goku SSJ3 + Vegeta SSJ2 fuse. Vegito: 20% dodge; dodge grants +25% ATK on the next attack.',god_leaf:`Dodge +${p(r.dodge)} (maximum 80% total; skipped if existing dodge exceeds 80% or dodge bonuses are forbidden).`,jackal_guns:`ATK +${p(r.perEnemyAtk)} per living enemy (dynamic; works independently of the Gunner base-stat requirement).`,nail:`Crit Chance +${p(r.critChance)}; Crit Damage +${p(r.critDamage)}.`,millennium_puzzle:`EXP +${p(r.expBonus)} from all modes, including EXP Time Trial.`,enten_blade:`Special attack damage +${p(r.specialBonus)}; excludes basics, follow-ups/chains, DoT and reflected damage.`,bomb:`First main attack +${p(r.firstAttackBonus??.30)} base ATK; matching element only.`})[r.kind]||'';
  }
  function describe(r,binding=null){
   r=normalizeRoll(r);const d=byKind.get(r?.kind);if(!d)return 'Invalid Relic';const p=n=>+(n*100).toFixed(1)+'%';
@@ -177,7 +271,7 @@
  function reconcile(){migrateGodLeaves();migrateBindings();refreshDescriptions();ownershipChanged();}
  function equipped(cardId){rebuild();const item=index.get(String(cardId));return item&&bindingOwned(item.metadata.binding)?item:null;}
  function snapshotFor(cardId){const item=equipped(cardId);return item?clone(normalizeRoll(item.metadata.relic)):null;}
- function matching(card,r){const d=byKind.get(r?.kind),req=requirement(r);return Boolean(d&&card&&(req.category?(host.CategorySystem?.has(card,req.category)||(card.category||[]).includes(req.category))&&(d.kind!=='enten_blade'||hasFollowUp(card)):req.element===card.element));}
+ function matching(card,r){return byKind.has(r?.kind)&&satisfies(card,baseConditions(r));}
  // Shared card levels receive the strongest bound copy, never a sum of copies.
  function expMultiplier(cardId,owner){
   const bonus=r=>r?.kind==='millennium_puzzle'&&r.unique&&validRoll(r)?r.expBonus:0;
@@ -186,7 +280,7 @@
   return 1;
  }
  function preview(card,stats,variantKey,copy=0){const r=snapshotFor(card.id,variantKey,copy);return r&&matching(card,r)?{...stats,hp:Math.round(stats.hp*(1+r.hp)),atk:Math.round(stats.atk*(1+r.atk))}:stats;}
- function matchingUnit(unit,r=unit?.relic){return matching(unit?.relicCategory?{...unit.card,category:unit.relicCategory}:unit?.card,r);}
+ function matchingUnit(unit,r=unit?.relic){return matching(unit,r);}
  function factors(unit){
   if(unit?.relicFactors)return {...unit.relicFactors};
   const r=unit?.relic;return r&&matchingUnit(unit,r)?{hp:1+r.hp,atk:1+r.atk}:{hp:1,atk:1};
@@ -209,8 +303,28 @@
  }
  function applyToUnit(unit,r){if(unit.relicPrepared)return unit;unit.relicPrepared=true;if(!validRoll(r))return unit;r=normalizeRoll(r);unit.relic=clone(r);return rebase(unit,{hp:1,atk:1});}
  function attachTeam(team){const used=new Map();for(const unit of team||[]){if(unit.relicPrepared||unit.isClone||unit.isSummoned)continue;const id=unit.card?.id,variantKey=unit.variantKey||host.canonicalVariantKey(id,(unit.mutations||[]).map(m=>m.id)),copy=Number.isSafeInteger(unit.cardInstance?.copy)?unit.cardInstance.copy:used.get(variantKey)||0;used.set(variantKey,copy+1);unit.cardInstance={cardId:id,variantKey,copy};applyToUnit(unit,snapshotFor(id,variantKey,copy));}return team;}
- function open(id){if(!canAct()||!get(id)||!mount())return false;editing=id;ui.search.value='';renderCards();const b=get(id).metadata.binding;if(b)ui.card.value=b.cardId;ui.title.textContent=get(id).name+' · Equip Relic';ui.root.classList.remove('hidden');return true;}
- function renderCards(){if(!ui)return;const query=ui.search.value.trim().toLowerCase(),old=ui.card.value;ui.card.replaceChildren();for(const c of bridge.cards?.()||[]){if(!`${c.name} ${c.element}`.toLowerCase().includes(query))continue;const o=host.document.createElement('option');o.value=c.id;o.textContent=c.name+' · all mutations';ui.card.append(o);}if([...ui.card.options].some(o=>o.value===old))ui.card.value=old;ui.equip.disabled=!ui.card.value;}
- function mount(){if(ui)return true;const el=id=>host.document.getElementById(id),next={root:el('relicEquipModal'),title:el('relicEquipTitle'),search:el('relicCardSearch'),card:el('relicCardSelect'),equip:el('relicEquipConfirm'),unequip:el('relicUnequip'),status:el('relicEquipStatus')};if(Object.values(next).some(v=>!v))return false;ui=next;ui.search.addEventListener('input',()=>host.UIPerformanceSystem.debounce('relic-search',renderCards));ui.equip.addEventListener('click',()=>{const ok=bind(editing,{cardId:ui.card.value});ui.status.textContent=ok?'Relic equipped across all mutations.':'Unable to equip. Check ownership or current activity.';if(ok)ui.root.classList.add('hidden');});ui.unequip.addEventListener('click',()=>{if(bind(editing,null))ui.root.classList.add('hidden');});el('relicEquipClose')?.addEventListener('click',()=>ui.root.classList.add('hidden'));return true;}
- host.RelicSystem=Object.freeze({DEFINITIONS,RECIPES,capabilities,uniqueEligible,grantDropOnce,createItem:itemFor,FOLLOW_UP_IDS,hasFollowUp,register,roll,rollAtTier,FUSION_RULES,fusionRule,fusionMatches,fusionPlan,fuse,validRoll,validItem,validItems,validBinding,requirement,normalizeRoll,normalizeGodLeaf,migrateGodLeaves,normalizeBomb,migrateBombs,uniqueText,refreshDescriptions,migrateBindings,equipped,matchingUnit,factors,rebase,inherit,describe,craft,list,get,bind,key,matching,snapshotFor,ownershipChanged,reconcile,applyToUnit,attachTeam,preview,expMultiplier,open,count:kind=>list().filter(i=>i.metadata.relic.kind===kind).length,isRecipe:id=>RECIPES.some(r=>r.id===id),configure(options){bridge=options||{};migrateBombs();migrateGodLeaves();migrateBindings();refreshDescriptions();indexRevision=-1;mount();reconcile();}});
+ function open(id){
+  const item=canAct()&&get(id);if(!item||!mount())return false;
+  editing=id;ui.search.value='';ui.status.textContent='';
+  renderCards(item.metadata.binding?.cardId||'');
+  ui.title.textContent=item.name+' · Equip Relic';ui.root.classList.remove('hidden');return true;
+ }
+ function renderCards(selected){
+  if(!ui)return;
+  const item=get(editing),query=ui.search.value.trim().toLowerCase(),old=selected??ui.card.value;
+  ui.card.replaceChildren();
+  for(const c of bridge.cards?.()||[]){
+   if(!`${c.name} ${c.element}`.toLowerCase().includes(query))continue;
+   const o=host.document.createElement('option'),match=compatibility(c,item);
+   o.value=c.id;o.textContent=c.name+(match?.unique?.active?' · Unique Match':match?.base.active?' · Compatible':'');ui.card.append(o);
+   if(c.id===old)ui.card.value=old;
+  }
+  ui.equip.disabled=!ui.card.value;renderEquipPreview();
+ }
+ function renderEquipPreview(){
+  const item=get(editing),card=cardById(ui.card.value);
+  ui.inspect.innerHTML=item&&host.RelicInspection?host.RelicInspection.markup(item,{card,cards:card?[{card,owned:true}]:null,binding:true}):'';
+ }
+ function mount(){if(ui)return true;const el=id=>host.document.getElementById(id),next={root:el('relicEquipModal'),title:el('relicEquipTitle'),search:el('relicCardSearch'),card:el('relicCardSelect'),equip:el('relicEquipConfirm'),unequip:el('relicUnequip'),status:el('relicEquipStatus'),inspect:el('relicEquipInspect')};if(Object.values(next).some(v=>!v))return false;ui=next;ui.search.addEventListener('input',()=>host.UIPerformanceSystem.debounce('relic-search',renderCards));ui.card.addEventListener('change',renderEquipPreview);ui.equip.addEventListener('click',()=>{const ok=bind(editing,{cardId:ui.card.value});ui.status.textContent=ok?'Relic equipped across all mutations.':'Unable to equip. Check ownership or current activity.';if(ok)ui.root.classList.add('hidden');});ui.unequip.addEventListener('click',()=>{if(bind(editing,null))ui.root.classList.add('hidden');});el('relicEquipClose')?.addEventListener('click',()=>ui.root.classList.add('hidden'));return true;}
+ host.RelicSystem=Object.freeze({DEFINITIONS,RECIPES,capabilities,compatibility,uniqueEligible,template,ownedCards:()=>bridge.cards?.()||[],grantDropOnce,createItem:itemFor,FOLLOW_UP_IDS,hasFollowUp,register,roll,rollAtTier,FUSION_RULES,fusionRule,fusionMatches,fusionPlan,fuse,validRoll,validItem,validItems,validBinding,requirement,normalizeRoll,normalizeGodLeaf,migrateGodLeaves,normalizeBomb,migrateBombs,uniqueText,refreshDescriptions,migrateBindings,equipped,matchingUnit,factors,rebase,inherit,describe,craft,list,get,bind,key,matching,snapshotFor,ownershipChanged,reconcile,applyToUnit,attachTeam,preview,expMultiplier,open,count:kind=>list().filter(i=>i.metadata.relic.kind===kind).length,isRecipe:id=>RECIPES.some(r=>r.id===id),configure(options){bridge=options||{};migrateBombs();migrateGodLeaves();migrateBindings();refreshDescriptions();indexRevision=-1;mount();reconcile();}});
 })(window);

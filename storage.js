@@ -66,8 +66,12 @@
   function filtered(){const query=(ui.search.value||'').trim().toLowerCase();return host.InventorySystem.list().filter(item=>category(item)===tab&&(!host.RelicFusionSystem.active||host.RelicFusionSystem.matches(item))&&item.type!=='relic_recipe'&&(!['portal','relic'].includes(item.type)||item.quantity>0)&&`${item.name} ${item.description}`.toLowerCase().includes(query));}
   function details(){
     const item=host.InventorySystem.getItem(selected);ui.art.replaceChildren();
+    const relic=host.RelicSystem.get(selected);
+    ui.relic.hidden=!relic;
+    ui.relic.closest('.storage-detail').classList.toggle('is-relic',!!relic);
+    ui.relic.innerHTML=relic?host.RelicInspection.markup(relic,{cards:host.RelicInspection.collection(),limit:8,binding:true,empty:'No matching cards owned'}):'';
     if(!item){ui.fuse.hidden=true;const sell=host.document.getElementById('storageSellSingle');if(sell)sell.hidden=true;text(ui.title,'Select an item');text(ui.type,'');text(ui.description,'Choose an item to inspect its details and sources.');text(ui.owned,'');ui.action.hidden=true;ui.info.disabled=true;ui.result.hidden=true;return;}
-    ui.art.append(visual(item));text(ui.title,item.name);text(ui.type,category(item)==='equipment'?'Equipment · exclusive slot':item.type);text(ui.description,item.description);ui.info.disabled=false;
+    if(!relic)ui.art.append(visual(item));text(ui.title,item.name);text(ui.type,category(item)==='equipment'?'Equipment · exclusive slot':item.type);text(ui.description,item.description);ui.info.disabled=false;
     refreshDetails();
   }
   function refreshDetails(){
@@ -129,7 +133,7 @@
   function mount(root){
     if(!root)return false;if(ui?.root===root)return true;
     const select=name=>root.querySelector('[data-storage-'+name+']');
-    const next={root,search:root.querySelector('#inventorySearch'),grid:root.querySelector('#potionInventoryList'),title:select('title'),type:select('type'),art:select('art'),description:select('description'),owned:select('owned'),timer:select('timer'),result:select('result'),action:select('action'),fuse:select('fuse'),info:select('info'),equipped:select('equipped'),status:root.querySelector('#dropChanceDisplay')};
+    const next={root,search:root.querySelector('#inventorySearch'),grid:root.querySelector('#potionInventoryList'),title:select('title'),type:select('type'),art:select('art'),description:select('description'),relic:select('relic'),owned:select('owned'),timer:select('timer'),result:select('result'),action:select('action'),fuse:select('fuse'),info:select('info'),equipped:select('equipped'),status:root.querySelector('#dropChanceDisplay')};
     if(Object.values(next).some(n=>!n))return false;ui=next;
     root.addEventListener('click',event=>{
       const fusionMark=event.target.closest('[data-fusion-item]');if(fusionMark){host.RelicFusionSystem.toggle(fusionMark.dataset.fusionItem);return;}

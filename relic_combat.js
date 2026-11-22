@@ -17,16 +17,16 @@
    api.runtime(fused).effectivePassiveId='goku-ssj3';api.addCopy(fused,'vegeta-ssj2');api.log('[RELIC] Unique Potara fused Goku SSJ3 and Vegeta SSJ2 into Vegito.');
   }
   function survived(u,token){const r=trait(u);if(r?.kind!=='fate_scythe'||!host.RelicSystem.uniqueEligible(u,r))return;const s=state(u);if(s.lastSurvival===token)return;s.lastSurvival=token;s.survivals=(s.survivals||0)+1;api.percent(u,'relic:fate-scythe',s.survivals*r.fatalAtk);api.log('[RELIC] Fate Scythe gained a survival stack.');}
-  function dodge(u,base){if(u?.isVegito)return Math.max(0,.20-base);const r=trait(u);return r?.kind==='god_leaf'&&base<=.80?Math.max(0,Math.min(r.dodge,.80-base)):0;}
+  function dodge(u,base){if(u?.isVegito)return Math.max(0,.20-base);const r=trait(u);return r?.kind==='god_leaf'&&base<.80&&host.RelicSystem.uniqueEligible(u,r)?Math.max(0,Math.min(r.dodge,.80-base)):0;}
   function dynamicAtk(bs,u){const r=trait(u);return r?.kind==='jackal_guns'?Math.max(0,Math.min(.30,Number(r.perEnemyAtk)||0))*(bs?.playerTeam?.includes(u)?bs.enemyTeam:bs?.enemyTeam?.includes(u)?bs.playerTeam:[]).filter(v=>v.hp>0&&!v.defeated).length:0;}
   function hasDodge(u){return Boolean(u?.isVegito||trait(u)?.kind==='god_leaf');}
   function crit(u){const r=trait(u);return {chance:r?.kind==='nail'?r.critChance:0,damage:r?.kind==='nail'?r.critDamage:0};}
   function onDodge(u){if(u?.isVegito)state(u).next=.25;}
-  function prepare(u,options){const r=trait(u),s=state(u);let bonus=s.next;s.next=0;if(s.first&&!options.isFollowUp&&!options.followOwner){s.first=false;if(r?.kind==='bomb'&&u.card?.element===r.element){const action=actions.get(u);if(action)action.bombBonus=r.firstAttackBonus??.30;}}return bonus?{...options,damageMultiplier:(Number(options.damageMultiplier)||1)*(api.attackBonus?api.attackBonus(u,bonus):1+bonus)}:options;}
+  function prepare(u,options){const r=trait(u),s=state(u);let bonus=s.next;s.next=0;if(s.first&&!options.isFollowUp&&!options.followOwner){s.first=false;if(r?.kind==='bomb'&&host.RelicSystem.uniqueEligible(u,r)){const action=actions.get(u);if(action)action.bombBonus=r.firstAttackBonus??.30;}}return bonus?{...options,damageMultiplier:(Number(options.damageMultiplier)||1)*(api.attackBonus?api.attackBonus(u,bonus):1+bonus)}:options;}
   function followBonus(unit){
    if(!unit)return 0;
-   const r=unit.relic,card=unit.card;
-   return r?.kind==='enten_blade'&&(card?.category||unit.relicCategory||[]).some(c=>c==='Swordman'||c==='Swordsman')&&api.hasFollowUp(unit)?Math.max(0,Math.min(.09,Number(r.followChance)||0)):0;
+   const r=unit.relic;
+   return r?.kind==='enten_blade'&&host.RelicSystem.matchingUnit(unit,r)?Math.max(0,Math.min(.09,Number(r.followChance)||0)):0;
   }
   function chainChance(unit,chance,secondary=false){
    const r=trait(unit),action=unit&&actions.get(unit);
@@ -50,7 +50,7 @@
    const previous=actions.get(unit);actions.set(unit,options);
    try{return callback();}finally{if(previous)actions.set(unit,previous);else actions.delete(unit);}
   }
-  function burnTurns(source,turns){return trait(source)?.kind==='eternal_eye'?turns*2:turns;}
+  function burnTurns(source,turns){const r=trait(source);return r?.kind==='eternal_eye'&&host.RelicSystem.uniqueEligible(source,r)?turns*2:turns;}
   return {prepareBattle,survived,dynamicAtk,dodge,hasDodge,crit,onDodge,prepare,burnTurns,followBonus,chainChance,firstReady:u=>state(u).first,specialMultiplier,attackMultiplier,withAction};
  };
 })(window);

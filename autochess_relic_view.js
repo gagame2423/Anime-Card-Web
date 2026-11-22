@@ -2,33 +2,16 @@
 (function(host){
  'use strict';
  const C=host.AutoChessSystem,R=host.RelicSystem,instances=new WeakMap();
- const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const eventElement=node=>node?.nodeType===1&&typeof node.closest==='function'?node:node?.parentElement?.nodeType===1&&typeof node.parentElement.closest==='function'?node.parentElement:null;
- const pct=n=>(n*100).toLocaleString('en-US',{maximumFractionDigits:4})+'%';
- function content(roll,s){
-  if(!R.validRoll(roll)){const d=R.DEFINITIONS.find(d=>d.kind===roll?.kind);if(!d)return '<p>Unknown Relic.</p>';const tier=['common','rare','legendary'].indexOf(roll?.rarity),range=d.ranges[tier<0?2:tier];return '<header><img src="'+esc(d.image)+'" alt=""><div><small>TEMPLATE PREVIEW · NOT YET ROLLED</small><h3>'+esc(d.name)+'</h3></div></header><p>Base '+esc(d.stat)+' roll: '+range.join('–')+'%.</p><p class="ac-relic-unique">Unique potential: '+esc(d.unique)+'</p><footer>Actual values are rolled independently when this Relic is obtained.</footer>';}
-  roll=R.normalizeRoll(roll);
-  const d=R.DEFINITIONS.find(d=>d.kind===roll.kind),req=R.requirement(roll),tier=roll.unique?'Unique Legendary':roll.rarity;
-  const team=C.get(s).units.filter(u=>!u.reserve&&(u.board!=null||u.bench!=null));
-  const matches=test=>team.filter(u=>test(C.card(u)));
-  const portraits=rows=>'<div class="ac-relic-matches">'+(rows.length?rows.map(u=>{const c=C.card(u);return '<span data-rarity="'+esc(c.rarity)+'"><img src="'+esc(host.CardSkinSystem.art(c,u.skinId))+'" alt="'+esc(c.name)+'"><small>'+esc(c.name)+'</small><b>'+esc(c.rarity)+(u.fusionDepth?' · '+Math.min(3,u.fusionDepth+1)+'★':'')+'</b></span>';}).join(''):'<p>No matching units in team</p>')+'</div>';
-  const stats=[['atk','ATK'],['hp','Max HP'],['followChance','Follow-up chance']].filter(([key])=>roll[key]>0);
-  const restricted=!!(req.category||req.element),allUnits='Compatible Team Cards (All Units)';
-  const requirement=req.category?'<span class="ac-relic-category">'+esc(req.category)+'</span>':req.element?'<span>Element</span> '+host.ElementSystem.inlineMarkup(req.element):'';
-  const base=restricted?'<div class="ac-relic-requirement">'+requirement+'</div><h4>Base Stats · Matching '+esc(req.category||req.element)+' Team Cards</h4>'+portraits(matches(c=>R.matching(c,roll))):'<h4>'+allUnits+'</h4>'+portraits(team);
-  // Unique eligibility is independent of the base stat requirement.
-  const condition={
-   enten_blade:['Special-attack passives',c=>R.uniqueEligible(c,roll)],
-   fate_scythe:['Revival / fatal-hit survival passives',c=>R.uniqueEligible(c,roll)],
-   rabadon_hat:['Clone / summon passives',c=>R.uniqueEligible(c,roll)],
-   bomb:[roll.element+' cards',c=>c.element===roll.element],
-   potara_earring:['Goku SSJ3 and Vegeta SSJ2',c=>['goku-ssj3','vegeta-ssj2'].includes(c.id)],
-   odm:['Chained follow-up passives',c=>R.capabilities(c).follow],
-   god_leaf:['Dodge bonus subject to the 80% cap',c=>!['gojo-young','gojo-revice'].includes(c.id)]
-  }[roll.kind];
-  const unique=roll.unique?'<p class="ac-relic-unique">✦ '+esc(R.uniqueText(roll))+'</p>'+
-   (condition?'<h4>Unique Eligibility · '+esc(condition[0])+'</h4>'+portraits(matches(condition[1])):restricted?'<h4>'+allUnits+'</h4>'+portraits(team):''):'';
-  return '<header><img src="'+esc(d.image)+'" alt=""><div><small>'+esc(tier)+'</small><h3>'+esc(d.name)+'</h3></div><span class="ac-relic-close-hint">Click or tap to pin</span></header><dl>'+stats.map(([key,label])=>'<div><dt>'+label+'</dt><dd>+'+pct(roll[key])+'</dd></div>').join('')+'</dl>'+base+unique+'<footer>'+(d.kind==='enten_blade'?'Follow-up chance also requires a compatible follow-up passive. ':'')+'Previews use your board and bench, including while scouting.</footer>';
+ function teamCards(s,fight){
+  const combat=new Map([...(fight?.battle.playerTeam||[]),...(fight?.battle.enemyTeam||[])].map(unit=>[unit.grid?.uid,unit]));
+  return (s?C.get(s).units:[]).filter(u=>!u.reserve&&(u.board!=null||u.bench!=null)).map(u=>{
+   const card=C.card(u),unit=u.board!=null?combat.get(u.uid):null;
+   return card&&{card,unit,image:host.CardSkinSystem.art(card,u.skinId),stars:u.fusionDepth?Math.min(3,u.fusionDepth+1):null};
+  }).filter(Boolean);
+ }
+ function content(roll,s,fight,team=teamCards(s,fight)){
+  return host.RelicInspection.markup(roll,{team:true,cards:team,empty:'No matching units in team'});
  }
 
  function mount(root,getState,getCombat){
@@ -38,7 +21,7 @@
   function clamp(){const w=host.innerWidth,h=host.innerHeight,b=target?.getBoundingClientRect();if(!b)return;node.style.maxHeight=Math.max(80,h-16)+'px';const box=node.getBoundingClientRect(),x=Math.max(8,Math.min(w-box.width-8,b.right+8+box.width<=w-8?b.right+8:b.left-box.width-8)),y=Math.min(h-box.height-8,Math.max(8,b.top));node.style.left=Math.max(8,x)+'px';node.style.top=Math.max(8,y)+'px';}
   function cancelHide(){host.clearTimeout(hideTimer);hideTimer=0;}
   function hide(){cancelHide();targetId=null;target?.removeAttribute('aria-describedby');target=null;key='';pinned=false;node.classList.remove('is-pinned');node.hidden=true;}
-  function show(t,pin=false){t=eventElement(t);if(!t||dragging||host.performance.now()<suppressUntil||t.closest('.ac-drag-ghost'))return;const s=getState(),roll=find(t.dataset.acRelicInfo);if(!s||!roll||!R.validRoll(roll))return;cancelHide();target?.removeAttribute('aria-describedby');target=t;targetId=t.dataset.acRelicInfo;pinned=pin;node.classList.toggle('is-pinned',pin);target.setAttribute('aria-describedby',node.id);const next=JSON.stringify([roll,C.get(s).units.filter(u=>!u.reserve).map(u=>[u.uid,u.cardId,u.skinId,u.fusionDepth])]);if(key!==next){key=next;node.innerHTML=content(roll,s);node.dataset.tier=roll.unique?'unique':roll.rarity;}node.querySelector('.ac-relic-close-hint').textContent=pin?'Esc or tap outside':'Click or tap to pin';node.hidden=false;clamp();}
+  function show(t,pin=false){t=eventElement(t);if(!t||dragging||host.performance.now()<suppressUntil||t.closest('.ac-drag-ghost'))return;const s=getState(),roll=find(t.dataset.acRelicInfo);if(!s||!roll||!R.validRoll(roll))return;cancelHide();target?.removeAttribute('aria-describedby');target=t;targetId=t.dataset.acRelicInfo;pinned=pin;node.classList.toggle('is-pinned',pin);target.setAttribute('aria-describedby',node.id);const team=teamCards(s,getCombat?.()),next=JSON.stringify([roll,team.map(x=>[x.card.id,x.image,x.stars,x.unit?R.capabilities(x.unit):null,x.unit?.card?.element])]);if(key!==next){key=next;node.innerHTML=content(roll,s,null,team);node.dataset.tier=roll.unique?'unique':roll.rarity;}node.querySelector('.ac-relic-close-hint').textContent=pin?'Esc or tap outside':'Click or tap to pin';node.hidden=false;clamp();}
   function locate(element){element=eventElement(element);if(!element||element.closest('.ac-drag-ghost'))return null;return element.closest('[data-ac-relic]')?.querySelector('[data-ac-relic-info]')||element.closest('[data-ac-relic-info]')||element.closest('.ac-equipped,.ac-token-relic,.ac-draft-relic')?.querySelector('[data-ac-relic-info]')||null;}
   function overPointer(){return pointer&&Number.isFinite(pointer.x)&&Number.isFinite(pointer.y)?locate(host.document.elementFromPoint(pointer.x,pointer.y)):null;}
   function scheduleHide(){if(pinned||hideTimer)return;hideTimer=host.setTimeout(()=>{hideTimer=0;const current=overPointer();if(current&&current.dataset.acRelicInfo===targetId)show(current,false);else hide();},100);}

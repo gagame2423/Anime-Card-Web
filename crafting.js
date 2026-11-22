@@ -61,16 +61,22 @@
   function renderDetails() {
     if (!ui) return;
     const entry = catalog.find(entry => entry.item.id === selected);
-    ui.related.replaceChildren(); ui.ingredients.replaceChildren(); ui.requirements.clear(); ui.cardRequirements.clear(); ui.visual.replaceChildren();
+    ui.related.replaceChildren(); ui.relic.replaceChildren(); ui.relic.hidden=true; ui.ingredients.replaceChildren(); ui.requirements.clear(); ui.cardRequirements.clear(); ui.visual.replaceChildren();
     if (!entry) {
       setText(ui.title, 'Select an item'); setText(ui.category, ''); setText(ui.description, 'Search or choose an item from the grid.');
       setText(ui.owned, ''); setText(ui.status, ''); setText(ui.cost, '0 VNĐ'); ui.craft.disabled = true; return;
     }
     const { item, recipe } = entry;
     ui.visual.append(visual(item, 'crafting-detail-icon'));
-    setText(ui.title, item.name); setText(ui.category, item.type==='relic_recipe'?'Relic · one per card copy':item.type==='equipment' ? 'Equipment · one active slot' : recipe ? 'Consumable · Super Potion' : 'Evolution Material');
+    setText(ui.title, item.name); setText(ui.category, item.type==='relic_recipe'?'Relic · one per card':item.type==='equipment' ? 'Equipment · one active slot' : recipe ? 'Consumable · Super Potion' : 'Evolution Material');
     setText(ui.description, item.description);
-    // Consumables deliberately leave Related Card blank.
+    if(item.type==='relic_recipe'){
+      const model=host.RelicSystem.template(recipe.kind),detail=host.RelicInspection;
+      ui.relic.hidden=false;ui.relic.innerHTML=detail.markup(model,{header:false});
+      ui.related.innerHTML=detail.related(model,detail.collection(true),{limit:8});
+      setText(ui.description,'Craft odds: 70% Common, 25% Rare, 5% Legendary. A Legendary roll has a 10% chance to be Unique.');
+    }
+    // Consumables deliberately leave Related Cards blank.
     for (const link of item.type === 'material' ? relatedCards(item.id) : []) {
       const box = make('article', 'crafting-related-card');
       const base = link.base || link.result;
@@ -138,7 +144,7 @@
     if (ui?.root === root) return true;
     const select = name => root.querySelector(`[data-crafting-${name}]`);
     const next = { root, grid: select('grid'), search: select('search'), visual: select('visual'), title: select('title'),
-      category: select('category'), description: select('description'), owned: select('owned'), related: select('related'),
+      category: select('category'), description: select('description'), relic:select('relic'), owned: select('owned'), related: select('related'),
       ingredients: select('ingredients'), craft: select('craft'), cost: select('cost'), status: select('status'), tiles: new Map(), requirements: new Map(), cardRequirements: new Map(), choices: {} };
     if (Object.values(next).some(value => value === null)) return false;
     ui = next;

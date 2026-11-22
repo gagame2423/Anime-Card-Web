@@ -423,3 +423,81 @@ body {
   #app :is(.tcg-card,.tcg-card__foil,.miss-state,.hub-command__item,.roll-button),
   #battleModal :is(.battle-mode-option,.battle-hp-fill,.battle-shield__fill,.battle-visual-card,.battle-floating-text) {animation:none!important;transition:none!important;}
 }
+
+/* Relic inspection follows GAME_UI_SKILL.md. The same component is used by
+   Craft, Storage, both equip flows and the tactical tooltip. */
+.relic-inspect {
+  --relic-edge:#8a9bae;display:grid;gap:12px;min-width:0;padding:12px;
+  border:1px solid var(--relic-edge);border-radius:10px;
+  background:linear-gradient(155deg,#1b2c3b,#0b1019 76%);color:#e4edf4;
+  box-shadow:inset 0 1px #e0ebef38;line-height:1.45;font-variant-numeric:tabular-nums;
+}
+.relic-inspect[data-relic-tier="rare"]{--relic-edge:#6cacf1}
+.relic-inspect[data-relic-tier="legendary"],.relic-inspect[data-relic-tier="template"]{--relic-edge:#c8aa6e}
+.relic-inspect[data-relic-tier="unique"]{--relic-edge:#dcc17f}
+.relic-inspect .relic-inspect-head{display:flex;align-items:center;gap:9px;min-width:0}
+.relic-inspect-head>div{min-width:0;flex:1}
+.relic-inspect-head h3{margin:2px 0 0;color:var(--game-ivory,#f0e6d2);font:700 17px/1.18 var(--game-heading,Georgia,serif);overflow-wrap:anywhere}
+.relic-inspect-head>div>small{display:inline-block;padding:2px 6px;border:1px solid var(--relic-edge);border-radius:4px;color:#f5dfad;font:800 9px/1.35 system-ui;letter-spacing:.045em}
+.relic-inspect-icon{display:grid;place-items:center;position:relative;width:42px;height:42px;flex:0 0 42px;border:1px solid #907850a3;border-radius:7px;background:#111922;overflow:hidden}
+.relic-inspect-icon::before{content:"◆";grid-area:1/1;color:#a5926b}
+.relic-inspect-icon img{position:relative;grid-area:1/1;width:100%;height:100%;object-fit:contain}
+.relic-inspect dl.relic-stat-grid{display:grid;gap:5px;margin:0;padding:0;background:none}
+.relic-stat-grid>div{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0;padding:6px 8px;background:#090f19;border:1px solid #5367776b;border-radius:5px}
+.relic-stat-grid dt{color:#d2e1eb;font-size:11px}
+.relic-stat-grid dd{margin:0;text-align:right;color:#aef4df;font-size:12px;font-weight:800;overflow-wrap:anywhere}
+.relic-stat-grid dd small{color:#e0bb79;font:750 10px/1 system-ui}
+.relic-conditions,.relic-match-badges{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.relic-condition{display:inline-flex;align-items:center;width:max-content;max-width:100%;padding:2px 6px;border:1px solid #60778e;border-radius:5px;color:#d1e3f0;background:#111e2d;font:700 10px/1.3 system-ui;overflow-wrap:anywhere}
+.relic-condition .element-inline{display:inline-flex;align-items:center;gap:3px}
+.relic-condition .element-inline img{width:14px;height:14px;object-fit:contain}
+.relic-condition.is-base-match{border-color:#63c7bd;background:#133737;color:#b3fcf1}
+.relic-condition.is-unique-match{border-color:#d8b571;background:#382b18;color:#ffeab8}
+.relic-unique{
+  position:relative;display:grid;gap:6px;min-width:0;padding:9px 10px;overflow:hidden;
+  border:1px solid transparent;border-radius:7px;
+  background:linear-gradient(135deg,#302619,#12292c) padding-box,linear-gradient(115deg,#f7ca76,#be9352 43%,#6bdfd6) border-box;
+  color:#fff0cf;box-shadow:inset 0 1px #fff0cb35,0 0 12px #d5a95723;text-shadow:0 0 8px #e2ad5045;
+}
+.relic-unique::after{content:"";position:absolute;inset:0;width:42%;pointer-events:none;background:linear-gradient(106deg,transparent,#fff3ca40,transparent);opacity:0;animation:relic-gleam .9s ease-out both}
+@keyframes relic-gleam{from{opacity:0;transform:translateX(-105%)}35%{opacity:.75}to{opacity:0;transform:translateX(255%)}}
+.relic-unique strong{color:#ffdfa0;font:800 12px/1.25 system-ui}
+.relic-unique strong span{color:#fcdf94;text-shadow:0 0 9px #feca6f}
+.relic-unique p,.relic-inspect .relic-inspect-wearer{margin:0;font-size:11px;line-height:1.55}
+.relic-inspect-wearer{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.relic-compatible-groups{display:grid;gap:9px;min-width:0;width:100%}
+.relic-compatible-group{min-width:0}
+.relic-compatible-group h4{display:flex;align-items:center;gap:6px;margin:0 0 5px;color:#e7ecf3;font:750 11px/1.4 system-ui;overflow-wrap:anywhere}
+.relic-compatible-group h4 small{padding:1px 5px;border:1px solid #52677c;border-radius:4px;color:#bfd4e5;font-size:9px}
+.relic-portrait-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,56px),1fr));gap:5px;min-width:0}
+.relic-portrait{display:flex;flex-direction:column;position:relative;min-width:0;overflow:hidden;text-align:center;border:1px solid var(--portrait-edge,#8196a7);border-radius:5px;background:#111c2a}
+.relic-portrait[data-rarity="Uncommon"]{--portrait-edge:#68cdb9}
+.relic-portrait[data-rarity="Rare"]{--portrait-edge:#6aaef2}
+.relic-portrait[data-rarity="Epic"]{--portrait-edge:#ae7add}
+.relic-portrait[data-rarity="Legendary"]{--portrait-edge:#ddb56d}
+.relic-portrait[data-rarity="Mythic"]{--portrait-edge:#ee7195}
+.relic-portrait[data-rarity="Secret"]{--portrait-edge:#f9dda1}
+.relic-portrait[data-owned=true]{box-shadow:inset 0 -2px #77d7c6}
+.relic-portrait img{width:100%;height:43px;object-fit:cover;object-position:50% 25%;background:#233342}
+.relic-portrait>span{padding:3px 2px;color:#eaf1f5;font-size:9px;line-height:1.25;overflow-wrap:anywhere}
+.relic-portrait>small{position:absolute;top:0;right:0;padding:1px 4px;background:#09101ddd;color:#ffe8b0;font-size:8px}
+.relic-empty,.relic-inspect footer{margin:0;color:#b5c7d7;font-size:10px;line-height:1.45}
+.relic-more{margin-top:4px}
+.relic-more summary,.relic-picker-inspect>summary{min-height:32px;padding:6px;cursor:pointer;color:#b9dfe9;font-size:11px}
+.relic-more summary:focus-visible,.relic-picker-inspect>summary:focus-visible,.card-relic-option:focus-visible{outline:2px solid #8ce4d7;outline-offset:2px}
+#craftingModal .crafting-related:has(.relic-compatible-groups){min-height:0}
+#inventoryModal .storage-detail.is-relic{padding:10px;gap:7px;background:linear-gradient(145deg,#182837,#101621)}
+.storage-detail.is-relic :is([data-storage-summary],[data-storage-art],[data-storage-description]){display:none}
+.storage-detail.is-relic [data-storage-timer]:empty{display:none}
+.storage-detail.is-relic .storage-detail-actions{margin-top:8px}
+#cardRelicPicker .relic-picker-row{display:grid;gap:3px;padding:2px;min-width:0}
+#cardRelicPicker .card-relic-option{width:100%;cursor:pointer;transition:background .12s,border-color .12s}
+#cardRelicPicker .card-relic-option .relic-match-badges{display:flex;gap:4px}
+#cardRelicPicker .card-relic-option.is-compatible{border-color:#67c7ba;box-shadow:0 0 9px #61cbcb36;background:linear-gradient(130deg,#183d40,#142838)}
+#cardRelicPicker .card-relic-option.is-unique-match{border-color:#d5af64;box-shadow:0 0 10px #e8bf623e;background:linear-gradient(135deg,#362e20,#15343c)}
+#cardRelicPicker .card-relic-option:disabled{cursor:not-allowed;opacity:.68}
+@media(max-width:540px){
+  .relic-inspect{padding:8px;gap:9px}
+  #relicEquipModal .relic-equip-fields{grid-template-columns:minmax(0,1fr);gap:8px}
+}
+@media(prefers-reduced-motion:reduce){.relic-unique::after{animation:none}}
