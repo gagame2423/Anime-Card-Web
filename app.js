@@ -3405,9 +3405,16 @@ function appendBattleLog(message,tone=''){
   if(pendingBattleLogs.length>260)pendingBattleLogs.shift();window.RollPerformanceSystem.schedule(paintBattleLog);
 }
 function paintBattleLog(){
-  const queued=pendingBattleLogs||[];pendingBattleLogs=[];if(!els.battleLog)return;
-  const fragment=document.createDocumentFragment();for(const entry of queued){if(entry.battle!==getArenaBattleState())continue;const line=document.createElement('div');line.className=`battle-log__line ${entry.tone?'is-'+entry.tone:''}`;line.textContent=entry.message;fragment.append(line);}
-  els.battleLog.append(fragment);while(els.battleLog.children.length>260)els.battleLog.firstElementChild.remove();els.battleLog.scrollTop=els.battleLog.scrollHeight;
+  const queued=pendingBattleLogs||[],log=els.battleLog,battle=getArenaBattleState();
+  pendingBattleLogs=[];
+  if(!log||!queued.length)return;
+  const fragment=document.createDocumentFragment();
+  for(const entry of queued)if(entry.battle===battle)fragment.append(window.BattleLogView.createLine(document,entry.message,entry.tone));
+  if(!fragment.firstChild)return;
+  const follow=log.scrollHeight-log.clientHeight-log.scrollTop<=28;
+  log.append(fragment);
+  while(log.childElementCount>260)log.firstElementChild.remove();
+  if(follow)log.scrollTop=log.scrollHeight;
 }
 
 function rollEnemyMutations() {
@@ -5047,8 +5054,19 @@ function renderAchievements() {
   if (!achievements) return;
   const category = document.getElementById('achievementCategory')?.value || 'all';
   const items = achievements.list();
-  const summary = document.getElementById('achievementSummary');
-  if (summary) summary.textContent = `${items.filter(item => item.claimed).length} claimed • ${items.filter(item => item.complete && !item.claimed && !item.automatic).length} ready • ${items.length} milestones • EXP +${Number(achievements.getExpBonus(state.achievementRewardReceipts).toFixed(2))} • VNĐ +${achievements.getCoinBonus(state.achievementRewardReceipts).toFixed(1)} • Drops x${achievements.getDropMultiplier(state.achievementRewardReceipts).toFixed(2)}`;
+  const unlocked = items.filter(item => item.complete || item.claimed).length;
+  const claimed = items.filter(item => item.claimed).length;
+  const ready = items.filter(item => item.complete && !item.claimed && !item.automatic).length;
+  const meter = document.getElementById('achievementCompletion');
+  setCachedText(document.getElementById('achievementSummary'), `Unlocked ${unlocked} / ${items.length}`);
+  if(meter){
+    const max=items.length || 1;
+    if(meter.max!==max)meter.max=max;
+    if(meter.value!==unlocked||!meter.hasAttribute('value'))meter.value=unlocked;
+  }
+  setCachedText(document.getElementById('achievementRewardStatus'), `${ready} ready to claim · ${claimed} rewards received`);
+  const receipts=state.achievementRewardReceipts;
+  setCachedText(document.getElementById('achievementBonuses'), `EXP +${achievements.getExpBonus(receipts)} · VNĐ +${achievements.getCoinBonus(receipts)} · Drops x${achievements.getDropMultiplier(receipts).toFixed(2)}`);
   achievements.render(document.getElementById('achievementList'), category, () => {
     saveState(); updateStats(); renderUpgradeShop(); renderAvailableCards(); renderCollection(); refreshAchievements();
   });
@@ -5217,7 +5235,7 @@ function openModal(id) {
   }
   if (id === "upgradesModal") renderUpgradeShop();
   if (id === "inventoryModal") renderPotionInventory();
-  if (id === "achievementModal") { refreshAchievements(); renderAchievements(); }
+  if (id === "achievementModal") refreshAchievements();
   if (id === "riftShopModal") window.RiftSystem.renderShop();
   if (id === "towerShopModal") renderTowerShop();
   if (id === "timeTrialShopModal") renderTimeTrialShop();

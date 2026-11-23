@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="./autochess.css?v=20261122-relic-compat-1" />
   <link rel="stylesheet" href="./hextech.css?v=20261121-ui-cartoon-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
-  <link rel="stylesheet" href="./game-ui.css?v=20261122-relic-compat-1" />
+  <link rel="stylesheet" href="./game-ui.css?v=20261123-arena-achievements-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -328,10 +328,24 @@
   <!-- ACHIEVEMENTS: independent tracking, permanent milestone rewards -->
   <div id="achievementModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="achievementModalTitle">
     <section class="modal-panel module-modal achievement-modal">
-      <header class="modal-header"><div><p class="eyebrow">YOUR JOURNEY</p><h2 id="achievementModalTitle">🏆 Achievements</h2></div><button data-close-modal="achievementModal" class="modal-close" type="button" aria-label="Close achievements">×</button></header>
-      <p class="module-description">Milestones keep your best progress after spending or salvage. Floor 100 Champion cards are awarded automatically and unlock permanently for future rolls.</p>
-      <div class="achievement-toolbar"><span id="achievementSummary" aria-live="polite"></span><label><span class="sr-only">Achievement category</span><select id="achievementCategory"><option value="all">All milestones</option><option value="collection">Collection</option><option value="battles">Battle wins</option><option value="currency">VNĐ milestones</option><option value="rolls">Total rolls</option><option value="tower">Tower progress</option><option value="timetrial">Time Trial rooms</option><option value="raid">Total Raid wins</option><option value="boss">Total Boss Event clears</option><option value="spooky">Spooky Event</option><option value="penalty">Penalty Achievements</option></select></label></div>
-      <div id="achievementList" class="achievement-grid" aria-label="Achievements and rewards"></div>
+      <header class="modal-header">
+        <div><p class="eyebrow">THE MILESTONE VAULT</p><h2 id="achievementModalTitle">Achievements</h2></div>
+        <button data-close-modal="achievementModal" class="modal-close" type="button" aria-label="Close achievements">×</button>
+      </header>
+      <div class="achievement-dashboard">
+        <div class="achievement-overview">
+          <p class="eyebrow">Lifetime Progress</p>
+          <strong id="achievementSummary" aria-live="polite"></strong>
+          <progress id="achievementCompletion" aria-label="Total achievement progress" value="0" max="1"></progress>
+          <p id="achievementRewardStatus" class="achievement-overview__status"></p>
+        </div>
+        <div class="achievement-toolbar">
+          <label for="achievementCategory">Category</label>
+          <select id="achievementCategory"><option value="all">All milestones</option><option value="collection">Collection</option><option value="battles">Battle wins</option><option value="currency">VNĐ milestones</option><option value="rolls">Total rolls</option><option value="tower">Tower progress</option><option value="timetrial">Time Trial rooms</option><option value="raid">Total Raid wins</option><option value="boss">Total Boss Event clears</option><option value="spooky">Spooky Event</option><option value="penalty">Penalty Achievements</option></select>
+          <p id="achievementBonuses" class="achievement-bonuses" aria-label="Achievement bonuses"></p>
+        </div>
+      </div>
+      <div id="achievementList" class="achievement-grid" tabindex="0" role="region" aria-label="Achievements and rewards"></div>
     </section>
   </div>
   <div id="cloudAccountModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cloudAccountTitle">
@@ -539,104 +553,109 @@
       </div>
 
       <div class="battle-arena hidden" id="battleArena">
-        <section id="portalArenaHud" class="arena-run-hud portal-arena-hud" hidden aria-label="Portal battle">
-          <div class="arena-run-hud__heading"><strong id="portalCombatWave">NAMEK PORTAL</strong><span id="portalCombatAttempts"></span></div>
-          <p id="portalCombatModifiers"></p><p id="portalCombatResult" role="status"></p>
-          <div class="arena-run-hud__actions"><span>Shared Arena · Solo / Online Co-op</span><button id="portalRetrySave" class="ghost-button" type="button" hidden>Retry Save</button><button id="portalBattleExit" class="ghost-button" type="button">Exit Portal</button></div>
+        <div class="battle-stage" role="region" aria-label="Arena fighters and lineups" tabindex="0">
+          <section id="portalArenaHud" class="arena-run-hud portal-arena-hud" hidden aria-label="Portal battle">
+            <div class="arena-run-hud__heading"><strong id="portalCombatWave">NAMEK PORTAL</strong><span id="portalCombatAttempts"></span></div>
+            <p id="portalCombatModifiers"></p><p id="portalCombatResult" role="status"></p>
+            <div class="arena-run-hud__actions"><span>Shared Arena · Solo / Online Co-op</span><button id="portalRetrySave" class="ghost-button" type="button" hidden>Retry Save</button><button id="portalBattleExit" class="ghost-button" type="button">Exit Portal</button></div>
+          </section>
+          <section id="infinityArenaHud" class="arena-run-hud" aria-label="Infinity run" hidden>
+            <div class="arena-run-hud__heading"><strong id="infinityWave">Wave 1 - Continuous</strong><span id="infinityRunState">INFINITY</span></div>
+            <div class="arena-run-hud__badges"><span id="infinityWeekBadge"></span><span id="infinityCategoryBadge"></span><span id="infinityElementBadge"></span></div>
+            <div class="arena-run-hud__progress"><span id="infinityRunProgress"></span><strong id="infinityOrbTracker">Star Orbs +0</strong></div>
+            <progress id="infinityBestBar" max="1" value="0" aria-label="Current run versus weekly best"></progress>
+            <div class="arena-run-hud__actions"><span id="infinityArenaMessage" role="status"></span><button id="infinityRestart" class="ghost-button" type="button" hidden>New Run • Wave 1</button><button id="infinityArenaLeaderboard" class="ghost-button" type="button" hidden>Weekly Top 50</button><button id="infinityArenaExit" class="ghost-button" type="button">Exit Infinity</button></div>
+          </section>
+          <section id="trainingDamageHud" class="training-damage-hud" aria-label="EXP training damage meter" hidden>
+            <div><span class="eyebrow">EXP TRAINING</span><strong>Total Damage: <b id="trainingDamageTotal" data-total="0">0</b></strong></div><div class="training-damage-hud__records"><span id="trainingDamageDps">DPS 0</span><span id="trainingDamageBest">Best DPS 0</span></div>
+          </section>
+          <div class="battle-arena__header">
+            <div>
+              <span class="eyebrow">ACTIVE ENCOUNTER</span>
+              <h3>Clash Arena</h3>
+            </div>
+            <div id="arenaWeatherSlot" class="arena-weather-slot"></div>
+            <button id="spookyInfoBattleButton" class="ghost-button spooky-info-button hidden" type="button" aria-label="View active Spooky run modifiers" aria-haspopup="dialog" aria-controls="spookyInfoModal">...</button><strong id="spookyLiveCoins" class="hidden"></strong>
+            <strong id="timeTrialTimer" class="trial-timer hidden" aria-live="off"></strong>
+            <div class="battle-timing-controls"><div id="battleStatus" class="battle-status" aria-live="polite">PLAYER STRIKE IN 3s</div><label id="spookySpeedUpControl" class="spooky-speed-switch hidden" for="spookySpeedUpToggle"><span>Speed Up <small id="spookySpeedUpState">OFF • 2s / turn</small></span><input id="spookySpeedUpToggle" type="checkbox" role="switch"></label></div>
+          </div>
+
+          <div class="battle-combatants">
+            <article id="battlePlayerCard" class="battle-visual-card battle-player" aria-label="Player fighter">
+              <div class="battle-visual-card__glow"></div>
+              <div class="battle-side-label">PLAYER</div>
+              <div class="battle-art-frame">
+                <div id="battlePlayerBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
+                <img id="battlePlayerImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Player fighter artwork" />
+                <div id="battlePlayerFallback" class="battle-fallback" aria-hidden="true">✦</div>
+                <div id="battlePlayerFloatingText" class="battle-floating-text" aria-live="polite" aria-label="Player combat feedback"></div>
+              </div>
+              <div class="battle-card-info">
+                <h3 id="battlePlayerName">—</h3>
+                <div class="battle-level-row"><strong id="battlePlayerLevel">Lv. 1</strong><span id="battlePlayerExpText">0/100 EXP</span></div>
+                <div class="battle-exp-track"><div id="battlePlayerExpBar" class="battle-exp-fill"></div></div>
+                <div id="battlePlayerMutationBadges" class="battle-mutation-badges"></div>
+                <div id="battlePlayerPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Player passive status"></div>
+                <div class="battle-hp-meta"><span>HP</span><strong id="battlePlayerHp">0 / 0</strong></div>
+                <div class="battle-hp-track"><div id="battlePlayerHpBar" class="battle-hp-fill"></div></div>
+                <div class="battle-stats-row"><span>ATK</span><strong id="battlePlayerAtk">0</strong></div>
+                <div id="battlePlayerCombatStatus" class="battle-combat-status" aria-label="Player combat modifiers"></div>
+                <div id="battlePlayerStatusEffects" class="battle-status-effects" aria-label="Player status effects"></div>
+              </div>
+            </article>
+
+            <div class="battle-vs" aria-hidden="true">
+              <span>VS</span>
+              <i></i>
+            </div>
+
+            <article id="battleEnemyCard" class="battle-visual-card battle-enemy" aria-label="Enemy fighter">
+              <div class="battle-visual-card__glow"></div>
+              <div class="battle-side-label">ENEMY</div>
+              <div class="battle-art-frame">
+                <div id="battleEnemyBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
+                <img id="battleEnemyImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Enemy fighter artwork" />
+                <div id="battleEnemyFallback" class="battle-fallback" aria-hidden="true">✦</div>
+                <div id="battleEnemyFloatingText" class="battle-floating-text" aria-live="polite" aria-label="Enemy combat feedback"></div>
+              </div>
+              <div class="battle-card-info">
+                <h3 id="battleEnemyName">—</h3>
+                <div class="battle-level-row"><strong id="battleEnemyLevel">Lv. 1</strong><span id="battleEnemyExpText">0/100 EXP</span></div>
+                <div class="battle-exp-track"><div id="battleEnemyExpBar" class="battle-exp-fill"></div></div>
+                <div id="battleEnemyMutationBadges" class="battle-mutation-badges"></div>
+                <div id="battleEnemyPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Enemy passive status"></div>
+                <div class="battle-hp-meta"><span>HP</span><strong id="battleEnemyHp">0 / 0</strong></div>
+                <div class="battle-hp-track"><div id="battleEnemyHpBar" class="battle-hp-fill"></div></div>
+                <div class="battle-stats-row"><span>ATK</span><strong id="battleEnemyAtk">0</strong></div>
+                <div id="battleEnemyCombatStatus" class="battle-combat-status" aria-label="Enemy combat modifiers"></div>
+                <div id="battleEnemyStatusEffects" class="battle-status-effects" aria-label="Enemy status effects"></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="battle-team-power-strip">
+            <span id="battlePlayerTeamPower">PLAYER POWER 0</span>
+            <span id="battleModeLabel">4V4 • 3s TURNS</span>
+            <span id="battleEnemyTeamPower">ENEMY POWER 0</span>
+          </div>
+
+          <div class="battle-lineups">
+            <div>
+              <span class="battle-side-label">PLAYER LINEUP</span>
+              <div id="battlePlayerLineup" class="battle-lineup" aria-label="Player team lineup"></div>
+            </div>
+            <div>
+              <span class="battle-side-label battle-side-label--enemy">ENEMY LINEUP</span>
+              <div id="battleEnemyLineup" class="battle-lineup" aria-label="Enemy team lineup"></div>
+            </div>
+          </div>
+
+          <div id="battleAutoNote" class="battle-auto-note">Auto combat • Every 3 seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible</div>
+        </div>
+        <section class="battle-feed" aria-labelledby="battleLogTitle">
+          <header class="battle-feed__head"><h4 id="battleLogTitle">Battle Log</h4><span>Combat Record</span></header>
+          <div id="battleLog" class="battle-log" role="log" aria-labelledby="battleLogTitle" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
         </section>
-        <section id="infinityArenaHud" class="arena-run-hud" aria-label="Infinity run" hidden>
-          <div class="arena-run-hud__heading"><strong id="infinityWave">Wave 1 - Continuous</strong><span id="infinityRunState">INFINITY</span></div>
-          <div class="arena-run-hud__badges"><span id="infinityWeekBadge"></span><span id="infinityCategoryBadge"></span><span id="infinityElementBadge"></span></div>
-          <div class="arena-run-hud__progress"><span id="infinityRunProgress"></span><strong id="infinityOrbTracker">Star Orbs +0</strong></div>
-          <progress id="infinityBestBar" max="1" value="0" aria-label="Current run versus weekly best"></progress>
-          <div class="arena-run-hud__actions"><span id="infinityArenaMessage" role="status"></span><button id="infinityRestart" class="ghost-button" type="button" hidden>New Run • Wave 1</button><button id="infinityArenaLeaderboard" class="ghost-button" type="button" hidden>Weekly Top 50</button><button id="infinityArenaExit" class="ghost-button" type="button">Exit Infinity</button></div>
-        </section>
-        <section id="trainingDamageHud" class="training-damage-hud" aria-label="EXP training damage meter" hidden>
-          <div><span class="eyebrow">EXP TRAINING</span><strong>Total Damage: <b id="trainingDamageTotal" data-total="0">0</b></strong></div><div class="training-damage-hud__records"><span id="trainingDamageDps">DPS 0</span><span id="trainingDamageBest">Best DPS 0</span></div>
-        </section>
-        <div class="battle-arena__header">
-          <div>
-            <span class="eyebrow">ACTIVE ENCOUNTER</span>
-            <h3>Clash Arena</h3>
-          </div>
-          <div id="arenaWeatherSlot" class="arena-weather-slot"></div>
-          <button id="spookyInfoBattleButton" class="ghost-button spooky-info-button hidden" type="button" aria-label="View active Spooky run modifiers" aria-haspopup="dialog" aria-controls="spookyInfoModal">...</button><strong id="spookyLiveCoins" class="hidden"></strong>
-          <strong id="timeTrialTimer" class="trial-timer hidden" aria-live="off"></strong>
-          <div class="battle-timing-controls"><div id="battleStatus" class="battle-status" aria-live="polite">PLAYER STRIKE IN 3s</div><label id="spookySpeedUpControl" class="spooky-speed-switch hidden" for="spookySpeedUpToggle"><span>Speed Up <small id="spookySpeedUpState">OFF • 2s / turn</small></span><input id="spookySpeedUpToggle" type="checkbox" role="switch"></label></div>
-        </div>
-
-        <div class="battle-combatants">
-          <article id="battlePlayerCard" class="battle-visual-card battle-player" aria-label="Player fighter">
-            <div class="battle-visual-card__glow"></div>
-            <div class="battle-side-label">PLAYER</div>
-            <div class="battle-art-frame">
-              <div id="battlePlayerBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
-              <img id="battlePlayerImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Player fighter artwork" />
-              <div id="battlePlayerFallback" class="battle-fallback" aria-hidden="true">✦</div>
-              <div id="battlePlayerFloatingText" class="battle-floating-text" aria-live="polite" aria-label="Player combat feedback"></div>
-            </div>
-            <div class="battle-card-info">
-              <h3 id="battlePlayerName">—</h3>
-              <div class="battle-level-row"><strong id="battlePlayerLevel">Lv. 1</strong><span id="battlePlayerExpText">0/100 EXP</span></div>
-              <div class="battle-exp-track"><div id="battlePlayerExpBar" class="battle-exp-fill"></div></div>
-              <div id="battlePlayerMutationBadges" class="battle-mutation-badges"></div>
-              <div id="battlePlayerPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Player passive status"></div>
-              <div class="battle-hp-meta"><span>HP</span><strong id="battlePlayerHp">0 / 0</strong></div>
-              <div class="battle-hp-track"><div id="battlePlayerHpBar" class="battle-hp-fill"></div></div>
-              <div class="battle-stats-row"><span>ATK</span><strong id="battlePlayerAtk">0</strong></div>
-              <div id="battlePlayerCombatStatus" class="battle-combat-status" aria-label="Player combat modifiers"></div>
-              <div id="battlePlayerStatusEffects" class="battle-status-effects" aria-label="Player status effects"></div>
-            </div>
-          </article>
-
-          <div class="battle-vs" aria-hidden="true">
-            <span>VS</span>
-            <i></i>
-          </div>
-
-          <article id="battleEnemyCard" class="battle-visual-card battle-enemy" aria-label="Enemy fighter">
-            <div class="battle-visual-card__glow"></div>
-            <div class="battle-side-label">ENEMY</div>
-            <div class="battle-art-frame">
-              <div id="battleEnemyBackdrop" class="battle-art-backdrop" aria-hidden="true"></div>
-              <img id="battleEnemyImage" class="battle-art" src="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22600%22 height%3D%22800%22 viewBox%3D%220 0 600 800%22%3E%3Crect width%3D%22600%22 height%3D%22800%22 fill%3D%22%23080b14%22%2F%3E%3Ccircle cx%3D%22300%22 cy%3D%22340%22 r%3D%22100%22 fill%3D%22none%22 stroke%3D%22%2377e2ff%22 stroke-width%3D%2212%22 opacity%3D%220.65%22%2F%3E%3Ctext x%3D%22300%22 y%3D%22490%22 text-anchor%3D%22middle%22 fill%3D%22%23dfe9ff%22 font-family%3D%22Arial%22 font-size%3D%2236%22 font-weight%3D%22700%22%3EARTWORK%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Enemy fighter artwork" />
-              <div id="battleEnemyFallback" class="battle-fallback" aria-hidden="true">✦</div>
-              <div id="battleEnemyFloatingText" class="battle-floating-text" aria-live="polite" aria-label="Enemy combat feedback"></div>
-            </div>
-            <div class="battle-card-info">
-              <h3 id="battleEnemyName">—</h3>
-              <div class="battle-level-row"><strong id="battleEnemyLevel">Lv. 1</strong><span id="battleEnemyExpText">0/100 EXP</span></div>
-              <div class="battle-exp-track"><div id="battleEnemyExpBar" class="battle-exp-fill"></div></div>
-              <div id="battleEnemyMutationBadges" class="battle-mutation-badges"></div>
-              <div id="battleEnemyPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Enemy passive status"></div>
-              <div class="battle-hp-meta"><span>HP</span><strong id="battleEnemyHp">0 / 0</strong></div>
-              <div class="battle-hp-track"><div id="battleEnemyHpBar" class="battle-hp-fill"></div></div>
-              <div class="battle-stats-row"><span>ATK</span><strong id="battleEnemyAtk">0</strong></div>
-              <div id="battleEnemyCombatStatus" class="battle-combat-status" aria-label="Enemy combat modifiers"></div>
-              <div id="battleEnemyStatusEffects" class="battle-status-effects" aria-label="Enemy status effects"></div>
-            </div>
-          </article>
-        </div>
-
-        <div class="battle-team-power-strip">
-          <span id="battlePlayerTeamPower">PLAYER POWER 0</span>
-          <span id="battleModeLabel">4V4 • 3s TURNS</span>
-          <span id="battleEnemyTeamPower">ENEMY POWER 0</span>
-        </div>
-
-        <div class="battle-lineups">
-          <div>
-            <span class="battle-side-label">PLAYER LINEUP</span>
-            <div id="battlePlayerLineup" class="battle-lineup" aria-label="Player team lineup"></div>
-          </div>
-          <div>
-            <span class="battle-side-label battle-side-label--enemy">ENEMY LINEUP</span>
-            <div id="battleEnemyLineup" class="battle-lineup" aria-label="Enemy team lineup"></div>
-          </div>
-        </div>
-
-        <div id="battleAutoNote" class="battle-auto-note">Auto combat • Every 3 seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible</div>
-        <div id="battleLog" class="battle-log" aria-live="polite"></div>
       </div>
 
       <div id="battleVictory" class="battle-result battle-result--neutral hidden" aria-live="polite" role="status">
@@ -1073,7 +1092,7 @@
   <script type="application/x-game-script" data-game-script src="./penalty_game.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./penalty_sprites.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./penalty_view.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./achievements.js?v=20261123-arena-achievements-1"></script>
   <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261117-content-1"></script>
@@ -1122,6 +1141,7 @@
   <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_relic_view.js?v=20261122-relic-compat-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261121-ui-cartoon-1"></script>
+  <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261123-arena-achievements-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261123-arena-achievements-1"></script>
 </body>
 </html>

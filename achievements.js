@@ -54,7 +54,7 @@
           result.push(Object.freeze({ id, category, target, title: `Win ${compact(target)} ${target === 1 ? 'Raid' : 'Raids'} across all types`, reward: Object.freeze({ dropBonus: .05 }), automatic: false }));
           return;
         }
-        const title = category === 'collection' ? `Own ${compact(target)} unique cards` : category === 'battles' ? `Win ${compact(target)} battles` : category === 'currency' ? `Earn or own ${compact(target)} VNĐ` : category === 'rolls' ? `Complete ${compact(target)} rolls` : `Clear Floor ${compact(target)} in any Tower`;
+        const title = category === 'collection' ? `Own ${compact(target)} unique cards` : category === 'battles' ? `Win ${compact(target)} ${target===1?'battle':'battles'}` : category === 'currency' ? `Earn or own ${compact(target)} VNĐ` : category === 'rolls' ? `Complete ${compact(target)} rolls` : `Clear Floor ${compact(target)} in any Tower`;
         const currency = category === 'currency' ? Math.max(100, Math.floor(target * .05)) : category === 'battles' ? target * 500 : category === 'rolls' ? target : target * 100;
         result.push(Object.freeze({ id, category, target, title, reward: Object.freeze({ currency }), automatic: false }));
       });
@@ -137,28 +137,117 @@
   function recordCurrencyEarned(amount) { if (host.SandboxSystem?.active) return; data.stats.currencyEarned = count(data.stats.currencyEarned + count(amount)); persist(); }
   function configure(options = {}) { bridge = options; definitions = buildDefinitions(options.cards || host.ALL_CARDS || [], options.towerTypes || []); bonusDefinitions = {}; for (const def of definitions) for (const field of ['luckBonus','expBonus','coinBonus','dropBonus']) if (def.reward[field]) (bonusDefinitions[field] ||= []).push(def); sync(); persist(); }
   function list(category = 'all') {
-    return definitions.filter(def => category === 'all' || def.category === category).map(def => ({ ...def, value: progress(def), complete: progress(def) >= def.target, claimed: data.claimed[def.id] === true }));
+    return definitions.filter(def => category === 'all' || def.category === category).map(def => { const value=progress(def); return { ...def, value, complete:value>=def.target, claimed:data.claimed[def.id]===true }; });
+  }
+  const number = new Intl.NumberFormat('en-US');
+  const crests = Object.freeze({ collection:'▦', battles:'⚔︎', currency:'◈', rolls:'✦', tower:'♜', timetrial:'◷', raid:'⚑', boss:'♛', spooky:'☾', penalty:'◎' });
+  const tier = item => item.claimed ? 1 : item.complete ? 0 : 2;
+  const goal = item => item.claimed ? item.target : Math.min(item.value, item.target);
+  const sortProgress = (a,b) => tier(a)-tier(b) || (tier(a)===2 ? goal(b)/b.target-goal(a)/a.target : 0);
+  const format = value => number.format(value);
+  function requirementText(item) {
+    const target = format(item.target);
+    if (item.towerType) return 'Clear this Tower floor to unlock its Champion for future rolls.';
+    return ({
+      collection:'Count distinct cards in your collection; extra copies do not count.',
+      battles:`Record ${target} ${item.target===1?'victory':'victories'} in battle.`,
+      currency:`Reach ${target} VNĐ through earnings or your highest balance.`,
+      rolls:`Roll for cards ${target} times.`,
+      tower:`Reach Floor ${target} in any Tower.`,
+      timetrial:`Clear Room ${target} in Time Trial.`,
+      raid:`Record ${target} total wins across all Raid types.`,
+      boss:`Record ${target} total clears across all Boss Events.`,
+      spooky:'Progress is tracked during Spooky Hunt and in your collection.',
+      penalty:'Progress is tracked across Penalty Shootout sessions.'
+    })[item.category];
+  }
+  function rewardText(reward) {
+    if(reward.luckBonus)return `+${reward.luckBonus} permanent Luck`;
+    if(reward.expBonus)return `+${reward.expBonus} permanent EXP Multiplier`;
+    if(reward.coinBonus)return `+${reward.coinBonus} permanent VNĐ Multiplier`;
+    if(reward.dropBonus)return `+${reward.dropBonus} permanent Drop Multiplier · Item quantities only`;
+    if(reward.cardId)return `${reward.cardName} · Normal card and permanent roll unlock`;
+    return `${format(reward.currency)} VNĐ`;
   }
   const renderStates = new WeakMap();
+  function createCard(grid, item, view) {
+    const doc=grid.ownerDocument,make=(tag,cls,text)=>{
+      const node=doc.createElement(tag);if(cls)node.className=cls;if(text)node.textContent=text;return node;
+    };
+    const card=make('article','achievement-card');card.dataset.achievementId=item.id;
+    const head=make('header','achievement-card-head');
+    const crest=make('span','achievement-crest',crests[item.category]||'✦');crest.setAttribute('aria-hidden','true');
+    const identity=make('div','achievement-identity'),title=make('h4','achievement-title',item.title);
+    identity.append(make('span','achievement-category',CATEGORIES[item.category]),title);
+    const state=make('span','achievement-state');head.append(crest,identity,state);
+    const detail=make('p','achievement-requirement',requirementText(item));
+    const progress=make('div','achievement-metric'),numbers=make('small','achievement-metric__value');
+    const bar=make('div','achievement-progress'),fill=make('span');
+    bar.setAttribute('role','progressbar');bar.setAttribute('aria-label',item.title);
+    bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(item.target));
+    bar.append(fill);progress.append(make('small','achievement-metric__label','Progress'),numbers,bar);
+    const footer=make('footer','achievement-card-footer'),reward=make('span','achievement-reward');
+    reward.append(make('span','achievement-reward__label','Reward'),make('span','achievement-reward__value',rewardText(item.reward)));
+    const action=make('button','achievement-claim','Claim');action.type='button';action.setAttribute('aria-label',`Claim reward for ${item.title}`);
+    action.addEventListener('click',()=>{
+      sync();
+      if(!claim(item.id))return;
+      sync();view.onClaim(item);render(grid,view.category,view.onClaim);
+    });
+    footer.append(reward,action);
+    card.append(head,detail,progress,footer);
+    return {card,state,numbers,bar,fill,action};
+  }
+  function updateCard(row,item) {
+    const value=goal(item),rank=tier(item),stamp=`${rank}:${value}`;
+    if(row.stamp===stamp)return;
+    row.stamp=stamp;
+    row.card.classList.toggle('is-ready',rank===0);
+    row.card.classList.toggle('is-claimed',rank===1);
+    row.state.textContent=rank===1?'✓ Completed':rank===0?(item.automatic?'Auto Award Pending':'Ready to Claim'):(value?'In Progress':'Locked');
+    row.numbers.textContent=`${format(value)} / ${format(item.target)}`;
+    row.bar.setAttribute('aria-valuenow',String(value));
+    row.fill.style.width=`${value/item.target*100}%`;
+    row.action.hidden=row.action.disabled=rank!==0||item.automatic;
+  }
   function render(grid, category = 'all', onClaim = () => {}) {
     if (!grid) return;
-    const items = list(category), signature = JSON.stringify(items);
-    if (renderStates.get(grid) === signature) return;
-    renderStates.set(grid, signature);
-    grid.replaceChildren(); const doc = grid.ownerDocument;
-    for (const item of items) {
-      const card = doc.createElement('article'); card.className = `achievement-card ${item.claimed ? 'is-claimed' : item.complete ? 'is-ready' : ''}`; card.dataset.achievementId = item.id;
-      const head = doc.createElement('div'); head.className = 'achievement-card-head';
-      const categoryLabel = doc.createElement('span'); categoryLabel.textContent = CATEGORIES[item.category];
-      const status = doc.createElement('span'); status.textContent = item.claimed ? 'CLAIMED' : item.complete ? 'READY' : 'IN PROGRESS'; head.append(categoryLabel, status);
-      const title = doc.createElement('strong'); title.textContent = item.title;
-      const detail = doc.createElement('p'); detail.textContent = item.reward.luckBonus ? `Reward: +${item.reward.luckBonus.toFixed(1)} permanent Luck` : item.reward.expBonus ? `Reward: +${Number(item.reward.expBonus.toFixed(2))} permanent EXP Multiplier` : item.reward.coinBonus ? `Reward: +${item.reward.coinBonus.toFixed(1)} permanent VNĐ Multiplier` : item.reward.dropBonus ? `Reward: +${item.reward.dropBonus.toFixed(2)} permanent Drop Multiplier • Item quantities only` : item.reward.cardId ? `Reward: ${item.reward.cardName} • Normal version • Permanent roll unlock` : `Reward: ${compact(item.reward.currency)} VNĐ`;
-      const bar = doc.createElement('div'); bar.className = 'achievement-progress'; bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-label', item.title); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(item.target)); bar.setAttribute('aria-valuenow', String(Math.min(item.value, item.target)));
-      const fill = doc.createElement('span'); fill.style.width = `${Math.min(100, item.value / item.target * 100)}%`; bar.append(fill);
-      const numbers = doc.createElement('small'); numbers.textContent = `${compact(Math.min(item.value, item.target))} / ${compact(item.target)}`; numbers.title = `${item.value.toLocaleString('en-US')} / ${item.target.toLocaleString('en-US')}`;
-      const button = doc.createElement('button'); button.type = 'button'; button.disabled = item.claimed || !item.complete || item.automatic; button.textContent = item.claimed ? (item.automatic ? 'Automatically awarded' : 'Reward claimed') : item.automatic ? (item.category==='penalty'?'Awarded when complete':'Awarded on clear') : item.complete ? 'Claim reward' : 'Keep going';
-      button.addEventListener('click', () => { sync(); if (claim(item.id)) { sync(); onClaim(item); render(grid, category, onClaim); } });
-      card.append(head, title, detail, bar, numbers, button); grid.append(card);
+    const doc=grid.ownerDocument,items=list(category).sort(sortProgress);
+    let view=renderStates.get(grid);
+    if(!view){view={rows:new Map(),groups:new Map(),order:'',category:null};renderStates.set(grid,view);}
+    const focused=grid.contains(doc.activeElement)?doc.activeElement:null;
+    const changedCategory=view.category!==category;
+    view.category=category;view.onClaim=onClaim;
+    const order=items.map(item=>tier(item)+':'+item.id).join('|');
+    const reorder=changedCategory||view.order!==order,nodes=[];
+    let current=-1;
+    for(const item of items){
+      let row=view.rows.get(item.id);
+      if(!row){row=createCard(grid,item,view);view.rows.set(item.id,row);}
+      updateCard(row,item);
+      if(!reorder)continue;
+      const rank=tier(item);
+      if(rank!==current){
+        current=rank;
+        if(!view.groups.has(rank)){
+          const heading=doc.createElement('h3');heading.className='achievement-group';
+          heading.textContent=['Ready to Claim','Completed','In Progress & Locked'][rank];view.groups.set(rank,heading);
+        }
+        nodes.push(view.groups.get(rank));
+      }
+      nodes.push(row.card);
+    }
+    if(!reorder)return;
+    view.order=order;
+    if(!nodes.length){
+      const empty=doc.createElement('p');empty.className='achievement-empty';empty.textContent='No milestones in this category.';
+      nodes.push(empty);
+    }
+    grid.replaceChildren(...nodes);
+    if(changedCategory)grid.scrollTop=0;
+    if(focused&&focused!==grid){
+      if(grid.contains(focused)&&!focused.hidden&&!focused.disabled)focused.focus({preventScroll:true});
+      else (grid.querySelector('.achievement-claim:not([hidden])')||grid).focus({preventScroll:true});
     }
   }
   function reset() { data = fresh(); persist(); }
