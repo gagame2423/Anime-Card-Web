@@ -5,13 +5,14 @@
     passive: 'passive', 'self-passive': 'passive', champion: 'passive', relic: 'passive', skill: 'skill', 'special attack': 'skill',
     status: 'status', debuff: 'debuff', 'anti-heal': 'bleed', 'critical hit!': 'crit', 'critical hit': 'crit', crit: 'crit',
     dodge: 'dodge', heal: 'heal', revival: 'heal', revive: 'heal', shield: 'shield', support: 'heal',
-    burn: 'burn', bleed: 'bleed', poison: 'dot', dot: 'dot', stun: 'debuff', freeze: 'freeze', hindred: 'debuff', survive: 'heal'
+    burn: 'burn', bleed: 'bleed', poison: 'poison', dot: 'dot', stun: 'debuff', freeze: 'freeze', hindred: 'debuff', survive: 'heal'
   });
   const tones = new Set(['player','enemy','victory','defeat','passive','critical','status','debuff','dodge','support','heal','shield','burn','bleed','poison','special','revive','counter']);
   const events = [
     ['burn', 'black flames?|burn(?:s|ed|ing)?'],
     ['bleed', 'bleed(?:s|ing)?|bled|heal blocked'],
-    ['dot', 'poison(?:s|ed|ing)?|damage over time|dot'],
+    ['poison', 'poison(?:s|ed|ing)?'],
+    ['dot', 'damage over time|dot'],
     ['freeze', 'freez(?:e|es|ing)|froz(?:e|en)'],
     ['debuff', 'stun(?:s|ned|ning)?|hind(?:red|ered)|hypnosis|hypnotized?|fear|debuffs?|silenced?'],
     ['crit', 'crit(?:ical)?(?: hits?)?|crits'],
@@ -45,7 +46,7 @@
     const line = doc.createElement('div');
     const safeTone = tones.has(tone) ? tone : '';
     line.className = 'battle-log__line' + (safeTone ? ' is-' + safeTone : '');
-    const turn = /^TURN\s+\d+\s+•/i.test(message);
+    const turn = /^TURN\s+\d+\s+[•·]/i.test(message);
     const basic = !safeTone && /^.+? dealt [\d,.]+ damage\.$/i.test(message);
     const highlights = [];
     for (const hit of message.matchAll(basic ? plainPattern : pattern)) {
@@ -55,7 +56,7 @@
       if (kind) highlights.push({ text, kind, start: hit.index, bracket });
     }
     const contextual = highlights.find(h => !['number','skill','passive','status','debuff'].includes(h.kind))?.kind;
-    const toneAccent = {critical:'crit',passive:'passive',dodge:'dodge',heal:'heal',shield:'shield',debuff:'debuff',victory:'heal',defeat:'bleed',special:'skill',support:'heal',burn:'burn',bleed:'bleed',poison:'dot',revive:'heal',counter:'skill'};
+    const toneAccent = {critical:'crit',passive:'passive',dodge:'dodge',heal:'heal',shield:'shield',debuff:'debuff',victory:'heal',defeat:'bleed',special:'skill',support:'heal',burn:'burn',bleed:'bleed',poison:'poison',revive:'heal',counter:'skill'};
     const accent = turn ? 'turn' : toneAccent[safeTone] === 'crit' ? 'crit' : contextual ||
       toneAccent[safeTone] || highlights.find(h => h.kind !== 'number')?.kind;
     if (accent) line.dataset.accent = accent;
@@ -73,5 +74,16 @@
     if (cursor < message.length) line.append(doc.createTextNode(message.slice(cursor)));
     return line;
   }
-  host.BattleLogView = Object.freeze({ createLine });
+  const panes = doc => [doc.getElementById('battleLog'), doc.getElementById('battleEnemyLog')];
+  function backup(doc) {
+    return panes(doc).map(pane => pane && ({nodes:[...pane.childNodes], scroll:pane.scrollTop}));
+  }
+  function restore(doc, saved = []) {
+    panes(doc).forEach((pane,i) => {
+      if(!pane)return;
+      pane.replaceChildren(...(saved[i]?.nodes || []));
+      pane.scrollTop = saved[i]?.scroll || 0;
+    });
+  }
+  host.BattleLogView = Object.freeze({ createLine, panes, backup, restore });
 })(window);

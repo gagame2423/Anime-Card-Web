@@ -15,7 +15,7 @@
  function start(options){
   if(session)throw Error('A Portal battle is already active.');
   for(const id of ['battleModal','battleArena','portalArenaHud','portalModal'])if(!el(id))throw Error('Missing shared Arena: '+id);
-  session={...options,summary:null};fronts=null;bridge.clear?.();const log=el('battleLog');logBackup=log?[...log.childNodes]:[];log?.replaceChildren();
+  session={...options,summary:null};fronts=null;bridge.clear?.();logBackup=host.BattleLogView.backup(host.document);host.BattleLogView.restore(host.document);
   hide(el('portalModal'));hide(el('inventoryModal'));hide(el('battleSetup'));hide(el('battleVictory'));
   for(const id of ['infinityArenaHud','trainingDamageHud','timeTrialTimer','spookyInfoBattleButton','spookyLiveCoins','spookySpeedUpControl','sandboxOpenButton'])hide(el(id));hide(el('autoContinueBattleToggle')?.closest('.battle-auto-continue'));
   show(el('battleModal'));show(el('battleArena'));show(el('portalArenaHud'));text('portalCombatResult','');
@@ -32,7 +32,7 @@
   try{const summary=host.PortalsSystem.finish({id:session.id,portal:session.portal,won,party:session.party,mvp:Boolean(partyInfo.mvp),battle:session.combat.battle},R.generator((session.seed^0xa52c39f1)>>>0));if(!summary)throw Error('Portal result is already closed or unavailable.');session.summary=summary;host.PortalsSystem.showSummary(summary);render();showResult(summary);return summary;}
   catch(error){text('portalCombatResult',error.message+' · Use Retry Save before leaving.');const retry=el('portalRetrySave');if(retry)retry.hidden=false;return null;}
  }
- function release(){if(!session)return;clearTimers();host.RollPerformanceSystem.cancel(render);bridge.clear?.();session=null;fronts=null;for(const[n,s]of saved){n.hidden=s.hidden;n.classList.toggle('hidden',s.cls);if(s.fullClass!==null)n.className=s.fullClass;if(s.restoreText)n.textContent=s.text;}saved.clear();el('battleVictory').setAttribute('aria-hidden',String(el('battleVictory').classList.contains('hidden')));el('portalArenaHud').hidden=true;el('portalRetrySave').hidden=true;el('battleLog')?.replaceChildren(...logBackup);logBackup=[];bridge.lock?.(false);}
+ function release(){if(!session)return;clearTimers();host.RollPerformanceSystem.cancel(render);bridge.clear?.();session=null;fronts=null;for(const[n,s]of saved){n.hidden=s.hidden;n.classList.toggle('hidden',s.cls);if(s.fullClass!==null)n.className=s.fullClass;if(s.restoreText)n.textContent=s.text;}saved.clear();el('battleVictory').setAttribute('aria-hidden',String(el('battleVictory').classList.contains('hidden')));el('portalArenaHud').hidden=true;el('portalRetrySave').hidden=true;host.BattleLogView.restore(host.document,logBackup);logBackup=[];bridge.lock?.(false);}
  function showResult(summary){
   if(autoTimer!==null)host.clearTimeout(autoTimer);autoTimer=null;
   hide(el('battleArena'));show(el('battleVictory'));el('battleVictory').setAttribute('aria-hidden','false');

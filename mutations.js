@@ -228,6 +228,20 @@ const MUTATION_TIERS = Object.freeze({ normal: Object.freeze({ id: 'normal', nam
 const canonicalMutationMap = Object.fromEntries(MUTATIONS.map(m => [m.id, m]));
 const MUTATION_BY_ID = Object.freeze({ ...canonicalMutationMap, sweet: canonicalMutationMap.sweat, blizzard: canonicalMutationMap.frost, sacrifice: canonicalMutationMap.eclipsed });
 (function(host) {
+  // Display colors are separate from weather art and do not alter mutation rolls or stats.
+  const palette=Object.freeze({
+    wet:'#39b8ff', solar:'#ffca49', frost:'#68f5ef', clove:'#82f263',
+    sweat:'#ff8fbb', hollow:'#f6f9ff', eclipsed:'#fa4f83', storm:'#a6b6d0',
+    cursed:'#e08784', mangekyo:'#ff6462', angelic:'#fff1a1', monarch:'#ba91ff',
+    stardust:'#f87af7', colossal:'#d09870'
+  });
+  function accent(mutation) {
+    const id=MUTATION_BY_ID[mutation?.id]?.id||mutation?.id;
+    if(Object.hasOwn(palette,id))return palette[id];
+    if(/^#[0-9a-f]{6}$/i.test(mutation?.color||''))return mutation.color;
+    let hash=0;for(const c of String(id||mutation?.name||'mutation'))hash=(hash*31+c.charCodeAt(0))>>>0;
+    return `hsl(${hash%360} 85% 72%)`;
+  }
   let preparedKey='',prepared=[],order=[];
   const factorCache=new Map();
   function roll(weathers, random = Math.random, multiplier = 1) {
@@ -254,5 +268,5 @@ const MUTATION_BY_ID = Object.freeze({ ...canonicalMutationMap, sweet: canonical
     if(factorCache.size>=256)factorCache.delete(factorCache.keys().next().value);
     factorCache.set(key,Object.freeze(result));return result;
   }
-  Object.assign(host, { MUTATIONS, MUTATION_TIERS, MUTATION_BY_ID, MUTATION_SUCCESS_RATES, MutationSystem: Object.freeze({ roll, factors, successChance }) });
+  Object.assign(host, { MUTATIONS, MUTATION_TIERS, MUTATION_BY_ID, MUTATION_SUCCESS_RATES, MutationSystem: Object.freeze({ roll, factors, successChance, accent }) });
 })(window);

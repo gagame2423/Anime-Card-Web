@@ -1,34 +1,40 @@
-ANIME CARD RNG — BẢN VÁ BATTLE LOG VÀ ACHIEVEMENTS
-Phiên bản: 20261123-arena-achievements-1
+ANIME CARD RNG — BẢN VÁ GIAO DIỆN CHIẾN ĐẤU
+Phiên bản: 20261125-arena-readability-1
 
 Battle Log
-• Nhật ký chiến đấu tự giãn để lấp chỗ trống bên dưới đội hình. Trên
-  màn hình thấp, khu vực võ đài và đội hình cuộn riêng, nên vẫn thấy
-  nhật ký ở phía dưới. Cuộn lên đọc dòng cũ sẽ không bị kéo về cuối
-  khi có đòn mới; trở về cuối để tiếp tục theo dõi trực tiếp.
-• Nội tại và chiêu đặc biệt có nhãn vàng, tên kỹ năng và thế đánh
-  nổi bật bằng xanh ngọc. Burn có màu cam; Bleed, Poison và sát
-  thương theo lượt có màu đỏ. Stun, Hindred và Debuff dùng màu tím;
-  Freeze có màu xanh băng. Đòn chí mạng màu hổ phách, Heal và hồi
-  sinh màu xanh lục, Shield và Dodge màu xanh lam.
-• Số sát thương có độ rộng chữ số cố định để đọc nhanh. Lời thoại
-  chiến đấu và cách tính sát thương, lượt đánh vẫn giữ nguyên;
-  nhật ký hiển thị nội dung dưới dạng văn bản an toàn.
+• Nhật ký tự giãn dưới đội hình và tách thành Player / Own Log và
+  Enemy Log. Hai cột đặt cạnh nhau trên màn hình rộng và xếp dọc ở
+  chiều rộng từ 768 px trở xuống. Mỗi bên cuộn độc lập.
+• Hành động được ghi theo bên thực hiện, kể cả phản đòn, hồi máu,
+  né đòn và sát thương theo lượt. Ví dụ: Bleed gây bởi đội người
+  chơi vẫn nằm trong Player / Own Log khi nó phát tác ở lượt địch.
+  Thông báo chung của trận xuất hiện ở phía người chơi.
+• Giữ cách tô màu từ khóa và làm nổi số sát thương. Dòng nhật ký
+  tiếp tục hiển thị dưới dạng văn bản, không thực thi mã HTML.
 
-Achievements
-• Phần đầu hiển thị tổng số đã mở trên tổng số thành tựu, thanh tiến
-  độ toàn bộ, số phần thưởng chờ nhận, số đã nhận và các hệ số tích
-  lũy. Bộ lọc Category chỉ thay đổi danh sách đang xem.
-• Mỗi thẻ thành tựu có huy hiệu, điều kiện, tiến độ hiện tại / mục
-  tiêu và phần thưởng. Nút Claim màu vàng chỉ xuất hiện ở mốc cần
-  nhận thủ công. Các mốc thưởng tự động vẫn được trao như trước.
-• Danh sách luôn xếp mốc đủ điều kiện nhưng chưa nhận lên đầu, sau
-  đó đến mốc đã nhận có dấu Completed. Các mốc còn lại xếp từ phần
-  trăm hoàn thành cao xuống thấp. Mốc vừa nhận tự chuyển nhóm.
+Mutation
+• Tất cả mutation, gồm cả Eclipsed và Colossal, có màu riêng. Thẻ
+  có một mutation dùng màu đồng nhất cho tên và viền. Thẻ có hai
+  mutation chuyển màu ngang trên tên và chuyển màu chéo trên viền.
+• Áp dụng trong Summon, Card Index, Card Details, ô chọn đội và võ
+  đài. Card Index dùng biến thể đã sở hữu có bậc mutation cao nhất;
+  Card Details theo biến thể đang chọn. Không đổi tỉ lệ quay, chỉ
+  số, điều kiện thời tiết hoặc màu viền bậc hiếm bên ngoài.
+
+Hiệu ứng trong trận
+• Rê chuột, dùng bàn phím hoặc chạm vào huy hiệu để mở bảng hiệu
+  ứng riêng. Chạm lại, chạm ra ngoài hoặc nhấn Esc để đóng. Huy
+  hiệu nội tại của thẻ vẫn mở mô tả nội tại như trước.
+• Bảng Bleed, Burn và Poison cho biết tổng sát thương mỗi lượt,
+  nguồn, thời gian còn lại của từng nhóm cộng dồn và giá trị trước
+  khi trừ khiên hoặc chuyển hướng sát thương. Bleed ghi rõ chặn
+  toàn bộ hồi máu từ mọi nguồn. Bảng khiên và hiệu ứng khác hiển
+  thị giá trị và thời hạn khi cơ chế có bộ đếm.
+• Poison dùng xanh lục đậm trong huy hiệu, bảng thông tin và nhật
+  ký, dễ phân biệt với Bleed đỏ và Burn cam.
 
 Cài đặt
-1. Giải nén vào thư mục game có index.html. Ghi đè index.html,
-   game-ui.css, app.js, achievements.js và README.txt. Đặt tệp mới
-   battle_log_view.js cùng thư mục với app.js.
-2. Giữ nguyên thư mục assets và dữ liệu lưu. Mở lại game rồi nhấn
-   Ctrl + F5 để tải giao diện và trình hiển thị mới.
+1. Giải nén vào thư mục game có index.html. Ghi đè các tệp trùng
+   tên và đặt arena_status_view.js cạnh battle_log_view.js.
+2. Giữ nguyên assets và dữ liệu lưu. Mở lại game, nhấn Ctrl + F5
+   để tải các tệp giao diện và mô-đun chiến đấu mới.

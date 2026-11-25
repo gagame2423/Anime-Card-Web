@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="./autochess.css?v=20261122-relic-compat-1" />
   <link rel="stylesheet" href="./hextech.css?v=20261121-ui-cartoon-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
-  <link rel="stylesheet" href="./game-ui.css?v=20261123-arena-achievements-1" />
+  <link rel="stylesheet" href="./game-ui.css?v=20261125-arena-readability-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -654,7 +654,16 @@
         </div>
         <section class="battle-feed" aria-labelledby="battleLogTitle">
           <header class="battle-feed__head"><h4 id="battleLogTitle">Battle Log</h4><span>Combat Record</span></header>
-          <div id="battleLog" class="battle-log" role="log" aria-labelledby="battleLogTitle" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
+          <div class="battle-feed__columns">
+            <section class="battle-feed__column" data-log-side="player" aria-labelledby="battleLogOwnTitle">
+              <h5 id="battleLogOwnTitle">Player / Own Log</h5>
+              <div id="battleLog" class="battle-log" role="log" aria-labelledby="battleLogOwnTitle" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
+            </section>
+            <section class="battle-feed__column" data-log-side="enemy" aria-labelledby="battleLogEnemyTitle">
+              <h5 id="battleLogEnemyTitle">Enemy Log</h5>
+              <div id="battleEnemyLog" class="battle-log" role="log" aria-labelledby="battleLogEnemyTitle" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
+            </section>
+          </div>
         </section>
       </div>
 
@@ -1031,7 +1040,7 @@
       <div id="relicEquipInspect"></div><p id="relicEquipStatus" role="status"></p><div class="portal-actions"><button id="relicEquipConfirm" type="button" class="battle-primary-button">Equip this card</button><button id="relicUnequip" type="button" class="ghost-button">Unequip Relic</button></div>
     </section>
   </div>
-  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./cards.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./skins.js?v=20261119-hextech-1"></script>
@@ -1073,7 +1082,7 @@
   <script type="application/x-game-script" data-game-script src="./hextech_passives.js?v=20261122-alien-watch-1"></script>
 
   <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261122-alien-watch-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261117-content-1"></script>
@@ -1107,15 +1116,15 @@
   <script type="application/x-game-script" data-game-script src="./settings.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./storage.js?v=20261122-relic-compat-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261125-arena-readability-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./portals.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261117-content-1"></script>
@@ -1133,7 +1142,7 @@
   <script type="application/x-game-script" data-game-script src="./autochess_strategy.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_profile.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261122-alien-watch-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_report.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261120-ac-adventure-1"></script>
@@ -1141,7 +1150,8 @@
   <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_relic_view.js?v=20261122-relic-compat-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261123-arena-achievements-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261123-arena-achievements-1"></script>
+  <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261125-arena-readability-1"></script>
+  <script type="application/x-game-script" data-game-script src="./arena_status_view.js?v=20261125-arena-readability-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261125-arena-readability-1"></script>
 </body>
 </html>

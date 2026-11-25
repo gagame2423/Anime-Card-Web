@@ -1574,15 +1574,8 @@ function hexToRgb(hex) {
   };
 }
 
-function getMutationAccent(mutation, index = 0) {
-  if (mutation?.color) return mutation.color;
-
-  // Deterministic neon fallback: future mutations without an explicit color
-  // still receive a vibrant theme without changing gameplay data.
-  const seed = String(mutation?.id || mutation?.name || `mutation-${index}`);
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return `hsl(${hash % 360} 92% 62%)`;
+function getMutationAccent(mutation) {
+  return window.MutationSystem.accent(mutation);
 }
 
 function getMutationColorStops(mutations) {
@@ -1620,7 +1613,31 @@ function applyMutationStyleTokens(element, mutations) {
   element.style.setProperty("--mutation-accent", getMutationGlow(mutations));
 }
 
-function applyCardMutationVisual(cardElement, mutations) {
+const mutationFrameKeys=new WeakMap();
+function decorateMutationFrame(frame, mutations, title) {
+  if(!frame)return;
+  const list=normalizeMutationObjects(mutations).slice(0,2);
+  title?.classList.add('mutation-title');
+  const key=list.map(m=>m.id).join('+');
+  if(mutationFrameKeys.get(frame)===key)return;
+  mutationFrameKeys.set(frame,key);
+  if(!list.length){
+    delete frame.dataset.mutationFrame;
+    frame.style.removeProperty('--mutation-start');
+    frame.style.removeProperty('--mutation-end');
+    return;
+  }
+  const start=getMutationAccent(list[0]),end=getMutationAccent(list.at(-1));
+  frame.dataset.mutationFrame=list.length===2?'double':'single';
+  frame.style.setProperty('--mutation-start',start);
+  frame.style.setProperty('--mutation-end',end);
+  if(frame!==title&&!frame.querySelector(':scope > .mutation-frame')){
+    const rim=document.createElement('span');rim.className='mutation-frame';rim.setAttribute('aria-hidden','true');
+    frame.append(rim);
+  }
+}
+
+function applyCardMutationVisual(cardElement, mutations, title) {
   if (!cardElement) return;
   const safeMutations = normalizeMutationObjects(mutations);
 
@@ -1636,6 +1653,7 @@ function applyCardMutationVisual(cardElement, mutations) {
   }
 
   applyMutationStyleTokens(cardElement, safeMutations);
+  decorateMutationFrame(cardElement,safeMutations,title);
 }
 
 function renderMutationBadges(container, mutations) {
@@ -1811,7 +1829,7 @@ function showResult(card, effectiveChance, mutations = []) {
   if (els.resultPassiveDescription) renderPassiveCopy(els.resultPassiveDescription, getCardPassiveCopy(card).name, getCardPassiveCopy(card).description);
 
   renderMutationBadges(els.resultMutationBadges, mutations);
-  applyCardMutationVisual(els.resultCard, mutations);
+  applyCardMutationVisual(els.resultCard, mutations, els.resultName);
   if (els.resultCard) els.resultCard.dataset.effectiveChance = String(effectiveChance ?? "");
 
   setArtwork(els.resultImage, els.imageFallback, els.resultBackdrop, card.image, `${display.name} artwork`);
@@ -2227,6 +2245,8 @@ function renderCollection() {
       const title = document.createElement("h3");
       title.className = "collection-mini__name";
       title.textContent = owned ? safeName : "Undiscovered Card";
+      const showcase=owned?[...profile.variants].sort((a,b)=>getVariantRank(b)-getVariantRank(a))[0]:null;
+      decorateMutationFrame(item,showcase?.mutations,title);
 
       const tier = document.createElement("span");
       tier.className = "collection-tier-label";
@@ -2564,7 +2584,7 @@ function renderPreview() {
   if (els.previewSalvageExtrasButton) els.previewSalvageExtrasButton.disabled = isCardLocked(card.id) || !getPreviewVariants(card.id).some(entry => entry.count > 1);
   const skinButton=document.getElementById('previewSkinButton'),skinRows=window.CardSkinSystem.DEFINITIONS.filter(d=>d.cardId===card.id);
   if(skinButton){skinButton.textContent='✦ Skins '+(1+skinRows.filter(d=>window.CardSkinSystem.owned(d.id)).length)+'/'+(1+skinRows.length);skinButton.hidden=false;}
-  els.previewName.textContent = card.name;
+  els.previewName.textContent = display.name;
   window.ElementSystem.renderBadge(els.previewCard?.querySelector(".details-art"), card);
   els.previewRarity.textContent = card.rarity;
   els.previewVariantCount.textContent = `x${getOwnedCardCount(card.id).toLocaleString("en-US")}`;
@@ -2582,7 +2602,8 @@ function renderPreview() {
     : card.requiredWeather ? `Requires ${getWeatherByReference(card.requiredWeather)?.name || card.requiredWeather}` : 'Available in the standard pool';
 
   renderMutationBadges(els.previewMutationBadges, variant.mutations);
-  applyCardMutationVisual(els.previewCard, variant.mutations);
+  applyCardMutationVisual(els.previewCard, variant.mutations, els.previewName);
+  decorateMutationFrame(els.previewCard?.querySelector('.details-art'),variant.mutations);
   setArtwork(els.previewImage, els.previewFallback, els.previewBackdrop, card.image, `${display.name} preview artwork`);
   renderVariantMenu(variants);
   window.CardDetailsSystem?.render(card, variants, variant, isCardLocked(card.id));
@@ -3091,7 +3112,7 @@ function renderBattleTeamSlots() {
       variantLabel.textContent = (variant ? getBattleVariantLabel(variant) : 'Normal')+' · Copy '+((slot.copy||0)+1);
       info.append(name, variantLabel);
       button.append(media, info);
-      if (variant) applyMutationStyleTokens(button, variant.mutations);
+      if (variant) {applyMutationStyleTokens(button, variant.mutations);decorateMutationFrame(button,variant.mutations,name); }
     }
 
     container.appendChild(button);
@@ -3384,7 +3405,7 @@ function resetBattleView(mode = '4v4') {
   els.battleArena?.classList.add('hidden');
   els.battleVictory?.classList.add('hidden');
   els.battleVictory?.setAttribute('aria-hidden', 'true');
-  if (els.battleLog) els.battleLog.innerHTML = '';
+  window.BattleLogView.restore(document);
   if (els.battleStatus) els.battleStatus.textContent = 'PREPARING';
   renderBattleModePicker();
   if (els.battleStartButton) els.battleStartButton.disabled = true;
@@ -3399,22 +3420,29 @@ function openBattleModal() {
 function getArenaBattleState(){return window.PortalCombatView?.battle || window.InfinityViewSystem?.battle || battleState;}
 function getArenaRuntime(){return window.PortalCombatView?.runtime || window.InfinityViewSystem?.runtime || window.PassiveSystem;}
 var pendingBattleLogs;
-function appendBattleLog(message,tone=''){
-  if(!els.battleLog)return;pendingBattleLogs ||= [];
-  pendingBattleLogs.push({message:String(message),tone:String(tone),battle:getArenaBattleState()});
-  if(pendingBattleLogs.length>260)pendingBattleLogs.shift();window.RollPerformanceSystem.schedule(paintBattleLog);
+function appendBattleLog(message,tone='',sourceSide){
+  if(!els.battleLog)return;
+  const side=sourceSide==='enemy'||sourceSide!=='player'&&tone==='enemy'?'enemy':'player';
+  pendingBattleLogs ||= [];
+  pendingBattleLogs.push({message:String(message),tone:String(tone),side,battle:getArenaBattleState()});
+  if(pendingBattleLogs.length>520)pendingBattleLogs.shift();
+  window.RollPerformanceSystem.schedule(paintBattleLog);
 }
 function paintBattleLog(){
-  const queued=pendingBattleLogs||[],log=els.battleLog,battle=getArenaBattleState();
+  const queued=pendingBattleLogs||[],battle=getArenaBattleState(),view=window.BattleLogView;
   pendingBattleLogs=[];
-  if(!log||!queued.length)return;
-  const fragment=document.createDocumentFragment();
-  for(const entry of queued)if(entry.battle===battle)fragment.append(window.BattleLogView.createLine(document,entry.message,entry.tone));
-  if(!fragment.firstChild)return;
-  const follow=log.scrollHeight-log.clientHeight-log.scrollTop<=28;
-  log.append(fragment);
-  while(log.childElementCount>260)log.firstElementChild.remove();
-  if(follow)log.scrollTop=log.scrollHeight;
+  if(!queued.length)return;
+  const columns=[document.createDocumentFragment(),document.createDocumentFragment()];
+  for(const entry of queued){
+    if(entry.battle===battle)columns[entry.side==='enemy'?1:0].append(view.createLine(document,entry.message,entry.tone));
+  }
+  view.panes(document).forEach((log,index)=>{
+    const fragment=columns[index];if(!log||!fragment.firstChild)return;
+    const follow=log.scrollHeight-log.clientHeight-log.scrollTop<=28;
+    log.append(fragment);
+    while(log.childElementCount>260)log.firstElementChild.remove();
+    if(follow)log.scrollTop=log.scrollHeight;
+  });
 }
 
 function rollEnemyMutations() {
@@ -3720,7 +3748,8 @@ function renderBattleCombatant(side, unit) {
   if (expBarEl) expBarEl.style.width = `${Math.round((levelInfo.progress || 0) * 100)}%`;
 
   renderMutationBadges(mutationBadges, unit?.mutations);
-  applyCardMutationVisual(cardEl, unit?.mutations);
+  applyCardMutationVisual(cardEl, unit?.mutations, nameEl);
+  decorateMutationFrame(cardEl?.querySelector(".battle-art-frame"),unit?.mutations);
 
   const passive = getArenaRuntime()?.getPassiveDescription?.(unit) || {
     name: String(unit?.card?.passive?.name || 'Passive'),
@@ -3734,43 +3763,26 @@ function renderBattleCombatant(side, unit) {
   const statuses = getArenaRuntime()?.getPassiveStatusBadges?.(unit) || [];
 
   if (passiveStatus) {
-    passiveStatus.innerHTML = '';
-
-    // Primary passive tag is always present, even when runtime statuses are active.
-    const baseBadge = document.createElement('span');
-    baseBadge.className = 'passive-status-badge passive-status-badge--passive passive-skill-tag';
-    baseBadge.tabIndex = 0;
-    baseBadge.dataset.passiveTooltip = 'true';
-    baseBadge.dataset.passiveTooltipName = passiveTooltip.name;
-    baseBadge.dataset.passiveTooltipDescription = passiveTooltip.description;
-    baseBadge.dataset.passiveTooltipStatus = passiveTooltip.status;
-    const baseIcon = document.createElement('span');
-    baseIcon.className = 'passive-status-badge__icon';
-    baseIcon.textContent = '◇';
-    const baseLabel = document.createElement('span');
-    baseLabel.className = 'passive-status-badge__label';
-    baseLabel.textContent = passiveTooltip.name;
-    baseBadge.append(baseIcon, baseLabel);
-    passiveStatus.appendChild(baseBadge);
-    passiveStatus.appendChild(createPassiveExpandButton(passiveTooltip.name, passiveTooltip.description));
-
-    statuses.forEach(status => {
-      const badge = document.createElement('span');
-      badge.className = `passive-status-badge passive-status-badge--${String(status?.tone || 'passive').replace(/[^a-z0-9_-]/gi, '')}`;
-      const icon = document.createElement('span');
-      icon.className = 'passive-status-badge__icon';
-      icon.textContent = String(status?.icon || '✦');
-      const label = document.createElement('span');
-      label.className = 'passive-status-badge__label';
-      label.textContent = String(status?.label || passive.name);
-      badge.append(icon, label);
-      badge.tabIndex = 0;
-      badge.dataset.passiveTooltip = 'true';
-      badge.dataset.passiveTooltipName = passiveTooltip.name;
-      badge.dataset.passiveTooltipDescription = passiveTooltip.description;
-      badge.dataset.passiveTooltipStatus = String(status?.status || (status?.category === 'status' ? 'Active' : passiveTooltip.status));
-      passiveStatus.appendChild(badge);
-    });
+    let parts=battlePassiveViews.get(passiveStatus);
+    if(!parts){
+      const base=document.createElement('span');
+      base.className='passive-status-badge passive-status-badge--passive passive-skill-tag';
+      base.tabIndex=0;base.dataset.passiveTooltip='true';
+      const runtime=document.createElement('div');runtime.className='arena-runtime-effects';
+      passiveStatus.replaceChildren(base,runtime);
+      parts={base,runtime};battlePassiveViews.set(passiveStatus,parts);
+    }
+    const {base,runtime}=parts;
+    setCachedText(base,'◇ '+passiveTooltip.name);
+    base.dataset.passiveTooltipName=passiveTooltip.name;
+    base.dataset.passiveTooltipDescription=passiveTooltip.description;
+    base.dataset.passiveTooltipStatus=passiveTooltip.status;
+    const key=JSON.stringify([passiveTooltip.name,passiveTooltip.description]);
+    if(parts.expandKey!==key){
+      parts.expand?.remove();parts.expand=createPassiveExpandButton(passiveTooltip.name,passiveTooltip.description);
+      passiveStatus.insertBefore(parts.expand,runtime);parts.expandKey=key;
+    }
+    window.ArenaStatusView.render(runtime,window.ArenaStatusView.runtimeBadges(statuses),'passive');
   }
 
   renderBattleCombatModifiers(side, unit);
@@ -3795,7 +3807,7 @@ function renderBattleCombatant(side, unit) {
   );
 }
 
-const battleShieldViews=new WeakMap();
+const battlePassiveViews=new WeakMap(),battleShieldViews=new WeakMap();
 function renderBattleCombatModifiers(side, unit) {
   const statusEl = side === 'player' ? els.battlePlayerCombatStatus : els.battleEnemyCombatStatus;
   const effectsEl = side === 'player' ? els.battlePlayerStatusEffects : els.battleEnemyStatusEffects;
@@ -3816,13 +3828,7 @@ function renderBattleCombatModifiers(side, unit) {
   setCachedText(shield.value,Math.round(summary.shield).toLocaleString('en-US'));
   shield.fill.style.setProperty('--game-meter',Math.max(0,Math.min(1,summary.shieldPct/100)));
 
-  effectsEl.innerHTML = '';
-  (summary.effects || []).forEach(effect => {
-    const badge = document.createElement('span');
-    badge.className = `battle-effect-badge battle-effect-badge--${String(effect.tone || 'neutral').replace(/[^a-z0-9_-]/gi, '')}`;
-    badge.textContent = `${effect.icon || '✦'} ${effect.label}`;
-    effectsEl.appendChild(badge);
-  });
+  window.ArenaStatusView.render(effectsEl,summary.effects||[]);
 }
 
 const battleLineupViews=new WeakMap();
@@ -3838,7 +3844,7 @@ function renderBattleLineup(side,team,activeIndex){
       const media=document.createElement('div');media.className='battle-lineup-card__art';
       const img=document.createElement('img'),fallback=document.createElement('div');fallback.className='battle-fighter-option__fallback';media.append(img,fallback);
       const info=document.createElement('div');info.className='battle-lineup-card__info';const name=document.createElement('strong'),hp=document.createElement('span');info.append(name,hp);slot.append(media,info);
-      applyMutationStyleTokens(slot,unit.mutations);window.ElementSystem.renderBadge(slot,unit);
+      applyMutationStyleTokens(slot,unit.mutations);decorateMutationFrame(slot,unit.mutations,name);window.ElementSystem.renderBadge(slot,unit);
       row={slot,img,fallback,name,hp};view.rows.set(unit,row);
     }
     window.RelicBattleUI.render(row.slot,unit,getArenaRuntime(),getArenaBattleState(),true);
@@ -4226,7 +4232,7 @@ function startBattle(useExistingSetup = true, autoStart = false) {
   els.battleVictory?.setAttribute('aria-hidden', 'true');
   els.battleArena?.classList.remove('hidden');
   window.BattleWeatherHud?.render();
-  if (els.battleLog) els.battleLog.innerHTML = '';
+  window.BattleLogView.restore(document);
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
   appendBattleLog(isSpookyBattle()?`${getBattleModeLabel()} • Spooky Coins only • Auto Continue disabled.`:isBossEventBattle() ? `${getBattleModeLabel()} • 12-hour rotation window • Type-specific coins and exclusive drops only.` : isRaidBattle() ? `${getBattleModeLabel()} • ${window.RaidSystem.TYPES[getRaidType()].enemies.length} preset opponent(s) • Type-specific Coins and exclusive drops only.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.remaining(battleState) / 1000}s limit • ${window.TimeTrialSystem.isExp(mode)?'Speed Battle Potion ignored':'Speed Battle Potion supported'}.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);
@@ -5276,7 +5282,7 @@ function returnToLobby() {
     els.battleVictory?.classList.add('hidden');
     els.battleVictory?.setAttribute('aria-hidden', 'true');
     els.battleSetup?.classList.remove('hidden');
-    if (els.battleLog) els.battleLog.innerHTML = '';
+    window.BattleLogView.restore(document);
     if (els.battleStatus) els.battleStatus.textContent = 'PREPARING';
     battleState = null;
     document.body.classList.remove('battle-lock', 'modal-open');
@@ -5543,6 +5549,7 @@ function setupBattlePassiveTooltipDelegation() {
 
   const show = target => {
     if (!target?.dataset?.passiveTooltip) return;
+    document.dispatchEvent(new Event('arena-passive-open'));
     activeTarget = target;
     title.textContent = String(target.dataset.passiveTooltipName || 'Passive');
     status.textContent = String(target.dataset.passiveTooltipStatus || 'Active');
@@ -5566,7 +5573,7 @@ function setupBattlePassiveTooltipDelegation() {
 
   document.addEventListener('pointerover', event => {
     const target = event.target?.closest?.('[data-passive-tooltip]');
-    if (target) show(target);
+    if (target && !event.target?.closest?.('[data-status-inspect]')) show(target);
   });
 
   document.addEventListener('pointerout', event => {
@@ -5577,7 +5584,7 @@ function setupBattlePassiveTooltipDelegation() {
 
   document.addEventListener('focusin', event => {
     const target = event.target?.closest?.('[data-passive-tooltip]');
-    if (target) show(target);
+    if (target && !event.target?.closest?.('[data-status-inspect]')) show(target);
   });
 
   document.addEventListener('focusout', event => {
@@ -5585,11 +5592,13 @@ function setupBattlePassiveTooltipDelegation() {
     if (target && target === activeTarget) hide();
   });
 
+  document.addEventListener('arena-status-open',hide);
   window.addEventListener('resize', hide, { passive: true });
   window.addEventListener('scroll', hide, { passive: true, capture: true });
 }
 
 setupBattlePassiveTooltipDelegation();
+window.ArenaStatusView.mount(els.battleArena);
 window.upgrade = upgrade;
 
 els.buySpeedButton?.addEventListener("click", () => purchaseUpgrade("rollSpeed"));

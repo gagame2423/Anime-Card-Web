@@ -35,7 +35,7 @@
   if(session)throw Error('An Infinity Arena view is already open.');
   for(const id of ['battleModal','battleArena','battleSetup','battleVictory','infinityModal','infinityArenaHud'])if(!el(id))throw Error('Missing shared Arena: '+id);
   session={battle,runtime};info=next;fronts=null;
-  bridge.clear?.();const log=el('battleLog');logBackup=log?[...log.childNodes]:[];log?.replaceChildren();
+  bridge.clear?.();logBackup=host.BattleLogView.backup(host.document);host.BattleLogView.restore(host.document);
   hide(el('infinityModal'));hide(el('battleSetup'));hide(el('battleVictory'));
   for(const id of ['timeTrialTimer','spookyInfoBattleButton','spookyLiveCoins','spookySpeedUpControl','sandboxOpenButton'])hide(el(id));
   hide(el('autoContinueBattleToggle')?.closest('.battle-auto-continue'));
@@ -47,9 +47,9 @@
   if(!session)return;bridge.clear?.();session=null;info=null;fronts=null;
   if(el('infinityArenaHud'))el('infinityArenaHud').hidden=true;
   for(const[node,state]of saved){node.hidden=state.hidden;node.classList.toggle('hidden',state.cls);if(state.text!==undefined)node.textContent=state.text;}saved.clear();
-  el('battleLog')?.replaceChildren(...logBackup);logBackup=[];bridge.lock?.(false);
+  host.BattleLogView.restore(host.document,logBackup);logBackup=[];bridge.lock?.(false);
  }
- function log(message,tone){if(session)bridge.log?.(message,tone);}
+ function log(message,tone,side){if(session)bridge.log?.(message,tone,side);}
  function float(unit,message,tone,duration){if(session)bridge.float?.(unit,message,tone,duration);}
  function turn(side){if(session)log(`TURN ${(session.battle.turnCount||0)+1} • ${side==='player'?'PLAYER':'ENEMY'} ATTACK`,side);}
  function attack(side){if(session)bridge.attack?.(side);}

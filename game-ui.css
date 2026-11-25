@@ -555,7 +555,7 @@ body {
   letter-spacing:.14em;
   text-transform:uppercase;
 }
-#battleModal .battle-feed > #battleLog {
+#battleModal .battle-feed__column > :is(#battleLog,#battleEnemyLog) {
   flex:1 1 0 !important;
   height:auto !important;
   min-height:0 !important;
@@ -571,8 +571,8 @@ body {
   overscroll-behavior-y:auto;
   scrollbar-gutter:stable;
 }
-#battleModal #battleLog:focus-visible {outline:2px solid var(--game-energy);outline-offset:-2px;}
-#battleModal #battleLog .battle-log__line {
+#battleModal :is(#battleLog,#battleEnemyLog):focus-visible {outline:2px solid var(--game-energy);outline-offset:-2px;}
+#battleModal :is(#battleLog,#battleEnemyLog) .battle-log__line {
   display:block;
   min-height:0;
   padding:5px 8px;
@@ -586,25 +586,25 @@ body {
   overflow-wrap:anywhere;
   white-space:pre-wrap;
 }
-#battleModal #battleLog .battle-log__line:nth-child(even) {background-color:#c0dfff06;}
-#battleModal #battleLog .battle-log__line[data-accent] {
+#battleModal :is(#battleLog,#battleEnemyLog) .battle-log__line:nth-child(even) {background-color:#c0dfff06;}
+#battleModal :is(#battleLog,#battleEnemyLog) .battle-log__line[data-accent] {
   border-inline-start-color:var(--log-ink);
   background:linear-gradient(90deg,color-mix(in srgb,var(--log-ink) 9%,transparent),transparent 85%);
 }
-#battleModal #battleLog [data-accent="turn"] {--log-ink:#86cbc9;letter-spacing:.075em;font-weight:750;}
-#battleModal #battleLog .is-enemy[data-accent="turn"] {--log-ink:#f48f9e;}
-#battleModal #battleLog [data-accent="passive"] {--log-ink:#f0d494;}
-#battleModal #battleLog [data-accent="skill"] {--log-ink:#67dfd1;}
-#battleModal #battleLog [data-accent="burn"] {--log-ink:#fb923c;}
-#battleModal #battleLog :is([data-accent="bleed"],[data-accent="dot"]) {--log-ink:#f87171;}
-#battleModal #battleLog [data-accent="debuff"] {--log-ink:#c084fc;}
-#battleModal #battleLog [data-accent="freeze"] {--log-ink:#38bdf8;}
-#battleModal #battleLog [data-accent="crit"] {--log-ink:#ffcc60;}
-#battleModal #battleLog [data-accent="heal"] {--log-ink:#34d399;}
-#battleModal #battleLog :is([data-accent="shield"],[data-accent="dodge"]) {--log-ink:#81b8ff;}
-#battleModal #battleLog [data-accent="status"] {--log-ink:#a4c7dd;}
-#battleModal #battleLog .battle-log__token {color:var(--log-ink,#f0e6d2);font-weight:750;}
-#battleModal #battleLog .battle-log__pill {
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="turn"] {--log-ink:#86cbc9;letter-spacing:.075em;font-weight:750;}
+#battleModal :is(#battleLog,#battleEnemyLog) .is-enemy[data-accent="turn"] {--log-ink:#f48f9e;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="passive"] {--log-ink:#f0d494;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="skill"] {--log-ink:#67dfd1;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="burn"] {--log-ink:#fb923c;}
+#battleModal :is(#battleLog,#battleEnemyLog) :is([data-accent="bleed"],[data-accent="dot"]) {--log-ink:#f87171;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="debuff"] {--log-ink:#c084fc;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="freeze"] {--log-ink:#38bdf8;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="crit"] {--log-ink:#ffcc60;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="heal"] {--log-ink:#34d399;}
+#battleModal :is(#battleLog,#battleEnemyLog) :is([data-accent="shield"],[data-accent="dodge"]) {--log-ink:#81b8ff;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="status"] {--log-ink:#a4c7dd;}
+#battleModal :is(#battleLog,#battleEnemyLog) .battle-log__token {color:var(--log-ink,#f0e6d2);font-weight:750;}
+#battleModal :is(#battleLog,#battleEnemyLog) .battle-log__pill {
   padding:1px 4px;
   border:1px solid color-mix(in srgb,var(--log-ink) 44%,transparent);
   border-radius:4px;
@@ -613,12 +613,12 @@ body {
   box-decoration-break:clone;
   -webkit-box-decoration-break:clone;
 }
-#battleModal #battleLog :is(.battle-log__token[data-accent="skill"],.battle-log__token[data-accent="crit"]) {text-shadow:0 0 12px color-mix(in srgb,var(--log-ink) 42%,transparent);}
-#battleModal #battleLog .battle-log__token[data-accent="number"] {font-weight:800;}
+#battleModal :is(#battleLog,#battleEnemyLog) :is(.battle-log__token[data-accent="skill"],.battle-log__token[data-accent="crit"]) {text-shadow:0 0 12px color-mix(in srgb,var(--log-ink) 42%,transparent);}
+#battleModal :is(#battleLog,#battleEnemyLog) .battle-log__token[data-accent="number"] {font-weight:800;}
 
 @media(max-width:540px) {
   #battleModal.battle-modal--active .battle-art-frame {height:clamp(96px,18dvh,146px);}
-  #battleModal .battle-feed {flex-basis:clamp(140px,25dvh,186px);}
+  #battleModal .battle-feed {flex-basis:clamp(192px,36dvh,266px);}
   #battleModal .battle-feed__head {padding-inline:9px;}
 }
 @media(max-width:768px) {
@@ -795,4 +795,137 @@ body {
 }
 @media(prefers-reduced-motion:reduce) {
   #achievementModal .achievement-claim {transition:none;transform:none;}
+}
+
+/* Each side tracks its own scroll position. The feed remains docked below the stage. */
+#battleModal .battle-feed__columns {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:minmax(0,1fr);
+  flex:1 1 0;
+  min-height:0;
+  gap:1px;
+  background:#6d5d40;
+}
+#battleModal .battle-feed__column {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+  --side-log-ink:#83ebdc;
+  --side-log-fill:#1c393b;
+}
+#battleModal .battle-feed__column[data-log-side="enemy"] {
+  --side-log-ink:#ffc0aa;
+  --side-log-fill:#3d2635;
+}
+#battleModal .battle-feed__column h5 {
+  margin:0;
+  padding:5px 10px;
+  border-bottom:1px solid #ad91623d;
+  background:linear-gradient(95deg,var(--side-log-fill),#151e29);
+  color:var(--side-log-ink);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+@media(max-width:768px) {
+  #battleModal .battle-feed__columns {grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr));}
+  #battleModal .battle-feed {flex-basis:clamp(178px,36dvh,245px);}
+  #battleModal .battle-feed__column h5 {padding-block:3px;}
+}
+
+/* Mutation color runs through the name and inset rim, leaving the outer rarity edge readable. */
+:is(#app,#collectionModal,#battleModal,#cardPreviewModal) [data-mutation-frame] {position:relative;}
+.mutation-frame {display:none;}
+:is(#app,#collectionModal,#battleModal,#cardPreviewModal) [data-mutation-frame] > .mutation-frame {
+  display:block;
+  position:absolute;
+  z-index:2;
+  inset:2px;
+  padding:1.5px;
+  border-radius:inherit;
+  pointer-events:none;
+  background:linear-gradient(135deg,var(--mutation-start),var(--mutation-end));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+}
+:is(#app,#collectionModal,#battleModal,#cardPreviewModal) [data-mutation-frame] {
+  --mutation-rim-glow:0 0 12px color-mix(in srgb,var(--mutation-start) 32%,transparent),
+    0 0 20px color-mix(in srgb,var(--mutation-end) 26%,transparent);
+}
+:is(#app,#collectionModal,#battleModal,#cardPreviewModal)
+:is(.tcg-card,.index-details-card,.collection-card,.battle-team-slot,.battle-lineup-card,.battle-visual-card,.battle-art-frame)[data-mutation-frame] {
+  box-shadow:inset 0 1px #f0e6d234,var(--mutation-rim-glow);
+}
+:is(#app,#collectionModal,#battleModal,#cardPreviewModal) [data-mutation-frame] .mutation-title {
+  color:var(--mutation-start);
+  text-shadow:0 0 10px color-mix(in srgb,var(--mutation-start) 45%,transparent);
+}
+@supports ((background-clip:text) or (-webkit-background-clip:text)) {
+  :is(#app,#collectionModal,#battleModal,#cardPreviewModal) [data-mutation-frame="double"] .mutation-title {
+    background:linear-gradient(90deg,var(--mutation-start),var(--mutation-end));
+    background-size:100% 100%;
+    width:fit-content;
+    max-width:100%;
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    color:transparent;
+    text-shadow:0 0 14px color-mix(in srgb,var(--mutation-end) 23%,transparent);
+  }
+}
+:is(#app,#collectionModal,#battleModal,#cardPreviewModal) .mutation-title .element-badge {-webkit-text-fill-color:initial;}
+@media(forced-colors:active) {
+  :is(#app,#collectionModal,#battleModal,#cardPreviewModal) [data-mutation-frame] .mutation-title {background:none;color:CanvasText;-webkit-text-fill-color:CanvasText;text-shadow:none;}
+}
+
+#battlePassiveTooltip[hidden] {display:none;}
+#battleModal .arena-runtime-effects {display:contents;}
+#battleModal [data-status-inspect] {font-family:inherit;cursor:help;text-align:start;animation:none;}
+#battleModal [data-status-inspect]:focus-visible {outline:2px solid #b8f1e3;outline-offset:2px;}
+#battleModal :is(#battleLog,#battleEnemyLog) [data-accent="poison"] {--log-ink:#4ade80;}
+#battleModal :is(#battleLog,#battleEnemyLog) .battle-log__pill[data-accent="poison"],
+#battleModal [data-status-inspect][data-tone="poison"] {
+  color:#4ade80;
+  background:#0d2920;
+  border-color:#16a34a;
+  text-shadow:0 0 8px #22c55e66;
+}
+#battleModal .battle-log__line[data-accent="poison"] {border-inline-start-color:#15803d;}
+.arena-status-tooltip {
+  position:fixed;
+  z-index:13000;
+  width:min(360px,calc(100vw - 16px));
+  max-height:calc(100dvh - 16px);
+  overflow:hidden;
+  padding:11px 13px;
+  color:#e0e9f3;
+  background:linear-gradient(140deg,#182a37,#0c141f 70%);
+  border:1px solid #758e95;
+  border-radius:7px;
+  box-shadow:inset 0 1px #e2dbc82e,0 9px 24px #0009;
+  pointer-events:none;
+  overflow-wrap:anywhere;
+  font-variant-numeric:tabular-nums;
+  --status-ink:#89dfce;
+}
+.arena-status-tooltip[hidden] {display:none;}
+.arena-status-tooltip.is-pinned {pointer-events:auto;overflow-y:auto;overscroll-behavior:contain;}
+.arena-status-tooltip[data-tone="poison"] {--status-ink:#4ade80;border-color:#15803d;background:linear-gradient(140deg,#113324,#0a1716 70%);}
+.arena-status-tooltip[data-tone="burn"] {--status-ink:#fb923c;}
+.arena-status-tooltip[data-tone="bleed"] {--status-ink:#f87171;}
+.arena-status-tooltip:is([data-tone="stun"],[data-tone="debuff"]) {--status-ink:#d5a3ff;}
+.arena-status-tooltip[data-tone="freeze"] {--status-ink:#67ccfa;}
+.arena-status-tooltip[data-tone="shield"] {--status-ink:#92beff;}
+.arena-status-tooltip__title {display:block;font:700 17px/1.1 var(--game-heading);color:var(--status-ink);}
+.arena-status-tooltip__meta {display:block;margin-top:4px;color:var(--status-ink);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;}
+.arena-status-tooltip__detail {margin:7px 0 0;font-size:12px;line-height:1.4;}
+.arena-status-tooltip__facts {margin:6px 0 0;padding:6px 0 0;list-style:none;border-top:1px solid #637d833f;color:#c9d7e2;font-size:11px;line-height:1.4;}
+.arena-status-tooltip__facts li+li {margin-top:3px;}
+@media(prefers-reduced-motion:reduce) {
+  :is(#app,#collectionModal,#battleModal,#cardPreviewModal) [data-mutation-frame] {animation:none!important;}
 }
