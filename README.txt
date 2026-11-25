@@ -1,40 +1,38 @@
-ANIME CARD RNG — BẢN VÁ GIAO DIỆN CHIẾN ĐẤU
-Phiên bản: 20261125-arena-readability-1
+ANIME CARD RNG — NHẬT KÝ CẬP NHẬT
+Phiên bản trong game: Update 32.5 — The Update Archive
 
-Battle Log
-• Nhật ký tự giãn dưới đội hình và tách thành Player / Own Log và
-  Enemy Log. Hai cột đặt cạnh nhau trên màn hình rộng và xếp dọc ở
-  chiều rộng từ 768 px trở xuống. Mỗi bên cuộn độc lập.
-• Hành động được ghi theo bên thực hiện, kể cả phản đòn, hồi máu,
-  né đòn và sát thương theo lượt. Ví dụ: Bleed gây bởi đội người
-  chơi vẫn nằm trong Player / Own Log khi nó phát tác ở lượt địch.
-  Thông báo chung của trận xuất hiện ở phía người chơi.
-• Giữ cách tô màu từ khóa và làm nổi số sát thương. Dòng nhật ký
-  tiếp tục hiển thị dưới dạng văn bản, không thực thi mã HTML.
+1. Mở nhật ký
+- Tại thanh điều hướng trên cùng của màn hình chính, chọn Update Logs.
+  Huy hiệu NEW ở nút báo có bản cập nhật chưa xem. Mỗi lần mở, màn
+  hình mặc định hiển thị bản mới nhất. Dùng nút X hoặc phím Esc để đóng.
+- Dòng thời gian bắt đầu từ Update 0. Các mốc được xếp từ mới đến cũ
+  và nhóm những thay đổi liên quan. Bản lớn tăng 1.0; bản nhỏ và cải
+  tiến chất lượng chơi tăng 0.5. Phần nội dung trong game dùng tiếng Anh.
 
-Mutation
-• Tất cả mutation, gồm cả Eclipsed và Colossal, có màu riêng. Thẻ
-  có một mutation dùng màu đồng nhất cho tên và viền. Thẻ có hai
-  mutation chuyển màu ngang trên tên và chuyển màu chéo trên viền.
-• Áp dụng trong Summon, Card Index, Card Details, ô chọn đội và võ
-  đài. Card Index dùng biến thể đã sở hữu có bậc mutation cao nhất;
-  Card Details theo biến thể đang chọn. Không đổi tỉ lệ quay, chỉ
-  số, điều kiện thời tiết hoặc màu viền bậc hiếm bên ngoài.
+2. Giao diện ba cột
+- Timeline ở trái chọn bản cập nhật; phần giữa trình bày ghi chú;
+  Showcase ở phải trưng bày nội dung và lối tắt của bản đã chọn.
+- Viền bậc pixel, nền lưới tối và chữ cỡ lớn theo phong cách RPG
+  cổ điển. Ba cột cuộn độc lập trên màn hình rộng. Từ 768 px trở
+  xuống, các cột xếp dọc; dòng thời gian vẫn có vùng cuộn riêng.
 
-Hiệu ứng trong trận
-• Rê chuột, dùng bàn phím hoặc chạm vào huy hiệu để mở bảng hiệu
-  ứng riêng. Chạm lại, chạm ra ngoài hoặc nhấn Esc để đóng. Huy
-  hiệu nội tại của thẻ vẫn mở mô tả nội tại như trước.
-• Bảng Bleed, Burn và Poison cho biết tổng sát thương mỗi lượt,
-  nguồn, thời gian còn lại của từng nhóm cộng dồn và giá trị trước
-  khi trừ khiên hoặc chuyển hướng sát thương. Bleed ghi rõ chặn
-  toàn bộ hồi máu từ mọi nguồn. Bảng khiên và hiệu ứng khác hiển
-  thị giá trị và thời hạn khi cơ chế có bộ đếm.
-• Poison dùng xanh lục đậm trong huy hiệu, bảng thông tin và nhật
-  ký, dễ phân biệt với Bleed đỏ và Burn cam.
+3. Xem chi tiết và vào chơi
+- Rê chuột hoặc dùng Tab trên ảnh để xem nhanh; nhấn hoặc chạm để
+  ghim bảng xem. Bấm X của bảng, chạm ra ngoài hoặc nhấn Esc để đóng.
+- New Units hiển thị bậc hiếm, hệ, nhóm, HP/ATK gốc, toàn bộ nội
+  tại và cách nhận. New Relics dùng cùng thông tin với Craft,
+  gồm khoảng chỉ số, điều kiện, hiệu ứng Unique và nguyên liệu
+  hoặc nguồn rơi. New Items tách riêng vật phẩm, tiền tệ và skin.
+- Jump In mở thẳng chế độ, cửa hàng hoặc màn hình tương ứng mà
+  không tiêu hao vật phẩm hoặc bắt đầu trận. Nếu chưa có Portal
+  thuộc loại đã chọn, lối tắt mở Kho ở tab Portals với bộ lọc
+  đúng loại. Với Rift, lối tắt mở bảng thưởng đúng Rift; lượt vào
+  chơi vẫn phụ thuộc vào lịch luân phiên đang hiển thị.
 
-Cài đặt
-1. Giải nén vào thư mục game có index.html. Ghi đè các tệp trùng
-   tên và đặt arena_status_view.js cạnh battle_log_view.js.
-2. Giữ nguyên assets và dữ liệu lưu. Mở lại game, nhấn Ctrl + F5
-   để tải các tệp giao diện và mô-đun chiến đấu mới.
+4. Cài đặt
+1) Giải nén bản vá vào thư mục đang chứa index.html của game.
+2) Ghi đè index.html, app.js và README.txt. Thêm update_logs.js
+   và update_logs.css vào cùng thư mục. Giữ nguyên assets/ và
+   dữ liệu lưu hiện tại. Nếu chơi trên web, tải cả bốn tệp mã
+   nguồn đã cập nhật lên cùng thư mục trước khi mở lại game.
+3) Nhấn Ctrl + F5 để tải lại, rồi mở Update Logs ở thanh trên.

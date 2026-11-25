@@ -3368,6 +3368,7 @@ function renderBattleModePicker() {
 }
 
 function setBattleMode(mode) {
+  const archiveRiftPreview=document.getElementById('riftArchivePreview');if(archiveRiftPreview)archiveRiftPreview.hidden=true;
   arenaDeckKey='';
   window.TimeTrialSystem?.abort(battleState, 'mode-change');
   window.SpookySystem?.abort(battleState);
@@ -3382,6 +3383,7 @@ function setBattleMode(mode) {
 }
 
 function resetBattleView(mode = '4v4') {
+  const archiveRiftPreview=document.getElementById('riftArchivePreview');if(archiveRiftPreview)archiveRiftPreview.hidden=true;
   arenaDeckKey='';
   window.TimeTrialSystem?.abort(battleState, 'view-reset');
   window.SpookySystem?.abort(battleState);
@@ -5341,6 +5343,10 @@ function closeModal(id) {
   if(id==='penaltyModal'){window.PenaltyView.close();return;}
   if(id==='relicFusionModal'&&window.RelicFusionSystem?.dialogOpen){window.RelicFusionSystem.closeDialog();return;}
   if(id==='inventoryModal'&&window.RelicFusionSystem?.active)window.RelicFusionSystem.cancel();
+  if(id==='inventoryModal'){
+    const search=document.getElementById('inventorySearch');
+    if(search?.dataset.archivePortal){if(search.value===search.dataset.archivePortal)search.value='';delete search.dataset.archivePortal;}
+  }
   if(id==='evolutionModal'&&window.EvolutionSystem?.active){window.EvolutionSystem.close();return;}
   if(id==='portalModal'){window.PortalsSystem.exit();return;}
   if(id==='battleModal'&&window.PortalCombatView?.active)return;
@@ -6163,6 +6169,53 @@ document.getElementById('hubTrialButton')?.addEventListener('click',()=>{
   openBattleModal();
   if(!els.battleModal?.classList.contains('hidden'))document.getElementById('timeTrialOpenButton')?.click();
 });
+// Use the normal entry points so archive links never start a fight or consume an item.
+function canOpenUpdateLogs(){
+  return !gameInputLocked()&&!isBattleMatchActive()&&!isImportingSave&&!saveTransferBusy;
+}
+function jumpFromUpdateLogs(destination){
+  if(!canOpenUpdateLogs())return false;
+  const el=id=>document.getElementById(id);
+  const click=id=>{const button=el(id);if(!button||button.disabled)return false;button.click();return true;};
+  const show=id=>{openModal(id);const node=el(id);if(!node||node.classList.contains('hidden'))return false;node.querySelector('.modal-close')?.focus();return true;};
+  const buttons={craft:'craftingOpenButton',quests:'questOpenButton',index:'collectionButton',autochess:'hubChessButton',summon:'hubSummonButton'};
+  if(Object.hasOwn(buttons,destination))return click(buttons[destination]);
+  if(destination==='achievements')return show('achievementModal');
+  if(destination==='inventory')return show('inventoryModal');
+  if(destination==='hextech')return window.HextechSystem.open();
+  if(destination==='penalty'){openPenalty();return Boolean(window.PenaltyView.active);}
+  if(destination==='elements'){show('battleModal');return click('elementChartOpenButton');}
+  if(['pvp','infinity','sandbox'].includes(destination)){
+    if(!show('battleModal'))return false;
+    return click({pvp:'pvpOpenButton',infinity:'infinityOpenButton',sandbox:'sandboxOpenButton'}[destination]);
+  }
+  if(Object.hasOwn(window.PortalRules.TYPES,destination)){
+    const portal=window.InventorySystem.list().find(item=>item.type==='portal'&&item.quantity>0&&window.PortalRules.typeOf(item)===destination&&window.PortalsSystem.get(item.id));
+    if(portal&&window.PortalsSystem.open(portal.id))return true;
+    if(!show('inventoryModal'))return false;
+    const search=el('inventorySearch');
+    search.value=window.PortalRules.TYPES[destination].name;search.dataset.archivePortal=search.value;
+    document.querySelector('#inventoryModal [data-storage-tab="portals"]')?.click();
+    search.focus();
+    return true;
+  }
+  const raid=Object.hasOwn(window.RaidSystem.TYPES,destination),rift=Object.hasOwn(window.RiftSystem.TYPES,destination);
+  const battleModes={arena:'4v4',tower:'tower',trial:'time-trial',exp:'exp-time-trial',material:'material-time-trial',boss:'boss-event',spooky:'spooky-hunt'};
+  const mode=raid?'raid':rift?'rift':Object.hasOwn(battleModes,destination)?battleModes[destination]:null;
+  if(!mode||!show('battleModal'))return false;
+  if(raid){el('raidTypeSelect').value=destination;}
+  setBattleMode(mode);
+  if(rift){
+    const preview=el('riftArchivePreview'),data=window.RiftSystem.preview(destination);
+    preview.querySelector('[data-rift-archive-title]').textContent=data.name+' · Reward Preview';
+    preview.querySelector('[data-rift-archive-drops]').textContent=data.text;
+    preview.hidden=false;
+    preview.tabIndex=-1;preview.focus();
+  }else if(raid)el('raidTypeSelect')?.focus();
+  else els.battleModePicker?.querySelector('[data-battle-mode="'+mode+'"]')?.focus();
+  return true;
+}
+window.UpdateLogs?.mount({canOpen:canOpenUpdateLogs,navigate:jumpFromUpdateLogs});
 window.AutoChessRanked.configure({getProfile:()=>state.autochessRank});
 window.AutoChessProfile.configure({get:()=>state.autochess_profile_stats,rank:()=>state.autochessRank,commit:profile=>{
  const previous=state.autochess_profile_stats;state.autochess_profile_stats=profile;

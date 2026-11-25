@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./hextech.css?v=20261121-ui-cartoon-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./game-ui.css?v=20261125-arena-readability-1" />
+  <link rel="stylesheet" href="./update_logs.css?v=20261125-update-logs-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -52,6 +53,11 @@
             <small>UPGRADES</small>
             <strong>Shop</strong>
           </span>
+        </button>
+
+        <button id="updateLogsOpenButton" class="ul-entry" type="button" aria-haspopup="dialog" aria-controls="updateLogsModal">
+          <svg class="ul-scroll-icon" viewBox="0 0 20 20" fill="none" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M4 2h12v2h2v6h-5v5h-2v3H2v-3h2zm2 2v11H4v1h6v-3h1V8h5V4zm2 2h6v1H8zm0 3h2v1H8zm0 3h2v1H8z"/></svg>
+          <span>Update Logs</span><b data-ul-new>NEW</b>
         </button>
 
         <details id="utilityMenu" class="utility-menu">
@@ -325,6 +331,42 @@
     </section>
   </div>
 
+  <!-- UPDATE LOGS: release history, inspections and mode shortcuts -->
+  <dialog id="updateLogsModal" class="ul-dialog" aria-labelledby="updateLogsTitle" aria-describedby="updateLogsVersion">
+    <article class="ul-shell">
+      <header class="ul-top">
+        <span class="ul-top-mark" aria-hidden="true"><svg viewBox="0 0 20 20" fill="currentColor" shape-rendering="crispEdges"><path d="M8 0h4v5h3v3h5v4h-5v3h-3v5H8v-5H5v-3H0V8h5V5h3zm0 8v4h4V8z" fill-rule="evenodd"/></svg></span>
+        <div>
+          <h2 id="updateLogsTitle">Update Logs</h2>
+          <p id="updateLogsVersion" data-ul-version-title></p>
+        </div>
+        <button class="ul-close" type="button" data-ul-close autofocus aria-label="Close Update Logs">×</button>
+      </header>
+      <div class="ul-body" data-ul-body>
+        <nav class="ul-column ul-timeline" data-ul-timeline-region tabindex="0" aria-label="Version timeline">
+          <h3 class="ul-column-title">Timeline <span aria-hidden="true">01</span></h3>
+          <ol data-ul-timeline></ol>
+        </nav>
+        <section class="ul-column ul-notes" data-ul-notes-region tabindex="0" aria-label="Patch notes">
+          <div class="ul-notes-inner" data-ul-notes></div>
+          <p class="ul-status" data-ul-status role="status"></p>
+        </section>
+        <aside class="ul-column ul-showcase" data-ul-show-region tabindex="0" aria-label="Update showcase">
+          <h3 class="ul-column-title">Showcase <span aria-hidden="true">03</span></h3>
+          <div class="ul-groups" data-ul-showcase></div>
+        </aside>
+      </div>
+      <section class="ul-inspector" id="updateLogsInspection" data-ul-inspector aria-labelledby="updateLogsInspectionTitle" hidden>
+        <header class="ul-inspector-head">
+          <span data-ul-inspector-art></span>
+          <div><p class="ul-label" data-ul-inspector-kicker></p><h3 id="updateLogsInspectionTitle" data-ul-inspector-title></h3></div>
+          <button type="button" class="ul-close" data-ul-inspector-close aria-label="Close inspection">×</button>
+        </header>
+        <div data-ul-inspector-body></div>
+      </section>
+    </article>
+  </dialog>
+
   <!-- ACHIEVEMENTS: independent tracking, permanent milestone rewards -->
   <div id="achievementModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="achievementModalTitle">
     <section class="modal-panel module-modal achievement-modal">
@@ -463,6 +505,10 @@
             <button id="riftShopOpenButton" class="tower-shop-button" type="button">◇ Rift Shop</button>
             <label class="battle-auto-continue" for="riftAutoGuarantee"><span>Auto Guarantee</span><input id="riftAutoGuarantee" type="checkbox" role="switch"><span class="battle-auto-continue__track" aria-hidden="true"></span></label>
             <small id="riftGuaranteeCount"></small><p id="riftDropPreview" aria-live="polite">5v5 • Open during the first 30 minutes of each UTC hour. Drops follow the selected Rift.</p>
+            <aside id="riftArchivePreview" class="ul-rift-preview" hidden aria-label="Selected Rift preview">
+              <strong data-rift-archive-title></strong><p data-rift-archive-drops></p>
+              <small>Entry follows the live Rift rotation shown above.</small>
+            </aside>
           </div>
           <div id="bossEventControls" class="boss-event-controls hidden">
             <strong id="bossEventActiveName" class="boss-event-active-name">Active Boss Event</strong>
@@ -1152,6 +1198,7 @@
   <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./arena_status_view.js?v=20261125-arena-readability-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261125-arena-readability-1"></script>
+  <script type="application/x-game-script" data-game-script src="./update_logs.js?v=20261125-update-logs-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261125-update-logs-1"></script>
 </body>
 </html>
