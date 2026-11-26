@@ -1,0 +1,560 @@
+/* Sailing Sea — original nautical HUD, scoped to the standalone mode. */
+body.sailing-active {overflow:hidden;}
+#sailingSeaModal[hidden],#sailingSeaModal [hidden] {display:none!important;}
+#sailingSeaModal {
+ --ss-gold:#dfc18a;--ss-ivory:#f4ebd6;--ss-teal:#87e7d0;--ss-muted:#9abcc3;
+ --ss-rule:#799aa255;--ss-dark:#081e2a;--ss-red:#f09d89;--ss-panel:#0b2431;
+ --ss-pad:max(16px,env(safe-area-inset-left));--ss-pad-r:max(16px,env(safe-area-inset-right));
+ --ss-top:max(15px,env(safe-area-inset-top));--ss-bottom:max(14px,env(safe-area-inset-bottom));
+ position:fixed;inset:0;z-index:8400;height:100dvh;width:100%;overflow:hidden;isolation:isolate;
+ background:#124a5d;color:var(--ss-ivory);font:13px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+ font-variant-numeric:tabular-nums;text-align:left;outline:none;
+}
+#sailingSeaModal *,#sailingSeaModal *::before,#sailingSeaModal *::after {box-sizing:border-box;}
+#sailingSeaModal h1,#sailingSeaModal h2,#sailingSeaModal h3,#sailingSeaModal p {margin:0;}
+#sailingSeaModal input,#sailingSeaModal button,#sailingSeaModal select {font:inherit;}
+#sailingSeaModal button {cursor:pointer;color:inherit;}
+#sailingSeaModal button:disabled {opacity:.45;cursor:not-allowed;filter:saturate(.55);}
+#sailingSeaModal button:focus-visible,#sailingSeaModal select:focus-visible,#sailingSeaModal summary:focus-visible,#sailingSeaModal canvas:focus-visible {outline:2px solid var(--ss-teal);outline-offset:2px;}
+#sailingSeaModal button {touch-action:manipulation;transition:transform 120ms ease,border-color 140ms ease,background-color 140ms ease,color 140ms ease;}
+#sailingSeaModal button:not(:disabled):active {transform:scale(.96);}
+#sailingSeaModal .ss-icon {display:block;flex:none;vertical-align:middle;}
+#ssOcean {display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none;outline:none;}
+#sailingSeaModal .ss-water-vignette {position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 48%,transparent 43%,#06192532 100%);}
+#sailingSeaModal .ss-hud {position:absolute;inset:0;pointer-events:none;}
+#sailingSeaModal .ss-glass {
+ pointer-events:auto;background:linear-gradient(150deg,#102d3bed,#081b28ec 87%);border:1px solid #88bfc150;border-radius:8px;
+ box-shadow:inset 0 1px #e6efdc23,0 5px 20px #02101d42;
+}
+#sailingSeaModal .ss-kicker {display:block;color:#a7c6c7;font-size:9px;font-weight:800;letter-spacing:.125em;line-height:1.35;}
+#sailingSeaModal .ss-small {color:#9ab8bc;font-size:10px;line-height:1.4;}
+#sailingSeaModal .ss-top {
+ position:absolute;top:var(--ss-top);left:var(--ss-pad);right:var(--ss-pad-r);
+ display:grid;grid-template-columns:minmax(205px,248px) minmax(175px,216px) minmax(204px,247px);justify-content:space-between;align-items:start;gap:9px;
+}
+#sailingSeaModal .ss-captain {padding:11px;display:flex;gap:10px;min-height:128px;}
+#sailingSeaModal .ss-captain-crest {display:grid;place-items:center;width:46px;height:46px;flex:0 0 46px;border:1px solid #d9bc7f98;border-radius:50%;color:var(--ss-gold);background:radial-gradient(circle,#30505a,#132834);box-shadow:inset 0 0 0 3px #0e1e2a;}
+#sailingSeaModal .ss-captain-body {flex:1;min-width:0;}
+#sailingSeaModal .ss-captain-body .ss-kicker {font-size:8px;display:flex;gap:4px;align-items:center;}
+#sailingSeaModal .ss-tag {font-size:7px;letter-spacing:.06em;background:#c5a26d24;color:#ecd09c;padding:2px 4px;border-radius:2px;white-space:nowrap;}
+#sailingSeaModal .ss-captain-name {font:700 19px/1.25 Georgia,serif;color:#fff2d7;margin:2px 0 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#sailingSeaModal .ss-captain-meta {display:flex;gap:5px;align-items:center;white-space:nowrap;font-size:10px;color:#a5c2c6;}
+#sailingSeaModal .ss-captain-meta>b:first-child {color:#e7f1df;font-size:12px;}
+#sailingSeaModal #ssShipLevel {margin-left:auto;color:var(--ss-gold);padding:2px 4px;border:1px solid #c6a86a50;border-radius:3px;background:#8b743324;}
+#sailingSeaModal .ss-hull-label {display:flex;align-items:center;gap:4px;margin:8px 0 4px;font-size:9px;letter-spacing:.075em;color:#9bbbc0;font-weight:800;}
+#sailingSeaModal .ss-hull-label b {margin-left:auto;color:#e8f3dd;letter-spacing:0;}
+#sailingSeaModal .ss-lock {color:#ffad9b;display:flex;}
+#sailingSeaModal .ss-meter {height:6px;background:#041721;border:1px solid #74989b23;border-radius:4px;overflow:hidden;}
+#sailingSeaModal .ss-meter i {display:block;width:100%;height:100%;background:linear-gradient(90deg,#3bba9f,#92e7c0);transition:width 170ms ease;}
+#sailingSeaModal .ss-meter i.critical {background:linear-gradient(90deg,#d56368,#f6a47f);}
+#sailingSeaModal .ss-meter--stamina i {background:linear-gradient(90deg,#aa7738,#e8c17d);}
+#sailingSeaModal .ss-captain .ss-small {margin-top:5px;}
+#sailingSeaModal .ss-calendar {padding:9px 12px 11px;text-align:center;}
+#sailingSeaModal .ss-day-head {display:flex;align-items:center;justify-content:center;position:relative;color:var(--ss-gold);font-size:11px;font-weight:750;letter-spacing:.065em;text-transform:uppercase;}
+#sailingSeaModal .ss-mini-button {display:grid;place-items:center;background:#0c2534;border:1px solid #87a8a343;border-radius:4px;color:#bcd9cb;padding:4px;min-width:24px;height:24px;}
+#sailingSeaModal .ss-mini-button:hover {border-color:var(--ss-gold);color:#fff2cb;}
+#sailingSeaModal #ssQuickPause {position:absolute;right:-3px;top:-3px;}
+#sailingSeaModal .ss-clock-row {display:flex;justify-content:center;align-items:center;gap:7px;margin:6px 0;color:#b5d6d2;}
+#sailingSeaModal .ss-clock-row strong {font:700 29px/1.05 Georgia,serif;letter-spacing:.035em;color:#f7f0df;}
+#sailingSeaModal #ssDayPeriod {font-size:8px;letter-spacing:.08em;font-weight:800;}
+#sailingSeaModal .ss-time-track {height:3px;background:#051924;border-radius:4px;overflow:hidden;}
+#sailingSeaModal .ss-time-track i {display:block;height:100%;background:#a3d6ca;transition:width .2s;}
+#sailingSeaModal .ss-difficulty {display:flex;align-items:center;justify-content:space-between;margin-top:7px;border-top:1px solid #71969f2d;padding-top:6px;}
+#sailingSeaModal .ss-difficulty span {font-size:9px;color:#a5c0c5;letter-spacing:.1em;font-weight:750;}
+#sailingSeaModal .ss-difficulty b {font-size:18px;color:#f9dca2;line-height:1;}
+#sailingSeaModal .ss-difficulty b.danger {color:#ffad98;}
+#sailingSeaModal .ss-bounties {padding:9px 10px 7px;}
+#sailingSeaModal .ss-panel-kicker {display:flex;gap:5px;align-items:center;letter-spacing:.10em;font-size:9px;color:var(--ss-gold);padding:0 1px 5px;}
+#sailingSeaModal .ss-panel-kicker b {font-weight:800;}
+#sailingSeaModal .ss-leader-toggle {display:none;margin-left:auto;}
+#sailingSeaModal .ss-wanted-line {display:flex;gap:5px;align-items:center;min-height:23px;padding:3px 6px;color:#ffdc92;background:#b6914323;border:1px solid #dcca7833;border-radius:3px;font-size:10px;white-space:nowrap;}
+#sailingSeaModal .ss-wanted-line span {min-width:0;overflow:hidden;text-overflow:ellipsis;}
+#sailingSeaModal .ss-leader-list {padding:4px 0 0;list-style:none;margin:0;}
+#sailingSeaModal .ss-leader-list li {display:flex;align-items:center;gap:5px;height:24px;border-bottom:1px solid #7d9da31d;font-size:10px;padding:0 2px;white-space:nowrap;}
+#sailingSeaModal .ss-leader-list li:last-child {border-bottom:0;}
+#sailingSeaModal .ss-rank {font-size:9px;color:#9db1b4;min-width:14px;text-align:center;}
+#sailingSeaModal .ss-leader-name {overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
+#sailingSeaModal .ss-leader-list li b {color:#e4e6d2;font-size:11px;}
+#sailingSeaModal .ss-leader-list li.own .ss-leader-name {color:var(--ss-teal);}
+#sailingSeaModal .ss-leader-name small {font-size:8px;color:var(--ss-teal);}
+#sailingSeaModal .ss-leader-list li.wanted {background:#e5b65c17;color:#ffdea0;}
+#sailingSeaModal .ss-leader-list li.wanted b {color:#ffdea0;}
+#sailingSeaModal .ss-sealog {position:absolute;left:var(--ss-pad);bottom:var(--ss-bottom);width:255px;padding:10px;}
+#sailingSeaModal .ss-material-head {display:flex;align-items:center;gap:8px;}
+#sailingSeaModal .ss-material-gem {width:32px;height:32px;flex:none;display:grid;place-items:center;color:#f2d39b;background:#6e5f3429;border:1px solid #ae935c62;border-radius:5px;}
+#sailingSeaModal .ss-material-head>.ss-material-gem+div {min-width:0;}
+#sailingSeaModal .ss-material-head strong {display:block;font-size:23px;line-height:1.2;color:#f7e3b7;}
+#sailingSeaModal .ss-haul {display:flex;align-items:center;gap:4px;margin-left:auto;color:#a9e5cf;max-width:92px;font-size:9px;}
+#sailingSeaModal .ss-haul img {width:23px;height:23px;object-fit:contain;}
+#sailingSeaModal .ss-haul small {line-height:1.25;}
+#sailingSeaModal .ss-zone {display:flex;align-items:center;gap:5px;padding:5px 6px;margin-top:9px;background:#1a414b6e;border:1px solid #78b5b644;border-radius:4px;color:#c0e1dc;font-size:10px;font-weight:650;min-height:25px;}
+#sailingSeaModal .ss-zone span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#sailingSeaModal .ss-zone i {display:flex;color:#9fd3cd;}
+#sailingSeaModal .ss-zone[data-kind="danger"] {background:#5d2d383d;border-color:#ef997a55;color:#ffbaa0;}
+#sailingSeaModal .ss-zone[data-kind="storm"] {background:#333b6270;border-color:#a3b5e666;color:#c4cefc;}
+#sailingSeaModal .ss-zone[data-kind="dock"] {background:#1e554c5c;border-color:#78deb261;color:#b8f0d1;}
+#sailingSeaModal #ssFlags {margin:5px 2px 8px;padding-bottom:6px;border-bottom:1px solid #8fabb32b;}
+#sailingSeaModal .ss-log-heading {display:flex;justify-content:space-between;align-items:center;color:#c5bdab;font-size:9px;letter-spacing:.14em;margin-bottom:5px;}
+#sailingSeaModal .ss-log-toggle {display:none;}
+#sailingSeaModal .ss-log {height:112px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#577e83 transparent;overscroll-behavior:contain;}
+#sailingSeaModal .ss-log>div {display:grid;grid-template-columns:47px minmax(0,1fr);gap:3px;color:#b5c8ca;font-size:10px;line-height:1.38;padding:4px 2px;border-bottom:1px solid #8caba412;}
+#sailingSeaModal .ss-log time {font-size:8px;color:#779aa5;white-space:nowrap;padding-top:2px;}
+#sailingSeaModal .ss-log>div[data-tone="gold"] span,#sailingSeaModal .ss-log>div[data-tone="day"] span {color:#f6d494;}
+#sailingSeaModal .ss-log>div[data-tone="danger"] span,#sailingSeaModal .ss-log>div[data-tone="sink"] span {color:#efaa99;}
+#sailingSeaModal .ss-log>div[data-tone="success"] span,#sailingSeaModal .ss-log>div[data-tone="flag"] span {color:#a3dfc7;}
+#sailingSeaModal .ss-log>div[data-tone="beast"] span {color:#c9bdf5;}
+#sailingSeaModal .ss-quick {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding-top:7px;border-top:1px solid #8da6a22c;margin-top:4px;}
+#sailingSeaModal .ss-quick button {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:40px;border:1px solid #81a7a23d;border-radius:5px;background:#0a2430;color:#b1d1cf;font-size:9px;padding:5px 0;}
+#sailingSeaModal .ss-quick button:hover {border-color:#d4ba7f;color:#f4e2b6;}
+#sailingSeaModal .ss-save-note {font-size:8px;color:#8ca8ad;text-align:right;margin-top:4px;}
+#sailingSeaModal .ss-radar {position:absolute;right:var(--ss-pad-r);bottom:var(--ss-bottom);width:193px;padding:8px;}
+#sailingSeaModal .ss-radar-head {display:flex;align-items:center;justify-content:space-between;color:var(--ss-gold);font-size:9px;letter-spacing:.1em;padding:0 2px 6px;}
+#sailingSeaModal .ss-radar-head span {color:#a2d5c8;font-size:10px;}
+#ssRadar {display:block;width:100%;aspect-ratio:1;border:1px solid #83acb64f;border-radius:4px;touch-action:none;cursor:crosshair;background:#0a354a;}
+#sailingSeaModal .ss-radar-legend {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin-top:7px;color:#a6c3c5;font-size:8px;}
+#sailingSeaModal .ss-radar-legend span {display:flex;gap:4px;align-items:center;white-space:nowrap;}
+#sailingSeaModal .ss-radar-legend i {width:6px;height:6px;border-radius:2px;background:#d2be84;}
+#sailingSeaModal .ss-radar-legend i.danger {background:#e58b84;}
+#sailingSeaModal .ss-radar-legend i.storm {background:#b6b1e9;}
+#sailingSeaModal .ss-radar-legend i.gold {background:#ffdd77;box-shadow:0 0 5px #ffe69c;}
+#sailingSeaModal .ss-dock-zone {position:absolute;left:50%;transform:translateX(-50%);bottom:var(--ss-bottom);width:max-content;max-width:calc(100% - 2 * var(--ss-pad));text-align:center;display:flex;flex-direction:column;align-items:center;gap:9px;}
+#sailingSeaModal .ss-nav-hint {color:#d6e7e1;background:#0b2639c4;border:1px solid #8db3b835;border-radius:4px;font-size:10px;padding:4px 10px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#sailingSeaModal .ss-actions {pointer-events:auto;display:grid;grid-template-columns:repeat(5,75px);gap:6px;}
+#sailingSeaModal .ss-action {position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;border:0;padding:0 2px;background:transparent;color:var(--ss-ivory);min-width:0;}
+#sailingSeaModal .ss-action-circle {position:relative;display:grid;place-items:center;width:59px;height:59px;border-radius:50%;border:2px solid #b7a678;background:radial-gradient(circle at 36% 22%,#334b56,#0c2534 65%);box-shadow:inset 0 0 0 4px #081e2c,0 5px 14px #031826a3;color:#f3d7a1;}
+#sailingSeaModal .ss-action:hover .ss-action-circle {border-color:#f6dba1;color:#fff3d2;box-shadow:inset 0 0 0 4px #081e2c,0 0 14px #e7bd7e45;}
+#sailingSeaModal .ss-action-circle small {position:absolute;left:-3px;top:0;background:#163442;border:1px solid #b59e73;color:#ecd5a8;border-radius:4px;min-width:16px;height:17px;display:grid;place-items:center;font-size:9px;font-weight:800;}
+#sailingSeaModal .ss-action-label {font-size:10px;font-weight:750;text-shadow:0 1px 4px #04141d;line-height:1.15;white-space:nowrap;}
+#sailingSeaModal .ss-ready {position:absolute;top:-10px;right:-13px;padding:3px 5px;border-radius:8px;background:linear-gradient(180deg,#ffe9a7,#c59c52);color:#192c2d;font-size:8px;letter-spacing:.06em;box-shadow:0 0 12px #fee8a65c;white-space:nowrap;}
+#sailingSeaModal .ss-context {display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;pointer-events:auto;color:#e6cf9e;font-size:10px;}
+#sailingSeaModal .ss-context>span {background:#112431df;padding:3px 7px;border-radius:4px;}
+#sailingSeaModal .ss-board-button {border-color:#d99a66;background:#463332;color:#ffe0b2;min-height:34px;}
+#sailingSeaModal .ss-joystick {position:absolute;left:max(28px,calc(50% - 310px));bottom:max(110px,env(safe-area-inset-bottom) + 105px);width:102px;height:102px;z-index:3;border:1px solid #b8ded99c;border-radius:50%;background:#08293560;touch-action:none;user-select:none;display:grid;place-items:center;box-shadow:inset 0 0 0 7px #77c8bf1e;}
+#sailingSeaModal .ss-joystick-ring {position:absolute;inset:20%;border:1px dashed #b8ded95e;border-radius:50%;}
+#sailingSeaModal .ss-joystick-knob {width:37px;height:37px;display:grid;place-items:center;border-radius:50%;border:1px solid #d2ddb4;background:#214b58e6;color:#f5dfb0;box-shadow:0 3px 10px #041a28;}
+#sailingSeaModal .ss-overlay {position:absolute;inset:0;z-index:10;display:grid;place-items:center;padding:clamp(7px,1.8vw,22px);background:radial-gradient(ellipse at center,#06182238,#04141ecd 100%);}
+#sailingSeaModal .ss-panel {position:relative;width:min(100%,600px);max-height:calc(100dvh - 34px);overflow:hidden;border:1px solid #c3a777c7;border-radius:11px;background:linear-gradient(155deg,#17313e,#0a1d2b 74%);box-shadow:inset 0 0 0 4px #0a202b,0 24px 65px #03111cc7;outline:none;}
+#sailingSeaModal .ss-panel--wide {width:min(100%,1060px);}
+#sailingSeaModal .ss-panel--harbor {width:min(100%,634px);}
+#sailingSeaModal .ss-panel-scroll {max-height:calc(100dvh - 36px);overflow:auto;scrollbar-width:thin;scrollbar-color:#67868a #0a202b;overscroll-behavior:contain;padding:19px 20px 21px;}
+#sailingSeaModal .ss-panel-header {position:sticky;top:-19px;z-index:5;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:linear-gradient(180deg,#142d3b 87%,#142d3b00);padding:17px 20px 12px;margin:-19px -20px 15px;border-bottom:1px solid #c6b18440;}
+#sailingSeaModal .ss-panel-header>div:first-child {min-width:0;}
+#sailingSeaModal .ss-panel-header .ss-kicker {color:#d5be8e;font-size:10px;}
+#sailingSeaModal .ss-panel-header h2 {font:700 clamp(21px,3vw,30px)/1.18 Georgia,serif;letter-spacing:.015em;color:#f6e8ce;margin:3px 0 4px;}
+#sailingSeaModal .ss-panel-header p {font-size:12px;color:#afc7ca;max-width:72ch;}
+#sailingSeaModal .ss-panel-tools {display:flex;align-items:center;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end;}
+#sailingSeaModal .ss-button {display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 13px;min-height:42px;border:1px solid #8eaba56b;border-radius:5px;background:linear-gradient(180deg,#254552,#142c39);color:#e6efdf;font-size:12px;font-weight:750;text-align:center;line-height:1.25;box-shadow:inset 0 1px #d5e9d119;}
+#sailingSeaModal .ss-button:hover:not(:disabled) {border-color:var(--ss-gold);color:#fff2cf;}
+#sailingSeaModal .ss-button--small {min-height:34px;padding:5px 9px;font-size:10px;gap:4px;}
+#sailingSeaModal .ss-button.ss-primary {border-color:#ead5a3;color:#17313a;background:linear-gradient(180deg,#efdcb1,#c9aa72);box-shadow:inset 0 1px #fff5cc,0 3px 11px #d9a75c1a;font-weight:850;}
+#sailingSeaModal .ss-button.ss-primary:hover:not(:disabled) {color:#0e2630;background:#f5dfab;}
+#sailingSeaModal .ss-button.ss-danger-button {border-color:#996e68;background:linear-gradient(180deg,#55353a,#302d36);color:#ffc4af;}
+#sailingSeaModal .ss-close {width:35px;height:35px;display:grid;place-items:center;background:#222c37;border:1px solid #9d8669;border-radius:5px;color:#f7dcb7;}
+#sailingSeaModal .ss-close:hover {border-color:#f7c29a;color:#fff1c8;}
+#sailingSeaModal .ss-panel-actions {display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-top:16px;}
+#sailingSeaModal .ss-panel-actions .ss-button {min-width:128px;}
+#sailingSeaModal .ss-panel-note {color:#aac3c4;font-size:12px;padding:10px 12px;margin-top:11px;background:#0d2935;border:1px solid #729ba333;border-radius:5px;line-height:1.55;}
+#sailingSeaModal .ss-warning {color:#ffc6b1;padding:11px 12px;font-size:12px;border:1px solid #d79a785e;border-radius:5px;background:#492f39;margin:8px 0;line-height:1.5;}
+#sailingSeaModal .ss-harbor {text-align:center;padding:11px 15px 10px;}
+#sailingSeaModal .ss-harbor-emblem {width:108px;height:108px;margin:2px auto 17px;display:grid;place-items:center;border:1px solid #ecd29e86;border-radius:50%;background:radial-gradient(circle,#3d6063,#153641 60%,#102631 62%);box-shadow:0 0 0 5px #c8a66e18,inset 0 0 0 6px #081f2b,0 8px 36px #0a121a;color:#eccd95;position:relative;}
+#sailingSeaModal .ss-harbor-emblem span {position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:25px;color:#f4dea4;text-shadow:0 0 12px #f7dc94;}
+#sailingSeaModal .ss-harbor-kicker {font-size:10px;font-weight:850;letter-spacing:.19em;color:#b9ccc4;}
+#sailingSeaModal .ss-harbor h1 {font:700 clamp(38px,6vw,57px)/1.12 Georgia,serif;color:#f3e5c8;text-shadow:0 3px 0 #0a1f2c;letter-spacing:-.035em;margin:5px 0;}
+#sailingSeaModal .ss-harbor h1 em {font-style:normal;color:#98e0d0;}
+#sailingSeaModal .ss-harbor-sub {color:#b4cfce;font:13px/1.55 Georgia,serif;}
+#sailingSeaModal .ss-harbor-facts {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin:22px 0 17px;border:1px solid #80a4a451;border-radius:6px;background:#8caba330;overflow:hidden;}
+#sailingSeaModal .ss-harbor-facts>div {display:grid;place-items:center;gap:4px;padding:12px 4px;background:#0b2531;color:#cdb386;}
+#sailingSeaModal .ss-harbor-facts strong {font-size:20px;color:#f3e1b5;line-height:1;}
+#sailingSeaModal .ss-harbor-facts span {font-size:10px;color:#a8c2c1;}
+#sailingSeaModal .ss-resume-tile {text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;background:#173d43;border:1px solid #7cbaad69;border-radius:6px;padding:10px;margin:10px 0 16px;}
+#sailingSeaModal .ss-resume-tile h3 {font-size:16px;color:#e5f1d9;padding:2px 0;}
+#sailingSeaModal .ss-resume-tile p {font-size:10px;color:#adc5c3;}
+#sailingSeaModal .ss-status-seal {font-size:8px;letter-spacing:.08em;white-space:nowrap;color:#c5efd6;border:1px solid #8dceba80;padding:5px 7px;border-radius:4px;}
+#sailingSeaModal .ss-harbor-actions {display:flex;justify-content:center;gap:8px;flex-wrap:wrap;}
+#sailingSeaModal .ss-harbor-actions button {flex:1;min-height:49px;font-size:14px;}
+#sailingSeaModal .ss-harbor-note {margin:13px auto 16px;color:#a8c3c5;font-size:11px;max-width:42ch;}
+#sailingSeaModal .ss-harbor-secondary {display:flex;justify-content:center;gap:7px;flex-wrap:wrap;}
+#sailingSeaModal .ss-art {position:relative;overflow:hidden;background:radial-gradient(ellipse at 45% 38%,#456d72,#122b3b 65%);border:1px solid var(--rarity);border-radius:4px;width:100%;height:100%;display:grid;place-items:center;}
+#sailingSeaModal .ss-art>span {font:700 27px/1 Georgia,serif;color:var(--rarity);letter-spacing:.05em;}
+#sailingSeaModal .ss-art img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 24%;}
+#sailingSeaModal .ss-draft-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+#sailingSeaModal .ss-draft-card {min-width:0;display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(180deg,#25353f,#0e2835);border:1px solid var(--rarity);border-radius:7px;box-shadow:inset 0 0 0 3px #091e2a,0 4px 19px #07152160;}
+#sailingSeaModal .ss-draft-art {height:clamp(140px,25dvh,226px);position:relative;padding:5px 5px 0;}
+#sailingSeaModal .ss-rarity-badge {position:absolute;top:12px;left:12px;background:#10202bdc;color:var(--rarity);border:1px solid var(--rarity);font-size:9px;font-weight:800;letter-spacing:.11em;padding:4px 6px;border-radius:3px;}
+#sailingSeaModal .ss-draft-number {position:absolute;right:12px;top:12px;padding:3px 6px;color:#f0ddbc;background:#10202bba;border:1px solid #bba472;font-size:10px;border-radius:3px;}
+#sailingSeaModal .ss-draft-info {display:flex;flex-direction:column;gap:7px;padding:11px;flex:1;min-width:0;}
+#sailingSeaModal .ss-card-title {display:flex;align-items:flex-start;gap:5px;justify-content:space-between;min-width:0;}
+#sailingSeaModal .ss-card-title h3 {color:#f2e9d1;font-size:14px;line-height:1.2;overflow-wrap:anywhere;}
+#sailingSeaModal .ss-card-title>span {flex:none;font-size:9px;color:#92cdc9;border:1px solid #7caaad63;padding:2px 4px;border-radius:3px;line-height:1.1;}
+#sailingSeaModal .ss-stat-pair {display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:center;font-size:10px;color:#9ec6c2;}
+#sailingSeaModal .ss-stat-pair span {white-space:nowrap;border:1px solid #8faaaa32;background:#091d29;border-radius:4px;padding:5px 3px;}
+#sailingSeaModal .ss-stat-pair b {font-size:14px;color:#e1e9cd;}
+#sailingSeaModal .ss-card-passive {color:#b5c9cb;font-size:11px;line-height:1.5;border:1px solid #7ea3a83d;border-radius:4px;background:#091e29;overflow:hidden;}
+#sailingSeaModal .ss-card-passive summary {cursor:pointer;color:#d9c59d;font-size:11px;font-weight:750;padding:6px 7px;}
+#sailingSeaModal .ss-card-passive summary small {color:#8cbdbb;font-weight:500;font-size:9px;}
+#sailingSeaModal .ss-card-passive>div {padding:5px 7px;white-space:pre-line;overflow-wrap:anywhere;}
+#sailingSeaModal .ss-card-passive[open] {max-height:156px;overflow:auto;scrollbar-width:thin;}
+#sailingSeaModal .ss-card-passive .ss-skill-detail {border-top:1px solid #7ea3a83d;color:#a7ded1;font-size:10px;}
+#sailingSeaModal .ss-draft-info>.ss-button {margin-top:auto;width:100%;}
+#sailingSeaModal .ss-capture-chance {display:flex;align-items:center;justify-content:space-between;padding:7px;background:#29483f66;border:1px solid #81cba96b;border-radius:4px;color:#addbc7;font-size:11px;}
+#sailingSeaModal .ss-capture-chance b {color:#d8f9d7;font-size:17px;}
+#sailingSeaModal .ss-deploy-head {display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#14374185;border:1px solid #75aaab4e;border-radius:6px;margin-bottom:11px;}
+#sailingSeaModal .ss-deploy-head h3 {font-size:15px;color:#e2e9d8;}
+#sailingSeaModal .ss-deploy-head p {font-size:10px;color:#9cbcbf;margin-top:2px;}
+#sailingSeaModal .ss-inline-actions {display:flex;align-items:center;gap:6px;flex:none;}
+#sailingSeaModal .ss-crew-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(174px,1fr));gap:9px;}
+#sailingSeaModal .ss-crew-card {display:flex;flex-direction:column;min-width:0;border:1px solid #75919357;box-shadow:inset 0 0 0 2px #0a2330;border-radius:6px;background:#112e39;overflow:hidden;}
+#sailingSeaModal .ss-crew-card.is-selected {border-color:#aee3cc;box-shadow:inset 0 0 0 2px #80c5b44f;}
+#sailingSeaModal .ss-crew-card.is-dead {border-color:#b57d72;}
+#sailingSeaModal .ss-crew-select {height:109px;position:relative;display:block;border:0;padding:4px 4px 0;background:transparent;width:100%;}
+#sailingSeaModal .ss-crew-select:not(:disabled):hover .ss-art {border-color:#c8f3db;}
+#sailingSeaModal .ss-crew-card.is-dead .ss-art img {filter:grayscale(.8) brightness(.62);}
+#sailingSeaModal .ss-crew-static {cursor:default;}
+#sailingSeaModal .ss-selection-marker {position:absolute;top:9px;right:9px;width:23px;height:23px;border:1px solid #b8d8cd;color:#d4f2dd;background:#173b47cd;border-radius:4px;display:grid;place-items:center;font-weight:800;font-size:16px;}
+#sailingSeaModal .ss-crew-card.is-selected .ss-selection-marker {background:#b3ddba;color:#183c39;}
+#sailingSeaModal .ss-crew-art-badge {position:absolute;bottom:5px;left:9px;padding:3px 6px;border:1px solid #afc1b4a0;background:#102934e3;border-radius:3px;font-size:8px;color:#e6ecd8;font-weight:800;letter-spacing:.08em;}
+#sailingSeaModal .ss-crew-card.is-selected .ss-crew-art-badge {color:#ccf3d4;border-color:#a5e1c2;}
+#sailingSeaModal .ss-crew-data {display:flex;flex-direction:column;gap:5px;padding:8px;}
+#sailingSeaModal .ss-crew-data .ss-card-title h3 {font-size:12px;line-height:1.15;}
+#sailingSeaModal .ss-crew-sub {color:#a1bcc1;font-size:10px;}
+#sailingSeaModal .ss-resource-line {display:flex;align-items:center;justify-content:space-between;gap:5px;color:#9bbdc1;font-size:9px;font-weight:700;}
+#sailingSeaModal .ss-resource-line b {color:#ebeedb;font-size:10px;white-space:nowrap;}
+#sailingSeaModal .ss-condition {font-size:9px;color:#95dbbe;min-height:13px;line-height:1.25;}
+#sailingSeaModal .ss-crew-card.is-dead .ss-condition {color:#ffb6a0;}
+#sailingSeaModal .ss-relic-chip {border:1px solid #bda15e72;border-radius:4px;background:#5847252b;font-size:10px;color:#ddc99b;}
+#sailingSeaModal .ss-relic-chip summary {display:flex;align-items:center;gap:4px;padding:3px 5px;cursor:pointer;line-height:1.25;}
+#sailingSeaModal .ss-relic-chip img {width:22px;height:22px;object-fit:contain;}
+#sailingSeaModal .ss-relic-chip b {margin-left:auto;font-size:7px;color:#f5da97;}
+#sailingSeaModal .ss-relic-chip p {padding:6px;font-size:10px;line-height:1.45;}
+#sailingSeaModal .ss-equip-label {display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;gap:4px;color:#aec6c2;font-size:9px;}
+#sailingSeaModal select {min-width:0;max-width:100%;background:#081f2d;border:1px solid #769d9f7d;color:#dce9d7;border-radius:4px;padding:7px 6px;outline:none;font-size:11px;}
+#sailingSeaModal .ss-island-banner,#sailingSeaModal .ss-encounter-banner {display:flex;align-items:center;gap:13px;padding:14px;background:linear-gradient(120deg,#254a4b,#112936);border:1px solid #95c7b363;border-radius:6px;margin-bottom:12px;}
+#sailingSeaModal .ss-encounter-banner {background:linear-gradient(120deg,#533934,#142934);border-color:#cb9c796b;}
+#sailingSeaModal .ss-round-emblem {width:61px;height:61px;flex:0 0 61px;display:grid;place-items:center;border-radius:50%;background:#0a2835;border:1px solid #c5c08b;color:#e5d0a0;}
+#sailingSeaModal .ss-round-emblem--danger {border-color:#e0a18a;color:#ffd0a1;}
+#sailingSeaModal .ss-island-banner h3,#sailingSeaModal .ss-encounter-banner h3 {font:700 22px/1.2 Georgia,serif;color:#f2e4c5;margin:3px 0;}
+#sailingSeaModal .ss-island-banner p,#sailingSeaModal .ss-encounter-banner p {color:#b9d0ca;font-size:11px;}
+#sailingSeaModal .ss-info-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;}
+#sailingSeaModal .ss-info-grid>div {min-width:0;display:grid;gap:5px;padding:13px 9px;text-align:center;border:1px solid #73979c45;border-radius:5px;background:#0b2533;}
+#sailingSeaModal .ss-info-grid strong {font-size:20px;line-height:1.15;color:#d9e6c7;}
+#sailingSeaModal .ss-info-grid span {color:#9ebabc;font-size:10px;}
+#sailingSeaModal .ss-forge-toolbar {display:flex;align-items:center;gap:16px;justify-content:space-between;border:1px solid #95aaa35c;padding:11px 13px;background:#0e303b;border-radius:6px;margin-bottom:12px;}
+#sailingSeaModal .ss-forge-toolbar strong {font-size:24px;color:#e9d3a5;line-height:1.2;}
+#sailingSeaModal .ss-forge-toolbar label {display:flex;align-items:center;gap:8px;font-size:11px;color:#b8d0cc;max-width:59%;}
+#sailingSeaModal .ss-forge-toolbar select {width:min(230px,100%);}
+#sailingSeaModal .ss-recipe-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;}
+#sailingSeaModal .ss-recipe {min-width:0;display:flex;flex-direction:column;gap:8px;padding:11px;border:1px solid #c3a56e83;border-radius:6px;background:linear-gradient(150deg,#263a3b,#102a37);box-shadow:inset 0 1px #eed6a51e;}
+#sailingSeaModal .ss-recipe-top {display:flex;gap:10px;align-items:center;}
+#sailingSeaModal .ss-recipe-art {width:56px;height:56px;flex:none;display:grid;place-items:center;background:#152b35;border:1px solid #d8bb7c7a;border-radius:6px;box-shadow:inset 0 0 14px #c1a46924;}
+#sailingSeaModal .ss-recipe-art img {width:49px;height:49px;object-fit:contain;}
+#sailingSeaModal .ss-rarity-text {color:#f0d297;font-size:8px;font-weight:800;letter-spacing:.08em;}
+#sailingSeaModal .ss-recipe-top h3 {font-size:15px;color:#f0e2c3;}
+#sailingSeaModal .ss-recipe p {font-size:11px;line-height:1.5;color:#b3c9ca;flex:1;}
+#sailingSeaModal .ss-cost {display:flex;align-items:center;gap:3px;font-size:11px;color:#d6c69c;font-weight:650;margin-top:3px;}
+#sailingSeaModal .ss-recipe-rules {border:1px solid #8aa8a63b;border-radius:4px;background:#0b2632;padding:5px 6px;color:#afc5c4;font-size:10px;}
+#sailingSeaModal .ss-recipe-rules summary {color:#bcd1c9;cursor:pointer;font-weight:700;}
+#sailingSeaModal .ss-recipe-rules>div {display:flex;flex-wrap:wrap;gap:4px;padding:5px 0;}
+#sailingSeaModal .ss-recipe-rules>div span {display:flex;align-items:center;gap:2px;font-size:9px;color:#a5c5bf;padding:2px 3px;border:1px solid #729b982d;border-radius:3px;}
+#sailingSeaModal .ss-recipe-rules img {width:15px;height:15px;object-fit:contain;}
+#sailingSeaModal .ss-recipe-rules small {display:block;font-size:9px;color:#8da9ab;line-height:1.3;}
+#sailingSeaModal .ss-match {display:inline-flex;color:#bdccd0;font-size:10px;}
+#sailingSeaModal .ss-match.is-match {color:#acf0d1;}
+#sailingSeaModal .ss-recipe>.ss-button {margin-top:auto;}
+#sailingSeaModal .ss-upgrade-stages {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:15px;}
+#sailingSeaModal .ss-upgrade-stage {min-width:0;display:grid;place-items:center;gap:4px;padding:13px 7px;background:#0b2330;border:1px solid #73939b4d;border-radius:6px;color:#a6bdbd;text-align:center;}
+#sailingSeaModal .ss-upgrade-stage.current {background:#34504a;border-color:#e4c98b;color:#eee1b7;}
+#sailingSeaModal .ss-upgrade-stage.past {border-color:#8ecdb9a1;}
+#sailingSeaModal .ss-upgrade-stage>div {height:52px;display:grid;place-items:center;color:#d7be86;}
+#sailingSeaModal .ss-upgrade-stage>b {font-size:20px;color:#f1dec0;}
+#sailingSeaModal .ss-upgrade-stage>span {font:700 14px Georgia,serif;}
+#sailingSeaModal .ss-upgrade-stage>strong {font-size:11px;color:#d5e4cf;}
+#sailingSeaModal .ss-upgrade-stage>small {font-size:8px;letter-spacing:.08em;margin-top:3px;color:#a7b8b7;}
+#sailingSeaModal .ss-upgrade-requirements {display:grid;gap:8px;background:#0a2632;padding:13px;border:1px solid #9daea555;border-radius:5px;}
+#sailingSeaModal .ss-upgrade-requirements .ss-resource-line {font-size:12px;}
+#sailingSeaModal .ss-upgrade-requirements .ss-resource-line b {font-size:13px;}
+#sailingSeaModal .ss-upgrade-requirements .ss-meter {height:9px;}
+#sailingSeaModal .ss-max-ship {padding:15px;text-align:center;background:#44634b4a;border:1px solid #b1cc859e;border-radius:5px;color:#e2e8b3;}
+#sailingSeaModal .ss-guide-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+#sailingSeaModal .ss-guide-grid article {border:1px solid #7fa0a54e;border-radius:5px;background:#102b36;padding:12px;}
+#sailingSeaModal .ss-guide-grid h3 {display:flex;gap:7px;align-items:center;color:#e4d0a2;font:700 18px/1.2 Georgia,serif;margin-bottom:7px;}
+#sailingSeaModal .ss-guide-grid p {color:#b9cdcc;font-size:12px;line-height:1.6;margin:6px 0;}
+#sailingSeaModal .ss-guide-rates {margin-top:14px;border:1px solid #b7a1715e;border-radius:6px;padding:12px;background:#102832;}
+#sailingSeaModal .ss-guide-rates .ss-kicker {color:#e2c38e;font-size:11px;margin-bottom:8px;}
+#sailingSeaModal .ss-guide-rates table {width:100%;border-collapse:collapse;text-align:center;font-size:13px;color:#def0d9;}
+#sailingSeaModal .ss-guide-rates td,#sailingSeaModal .ss-guide-rates th {border-bottom:1px solid #80a2a32d;padding:8px 4px;}
+#sailingSeaModal .ss-guide-rates th:first-child {text-align:left;padding-left:9px;}
+#sailingSeaModal .ss-guide-rates thead {background:#253c43;color:#e8d0a0;}
+#sailingSeaModal .ss-guide-rates small {display:block;color:#a7c3c3;line-height:1.5;margin-top:9px;}
+#sailingSeaModal .ss-control-options {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0 17px;}
+#sailingSeaModal .ss-control-choice {display:grid;place-items:center;gap:8px;padding:15px 10px;border:1px solid #84a0a55f;background:#0b2634;border-radius:6px;color:#b8ceca;text-align:center;}
+#sailingSeaModal .ss-control-choice.selected {border-color:#d9cd91;background:#2c4f47;color:#f5e6c0;box-shadow:inset 0 0 0 2px #93b5963c;}
+#sailingSeaModal .ss-control-choice>.ss-icon {color:#e4c78e;}
+#sailingSeaModal .ss-control-choice strong {font-size:15px;color:#f1e3c7;}
+#sailingSeaModal .ss-control-choice span {font-size:11px;line-height:1.4;}
+#sailingSeaModal .ss-control-choice b {font-size:9px;letter-spacing:.1em;background:#24404b;padding:4px 7px;border-radius:4px;}
+#sailingSeaModal .ss-control-choice.selected b {background:#e1cf9c;color:#17342f;}
+#sailingSeaModal .ss-setting-row {display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 1px;border-top:1px solid #8ca5a13d;}
+#sailingSeaModal .ss-setting-row b {font-size:13px;color:#dfd9c6;}
+#sailingSeaModal .ss-setting-row p {margin:3px 0;color:#9dbabd;font-size:11px;line-height:1.45;}
+#sailingSeaModal .ss-setting-row button {flex:none;}
+#sailingSeaModal .ss-enemy-lineup {display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;margin:0 0 12px;}
+#sailingSeaModal .ss-enemy-card {min-width:0;border:1px solid #a8898154;border-radius:5px;background:#1f2f36;}
+#sailingSeaModal .ss-enemy-card>summary {display:flex;align-items:center;gap:6px;padding:5px;cursor:pointer;list-style:none;}
+#sailingSeaModal .ss-enemy-card>summary::-webkit-details-marker {display:none;}
+#sailingSeaModal .ss-enemy-card .ss-art {width:38px;height:49px;flex:0 0 38px;}
+#sailingSeaModal .ss-enemy-card .ss-art>span {font-size:13px;}
+#sailingSeaModal .ss-enemy-card>summary>div:last-child {min-width:0;display:grid;gap:2px;line-height:1.2;}
+#sailingSeaModal .ss-enemy-card b {font-size:10px;color:#eddbce;overflow-wrap:anywhere;}
+#sailingSeaModal .ss-enemy-card span,#sailingSeaModal .ss-enemy-card small {font-size:9px;color:#a8c0c4;}
+#sailingSeaModal .ss-enemy-card p {font-size:10px;line-height:1.45;padding:7px;color:#c6cfcc;white-space:pre-line;}
+#sailingSeaModal .ss-sticky-actions {position:sticky;bottom:-21px;z-index:3;padding:9px 20px 15px;margin:13px -20px -21px;background:linear-gradient(180deg,#122c38,#0b202d);border-top:1px solid #b1ab865c;}
+#sailingSeaModal .ss-deploy-warning {flex:1;font-size:11px;color:#b8cfc4;min-width:120px;}
+#sailingSeaModal .ss-new-recruit {display:flex;align-items:center;gap:13px;padding:13px;background:#29443f;border:1px solid #bfcb8980;border-radius:6px;}
+#sailingSeaModal .ss-new-recruit .ss-art {width:70px;height:83px;flex:none;}
+#sailingSeaModal .ss-new-recruit h3 {font:700 21px Georgia,serif;color:#f4e3c2;margin:3px 0 7px;}
+#sailingSeaModal .ss-new-recruit .ss-button {margin-left:auto;}
+#sailingSeaModal .ss-new-recruit+.ss-panel-note {margin-bottom:10px;}
+#sailingSeaModal .ss-result-crest {display:grid;place-items:center;gap:7px;text-align:center;background:radial-gradient(ellipse,#6e623640,transparent 70%),#102a35;border:1px solid #bda46f62;border-radius:8px;padding:22px 12px;margin-bottom:12px;color:#e6c58b;}
+#sailingSeaModal .ss-result-crest h3 {font:700 26px Georgia,serif;color:#f4ddac;}
+#sailingSeaModal .ss-result-crest p {font-size:12px;color:#b6cdc6;line-height:1.5;}
+#sailingSeaModal .ss-result-crest.loss {color:#e49f8b;border-color:#bf897b79;background:radial-gradient(ellipse,#67393530,transparent 70%),#132733;}
+#sailingSeaModal .ss-result-crest.loss h3 {color:#f0b19a;}
+#sailingSeaModal .ss-reward-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+#sailingSeaModal .ss-reward-grid strong {color:#f3deaf;}
+#sailingSeaModal .ss-combat-layout {display:grid;grid-template-columns:minmax(132px,190px) minmax(0,1fr) minmax(132px,190px);gap:10px;align-items:start;}
+#sailingSeaModal .ss-deck-frame {position:relative;min-width:0;height:min(52dvh,510px);background:#071c27;border:1px solid #bca88186;border-radius:5px;overflow:hidden;}
+#ssBattleBoard {display:block;width:100%;height:100%;}
+#sailingSeaModal .ss-battle-roster {background:#0a2430;border:1px solid #79a7a74f;border-radius:5px;overflow:hidden;max-height:min(52dvh,510px);display:flex;flex-direction:column;}
+#sailingSeaModal .ss-battle-roster--enemy {border-color:#c99b8966;}
+#sailingSeaModal .ss-battle-roster h3,#sailingSeaModal .ss-battle-log-panel h3 {padding:8px;display:flex;gap:4px;align-items:center;font-size:10px;letter-spacing:.09em;color:#bfdfcc;border-bottom:1px solid #75989a4d;background:#173745;}
+#sailingSeaModal .ss-battle-roster--enemy h3 {color:#eac3ab;background:#392f38;}
+#sailingSeaModal .ss-live-roster {overflow:auto;scrollbar-width:thin;min-height:0;padding:3px;}
+#sailingSeaModal .ss-live-card {display:flex;gap:5px;align-items:center;padding:5px;border:1px solid #879da037;border-left:2px solid var(--rarity);border-radius:3px;background:#122d39;margin-bottom:4px;}
+#sailingSeaModal .ss-live-art {width:32px;height:45px;flex:0 0 32px;background:#294551;border:1px solid var(--rarity);border-radius:3px;overflow:hidden;}
+#sailingSeaModal .ss-live-art img {width:100%;height:100%;object-fit:cover;}
+#sailingSeaModal .ss-live-data {min-width:0;display:grid;gap:2px;flex:1;}
+#sailingSeaModal .ss-live-data strong {font-size:10px;color:#f0e6d0;line-height:1.2;overflow-wrap:anywhere;}
+#sailingSeaModal .ss-live-data small {font-size:8px;line-height:1.1;color:#bed8ce;white-space:nowrap;}
+#sailingSeaModal .ss-live-data .ss-meter {height:4px;}
+#sailingSeaModal .ss-live-data em {font-size:8px;color:#e8c5a1;font-style:normal;line-height:1.25;overflow-wrap:anywhere;}
+#sailingSeaModal .ss-live-card.defeated {opacity:.55;border-left-color:#a37575;}
+#sailingSeaModal .ss-battle-log-panel {border:1px solid #789ca14f;border-radius:5px;background:#092430;overflow:hidden;margin-top:9px;}
+#sailingSeaModal #ssBattleLog {height:102px;overflow:auto;padding:5px;scrollbar-width:thin;scrollbar-color:#5e8585 transparent;}
+#sailingSeaModal #ssBattleLog>div {font-size:10px;color:#c2d3d0;padding:3px 4px;border-bottom:1px solid #9bbab01a;}
+#sailingSeaModal #ssBattleLog>div.skill {color:#f0d294;}
+#sailingSeaModal #ssBattleLog>div.status {color:#d7bff1;}
+#sailingSeaModal #ssBattleLog>div.heal {color:#b2f0c6;}
+#sailingSeaModal .ss-restoring {position:absolute;inset:0;background:#0a2234e4;display:grid;place-items:center;text-align:center;color:#eddaaa;padding:12px;font-weight:800;}
+#sailingSeaModal .ss-toast {position:absolute;z-index:30;top:calc(var(--ss-top) + 4px);left:50%;transform:translateX(-50%);max-width:min(540px,90%);padding:11px 16px;background:#143745;border:1px solid #9bbbaf;border-radius:6px;color:#f0e4cd;box-shadow:0 6px 25px #07151d8f;font-size:12px;text-align:center;pointer-events:none;}
+#sailingSeaModal .ss-toast[data-tone="danger"] {background:#4b3035;border-color:#d59f8a;color:#ffcfb9;}
+#sailingSeaModal .ss-toast[data-tone="success"] {background:#214b43;border-color:#99d0b6;color:#e5f1d2;}
+#sailingSeaModal .ss-paused {position:absolute;z-index:8;left:50%;top:48%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:9px;background:#142e3be8;border:1px solid #d9c38f;border-radius:6px;padding:12px 16px;color:#f1ddae;font-size:12px;font-weight:800;letter-spacing:.05em;white-space:nowrap;box-shadow:0 9px 26px #04131c91;}
+#sailingSeaModal .ss-paused>span {font-weight:500;font-size:10px;color:#aac5c4;letter-spacing:0;}
+@media(max-width:1050px) {
+ #sailingSeaModal {--ss-pad:max(10px,env(safe-area-inset-left));--ss-pad-r:max(10px,env(safe-area-inset-right));--ss-top:max(10px,env(safe-area-inset-top));--ss-bottom:max(9px,env(safe-area-inset-bottom));}
+ #sailingSeaModal .ss-top {grid-template-columns:minmax(178px,220px) minmax(148px,190px) minmax(175px,215px);}
+ #sailingSeaModal .ss-sealog {width:211px;}
+ #sailingSeaModal .ss-radar {width:162px;}
+ #sailingSeaModal .ss-actions {grid-template-columns:repeat(5,62px);gap:3px;}
+ #sailingSeaModal .ss-action-circle {width:52px;height:52px;}
+ #sailingSeaModal .ss-action-circle>.ss-icon {width:22px;height:22px;}
+ #sailingSeaModal .ss-action-label {font-size:9px;}
+}
+@media(max-width:760px) {
+ #sailingSeaModal .ss-top {grid-template-columns:minmax(120px,1fr) minmax(120px,1fr);gap:6px;}
+ #sailingSeaModal .ss-captain {grid-column:1;grid-row:1;min-height:116px;gap:5px;padding:8px;}
+ #sailingSeaModal .ss-captain-crest {display:none;}
+ #sailingSeaModal .ss-captain-name {font-size:16px;}
+ #sailingSeaModal .ss-captain-body .ss-kicker {font-size:8px;}
+ #sailingSeaModal .ss-captain-meta {font-size:9px;}
+ #sailingSeaModal .ss-calendar {grid-column:1/-1;grid-row:2;justify-self:center;width:min(206px,59%);padding:6px 9px;}
+ #sailingSeaModal .ss-clock-row {margin:3px 0;}
+ #sailingSeaModal .ss-clock-row strong {font-size:23px;}
+ #sailingSeaModal .ss-difficulty {padding-top:4px;margin-top:4px;}
+ #sailingSeaModal .ss-difficulty b {font-size:16px;}
+ #sailingSeaModal .ss-day-head {font-size:10px;}
+ #sailingSeaModal #ssQuickPause {height:20px;min-width:20px;padding:2px;right:-1px;}
+ #sailingSeaModal .ss-bounties {grid-column:2;grid-row:1;padding:7px 7px 4px;min-height:107px;}
+ #sailingSeaModal .ss-panel-kicker {font-size:8px;padding-bottom:3px;}
+ #sailingSeaModal .ss-wanted-line {font-size:8px;min-height:19px;padding:2px 3px;}
+ #sailingSeaModal .ss-leader-list {padding-top:2px;}
+ #sailingSeaModal .ss-leader-list li {height:17px;gap:3px;font-size:9px;}
+ #sailingSeaModal .ss-leader-list li b {font-size:9px;}
+ #sailingSeaModal .ss-rank {min-width:10px;font-size:8px;}
+ #sailingSeaModal .ss-leader-name small {font-size:6px;}
+ #sailingSeaModal .ss-dock-zone {width:100%;max-width:100%;bottom:var(--ss-bottom);gap:6px;padding:0 6px;}
+ #sailingSeaModal .ss-actions {grid-template-columns:repeat(5,minmax(45px,1fr));width:min(370px,100%);gap:5px;}
+ #sailingSeaModal .ss-action-circle {width:49px;height:49px;}
+ #sailingSeaModal .ss-action-label {font-size:9px;}
+ #sailingSeaModal .ss-context {gap:4px;}
+ #sailingSeaModal .ss-context>span {display:none;}
+ #sailingSeaModal .ss-nav-hint {font-size:9px;padding:3px 7px;}
+ #sailingSeaModal .ss-sealog {bottom:calc(var(--ss-bottom) + 104px);width:169px;padding:7px;max-width:53%;}
+ #sailingSeaModal .ss-material-head {gap:5px;}
+ #sailingSeaModal .ss-material-gem {width:25px;height:25px;}
+ #sailingSeaModal .ss-material-gem .ss-icon {width:19px;height:19px;}
+ #sailingSeaModal .ss-material-head strong {font-size:18px;}
+ #sailingSeaModal .ss-haul {display:none;}
+ #sailingSeaModal .ss-zone {margin-top:5px;font-size:9px;padding:4px 4px;}
+ #sailingSeaModal #ssFlags {margin:3px 1px;font-size:9px;padding-bottom:4px;}
+ #sailingSeaModal .ss-log-heading {margin-bottom:2px;font-size:8px;}
+ #sailingSeaModal .ss-log-toggle {display:grid;height:20px;min-width:20px;padding:1px;}
+ #sailingSeaModal .ss-log {height:40px;}
+ #sailingSeaModal.ss-log-expanded .ss-log {height:158px;}
+ #sailingSeaModal .ss-log>div {font-size:9px;grid-template-columns:34px minmax(0,1fr);padding:2px 1px;}
+ #sailingSeaModal .ss-log time {font-size:7px;}
+ #sailingSeaModal .ss-quick {gap:2px;padding-top:4px;}
+ #sailingSeaModal .ss-quick button {min-height:35px;font-size:8px;gap:2px;padding:3px 0;}
+ #sailingSeaModal .ss-save-note {font-size:7px;margin-top:2px;}
+ #sailingSeaModal .ss-radar {bottom:calc(var(--ss-bottom) + 104px);width:117px;padding:5px;}
+ #sailingSeaModal .ss-radar-head {padding:0 1px 4px;font-size:7px;}
+ #sailingSeaModal .ss-radar-legend {font-size:6px;gap:3px;margin-top:4px;}
+ #sailingSeaModal .ss-radar-legend span {gap:2px;}
+ #sailingSeaModal .ss-radar-legend i {width:5px;height:5px;}
+ #sailingSeaModal .ss-joystick {width:86px;height:86px;left:max(16px,env(safe-area-inset-left));bottom:calc(var(--ss-bottom) + 335px);}
+ #sailingSeaModal .ss-joystick-knob {width:30px;height:30px;}
+ #sailingSeaModal.ss-log-expanded .ss-joystick {bottom:calc(var(--ss-bottom) + 455px);}
+ #sailingSeaModal .ss-panel {max-height:calc(100dvh - 16px);border-radius:8px;}
+ #sailingSeaModal .ss-panel-scroll {max-height:calc(100dvh - 18px);padding:12px;}
+ #sailingSeaModal .ss-panel-header {top:-12px;padding:11px 12px 9px;margin:-12px -12px 11px;}
+ #sailingSeaModal .ss-panel-header .ss-kicker {font-size:8px;}
+ #sailingSeaModal .ss-panel-header h2 {font-size:22px;}
+ #sailingSeaModal .ss-panel-header p {font-size:10px;}
+ #sailingSeaModal .ss-panel-tools {gap:4px;max-width:37%;}
+ #sailingSeaModal .ss-panel-tools .ss-button {font-size:9px;padding:5px 5px;min-height:32px;}
+ #sailingSeaModal .ss-panel-tools .ss-icon {width:14px;height:14px;}
+ #sailingSeaModal .ss-close {width:31px;height:31px;}
+ #sailingSeaModal .ss-panel-actions {gap:5px;margin-top:12px;}
+ #sailingSeaModal .ss-panel-actions .ss-button {min-width:0;flex:1;}
+ #sailingSeaModal .ss-sticky-actions {bottom:-12px;margin:9px -12px -12px;padding:8px 12px 11px;}
+ #sailingSeaModal .ss-sticky-actions .ss-deploy-warning {flex:0 0 100%;font-size:10px;}
+ #sailingSeaModal .ss-harbor {padding:5px 4px;}
+ #sailingSeaModal .ss-harbor-emblem {width:79px;height:79px;margin:7px auto 12px;}
+ #sailingSeaModal .ss-harbor-emblem .ss-icon {width:50px;height:50px;}
+ #sailingSeaModal .ss-harbor-facts {margin:16px 0 12px;}
+ #sailingSeaModal .ss-harbor-facts>div {padding:8px 2px;}
+ #sailingSeaModal .ss-harbor-facts strong {font-size:16px;}
+ #sailingSeaModal .ss-draft-grid {gap:7px;}
+ #sailingSeaModal .ss-draft-info {padding:7px;}
+ #sailingSeaModal .ss-draft-art {height:150px;}
+ #sailingSeaModal .ss-crew-grid {grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:7px;}
+ #sailingSeaModal .ss-crew-select {height:99px;}
+ #sailingSeaModal .ss-inline-actions {gap:3px;flex-wrap:wrap;justify-content:flex-end;max-width:40%;}
+ #sailingSeaModal .ss-deploy-head {padding:8px;}
+ #sailingSeaModal .ss-deploy-head h3 {font-size:12px;}
+ #sailingSeaModal .ss-deploy-head p {font-size:9px;}
+ #sailingSeaModal .ss-guide-grid {gap:7px;}
+ #sailingSeaModal .ss-guide-grid article {padding:9px;}
+ #sailingSeaModal .ss-guide-grid h3 {font-size:16px;}
+ #sailingSeaModal .ss-guide-grid p {font-size:11px;}
+ #sailingSeaModal .ss-new-recruit {flex-wrap:wrap;padding:9px;}
+ #sailingSeaModal .ss-new-recruit .ss-button {width:100%;}
+ #sailingSeaModal .ss-combat-layout {grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;}
+ #sailingSeaModal .ss-deck-frame {grid-column:1/-1;grid-row:1;height:min(43dvh,400px);}
+ #sailingSeaModal .ss-battle-roster {max-height:170px;}
+ #sailingSeaModal .ss-battle-log-panel h3,#sailingSeaModal .ss-battle-roster h3 {padding:5px;}
+ #sailingSeaModal #ssBattleLog {height:86px;}
+ #sailingSeaModal .ss-paused {flex-wrap:wrap;justify-content:center;max-width:92%;white-space:normal;}
+}
+@media(max-width:540px) {
+ #sailingSeaModal .ss-draft-grid {grid-template-columns:minmax(0,1fr);}
+ #sailingSeaModal .ss-draft-card {display:grid;grid-template-columns:32% minmax(0,1fr);}
+ #sailingSeaModal .ss-draft-art {height:auto;min-height:153px;padding:4px;}
+ #sailingSeaModal .ss-draft-art .ss-art img {object-position:center center;}
+ #sailingSeaModal .ss-draft-number {right:7px;top:7px;font-size:8px;}
+ #sailingSeaModal .ss-rarity-badge {left:7px;top:auto;bottom:7px;font-size:8px;padding:3px 4px;}
+ #sailingSeaModal .ss-card-passive[open] {max-height:105px;}
+ #sailingSeaModal .ss-draft-info {gap:4px;padding:7px 7px 7px 4px;}
+ #sailingSeaModal .ss-card-title h3 {font-size:13px;}
+ #sailingSeaModal .ss-draft-info>.ss-button {min-height:36px;font-size:11px;padding:5px;}
+ #sailingSeaModal .ss-stat-pair b {font-size:12px;}
+ #sailingSeaModal .ss-capture-chance {padding:3px 6px;}
+ #sailingSeaModal .ss-guide-grid,#sailingSeaModal .ss-recipe-grid {grid-template-columns:minmax(0,1fr);}
+ #sailingSeaModal .ss-info-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+ #sailingSeaModal .ss-info-grid strong {font-size:17px;}
+ #sailingSeaModal .ss-info-grid>div {padding:9px 5px;}
+ #sailingSeaModal .ss-forge-toolbar {gap:8px;padding:9px;}
+ #sailingSeaModal .ss-forge-toolbar label {display:grid;gap:4px;}
+ #sailingSeaModal .ss-forge-toolbar strong {font-size:19px;}
+ #sailingSeaModal .ss-forge-toolbar select {width:100%;}
+ #sailingSeaModal .ss-upgrade-stage {padding:9px 3px;}
+ #sailingSeaModal .ss-upgrade-stage small {font-size:7px;}
+ #sailingSeaModal .ss-control-choice {padding:10px 5px;}
+ #sailingSeaModal .ss-control-choice strong {font-size:13px;}
+ #sailingSeaModal .ss-control-choice span {font-size:10px;}
+}
+@media(max-height:510px) and (orientation:landscape) {
+ #sailingSeaModal .ss-top {grid-template-columns:minmax(125px,183px) minmax(135px,172px) minmax(135px,183px);gap:5px;top:var(--ss-top);}
+ #sailingSeaModal .ss-captain {grid-row:1;grid-column:1;padding:5px;min-height:92px;}
+ #sailingSeaModal .ss-captain-crest {display:none;}
+ #sailingSeaModal .ss-captain-name {font-size:15px;margin:1px 0 2px;}
+ #sailingSeaModal .ss-hull-label {margin:4px 0 3px;}
+ #sailingSeaModal .ss-captain .ss-small {font-size:9px;margin-top:2px;}
+ #sailingSeaModal .ss-calendar {grid-row:1;grid-column:2;width:100%;padding:5px 7px;}
+ #sailingSeaModal .ss-calendar .ss-clock-row {margin:3px 0;}
+ #sailingSeaModal .ss-clock-row strong {font-size:22px;}
+ #sailingSeaModal .ss-difficulty {margin-top:4px;padding-top:3px;}
+ #sailingSeaModal .ss-difficulty b {font-size:15px;}
+ #sailingSeaModal .ss-bounties {grid-row:1;grid-column:3;padding:5px;min-height:0;}
+ #sailingSeaModal .ss-panel-kicker {font-size:8px;}
+ #sailingSeaModal .ss-leader-list li {height:15px;font-size:9px;}
+ #sailingSeaModal .ss-wanted-line {min-height:19px;font-size:8px;}
+ #sailingSeaModal .ss-sealog {bottom:var(--ss-bottom);width:170px;padding:6px;}
+ #sailingSeaModal .ss-log {height:35px;}
+ #sailingSeaModal.ss-log-expanded .ss-log {height:90px;}
+ #sailingSeaModal .ss-log-toggle {display:grid;height:20px;min-width:20px;padding:1px;}
+ #sailingSeaModal .ss-material-head strong {font-size:17px;}
+ #sailingSeaModal .ss-zone {margin-top:4px;padding:3px;font-size:9px;min-height:21px;}
+ #sailingSeaModal .ss-quick button {min-height:31px;font-size:8px;}
+ #sailingSeaModal #ssFlags {margin:3px 0;padding-bottom:3px;}
+ #sailingSeaModal .ss-radar {bottom:var(--ss-bottom);width:128px;padding:5px;}
+ #sailingSeaModal .ss-radar-legend {font-size:7px;line-height:1;}
+ #sailingSeaModal .ss-dock-zone {width:max-content;max-width:calc(100% - 310px);gap:5px;}
+ #sailingSeaModal .ss-actions {grid-template-columns:repeat(5,minmax(40px,55px));gap:2px;width:auto;}
+ #sailingSeaModal .ss-action-circle {width:42px;height:42px;}
+ #sailingSeaModal .ss-action-circle>.ss-icon {width:20px;height:20px;}
+ #sailingSeaModal .ss-action-label {font-size:8px;}
+ #sailingSeaModal .ss-nav-hint {font-size:8px;}
+ #sailingSeaModal .ss-joystick {left:max(calc(var(--ss-pad) + 180px),calc(50% - 230px));bottom:calc(var(--ss-bottom) + 92px);width:76px;height:76px;}
+ #sailingSeaModal .ss-combat-layout {grid-template-columns:minmax(90px,130px) minmax(0,1fr) minmax(90px,130px);}
+ #sailingSeaModal .ss-deck-frame {grid-column:2;grid-row:1;height:62dvh;}
+ #sailingSeaModal .ss-battle-roster {max-height:62dvh;}
+ #sailingSeaModal .ss-draft-art {height:clamp(115px,34dvh,170px);}
+}
+@media(prefers-reduced-motion:reduce) {
+ #sailingSeaModal *,#sailingSeaModal *::before,#sailingSeaModal *::after {transition:none!important;animation:none!important;}
+}
+
+/* Wide labels use the full action names; compact displays use short captions. */
+#sailingSeaModal .ss-action-label {white-space:normal;max-width:76px;min-height:25px;display:flex;align-items:flex-start;justify-content:center;}
+#sailingSeaModal .ss-panel-control {min-width:32px;}
+@media(max-width:1050px) {
+ #sailingSeaModal .ss-action-label {font-size:0;min-height:11px;}
+ #sailingSeaModal .ss-action-label::after {content:attr(data-short);font-size:9px;white-space:nowrap;}
+}
+@media(max-width:760px) {
+ #sailingSeaModal .ss-panel-tools {max-width:40%;}
+ #sailingSeaModal .ss-panel-control>span {display:none;}
+}
+@media(max-height:510px) and (orientation:landscape) {
+ #sailingSeaModal .ss-action-label::after {font-size:8px;}
+}
+
+@media(max-width:760px) and (orientation:portrait) {
+ #sailingSeaModal .ss-calendar {width:100%;display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:center;gap:4px 6px;padding:6px 8px;}
+ #sailingSeaModal .ss-day-head {justify-content:flex-start;text-align:left;font-size:9px;gap:3px;}
+ #sailingSeaModal #ssQuickPause {position:static;flex:none;}
+ #sailingSeaModal .ss-clock-row {margin:0;gap:4px;}
+ #sailingSeaModal .ss-clock-row strong {font-size:21px;}
+ #sailingSeaModal #ssDayPeriod {display:none;}
+ #sailingSeaModal .ss-difficulty {margin:0;border:0;padding:0;display:grid;gap:2px;justify-items:end;}
+ #sailingSeaModal .ss-difficulty span {font-size:8px;}
+ #sailingSeaModal .ss-difficulty b {font-size:14px;}
+ #sailingSeaModal .ss-time-track {grid-column:1/-1;grid-row:2;}
+}
+@media(max-height:720px) and (orientation:portrait) {
+ #sailingSeaModal .ss-log {height:30px;}
+ #sailingSeaModal .ss-joystick {width:74px;height:74px;bottom:calc(var(--ss-bottom) + 325px);}
+ #sailingSeaModal.ss-log-expanded .ss-log {height:105px;}
+ #sailingSeaModal.ss-log-expanded .ss-joystick {left:auto;right:calc(var(--ss-pad-r) + 18px);bottom:calc(var(--ss-bottom) + 275px);}
+}

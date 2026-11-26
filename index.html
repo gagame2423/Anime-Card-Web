@@ -12,9 +12,10 @@
   <link rel="stylesheet" href="./autochess.css?v=20261126-ball-arena-1" />
   <link rel="stylesheet" href="./hextech.css?v=20261121-ui-cartoon-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
-  <link rel="stylesheet" href="./game-ui.css?v=20261126-standard-turn-1" />
+  <link rel="stylesheet" href="./game-ui.css?v=20261127-sailing-1" />
   <link rel="stylesheet" href="./update_logs.css?v=20261125-update-logs-1" />
   <link rel="stylesheet" href="./ball_arena.css?v=20261126-ball-polish-1" />
+  <link rel="stylesheet" href="./sailing.css?v=20261127-sailing-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -83,6 +84,7 @@
       <button id="battleButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">⚔</i><span>Arena<small>Combat Modes</small></span></button>
       <button id="hubChessButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="autochessModal"><i aria-hidden="true">♜</i><span>Auto Chess<small>Tactical Grid</small></span></button>
       <button id="hubBallButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="ballArenaModal"><i aria-hidden="true">●</i><span>Ball vs Ball<small>Physics Arena</small></span></button>
+      <button id="hubSailingButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="sailingSeaModal"><i aria-hidden="true">⚓</i><span>Sailing Sea<small>Naval Royale</small></span></button>
       <button id="inventoryOpenButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">▣</i><span>Inventory<small>Vault &amp; Relics</small></span></button>
       <button id="craftingOpenButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">⬡</i><span>Craft<small>Forge Relics</small></span></button>
       <button id="collectionButton" type="button" class="hub-command__item" aria-label="Open collection"><i aria-hidden="true">▦</i><span>Card Index<small id="collectionSummary">Cards: 0/0</small></span></button>
@@ -1116,6 +1118,7 @@
       <div id="relicEquipInspect"></div><p id="relicEquipStatus" role="status"></p><div class="portal-actions"><button id="relicEquipConfirm" type="button" class="battle-primary-button">Equip this card</button><button id="relicUnequip" type="button" class="ghost-button">Unequip Relic</button></div>
     </section>
   </div>
+  <section id="sailingSeaModal" role="dialog" aria-modal="true" aria-label="Sailing Sea" tabindex="-1" hidden></section>
   <script type="application/x-game-script" data-game-script src="./mutations.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./weathers.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./cards.js?v=20261121-ui-cartoon-1"></script>
@@ -1123,7 +1126,7 @@
   <script type="application/x-game-script" data-game-script src="./hextech.js?v=20261119-hextech-1"></script>
 
   <script type="application/x-game-script" data-game-script src="./category.js?v=20261120-ac-adventure-1"></script>
-  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./elements.js?v=20261127-sailing-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_rules.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./background.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./levels.js?v=20261117-content-1"></script>
@@ -1142,7 +1145,7 @@
   <script type="application/x-game-script" data-game-script src="./companions.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261126-ball-polish-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261127-sailing-1"></script>
   <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261122-alien-watch-1"></script>
@@ -1159,7 +1162,7 @@
 
   <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./spatial_combat.js?v=20261126-ball-polish-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261126-standard-turn-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261127-sailing-1"></script>
   <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261117-content-1"></script>
@@ -1211,7 +1214,7 @@
   <script type="application/x-game-script" data-game-script src="./autochess_audio.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_ranked.js?v=20261120-ac-adventure-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_synergies.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_synergies.js?v=20261127-sailing-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_telemetry.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_augments.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_runs.js?v=20261122-alien-watch-1"></script>
@@ -1219,7 +1222,7 @@
   <script type="application/x-game-script" data-game-script src="./autochess_strategy.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_profile.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261126-ball-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261126-standard-turn-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261127-sailing-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_report.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261120-ac-adventure-1"></script>
@@ -1230,13 +1233,19 @@
   <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./arena_turn_view.js?v=20261126-standard-turn-1"></script>
   <script type="application/x-game-script" data-game-script src="./arena_status_view.js?v=20261126-standard-turn-1"></script>
-  <script type="application/x-game-script" data-game-script src="./update_logs.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./update_logs.js?v=20261127-sailing-1"></script>
   <script type="application/x-game-script" data-game-script src="./recommend_team.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_audio.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_combat.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_index.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_view.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_arena.js?v=20261126-ball-polish-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261126-standard-turn-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sailing_map.js?v=20261127-sailing-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sailing_combat.js?v=20261127-sailing-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sailing_rules.js?v=20261127-sailing-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sailing_bots.js?v=20261127-sailing-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sailing_ui.js?v=20261127-sailing-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sailing_main.js?v=20261127-sailing-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261127-sailing-1"></script>
 </body>
 </html>

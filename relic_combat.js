@@ -13,6 +13,7 @@
    const hp=goku.maxHp+vegeta.maxHp,atk=goku.atk+vegeta.atk;
    const card={...goku.card,id:'relic-vegito',name:'Vegito',image:'assets/cards/vegito.png',category:[...new Set([...(goku.card.category||[]),...(vegeta.card.category||[])])],stats:{hp,atk},passive:{name:'Potara Fusion',description:'Dragon Combo + Saiyan Prince. 20% dodge; successful dodge grants +25% ATK damage on the next attack.'}};
    const fused={...(bs.mode==='auto-chess'?{grid:{...goku.grid,uid:goku.grid.uid+'_vegito'},relic:{...goku.relic}}:{}),card,display:{name:'Vegito',image:card.image,hp,atk},hp:goku.hp+vegeta.hp,maxHp:hp,atk,level:Math.max(goku.level||1,vegeta.level||1),mutations:[],defeated:false,isVegito:true,relicPrepared:true,portalOwnerId:goku.portalOwnerId,fusionMembers:[goku.card.id,vegeta.card.id]};
+   if(bs.tactical?.sailing&&fused.grid){fused.grid.sailingMembers=[goku.grid.uid,vegeta.grid.uid];fused.grid.stamina=Math.min(goku.grid.stamina,vegeta.grid.stamina);bs.tactical.registerFusion?.(fused,fused.grid.sailingMembers);}
    const index=Math.min(line.indexOf(goku),line.indexOf(vegeta));line.splice(line.indexOf(goku),1);line.splice(line.indexOf(vegeta),1);line.splice(index,0,fused);
    api.runtime(fused).effectivePassiveId='goku-ssj3';api.addCopy(fused,'vegeta-ssj2');api.log('[RELIC] Unique Potara fused Goku SSJ3 and Vegeta SSJ2 into Vegito.');
   }

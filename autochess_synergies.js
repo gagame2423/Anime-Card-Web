@@ -122,7 +122,7 @@
   function state(u){let s=states.get(u);if(!s){s={attacks:0,growth:0,adapt:0,secondLife:false,bonuses:bonuses(rows[side(u)],u),active:rows[side(u)].filter(r=>r.tier&&(r.type==='element'||native(u)?.category?.includes(r.id)))};states.set(u,s);}return s;}
   const active=u=>state(u).active;
   function start(u){const s=state(u),b=s.bonuses;api.buff(u,'atk',b.atk,'synergy:atk');api.buff(u,'hp',b.hp,'synergy:hp',true);if(u.relic?.unique){api.buff(u,'hp',.2,'chess:uniqueHp',true);api.buff(u,'atk',.2,'chess:uniqueAtk');}for(const r of active(u))if(r.proc==='oath')api.shield(u,u.maxHp*.08*r.tier,u);}
-  function energy(u,n){if(!alive(u)||!u.grid)return;u.grid.mana=Math.min(100,u.grid.mana+n);}
+  function energy(u,n){if(battle.tactical?.sailing||!alive(u)||!u.grid)return;u.grid.mana=Math.min(100,u.grid.mana+n);}
   function hit(u,v,n,extra={}){if(alive(v)&&alive(u))api.hit(u,v,n,{autochessSynergy:true,...extra});}
   function damage(u,v,amount,meta={}){
    if(!alive(u)||!u.grid||!amount||meta.autochessSynergy||meta.dot||meta.grimoireReflection)return;
@@ -175,21 +175,29 @@
    }
   }
   function releaseEnergy(u,target){
-   if(!alive(u)||!u.grid||u.grid.mana<100)return false;
-   const foes=enemies(u).filter(v=>v.grid),victim=target&&alive(target)?target:nearest(u,foes,1)[0];
+   if(battle.tactical?.sailing||!alive(u)||!u.grid||u.grid.mana<100)return false;
+   return cast(u,target,false);
+  }
+  function releaseStamina(u,target){
+   if(!battle.tactical?.sailing||!alive(u)||!u.grid||u.grid.stamina<20)return false;
+   return cast(u,target,true);
+  }
+  function cast(u,target,stamina){
+   const foes=enemies(u).filter(v=>v.grid),victim=target&&alive(target)&&(!stamina||foes.includes(target))?target:nearest(u,foes,1)[0];
    if(!victim)return false;
-   u.grid.mana-=100;api.energyCast(u,victim);
+   if(stamina)u.grid.stamina=Math.max(0,u.grid.stamina-20);else u.grid.mana-=100;
+   api.energyCast(u,victim);
    for(const r of active(u)){
     if(!alive(u))break;const amount=u.atk*r.power*r.tier;
     if(r.proc==='ki')for(const v of api.area(u,victim,'pierce',{label:'Ki Burst'},foes).slice(0,3))hit(u,v,amount);
-    if(r.proc==='nova')for(const v of api.area(u,victim,'blast',{label:'Mana Nova'},foes))hit(u,v,amount);
+    if(r.proc==='nova')for(const v of api.area(u,victim,'blast',{label:stamina?'Arcane Nova':'Mana Nova'},foes))hit(u,v,amount);
    }
    return true;
   }
   function second(time){for(const u of [...battle.playerTeam,...battle.enemyTeam])if(alive(u)&&u.grid){const s=state(u),b=s.bonuses;if(b.regen)api.heal(u,u.maxHp*b.regen,u);for(const r of active(u)){if(r.proc==='tide'&&time%4===0)api.heal(u,u.maxHp*r.power*r.tier,u);if(r.proc==='purify'&&time%5===0)api.cleanse(u);if(r.proc==='secondlife'&&!s.secondLife&&u.hp<u.maxHp*.25){s.secondLife=true;api.heal(u,u.maxHp*.1*r.tier,u);}}}}
   function hurt(target,source,amount,meta={}){if(!target?.grid||meta.autochessSynergy||meta.dot)return;const b=state(target).bonuses;if(alive(source)&&b.reflect)api.hit(target,source,amount*b.reflect,{autochessSynergy:true,isCounter:true});energy(target,3);}
   function speed(u){const s=state(u);let n=s.bonuses.speed;for(const r of active(u))if(r.proc==='frenzy')n+=r.power*r.tier*(1-u.hp/u.maxHp);return Math.min(1.5,n);}
-  return{rows,start,attack,damage,hurt,second,speed,releaseEnergy,bonuses:u=>state(u).bonuses};
+  return{rows,start,attack,damage,hurt,second,speed,releaseEnergy,releaseStamina,bonuses:u=>state(u).bonuses};
  }
  host.AutoChessSynergies=Object.freeze({DEFINITIONS,ALIASES,THRESHOLDS,TIERS,analyze,bonuses,tooltip,matches,roster,tierDetails,details,create,definition:id=>byId.get(ALIASES[id]||id)});
 })(window);

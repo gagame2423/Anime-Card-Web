@@ -75,7 +75,7 @@ body {
 #app .hub-resource__icon img {position:absolute;inset:0;padding:1px;background:#17252c;border-radius:4px;}
 #app .utility-menu__panel {z-index:200;border-color:#786744;background:#121b28;box-shadow:var(--game-engraving),0 20px 48px #000c;}
 #app .hub-command {
-  display:grid; grid-template-columns:auto repeat(8,minmax(0,1fr)); align-items:stretch; gap:4px; min-width:0;
+  display:grid; grid-template-columns:auto repeat(10,minmax(0,1fr)); align-items:stretch; gap:4px; min-width:0;
   flex:0 0 auto; border:1px solid #5b503b;border-radius:5px;padding:4px;
   background:linear-gradient(180deg,#202734,#10151e); box-shadow:var(--game-engraving);
 }
@@ -329,8 +329,14 @@ body {
   #battleModal .battle-card-info .battle-hp-track {height:8px;}
 }
 
+@media(min-width:1081px) and (max-width:1280px) {
+  #app .hub-command__index {display:none;}
+  #app .hub-command {grid-template-columns:repeat(10,minmax(0,1fr));}
+  #app .hub-command__item {gap:4px;padding-inline:4px;}
+  #app .hub-command__item small {font-size:8px;}
+}
 @media(max-width:1080px) {
-  #app .hub-command {grid-template-columns:repeat(8,minmax(0,1fr));}
+  #app .hub-command {grid-template-columns:repeat(5,minmax(0,1fr));}
   #app .hub-command__index {display:none;}
   #app .hub-command__item {gap:5px;}
 }
@@ -357,7 +363,7 @@ body {
   #app .hub-resource small {font-size:6px;letter-spacing:0;}
   #app .hub-resource--ore {display:none;}
   #app .hub-wallet {gap:4px;}
-  #app .hub-command {grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:3px;}
+  #app .hub-command {grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:3px;}
   #app .hub-command__item {min-height:42px;padding:2px 3px;justify-content:center;gap:3px;}
   #app .hub-command__item i {font-size:15px;min-width:12px;}
   #app .hub-command__item small {display:none;}

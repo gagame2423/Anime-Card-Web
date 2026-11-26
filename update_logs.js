@@ -223,9 +223,17 @@
     'Sound Effects': 'A new sound toggle and volume slider control optional Ball Arena effects, including countdowns, impacts, passive triggers, shields, healing, and match results.'
   }, { jumps:'ball', art:'unit:tower-champion-normal' });
 
+  release(35, 'Sailing Sea', 'Chart a seeded ocean, recruit a crew and become the last captain standing in a 20-ship naval royale.', {
+    'Independent voyage': 'Draft one of three Secret cards and sail with Auto Chess stats. Your collection, card levels and account items do not affect the run. Save and resume your voyage locally.',
+    'Island progression': 'Dock to gather Material, restore crew HP and Stamina, revive fallen crew and repair your hull. Upgrade to five, seven and ten crew slots, craft Legendary Unique Relics, and claim islands from Ship Lv. 2.',
+    'Danger and Storm': 'Board pirate crews to recruit cards, hunt Sea Beasts, and select the crew that fights each encounter. Battles use Stamina instead of Energy. New zones appear every six-minute day.',
+    'Golden Bounty': 'Nineteen rival captains farm, raid, hunt beasts or chase the daily Wanted Target. Difficulty 10 permanently locks repairs. Survive as the last ship or lead the Bounty standings at the end of Day 15.'
+  }, { jumps:'sailing', art:'unit:raid-secret-mihawk' });
+
   const jumps = {
     summon:['Summon','Return to the roll altar','unit:starter-common'],
     ball:['Ball vs Ball','Enter the physics arena','unit:sonic'],
+    sailing:['Sailing Sea','Embark on a naval royale','unit:raid-secret-mihawk'],
     arena:['Clash Arena','Choose a lineup and battle','unit:jotaro-kujo'],
     tower:['Tower','Challenge the next floor','unit:tower-champion-normal'],
     trial:['Normal Time Trial','Race through timed rooms','unit:tower-champion-heavenly'],

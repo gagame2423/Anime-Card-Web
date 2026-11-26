@@ -10,7 +10,7 @@
 // ============================================================
 
 let ballRewardApplying=false;
-function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active||window.AutoChessView?.active||window.BallArena?.active&&!ballRewardApplying);}
+function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active||window.AutoChessView?.active||window.SailingSea?.active||window.BallArena?.active&&!ballRewardApplying);}
 function gameInputLocked(){return Boolean(window.PenaltyView?.active||window.BallArena?.active)||isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed)||Boolean(window.HextechSystem?.active);}
 
 const STORAGE_KEY = "anime_card_rng_save_v1";
@@ -5278,6 +5278,8 @@ function setBattleModalLock(active) {
 }
 
 function openModal(id) {
+  if(id==='sailingSeaModal'){window.SailingSea?.open();return;}
+  if(window.SailingSea?.active)return;
   if(id==='autochessModal'){openAutoChess();return;}
   if(window.AutoChessView?.active)return;
   if(id==='penaltyModal'){openPenalty();return;}
@@ -5394,6 +5396,7 @@ function surrenderBattle() {
 }
 
 function closeModal(id) {
+  if(id==='sailingSeaModal'){window.SailingSea?.close();return;}
   if(id==='autochessModal'){window.AutoChessView.close();return;}
   if(id==='penaltyModal'){window.PenaltyView.close();return;}
   if(id==='relicFusionModal'&&window.RelicFusionSystem?.dialogOpen){window.RelicFusionSystem.closeDialog();return;}
@@ -5805,7 +5808,7 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
 });
 
 document.addEventListener("keydown", event => {
-  if(window.AutoChessView?.active)return;
+  if(window.AutoChessView?.active||window.SailingSea?.active)return;
   if (event.key !== "Escape") return;
   closeVariantMenu();
   if (isBattleMatchActive()) {
@@ -6240,7 +6243,7 @@ function jumpFromUpdateLogs(destination){
   const el=id=>document.getElementById(id);
   const click=id=>{const button=el(id);if(!button||button.disabled)return false;button.click();return true;};
   const show=id=>{openModal(id);const node=el(id);if(!node||node.classList.contains('hidden'))return false;node.querySelector('.modal-close')?.focus();return true;};
-  const buttons={craft:'craftingOpenButton',quests:'questOpenButton',index:'collectionButton',autochess:'hubChessButton',ball:'hubBallButton',summon:'hubSummonButton'};
+  const buttons={craft:'craftingOpenButton',quests:'questOpenButton',index:'collectionButton',autochess:'hubChessButton',ball:'hubBallButton',sailing:'hubSailingButton',summon:'hubSummonButton'};
   if(Object.hasOwn(buttons,destination))return click(buttons[destination]);
   if(destination==='achievements')return show('achievementModal');
   if(destination==='inventory')return show('inventoryModal');
@@ -6415,6 +6418,14 @@ window.BallArena.configure({
   onExit(){ballMatchContext=null;window.CloudSaveSystem?.releaseAutoChess();resumeGameRuntime();updateStats();}
 });
 document.getElementById('hubBallButton')?.addEventListener('click',()=>window.BallArena.open());
+// Standalone, local naval voyage. It never reads owned cards or pays account rewards.
+window.SailingSea.configure({
+ canOpen:()=>canOpenUpdateLogs()&&canPlayPenalty(),
+ name:()=>window.CloudSaveSystem?.publicName||'You',
+ onEnter(){clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();window.CloudSaveSystem?.holdAutoChess();},
+ onExit(){window.CloudSaveSystem?.releaseAutoChess();resumeGameRuntime();updateStats();}
+});
+document.getElementById('hubSailingButton')?.addEventListener('click',()=>window.SailingSea.open());
 
 window.AutoChessView.configure({
  canOpen:()=>!window.PenaltyView?.active&&canPlayPenalty(),

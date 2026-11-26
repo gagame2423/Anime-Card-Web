@@ -9,14 +9,15 @@
     const element = value?.card ? value.card.element : value?.element;
     return TYPES.includes(element) ? element : null;
   }
-  function multiplier(source, target) {
+  function multiplier(source, target, rates = null) {
+    const advantage = rates?.advantage ?? 3, disadvantage = rates?.disadvantage ?? 1/3;
     const attacker = of(source), defender = of(target);
     if (!attacker || !defender) return 1;
-    if(!source?.akatsukiElements?.length&&!target?.akatsukiElements?.length)return attacker===defender?1:COUNTERS[attacker]===defender?3:COUNTERS[defender]===attacker?1/3:1;
+    if(!source?.akatsukiElements?.length&&!target?.akatsukiElements?.length)return attacker===defender?1:COUNTERS[attacker]===defender?advantage:COUNTERS[defender]===attacker?disadvantage:1;
     const bonus=value=>Array.isArray(value?.akatsukiElements)?value.akatsukiElements.filter(e=>TYPES.includes(e)):[];
     const sources=[...new Set([attacker,...bonus(source)])],stolen=bonus(target);let best=0;
     for(const element of sources){
-      let current=element===defender?1:COUNTERS[element]===defender?3:COUNTERS[defender]===element?1/3:1;
+      let current=element===defender?1:COUNTERS[element]===defender?advantage:COUNTERS[defender]===element?disadvantage:1;
       for(const extra of stolen)if(COUNTERS[element]===extra)current=Math.max(current,1.5);
       best=Math.max(best,current);
     }
@@ -24,7 +25,7 @@
 
   }
   const MATRIX = Object.freeze(Object.fromEntries(TYPES.map(a => [a, Object.freeze(Object.fromEntries(TYPES.map(b => [b, multiplier(a, b)])))])));
-  function damage(source, target, amount) { return Math.max(0, Number(amount) || 0) * multiplier(source, target); }
+  function damage(source, target, amount, rates = null) { return Math.max(0, Number(amount) || 0) * multiplier(source, target, rates); }
   function badgeMarkup(value) {
     const type = of(value);
     return type ? `<span class="element-badge" data-element="${type}" title="${type} element" aria-label="${type} element"><img src="${ICONS[type]}" alt="" width="28" height="28"></span>` : '';

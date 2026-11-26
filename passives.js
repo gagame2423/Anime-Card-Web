@@ -12,9 +12,12 @@
 // ============================================================
 
 (() => {
- if(window.PassiveSystem?.hookVersion==='20261126-standard-turn-1')return;
+ if(window.PassiveSystem?.hookVersion==='20261127-sailing-1')return;
  function createPassiveRuntime(initialHost = {}) {
   const Math = initialHost.random ? Object.assign(Object.create(globalThis.Math), {random:initialHost.random}) : globalThis.Math;
+  const elementRates=initialHost.elementRates||null;
+  const elementDamage=(source,target,amount)=>window.ElementSystem.damage(source,target,amount,elementRates);
+  const elementMultiplier=(source,target)=>window.ElementSystem.multiplier(source,target,elementRates);
   const BASE_CRIT_CHANCE = 0.05;
   const BASE_CRIT_MULTIPLIER = 1.5;
   const MAX_CHAIN_ATTACKS = 24;
@@ -427,7 +430,7 @@
       ({target,options}=stretchTarget(bs,source,target,options));
       recordFollowUp(bs,source,options);
       markAttackTarget(bs,source,target,options);if(attackMisses(bs,source,options))return{hit:false,damage:0,killed:false,missed:true};options={...options,specialAttack:options.specialAttack!==false,fearChecked:true};
-      const amount = options.akatsukiRawDamage?Math.max(0,damage):window.ElementSystem.damage(source, target, Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1) * yuno.offensive(source,target))));
+      const amount = options.akatsukiRawDamage?Math.max(0,damage):elementDamage(source, target, Math.max(1, Math.floor(damage * (state(source).heresy > 0 ? 0.91 : 1) * yuno.offensive(source,target))));
       if (raidSecrets.block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       if (options.passiveAttack!==false && !options.championCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) {
         const reflected = damageUnit(bs, target, source, Math.max(1, Math.floor(getBaseAtk(source) * .50)), { passiveAttack: true, championCounter: true });
@@ -783,7 +786,7 @@
       if (!isAlive(source) || !isAlive(target) || !(amount > 0)) return { damage: 0, killed: false };
       if (block(bs, source, target, options)) return { damage: 0, killed: false, raidBlocked: true };
       const heresyFactor = options.raidCounter && champions.state(source).heresy > 0 ? .91 : 1;
-      const value = window.ElementSystem.damage(source, target, Math.max(1, Math.floor(amount * heresyFactor * yuno.offensive(source,target)))), before = target.hp;
+      const value = elementDamage(source, target, Math.max(1, Math.floor(amount * heresyFactor * yuno.offensive(source,target)))), before = target.hp;
       if (!options.raidCounter && shouldReflectPassiveAttack(target, source, { passiveAttack: true })) return hit(bs, target, source, getBaseAtk(source) * .50, { raidCounter: true });
       if (value >= before && tower200.offensive(bs,source,target)===1 && relic.attackMultiplier(source,{raidSkill:true,...options})===1 && !deferFatality(bs, target) && onFatalityAttempt(bs, target, source, value, options)) { recordBattleDamage(bs, source, target, before); return { damage: 0, killed: false }; }
       const result = damageUnit(bs, source, target, value, { passiveAttack: true, raidSkill: true, ...options, raidBlockChecked: true, elementApplied: true, yunoDamageApplied:true });
@@ -2176,7 +2179,7 @@
   }
 
   function dotDamage(battleState, unit, kind, effect) {
-    return content.debuffImmune(unit)||!tensura.effectAllowed(battleState,effect.source,unit)||tensura.passiveImmune(unit,{dot:true})?0:Math.max(0, Math.floor(window.ElementSystem.damage(effect?.source, unit, (Number(effect?.damage) || 0) * (battleState?.mode==='auto-chess'?1+(effect?.source?.grid?.traits?.dot||0):1) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : tower200.dotFactor(battleState,effect?.source,kind))) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)*ragna.dotFactor(unit,kind)*mourner.incoming(unit)*mourner.outgoing(effect?.source)*sins.dotFactor(battleState)*(1-sins.reduction(unit))));
+    return content.debuffImmune(unit)||!tensura.effectAllowed(battleState,effect.source,unit)||tensura.passiveImmune(unit,{dot:true})?0:Math.max(0, Math.floor(elementDamage(effect?.source, unit, (Number(effect?.damage) || 0) * (battleState?.mode==='auto-chess'?1+(effect?.source?.grid?.traits?.dot||0):1) * (kind === "bleed" ? alucard.bleedMultiplier(battleState,effect?.source) : tower200.dotFactor(battleState,effect?.source,kind))) * yuno.offensive(effect?.source,unit) * yuno.defensive(effect?.source,unit)*ragna.dotFactor(unit,kind)*mourner.incoming(unit)*mourner.outgoing(effect?.source)*sins.dotFactor(battleState)*(1-sins.reduction(unit))));
   }
 
   function tickStatusEffects(battleState, unit) {
@@ -2446,7 +2449,7 @@
     champions.incoming(battleState, target);
     if (!isAlive(target)) return { damage: 0, killed: true };
     amount=tensura.beforeDamageTaken(battleState,attacker,target,amount,meta);
-    let remaining = meta.elementApplied ? Math.max(0, Number(amount) || 0) : window.ElementSystem.damage(source, target, amount);
+    let remaining = meta.elementApplied ? Math.max(0, Number(amount) || 0) : elementDamage(source, target, amount);
     remaining=baller.transform(battleState,source,target,remaining,meta);
     remaining=sins.damageBonus(battleState,source,target,remaining,meta)*bleach.multiplier(source,target,meta);
     remaining*=1-content.reduction(target,source,meta);
@@ -2461,7 +2464,7 @@
     if(remaining>0){mourner.hitTaken(battleState,target,meta);recordCombatHit(source,meta);gomen.incoming(battleState,source,target,meta);baller.incoming(battleState,target,source,meta);}
     let tacticalTrueShare=0;
     if(battleState?.mode==='auto-chess'&&meta.autochessTrueDamage>0&&!meta.dot){
-      const part=meta.autochessTrueDamage,normal=remaining*(1-part),pure=remaining*part/Math.max(.01,window.ElementSystem.multiplier(source,target));
+      const part=meta.autochessTrueDamage,normal=remaining*(1-part),pure=remaining*part/Math.max(.01,elementMultiplier(source,target));
       remaining=normal+pure;tacticalTrueShare=remaining>0?pure/remaining:0;
     }
     const reduction = meta.ignoreReduction ? 0 : clamp(
@@ -3818,7 +3821,31 @@
     try{return phases.withAction(battleState,attacker,options,()=>relic.withAction(attacker,options,()=>performAttackScoped(battleState,attacker,requestedTarget,options)));}
     finally{if(tactical)tacticalAttackDepth--;attackResolutionDepth--;flushAmazingWorld(battleState);}
   }
+  function sailingBasicAttack(bs,u,target,options){
+    if(!isAlive(u)||options.isFollowUp||options.isCounter||options.grimoireDriver||options.linkedAttack||options.outOfTurnPassive||!isScheduledTurnAttacker(bs,u)||isUnitStunned(u))return {hit:false,skipped:true,damage:0,killed:false};
+    target=target||activeDefender(bs,u);if(!isAlive(target))return {hit:false,damage:0,killed:false};
+    if(!teamOf(bs,u).includes(target))target=maybeRedirectTarget(bs,u,target);
+    const r=ensureRuntime(u);r.lastCrit=false;r.lastDodge=false;
+    r.ownAttackCount=(Number(r.ownAttackCount)||0)+1;r.attackCount=r.ownAttackCount;
+    const meta={sailingBasic:true,passiveAttack:false,dodgeChecked:true};
+    markAttackTarget(bs,u,target,meta);
+    if(attackMisses(bs,u,options)){safeLog('[EXHAUSTED] '+(u.display?.name||'Unit')+' missed a basic attack.','status',u,bs);return {hit:false,damage:0,killed:false,missed:true};}
+    const crit=getCritStats(u),base=computeWeakenedAtk(u)*.75;
+    if(Math.random()<getDodgeChance(target,u,bs,meta)){
+      onDodge(bs,target,u,{incomingDamage:elementDamage(u,target,base),meta});
+      safeLog('[EXHAUSTED] '+(u.display?.name||'Unit')+' had a basic attack dodged.','status',u,bs);
+      return {hit:false,damage:0,killed:false,dodged:true};
+    }
+    const critical=Math.random()<crit.chance; r.lastCrit=critical;
+    const result=damageUnit(bs,u,target,base*(critical?crit.multiplier:1),meta);
+    const hit=!result.dodged&&!result.reflected&&!result.immune&&!result.invincible&&!result.raidBlocked;
+    if(hit){ensureRuntime(target).dodgeStreak=0;onHitTaken(bs,target,u,{hit:true,damage:result.damage,critical,options:meta});}
+    if(result.killed){onKill(bs,u,target);onTeammateDeath(bs,target);}
+    safeLog('[EXHAUSTED] '+(u.display?.name||cardOf(u)?.name||'Unit')+' dealt '+Math.round(result.damage||0)+' damage with a basic attack.','status',u,bs);
+    return {...result,attacker:u,target,hit,critical};
+  }
   function performAttackScoped(battleState,attacker,requestedTarget,options={}) {
+    if(battleState?.tactical?.sailing&&attacker?.grid&&attacker.grid.stamina<=0&&!attacker.grid.sailingFunded)return sailingBasicAttack(battleState,attacker,requestedTarget,options);
     const mimic=amazingStates.get(attacker)?.copy;
     if(mimic&&!passiveScopes.has(attacker)&&!passiveSuppressed(attacker))return withPassive(attacker,mimic,()=>performAttackScoped(battleState,attacker,requestedTarget,options));
     if(options.isFollowUp&&(!spooky.canFollow(attacker)||!spooky.canFollow(options.followOwner)))return {hit:false,damage:0,killed:false,skipped:true,hindered:true};
@@ -4036,7 +4063,7 @@
       let incomingDamage = computeWeakenedAtk(attacker) * passiveAttackMultiplier(preview, target, battleState, options);
       incomingDamage *= questSkills.multiplier(attacker, target) * expansion.multiplier(attacker, target, battleState) * champions.multiplier(attacker, target, options) * (Number(options.damageMultiplier) || 1);
       if (champions.state(attacker).heresy > 0) incomingDamage *= .91;
-      incomingDamage = window.ElementSystem.damage(attacker, target, (incomingDamage+yuno.nextDamage(attacker,false))*yuno.offensive(attacker,target));
+      incomingDamage = elementDamage(attacker, target, (incomingDamage+yuno.nextDamage(attacker,false))*yuno.offensive(attacker,target));
       onDodge(battleState, target, attacker, { chainDepth: options.chainDepth || 0, incomingDamage:incomingDamage*(options.stretchyScale??1), meta:options });
       champions.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
       expansion.afterAttack(battleState, attacker, target, { damage: 0, critical: false, hit: false }, options);
@@ -4080,7 +4107,7 @@
     let rawDamage = Math.max(attacker.sandboxAllowZeroAttack ? 0 : 1, Math.floor(baseAttack * multiplier + yuno.nextDamage(attacker)));
     const attackDamage = rawDamage;
     rawDamage=Math.floor(rawDamage*yuno.offensive(attacker,target));
-    rawDamage = window.ElementSystem.damage(attacker, target, rawDamage);
+    rawDamage = elementDamage(attacker, target, rawDamage);
     const damageReduction = (baller.direct(battleState,attacker,target)||sins.present(battleState))?0:clamp(ensureRuntime(target).damageReductionPct, 0, 0.95);
     rawDamage = Math.max(attacker.sandboxAllowZeroAttack ? 0 : 1, Math.floor(rawDamage * (1 - damageReduction)));
 
@@ -4408,6 +4435,7 @@
     target = akatsuki.hypnosisTarget(battleState,attacker,target);
     target = spooky.hypnosisTarget(battleState,attacker,target);
     target = shibuya.hypnosisTarget(battleState,attacker,expansion.hypnosisTarget(battleState, attacker, target));
+    if(battleState.tactical?.sailing)battleState.tactical.onAction?.(attacker);
     const attack=performAttack(battleState, attacker, target, { chainDepth: 0 });
     if(phases.standard(battleState)){
       const kind=attack?.charging?'charging':attack?.trainingDummy?'waiting':attack?.skipped?'skipped':attack?.missed||attack?.dodged?'missed':'acted';
@@ -5428,7 +5456,7 @@
   }
 
   return Object.freeze({
-    hookVersion:'20261126-standard-turn-1',
+    hookVersion:'20261127-sailing-1',
     damageDiagnostics:()=>({damageRecursionDepth,hitRecursionDepth,tacticalAttackDepth}),
     createIsolated: options => createPassiveRuntime(options),
     BASE_CRIT_CHANCE,
