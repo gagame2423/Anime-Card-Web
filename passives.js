@@ -12,7 +12,7 @@
 // ============================================================
 
 (() => {
- if(window.PassiveSystem?.hookVersion==='20261126-ball-polish-1')return;
+ if(window.PassiveSystem?.hookVersion==='20261126-standard-turn-1')return;
  function createPassiveRuntime(initialHost = {}) {
   const Math = initialHost.random ? Object.assign(Object.create(globalThis.Math), {random:initialHost.random}) : globalThis.Math;
   const BASE_CRIT_CHANCE = 0.05;
@@ -2184,6 +2184,7 @@
     const runtime = ensureRuntime(unit);
     akatsuki.restoreBurn(unit);
     let skipped = false;
+    const reasons=[];
 
     for (const kind of ['burn', 'bleed', 'poison']) {
       const list = Array.isArray(runtime[kind]) ? runtime[kind] : [];
@@ -2231,13 +2232,23 @@
     titan.jawTurn(unit,jawStunned);
     if ((runtime.stunTurns > 0 && !hasPassive(unit,'jaw-titan')) || runtime.freezeTurns > 0) {
       skipped = true;
+      if(runtime.stunTurns>0&&!hasPassive(unit,'jaw-titan'))reasons.push('Stun');
+      if(runtime.freezeTurns>0)reasons.push('Freeze');
       runtime.stunTurns = Math.max(0, runtime.stunTurns - 1);
       runtime.freezeTurns = Math.max(0, runtime.freezeTurns - 1);
       safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} is unable to attack this turn.`, 'status',unit,battleState);
     }
 
     if(jawStunned)runtime.stunTurns--;
-    if (runtime.snailTurns > 0) runtime.snailTurns -= 1;
+    if (runtime.snailTurns > 0) {
+      // Standard turns consume the last transformation turn before attacking.
+      // Capture that restriction first; live arenas retain their own clock.
+      if(phases.standard(battleState)){
+        if(!skipped)safeLog('[STATUS] '+(unit.display?.name||unit.card?.name||'Fighter')+' is unable to attack while transformed into a snail.','status',unit,battleState);
+        skipped=true;reasons.push('Snail transformation');
+      }
+      runtime.snailTurns -= 1;
+    }
     if (runtime.incomingImmuneTurns > 0) runtime.incomingImmuneTurns -= 1;
     if (runtime.noDodgeTurns > 0) runtime.noDodgeTurns -= 1;
     if (runtime.noDodgeTurns === 0) runtime.noDodgeAgainstUnit = false;
@@ -2280,7 +2291,7 @@
       }
     }
 
-    return { skipped };
+    return { skipped, reasons };
   }
 
   function healAllies(battleState, unit, pct) {
@@ -3901,10 +3912,10 @@
     ensureRuntime(attacker).lastDodge = false;
     if (isUnitStunned(attacker)) {
       safeLog(`[STATUS] ${attacker.display?.name || cardOf(attacker)?.name || 'Unit'} could not attack.`, 'status');
-      return { hit: false, skipped: true, killed: false, damage: 0 };
+      return { hit: false, skipped: true, killed: false, damage: 0, turnReason:'Incapacitated' };
     }
 
-    if(content.skipAttack(battleState,attacker,options))return {hit:false,skipped:true,killed:false,damage:0};
+    if(content.skipAttack(battleState,attacker,options))return {hit:false,skipped:true,killed:false,damage:0,turnReason:'Rigby is resting and healing'};
     bleach.beforeAttack(battleState,attacker,target,options);tensura.beforeAttack(battleState,attacker,target,options);
     sins.prepare(battleState,attacker,target,options);
     const ballerPreparation=baller.prepare(battleState,attacker,target,options);if(ballerPreparation)return ballerPreparation;
@@ -4161,9 +4172,9 @@
     // Domain disables one full attack cycle for both sides.
     if (battleState?.passiveDomain?.skipAttacksRemaining > 0) {
       battleState.passiveDomain.skipAttacksRemaining -= 1;
-      if(battleState.mode==='ball-arena')tickStatusEffects(battleState,attacker);
+      const status=(battleState.mode==='ball-arena'||phases.standard(battleState))?tickStatusEffects(battleState,attacker):null;
       safeLog(`[PASSIVE] Dimensional Domain disables attacks for this turn.`, 'passive');
-      return { skipped: true };
+      return { skipped: true, reasons:['Dimensional Domain',...(status?.reasons||[])] };
     }
 
     requiem.cleanse(battleState,attacker);
@@ -4171,8 +4182,10 @@
     const skipAkatsuki = akatsuki.skipTurn(battleState,attacker);
     const skipGodspeed = grimoire.skipTurn(attacker);
     const actorStatus = tickStatusEffects(battleState, attacker);
-    if(skipTensura||skipAkatsuki)return {skipped:true};
-    if (skipGodspeed) { safeLog('[PASSIVE] Godspeed skips this attack turn after dodging.', 'status'); return {skipped:true}; }
+    if(skipTensura||skipAkatsuki||skipGodspeed){
+      if(skipGodspeed)safeLog('[PASSIVE] Godspeed skips this attack turn after dodging.', 'status',attacker,battleState);
+      return {skipped:true,reasons:[...(actorStatus.reasons||[]),...(skipTensura?['Hypnosis']:[]),...(skipAkatsuki?['Technique cooldown']:[]),...(skipGodspeed?['Godspeed recovery']:[])]};
+    }
     return actorStatus;
   }
 
@@ -4334,7 +4347,7 @@
     tower200.startTurn(battleState,attacker);
     dragon.startTurn(battleState,attacker);
     shibuya.startTurn(battleState,attacker,battleState.turn);
-    if(!isAlive(attacker))return {skipped:true};
+    if(!isAlive(attacker))return {skipped:true,reasons:['Defeated before the attack']};
     spooky.startTurn(battleState,attacker,battleState.turn);
     fate.startTurn(battleState,attacker,battleState.turn);
     requiem.turn(battleState);
@@ -4368,9 +4381,11 @@
       battleState.enemyIndex = battleState.enemyTeam.indexOf(attacker);
     }
 
+    const actingSide=battleState.turn;
     const control=startActorTurn(battleState,attacker);
     if(control.skipped||!isAlive(attacker)){
-      battleState.turn=battleState.turn==='player'?'enemy':'player';
+      phases.record(battleState,attacker,actingSide,'skipped',control.reasons?.length?control.reasons:[!isAlive(attacker)?'Defeated before the attack':'Incapacitated']);
+      battleState.turn=actingSide==='player'?'enemy':'player';
       if(battleState.mode==='infinity')battleState.infinity.turnAdvanced=true;
       const winner=checkBattleWinner(battleState);
       return {ended:Boolean(winner),winner};
@@ -4393,7 +4408,12 @@
     target = akatsuki.hypnosisTarget(battleState,attacker,target);
     target = spooky.hypnosisTarget(battleState,attacker,target);
     target = shibuya.hypnosisTarget(battleState,attacker,expansion.hypnosisTarget(battleState, attacker, target));
-    performAttack(battleState, attacker, target, { chainDepth: 0 });
+    const attack=performAttack(battleState, attacker, target, { chainDepth: 0 });
+    if(phases.standard(battleState)){
+      const kind=attack?.charging?'charging':attack?.trainingDummy?'waiting':attack?.skipped?'skipped':attack?.missed||attack?.dodged?'missed':'acted';
+      const reasons=attack?.turnReason?[attack.turnReason]:attack?.charging?['Charging a passive skill']:attack?.trainingDummy?['Training target has no attack']:attack?.skipped?['Incapacitated or passive recovery']:attack?.dodged?['Target dodged']:attack?.missed?['Attack missed']:[];
+      phases.record(battleState,attacker,actingSide,kind,reasons);
+    }
 
     let winner = checkBattleWinner(battleState);
     if (winner) return { ended: true, winner };
@@ -4514,10 +4534,64 @@
       if (copied?.passive?.name) badges.push({ icon: '♢', label: `STOLEN: ${copied.passive.name}`, tone: 'stolen' });
     }
     if (runtime.lastPassiveTrigger && !badges.some(b => b.label === runtime.lastPassiveTrigger)) {
-      badges.push({ icon: '★', label: runtime.lastPassiveTrigger, tone: 'passive' });
+      badges.push({ icon: '★', label: runtime.lastPassiveTrigger, tone: 'passive', presentationRole:'history' });
     }
-    if (!badges.length && passive?.name) badges.push({ icon: '◇', label: passive.name, tone: 'passive' });
+    if (!badges.length && passive?.name) badges.push({ icon: '◇', label: passive.name, tone: 'passive', presentationRole:'identity' });
     return options.all===true?badges:badges.slice(0, 5);
+  }
+
+  // Arena mode/readout adapter. A choice shown here is the one already made
+  // by the native passive, except Aqua's actual pre-battle radio selection.
+  function getArenaPassiveStatusBadges(unit,bs=activeCombat){
+    if(!unit)return [];
+    const raw=getPassiveStatusBadges(unit,{all:true}),rows=[],r=ensureRuntime(unit);
+    const nameOf=u=>u?.display?.name||u?.card?.name||'';
+    const add=(key,label,detail,facts=[],tone='passive')=>rows.push({key,name:label,label,icon:'✦',tone,category:'passive',detail,facts});
+    function mode(key,title,selected,options,detail,replace,facts=[]){
+      if(replace)for(let i=raw.length-1;i>=0;i--)if(replace(raw[i]))raw.splice(i,1);
+      const choices=Object.entries(options).map(([id,label])=>({id,label,selected:id===String(selected??'')}));
+      const current=choices.find(c=>c.selected)?.label||'Awaiting activation';
+      rows.push({key,name:title,label:title+' · '+current,icon:'◈',tone:'form',category:'passive',detail,
+        choices,choiceLabel:current,facts:[...facts, 'Selected: '+current]});
+    }
+    const use=id=>hasPassive(unit,id)?passiveRuntimeFor(unit,id):null;
+    let v=use('tower-champion-tsukuyomi');
+    if(v){
+      const c=v.champion||{};
+      mode('datebayo','Datebayo',c.mode,{naruto:'Naruto',sasuke:'Sasuke'},
+        'The mode is rolled automatically (50/50) for each new active enemy. Naruto summons clones on every third attack; Sasuke blasts the enemy team on every second attack and can dodge.',
+        b=>/^DATEBAYO\b/.test(b.label),['Living clones: '+(c.clones||[]).filter(isAlive).length,'Main attacks: '+(c.attacks||0),'Target: '+(nameOf(c.enemy)||'Awaiting opponent')]);
+    }
+    v=use('tower-champion-raining');
+    if(v)mode('aqua-choice','Aqua',v.champion?.aqua,{hp:'Team HP',rewards:'Rewards'},bs?.enemyTeam?.includes(unit)?'The opposing Aqua rolls one bonus automatically on entry.':'Select Aqua’s bonus before starting the battle. The recorded selection remains active for this match.',null);
+    v=use('sung-jin-woo');
+    if(v)mode('systems-mode','Systems',v.questSkill?.bonus,{atk:'ATK +15%',hp:'HP +20%',heal:'Heal 1.5%'},'One non-stacking bonus is rolled automatically on entry and after each kill.',b=>/^SYSTEMS\b/.test(b.label),['Living shadows: '+(v.questSkill?.clones||[]).filter(isAlive).length]);
+    v=use('toji');
+    if(v)mode('toji-mode','Heavenly Restriction',v.gomen?.mode,{spear:'Inverted Spear',katana:'SS Katana',cloud:'Playful Cloud',chains:'Thousand Chains'},'The native passive selects a weapon mode at entry and when an enemy is defeated.',b=>/^(INVERTED SPEAR|SS KATANA|PLAYFUL CLOUD|THOUSAND CHAINS|HEAVENLY RESTRICTION)$/.test(b.label));
+    v=use('the-clown');
+    if(v)mode('clown-mode','The Clown',v.spooky?.mode,{haste:'Haste',hindred:'Hindred'},'The mode changes automatically on entry and when an enemy is defeated.',b=>/^(HASTE|HINDRED|AWAITING IMPACT)$/.test(b.label));
+    v=use('kr-kuuga');
+    if(v)mode('kuuga-mode','Kuuga',v.kuugaForm,{blue:'Blue',green:'Green',purple:'Purple'},'Form rotates every third primary attack. Follow-up attacks do not advance the rotation.',b=>/^KUUGA\b/.test(b.label),['Primary attacks: '+(v.kuugaOwnAttacks||0)]);
+    v=use('asta-demon');
+    if(v)mode('asta-mode','Demon Asta',v.magicMode,{'Demon Slayer':'Demon Slayer','Demon Dweller':'Demon Dweller'},'Each primary attack turn rolls a sword mode automatically; follow-ups retain the current mode.',b=>/^(DEMON SLAYER|DEMON DWELLER)$/.test(b.label));
+    v=use('war-hammer-titan');
+    if(v)mode('war-hammer-mode','War Hammer',v.titan?.mode||'base',{base:'Base',hammer:'Hammer',spear:'Spear'},'Every fifth main attack selects the next weapon mode automatically.');
+    v=use('finn-the-human');
+    if(v)mode('finn-sword','Adventure Sword',v.contentSkills?.['finn-the-human']?.stance||0,{0:'Golden Sword',1:'Grass Sword',2:'Demon Blood Sword'},'Finn begins with Golden Sword and rolls his next sword after each attack.',b=>/^(Golden Sword|Grass Sword|Demon Blood Sword) · NEXT$/i.test(b.label));
+    v=use('zetsu')||(cardIdOf(unit)==='zetsu'?r:null);
+    if(v?.akatsuki?.stance)mode('zetsu-stance','Zetsu',v.akatsuki.stance,{White:'White',Black:'Black'},'Entry rolls one form automatically. White copies enemy stats; Black sacrifices itself to empower allies.');
+    v=use('pain');
+    if(v||unit.akatsukiPath){const c=unit.akatsukiPath?r.akatsukiPathState:v?.akatsuki;mode('pain-path','Rinnegan',c?.path||unit.akatsukiPath,{Deva:'Deva',Asura:'Asura',Animal:'Animal',Preta:'Preta',Human:'Human',Naraka:'Naraka'},'The current Path is selected by the native passive. Deva charges for three attack turns.',b=>/^RINNEGAN\b/.test(b.label),c?.path==='Deva'?['Charge: '+(c.charge||0)+'/3']:[]);}
+    v=use('mordecai-rigby');
+    if(v){const c=v.contentSkills?.['mordecai-rigby']||{};mode('regular-show-mode','Regular Show',c.serious?'Serious':c.mode,{Mordecai:'Mordecai',Rigby:'Rigby',Serious:'Serious mode'},'Entry and eligible kills roll the mode automatically. Below the threshold, Serious Mode is permanent.',b=>/^(MORDECAI|RIGBY|SERIOUS MODE)\b/.test(b.label));}
+    v=use('sasori');if(v)add('sasori-puppet','Puppet · '+(nameOf(v.akatsuki?.puppet)||'No eligible ally'),'The native passive prefers the living frontline ally, then chooses a replacement automatically.');
+    v=use('tower-champion-eclipse');if(v)add('calamity-target','Protected · '+(nameOf(v.champion?.protected)||'No eligible ally'),'Calamity splits damage with its selected living ally. The passive chooses a replacement if required.');
+    v=use('tohth');if(v?.expansion?.marked)add('tohth-mark','Marked · '+nameOf(v.expansion.marked),'The native passive marks an enemy at battle entry.');
+    if(bs?.passiveDomain?.owner===unit)add('dimensional-domain','Dimensional Domain · '+bs.passiveDomain.turns+'t','The domain is activated by the passive, not by a manual button.',['Attack skips remaining: '+(bs.passiveDomain.skipAttacksRemaining||0)]);
+    v=use('jogo');if(v?.shibuya?.domain)add('jogo-domain','Domain active','Jogo’s HP threshold activated the domain.');
+    v=use('sukuna-shibuya');if(v?.shibuya?.domainTurns>0)add('sukuna-domain','Domain · '+v.shibuya.domainTurns+'t','The domain was activated by revival and consumes its native turns.');
+    v=use('kisame-hoshigaki');if(v?.akatsuki?.domainUntil>(bs?.turnCount||0))add('kisame-domain','Water Domain · '+(v.akatsuki.domainUntil-(bs?.turnCount||0))+'t','The entry domain is active.');
+    return [...rows,...raw];
   }
 
   // Display only actual native combat state. These counters never drive damage,
@@ -5354,7 +5428,7 @@
   }
 
   return Object.freeze({
-    hookVersion:'20261126-ball-polish-1',
+    hookVersion:'20261126-standard-turn-1',
     damageDiagnostics:()=>({damageRecursionDepth,hitRecursionDepth,tacticalAttackDepth}),
     createIsolated: options => createPassiveRuntime(options),
     BASE_CRIT_CHANCE,
@@ -5439,7 +5513,7 @@
       }
       advanceEnemy();ensureCurrentIndices(bs);
     },
-    getPassiveStatusBadges,getBallPassiveProgress,
+    getPassiveStatusBadges,getArenaPassiveStatusBadges,getBallPassiveProgress,getTurnFeedback:phases.feedback,isStandardTurn:phases.standard,
     getCombatStatusSummary,
     getRelicDetails(battle,unit){
       const r=unit?.relic,R=window.RelicSystem;if(!r||!R.validRoll(r))return null;

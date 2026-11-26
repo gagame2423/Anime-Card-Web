@@ -3412,6 +3412,7 @@ function setBattleMode(mode) {
 }
 
 function resetBattleView(mode = '4v4') {
+  window.ArenaTurnView?.hide();
   const archiveRiftPreview=document.getElementById('riftArchivePreview');if(archiveRiftPreview)archiveRiftPreview.hidden=true;
   arenaDeckKey='';
   window.TimeTrialSystem?.abort(battleState, 'view-reset');
@@ -3792,11 +3793,12 @@ function renderBattleCombatant(side, unit) {
     description: passive.description,
     status: unit?.passiveState?.lastPassiveTrigger ? `Triggered: ${unit.passiveState.lastPassiveTrigger}` : 'Active'
   };
-  const statuses = getArenaRuntime()?.getPassiveStatusBadges?.(unit) || [];
+  const runtime=getArenaRuntime();
+  const statuses = runtime?.getArenaPassiveStatusBadges?.(unit,getArenaBattleState()) || runtime?.getPassiveStatusBadges?.(unit,{all:true}) || [];
 
   if (passiveStatus) {
     let parts=battlePassiveViews.get(passiveStatus);
-    if(!parts){
+    if(!parts||!passiveStatus.contains(parts.base)||!passiveStatus.contains(parts.runtime)){
       const base=document.createElement('span');
       base.className='passive-status-badge passive-status-badge--passive passive-skill-tag';
       base.tabIndex=0;base.dataset.passiveTooltip='true';
@@ -3956,6 +3958,7 @@ function scheduleNextBattleTurn(remainingMs) {
   battleState.nextTurnAt = Date.now() + delay;
   if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${Math.ceil(delay / 1000)}s`;
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
+  window.ArenaTurnView?.render(battleState,window.PassiveSystem);
   const autoNote = document.getElementById('battleAutoNote');
   if (autoNote) autoNote.textContent = isSpookyBattle() ? `Spooky Hunt • ${turnMs / 1000}-second turns • Speed Battle Potion ignored • Manual Continue only` : isTimeTrialBattle() ? `${window.TimeTrialSystem.isExp(getBattleMode()) ? 'EXP' : getBattleMode()==='material-time-trial'?'Material':'Normal'} Time Trial • ${turnMs / 1000}-second turns • ${window.TimeTrialSystem.isExp(getBattleMode())?'Speed Battle Potion ignored':'Speed Battle Potion: 1s turns / 90s while active'} • Timer keeps running while reading` : `Auto combat • Every ${turnMs / 1000} seconds • Frontline cards stay engaged until defeated • Weather-mutated enemies are possible`;
   battleTurnTimer = window.setTimeout(() => {
@@ -4139,7 +4142,7 @@ function finishBattle(playerWon) {
 
   els.battleArena?.classList.add('hidden');
   setBattleModalLock(false);
-  const battleResultView = document.getElementById('battle-result-modal') || els.battleVictory;
+  const battleResultView = els.battleVictory;
   if (battleResultView) {
     battleResultView.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
     battleResultView.classList.add(playerWon ? 'battle-result--victory' : 'battle-result--defeat');
@@ -4320,6 +4323,7 @@ function executeBattleTurn() {
     if(isSpookyBattle()){finishSpookyBattle(false);return;}
     if (isTimeTrialBattle()) { finishTimeTrialBattle(false, 'save-error'); return; }
     appendBattleLog('Battle turn encountered a recoverable error. The turn was skipped.', 'defeat');
+    window.ArenaTurnView?.reportRecovery(battleState);
     if (battleState?.turn) {
       battleState.turn = battleState.turn === 'player' ? 'enemy' : 'player';
     }
@@ -5186,6 +5190,7 @@ document.getElementById('questCloseButton')?.addEventListener('click', () => clo
 
 
 function globalTick() {
+  window.ArenaTurnView?.refresh(battleState,window.PassiveSystem);
   if(window.EquipmentSystem?.blocked)return;
   if (isImportingSave) return;
   window.PotionHudSystem?.render();
@@ -5262,6 +5267,7 @@ function isBattleMatchActive() {
 }
 
 function setBattleModalLock(active) {
+  if(!active||window.PortalCombatView?.active||window.InfinityViewSystem?.active)window.ArenaTurnView?.hide();
   if(!active)window.CloudSaveSystem?.afterActivity();
   window.BattleWeatherHud?.render();
   const sandboxButton = document.getElementById('sandboxOpenButton');

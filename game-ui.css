@@ -1090,3 +1090,56 @@ body {
   .rec-plan{padding:8px}
 }
 @media(prefers-reduced-motion:reduce){.rec-dialog button{transition:none!important}}
+
+/* Standard Arena: persistent last-action feedback, independent of the next timer. */
+#battleModal .battle-turn-feedback[hidden] {display:none!important;}
+#battleModal .battle-turn-feedback {
+  display:grid;grid-template-columns:66px minmax(0,1fr) 82px;align-items:center;gap:11px;
+  min-height:46px;padding:6px 12px;border:1px solid #536d73;border-left:3px solid #76e0d1;
+  border-radius:5px;background:linear-gradient(105deg,#183035,#14202e 58%,#111926);
+  box-shadow:inset 0 1px #d8e7d31a;color:#e7ede7;
+}
+#battleModal .battle-turn-feedback[data-side="enemy"] {border-left-color:#e99495;background:linear-gradient(105deg,#322530,#15202b 58%,#111926);}
+#battleModal .battle-turn-feedback[data-state="skipped"] {border-color:#ba9961;border-left-color:#f0ba66;background:linear-gradient(105deg,#382a22,#27242e 58%,#171e2a);}
+#battleModal .battle-turn-feedback[data-state="charging"] {border-color:#8d81c2;border-left-color:#c9a9f5;}
+.battle-turn-feedback__side,.battle-turn-feedback__auto {
+  color:#a4d9ce;font-size:9px;font-weight:850;letter-spacing:.065em;text-align:center;white-space:nowrap;
+}
+.battle-turn-feedback__auto {border:1px solid #657b76;padding:5px 3px;color:#e4d7b4;border-radius:3px;background:#111d28;}
+.battle-turn-feedback__activity {display:flex;flex-direction:column;gap:3px;min-width:0;}
+#battleModal #battleTurnTitle {font-size:13px;line-height:1.15;color:#eaf7ef;}
+#battleModal [data-state="skipped"] #battleTurnTitle {color:#ffdc9a;}
+#battleModal #battleTurnDetail {font-size:10px;line-height:1.3;color:#b3c8d1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#battleModal:has(#battleTurnFeedback:not([hidden])) #battleStatus {min-width:126px;font-variant-numeric:tabular-nums;}
+/* Keep the native inspection list and the choice readouts within their card. */
+#battleModal .arena-runtime-effects {
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0;width:100%;
+  max-height:110px;overflow:auto;scrollbar-width:thin;scrollbar-color:#5a7778 transparent;
+}
+#battleModal .arena-runtime-effects:empty {display:none;}
+#battleModal .arena-mode-readout {
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:3px 6px;
+  width:100%;max-width:100%;min-width:0;min-height:42px;border-radius:4px;
+  padding:5px 7px;background:linear-gradient(135deg,#172936,#182331);
+  border:1px solid #688f89;color:#b8e2d9;box-shadow:inset 0 1px #c3f0e017;
+}
+#battleModal .arena-mode-readout__title {font-size:9px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#battleModal .arena-mode-readout__selected {font-size:9px;color:#f9dc9e;max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+#battleModal .arena-mode-readout__options {grid-column:1/-1;display:flex;flex-wrap:wrap;gap:3px;min-width:0;}
+#battleModal .arena-mode-readout__option {display:inline-flex;max-width:100%;padding:3px 5px;border:1px solid #485d69;border-radius:3px;color:#9eafbf;background:#111e2b;font-size:8px;line-height:1.1;white-space:nowrap;}
+#battleModal .arena-mode-readout__option.is-selected {border-color:#d6b777;background:#373b32;color:#ffedbb;box-shadow:inset 0 1px #e5d7a32a;}
+#battleModal #aquaBattleChoice:not(.hidden) {display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}
+#battleModal #aquaChoiceHint {flex:0 0 100%;margin:0;color:#b8c9d1;font-size:11px;}
+#battleModal #aquaBattleChoice label {min-height:42px;align-items:center;gap:8px;cursor:pointer;border:1px solid #4c6574;background:#142737;padding:6px 10px;border-radius:5px;}
+#battleModal #aquaBattleChoice label:has(input:checked) {border-color:#c8aa6e;background:#293337;}
+#battleModal #aquaBattleChoice label span {display:grid;gap:2px;font-size:12px;font-weight:800;}
+#battleModal #aquaBattleChoice label small {color:#b1c9c5;font-size:10px;font-weight:600;}
+#battleModal #aquaBattleChoice input {accent-color:#b9d3b1;}
+@media(max-width:540px) {
+  #battleModal .battle-turn-feedback {grid-template-columns:50px minmax(0,1fr) 60px;gap:6px;padding:5px 6px;min-height:43px;}
+  #battleModal .battle-turn-feedback__side,#battleModal .battle-turn-feedback__auto {font-size:8px;letter-spacing:0;}
+  #battleModal #battleTurnTitle {font-size:12px;}
+  #battleModal #battleTurnDetail {font-size:9px;}
+  #battleModal:has(#battleTurnFeedback:not([hidden])) #battleStatus {min-width:100px;}
+  #battleModal .arena-runtime-effects {max-height:94px;}
+}

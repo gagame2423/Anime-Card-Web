@@ -3,7 +3,7 @@
  'use strict';
  host.createTurnPhases=function(){
   const battles=new WeakMap();
-  function state(bs){let s=battles.get(bs);if(!s){s={serial:0,actor:null,turns:new WeakMap(),gates:new WeakMap(),actions:new WeakMap()};battles.set(bs,s);}return s;}
+  function state(bs){let s=battles.get(bs);if(!s){s={serial:0,actor:null,turns:new WeakMap(),gates:new WeakMap(),actions:new WeakMap(),feedback:null};battles.set(bs,s);}return s;}
   function actor(bs){if(!bs)return null;const s=battles.get(bs);if(s?.actor)return s.actor;if(bs.activeAttacker)return bs.activeAttacker;const line=bs.turn==='enemy'?bs.enemyTeam:bs.playerTeam,index=bs.turn==='enemy'?bs.enemyIndex:bs.playerIndex;return line?.slice(index||0).find(u=>u&&u.hp>0&&!u.defeated)||null;}
   function own(bs,u,options={}){return Boolean(u&&actor(bs)===u&&!options.isFollowUp&&!options.isCounter&&!options.followOwner&&!options.linkedAttack);}
   const ownTurns=(bs,u)=>battles.get(bs)?.turns.get(u)||u?.passiveState?.ownTurnCount||0;
@@ -14,6 +14,17 @@
   function withActor(bs,u,fn){const s=state(bs),previous=s.actor,publicActor=bs.activeAttacker;s.actor=u;s.serial++;bs.activeAttacker=u;try{return fn();}finally{s.actor=previous;bs.activeAttacker=publicActor||null;}}
   function withAction(bs,u,options,fn){if(!bs||!u)return fn();const s=state(bs),previous=s.actions.get(u);s.actions.set(u,{token:{},follow:Boolean(options.isFollowUp)});try{return fn();}finally{if(previous)s.actions.set(u,previous);else s.actions.delete(u);}}
   function attackToken(bs,u,meta={}){const a=battles.get(bs)?.actions.get(u);if(a&&(!meta.isFollowUp||a.follow))return a.token;return meta.ballerAttackToken ||= {};}
-  return Object.freeze({actor,own,ownTurns,once,withTurn,withActor,withAction,attackToken,reset:bs=>battles.delete(bs)});
+  // A presentation snapshot belongs to the actor that actually took the
+  // turn. It survives the handoff to the other side and status expiration.
+  // No renderer or timer reads/changes the combat counters themselves.
+  const standardModes=new Set(['1v1','4v4','tower','time-trial','exp-time-trial','material-time-trial','raid','rift','boss-event','spooky-hunt']);
+  const standard=bs=>standardModes.has(bs?.mode)&&!bs.sandbox&&!bs.pvp;
+  function record(bs,u,side,kind,reasons=[]){
+   if(!standard(bs))return;
+   state(bs).feedback=Object.freeze({turn:Math.max(0,Number(bs.turnCount)||0),side:side==='enemy'?'enemy':'player',
+    actor:String(u?.display?.name||u?.card?.name||'Fighter'),kind,reasons:Object.freeze([...new Set(reasons.filter(Boolean).map(String))])});
+  }
+  const feedback=bs=>battles.get(bs)?.feedback||null;
+  return Object.freeze({actor,own,ownTurns,once,withTurn,withActor,withAction,attackToken,standard,record,feedback,reset:bs=>battles.delete(bs)});
  };
 })(window);

@@ -10,7 +10,9 @@
       // Canonical combat badges have the actual runtime values and expiration.
       if(['burn','black-flame','bleed','poison','shield','freeze','stun','invincible','guard'].includes(tone)||
         /^(?:BLACK FLAME|BLEED|BURN|POISON|HINDRED|FEAR|FROST|FREEZE|STUN|SNAIL|HYPNOTIS|HYPNOS|HYPOTHESIS|IMMUNE|INVINCIBLE|PASSIVE OFF|ALIEN WATCH|[-+]\d+(?:\.\d+)?% ATK\b)/i.test(label))continue;
-      if(tone==='passive'&&!row.category)continue; // Passive name / last event, not a persistent effect.
+      // Native modes and counters may have no category. Exclude only the
+      // explicitly redundant identity and event-history badges.
+      if(!label.trim()||row.presentationRole==='identity'||row.presentationRole==='history')continue;
       const detail=/^NEXT\b/.test(label)?'Applies to the next eligible attack.':
         /^CRIT$/.test(label)?'The last attack was a critical hit.':
         /^DOOM/.test(label)?'When the countdown ends, this fighter is defeated permanently.':
@@ -24,9 +26,10 @@
         /^KUUGA PURPLE/.test(label)?'While in Purple Form, gain +30% maximum HP.':
         /^PAPER /.test(label)?'Each Paper stack removes 1 percentage point of damage reduction. A new shield is broken at 5 stacks, consuming 5 Paper.':
         `Current combat state: ${label}.`;
-      body.push({key:label.replace(/\d+(?:\.\d+)?/g,'#'),name:label,type:tone==='debuff'||row.category==='status'?'Debuff':'Buff',
-        icon:row.icon,tone,label,detail,turns:Number(label.match(/(?:^|\D)(\d+)t\b/i)?.[1])||0,
-        duration:/^NEXT\b/.test(label)?'Next attack':undefined});
+      body.push({key:row.key||label.replace(/\d+(?:\.\d+)?/g,'#'),name:row.name||label,type:row.category==='passive'||tone==='passive'||tone==='form'?'Passive':tone==='debuff'||row.category==='status'?'Debuff':'Buff',
+        icon:row.icon,tone,label,detail:row.detail||detail,facts:row.facts||[],choices:row.choices,choiceLabel:row.choiceLabel,
+        turns:row.turns??(Number(label.match(/(?:^|\D)(\d+)t\b/i)?.[1])||0),
+        duration:row.duration||(/^NEXT\b/.test(label)?'Next attack':undefined)});
     }
     return body;
   }
@@ -100,10 +103,26 @@
         record={badge,side,key,id:side+':'+kind+':'+key,model};badge.dataset.statusKey=record.id;
         view.nodes.set(key,record);records.set(record.id,record);
       }
-      const badge=record.badge,tone=toneFor(model);
-      const className=`${cls} ${cls}--${tone}`;if(badge.className!==className)badge.className=className;
+      const badge=record.badge,tone=toneFor(model),choice=Array.isArray(model.choices)&&model.choices.length>0;
+      const className=cls+' '+cls+'--'+tone+(choice?' arena-mode-readout':'');if(badge.className!==className)badge.className=className;
       if(badge.dataset.tone!==tone)badge.dataset.tone=tone;
-      const label=`${model.icon||'✦'} ${model.label}`;if(badge.textContent!==label)badge.textContent=label;
+      const label=(model.icon||'✦')+' '+model.label;
+      if(choice){
+        const signature=JSON.stringify([model.name,model.choices.map(x=>[x.id,x.label])]);
+        if(record.choiceSignature!==signature){
+          const title=element('span','arena-mode-readout__title');title.textContent=model.name;
+          const selected=element('span','arena-mode-readout__selected'),options=element('span','arena-mode-readout__options');
+          const chips=model.choices.map(c=>{const chip=element('span','arena-mode-readout__option');chip.textContent=c.label;options.append(chip);return chip;});
+          badge.replaceChildren(title,selected,options);record.choiceParts={selected,chips};record.choiceSignature=signature;
+        }
+        if(record.choiceParts.selected.textContent!==model.choiceLabel)record.choiceParts.selected.textContent=model.choiceLabel;
+        model.choices.forEach((c,index)=>record.choiceParts.chips[index].classList.toggle('is-selected',!!c.selected));
+        badge.setAttribute('aria-label',model.label+'. Inspect passive selection');
+      }else{
+        record.choiceSignature=null;record.choiceParts=null;
+        if(badge.textContent!==label)badge.textContent=label;
+        badge.setAttribute('aria-label',label);
+      }
       record.model=model;nodes.push(badge);
     }
     for(const [key,record] of view.nodes)if(!seen.has(key)){
