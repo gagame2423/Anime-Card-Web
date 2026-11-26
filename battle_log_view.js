@@ -5,16 +5,20 @@
     passive: 'passive', 'self-passive': 'passive', champion: 'passive', relic: 'passive', skill: 'skill', 'special attack': 'skill',
     status: 'status', debuff: 'debuff', 'anti-heal': 'bleed', 'critical hit!': 'crit', 'critical hit': 'crit', crit: 'crit',
     dodge: 'dodge', heal: 'heal', revival: 'heal', revive: 'heal', shield: 'shield', support: 'heal',
-    burn: 'burn', bleed: 'bleed', poison: 'poison', dot: 'dot', stun: 'debuff', freeze: 'freeze', hindred: 'debuff', survive: 'heal'
+    burn: 'burn', bleed: 'bleed', poison: 'poison', dot: 'dot', stun: 'debuff', freeze: 'freeze', 'black flame':'black-flame', 'black flames':'black-flame', fear:'fear', hindred: 'hindred', hindered:'hindred', hypnosis:'hypnosis', hypothesis:'hypnosis', survive: 'heal'
   });
   const tones = new Set(['player','enemy','victory','defeat','passive','critical','status','debuff','dodge','support','heal','shield','burn','bleed','poison','special','revive','counter']);
   const events = [
-    ['burn', 'black flames?|burn(?:s|ed|ing)?'],
+    ['black-flame', 'black flames?'],
+    ['burn', 'burn(?:s|ed|ing)?'],
     ['bleed', 'bleed(?:s|ing)?|bled|heal blocked'],
     ['poison', 'poison(?:s|ed|ing)?'],
     ['dot', 'damage over time|dot'],
     ['freeze', 'freez(?:e|es|ing)|froz(?:e|en)'],
-    ['debuff', 'stun(?:s|ned|ning)?|hind(?:red|ered)|hypnosis|hypnotized?|fear|debuffs?|silenced?'],
+    ['fear', 'fear(?:ed|s)?'],
+    ['hindred', 'hind(?:red|ered)'],
+    ['hypnosis', 'hyp(?:nosis|othesis|notized?)'],
+    ['debuff', 'stun(?:s|ned|ning)?|debuffs?|silenced?'],
     ['crit', 'crit(?:ical)?(?: hits?)?|crits'],
     ['dodge', 'dodg(?:e|es|ed|ing)|evad(?:e|es|ed|ing)'],
     ['heal', 'heal(?:s|ed|ing)?|reviv(?:e|es|ed|al)|resurrect(?:ed|ion)?|surviv(?:e|es|ed|al|ing)'],

@@ -2,7 +2,7 @@
 (function(host){
  'use strict';
  const U=host.OnlineUtils,R=host.PortalRules,P=()=>host.PortalsSystem,V=()=>host.PortalCombatView;
- const PROTOCOL='acr-portals-v1',CONNECT=U.PEER_CONNECT_TIMEOUT_MS;
+ const PROTOCOL='acr-portals-v2',CONNECT=U.PEER_CONNECT_TIMEOUT_MS;
  let peer=null,connections=new Map(),role='',room='',size=2,members=[],portal=null,localId='',phase='idle',revision=0,generation=0,signature='',queue=Promise.resolve(),attemptTimer=null,turnTimer=null,watchdog=null,ackTimer=null,pending=new Set(),hash='',seq=0,lastTurn=0,runId='',seed=0,busy=false;
  const name=value=>String(value||'Player').replace(/[\u0000-\u001f]/g,'').slice(0,40);
  const isHost=()=>role==='host';
@@ -54,15 +54,15 @@
    if(!isHost()||phase!=='lobby'||m.revision!==revision)throw Error('Party selection changed.');const player=members.find(v=>v.id===c.portalMemberId);if(!player||!validWires(m.wires,R.slots(size,members.indexOf(player))))throw Error('Invalid team size or card selection.');player.wires=m.wires;player.ready=true;broadcast('ready_state',{revision,members:members.map(v=>({id:v.id,name:v.name,ready:v.ready}))});update();return;
   }
   if(m.type==='ready_state'){if(isHost()||phase!=='lobby'||m.revision!==revision||!Array.isArray(m.members)||m.members.length!==members.length)throw Error('Invalid Ready state.');for(const member of members){const v=m.members.find(v=>v.id===member.id);if(!v)throw Error('Party member changed.');member.ready=Boolean(v.ready);}update();return;}
-  if(m.type==='rematch'){if(isHost()||phase!=='ended'||!R.validPortal(m.portal)||m.portal.type!==portal.type||(m.portal.id!==portal.id&&m.portal.tier!==portal.tier))throw Error('Invalid rematch.');portal=m.portal;phase='lobby';V().release();return;}
+  if(m.type==='rematch'){if(isHost()||phase!=='ended'||!R.validPortal(m.portal)||m.portal.type!==portal.type||![4,5,'secret'].includes(m.portal.tier)||R.tierRank(m.portal.tier)<R.tierRank(portal.tier))throw Error('Invalid rematch.');portal=m.portal;phase='lobby';V().release();return;}
   if(m.type==='prepare'){
    if(isHost()||phase!=='lobby'||!self()?.ready||m.signature!==signature||m.revision!==revision)throw Error('Unexpected Portal start.');
    await enter(m);send(c,'init_ack',{id:runId,hash});return;
   }
-  if(m.type==='init_ack'){if(!isHost()||phase!=='starting'||m.id!==runId||m.hash!==hash)throw Error('Portal initial state mismatch.');pending.delete(c.portalMemberId);if(!pending.size){host.clearTimeout(ackTimer);phase='combat';broadcast('go',{id:runId});schedule();}return;}
-  if(m.type==='go'){if(isHost()||phase!=='starting'||m.id!==runId)throw Error('Invalid Portal clock.');phase='combat';V().battle.nextTurnAt=Date.now()+2000;return;}
+  if(m.type==='init_ack'){if(!isHost()||phase!=='starting'||m.id!==runId||m.hash!==hash)throw Error('Portal initial state mismatch.');pending.delete(c.portalMemberId);if(!pending.size){host.clearTimeout(ackTimer);phase='combat';broadcast('go',{id:runId,turnMs:R.turnMs()});schedule();}return;}
+  if(m.type==='go'){if(isHost()||phase!=='starting'||m.id!==runId||![1000,2000].includes(m.turnMs))throw Error('Invalid Portal clock.');phase='combat';V().setTiming(m.turnMs);V().battle.nextTurnAt=Date.now()+V().turnMs;return;}
   if(m.type==='turn'){
-   if(isHost()||phase!=='combat'||m.id!==runId||m.seq!==seq+1)throw Error('Portal turn sequence mismatch.');seq=m.seq;V().step();const digest=await U.hash(V().combat.digest());if(digest!==m.hash)throw Error('Party combat diverged. Attempt stopped without rewards.');hash=digest;V().battle.nextTurnAt=Date.now()+2000;send(c,'turn_ack',{id:runId,seq,hash});return;
+   if(isHost()||phase!=='combat'||m.id!==runId||m.seq!==seq+1||![1000,2000].includes(m.turnMs))throw Error('Portal turn sequence mismatch.');seq=m.seq;V().step();const digest=await U.hash(V().combat.digest());if(digest!==m.hash)throw Error('Party combat diverged. Attempt stopped without rewards.');hash=digest;V().setTiming(m.turnMs);V().battle.nextTurnAt=Date.now()+V().turnMs;send(c,'turn_ack',{id:runId,seq,hash});return;
   }
   if(m.type==='turn_ack'){if(!isHost()||phase!=='combat'||m.id!==runId||m.seq!==seq||m.hash!==hash)throw Error('Party turn verification failed.');pending.delete(c.portalMemberId);if(!pending.size){host.clearTimeout(ackTimer);if(V().battle.finished)finishParty();else schedule();}return;}
   if(m.type==='result'){if(isHost()||phase!=='combat'||m.id!==runId||m.hash!==hash||!V().battle.finished||m.winner!==V().battle.portalWinner)throw Error('Unverified Party result.');finishLocal();return;}
@@ -71,15 +71,25 @@
  function ready(wires){if(phase!=='lobby'||self()?.ready||!validWires(wires,quota()))throw Error('Select the required owned cards first.');if(isHost()){Object.assign(self(),{ready:true,wires});broadcast('ready_state',{revision,members:members.map(v=>({id:v.id,name:v.name,ready:v.ready}))});update();}else{Object.assign(self(),{ready:true,wires});try{send([...connections.values()][0],'ready',{revision,wires});update();}catch(error){self().ready=false;update(error.message);throw error;}}}
  function ackTimeout(){if(ackTimer!==null)host.clearTimeout(ackTimer);ackTimer=host.setTimeout(()=>fail('A Party client did not confirm the combat state.'),CONNECT);}
  async function enter(packet){
-  if(!R.validPortal(packet.portal)||U.stable(packet.portal)!==U.stable(portal)||!Number.isSafeInteger(packet.seed)||packet.seed<0||packet.seed>0xffffffff||!Array.isArray(packet.players)||packet.players.length!==size||!Array.isArray(packet.weather)||packet.weather.length>32||typeof packet.id!=='string'||!/^portal_run_[a-f0-9]{20}$/.test(packet.id))throw Error('Invalid Portal battle.');
+  if(!R.validPortal(packet.portal)||U.stable(packet.portal)!==U.stable(portal)||!Number.isSafeInteger(packet.seed)||packet.seed<0||packet.seed>0xffffffff||![1000,2000].includes(packet.turnMs)||!Array.isArray(packet.players)||packet.players.length!==size||!Array.isArray(packet.weather)||packet.weather.length>32||typeof packet.id!=='string'||!/^portal_run_[a-f0-9]{20}$/.test(packet.id))throw Error('Invalid Portal battle.');
   const units=[];for(let i=0;i<size;i++){const player=packet.players[i];if(player.id!==members[i].id||!validWires(player.wires,R.slots(size,i)))throw Error('Party allocation does not match lobby.');if(player.id===localId&&U.stable(player.wires)!==U.stable(P().getWires()))throw Error('Your selected cards changed.');for(const wire of player.wires)units.push(R.unit(wire,player.id));}
-  runId=packet.id;seed=packet.seed;portal=packet.portal;R.renderIcon(host.document.getElementById('portalInspectorImage'),portal);phase='starting';P().begin(runId,portal,true,isHost(),packet.consumeOnEntry===true);V().start({id:runId,portal,players:units,seed,party:true,weather:packet.weather});hash=await U.hash(V().combat.digest());seq=0;
+  runId=packet.id;seed=packet.seed;portal=packet.portal;R.renderIcon(host.document.getElementById('portalInspectorImage'),portal);phase='starting';P().begin(runId,portal,true,isHost(),packet.consumeOnEntry===true);V().start({id:runId,portal,players:units,seed,party:true,weather:packet.weather,turnMs:packet.turnMs});hash=await U.hash(V().combat.digest());seq=0;
  }
  let consumeNext=false;
- async function start(){if(!readyToStart())return;try{busy=true;const packet={id:'portal_run_'+U.token(10),seed:R.integer(1,0xffffffff),portal,players:members.map(m=>({id:m.id,wires:m.wires})),weather:P().weather,signature,revision,consumeOnEntry:consumeNext};consumeNext=false;await enter(packet);pending=new Set(members.filter(m=>m.id!==localId).map(m=>m.id));broadcast('prepare',packet);ackTimeout();}catch(error){fail(error.message);}finally{busy=false;update();}}
- function schedule(){if(!isHost()||phase!=='combat')return;if(turnTimer!==null)host.clearTimeout(turnTimer);const delay=Math.max(0,lastTurn+2000-Date.now());V().battle.nextTurnAt=Date.now()+(lastTurn?delay:2000);turnTimer=host.setTimeout(()=>{turnTimer=null;void tick();},lastTurn?delay:2000);}
- async function tick(){try{if(phase!=='combat')return;lastTurn=Date.now();V().step();hash=await U.hash(V().combat.digest());seq++;pending=new Set(members.filter(m=>m.id!==localId).map(m=>m.id));broadcast('turn',{id:runId,seq,hash});ackTimeout();}catch(error){fail(error.message);}}
- function continueMatch(auto=false){if(!isHost()||phase!=='ended')return false;const current=auto?P().sameTierPortal(portal.tier,portal.type):P().get(portal.id);if(!current)return auto?P().returnMain():false;consumeNext=auto;portal=current;phase='lobby';lastTurn=0;V().release();broadcast('rematch',{portal});void start();return true;}
+ async function start(){if(!readyToStart())return;try{busy=true;const packet={id:'portal_run_'+U.token(10),seed:R.integer(1,0xffffffff),portal,players:members.map(m=>({id:m.id,wires:m.wires})),weather:P().weather,signature,revision,turnMs:R.turnMs(),consumeOnEntry:consumeNext};consumeNext=false;await enter(packet);pending=new Set(members.filter(m=>m.id!==localId).map(m=>m.id));broadcast('prepare',packet);ackTimeout();}catch(error){fail(error.message);}finally{busy=false;update();}}
+ function schedule(){
+  if(!isHost()||phase!=='combat')return;if(turnTimer!==null)host.clearTimeout(turnTimer);
+  const ms=R.turnMs(),delay=lastTurn?Math.max(0,lastTurn+ms-Date.now()):ms;
+  V().setTiming(ms);V().battle.nextTurnAt=Date.now()+delay;
+  turnTimer=host.setTimeout(()=>{turnTimer=null;void tick();},delay);
+ }
+ async function tick(){try{if(phase!=='combat')return;lastTurn=Date.now();V().step();hash=await U.hash(V().combat.digest());seq++;pending=new Set(members.filter(m=>m.id!==localId).map(m=>m.id));broadcast('turn',{id:runId,seq,hash,turnMs:R.turnMs()});ackTimeout();}catch(error){fail(error.message);}}
+ function continueMatch(auto=false,summary){
+  if(!isHost()||phase!=='ended')return false;
+  const up=auto&&V().autoUp,current=auto?P().nextForAuto(portal,summary):P().get(portal.id);
+  if(!current)return auto?P().returnMain(up?'Auto Go Up paused — no safe Portal with at least two attempts remains.':undefined):false;
+  consumeNext=auto&&!up;portal=current;phase='lobby';lastTurn=0;V().release();broadcast('rematch',{portal});void start();return true;
+ }
  function finishLocal(){phase='ended';clearTimers();const scores=V().combat.kills;let mvp=null;if(size===4){const ranked=members.map((m,i)=>({id:m.id,kills:scores[m.id]||0,index:i})).sort((a,b)=>b.kills-a.kills||a.index-b.index);if(ranked[0]?.kills>0)mvp=ranked[0].id;}const info={mvp:mvp===localId};V().setPartyInfo(info);V().complete(info);update();}
  function finishParty(){broadcast('result',{id:runId,hash,winner:V().battle.portalWinner});finishLocal();}
  host.PortalParty=Object.freeze({create,join,ready,start,reset,exit,continueMatch,get isHost(){return isHost();},get canContinue(){return isHost()&&phase==='ended'&&Boolean(P().get(portal?.id));},get active(){return Boolean(role);},get quota(){return quota();},get locked(){return Boolean(self()?.ready)||phase==='starting'||phase==='combat'||phase==='ended';},get canReady(){return phase==='lobby'&&!self()?.ready&&index()>=0;}});

@@ -11,6 +11,17 @@
  function renderIcon(node,value){if(!node)return;node.hidden=false;node.src=image(value);node.alt=definition(value).name;}
  const clone=value=>JSON.parse(JSON.stringify(value));
  const tierName=tier=>tier==='secret'?'Secret':'Tier '+tier;
+ const tierRank=tier=>tier==='secret'?6:Number(tier)||0;
+ const turnMs=(at=Date.now())=>host.InventorySystem?.combatTurnMs?.(2000,at)===1000?1000:2000;
+ // Tier progression always uses the same Portal type and retains attempts.
+ function advanceTarget(previous,current,owned,summary={}){
+  if(!previous||summary.won===false&&summary.remaining<=1)return null;
+  if(current&&current.attempts<=1)return null;
+  const next=(owned||[]).filter(p=>p.type===previous.type&&p.attempts>1&&tierRank(p.tier)>tierRank(previous.tier))
+    .sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)||Number(b.id===current?.id)-Number(a.id===current?.id)||b.attempts-a.attempts||a.id.localeCompare(b.id));
+  if(summary.won!==false&&next.length)return next[0];
+  return current&&current.attempts>1?current:null;
+ }
  const pick=(rows,random)=>rows[Math.min(rows.length-1,Math.floor(random()*rows.length))];
  const integer=(min,max,random=Math.random)=>min+Math.floor(Math.max(0,Math.min(1-Number.EPSILON,random()))*(max-min+1));
  const validPortal=p=>Boolean(p&&Object.hasOwn(TYPES,p.type)&&Object.hasOwn(MULTIPLIERS,p.tier)&&Number.isInteger(p.attempts)&&p.attempts>=1&&p.attempts<=5&&ELEMENTS.includes(p.element)&&definition(p).categories.includes(p.category)&&Number.isInteger(p.bonus)&&p.bonus>=50&&p.bonus<=definition(p).maxBonus);
@@ -46,5 +57,5 @@
   function digest(){return host.OnlineUtils.stable({turn:battle.turn,count:battle.turnCount||0,winner:battle.portalWinner||'',kills,teams:[battle.playerTeam,battle.enemyTeam].map(line=>line.map(u=>({id:u.card.id,hp:u.hp,maxHp:u.maxHp,atk:u.atk,dead:Boolean(u.defeated),shield:u.passiveState?.shield||0,attacks:u.passiveState?.ownAttackCount||0,status:[u.passiveState?.stunTurns||0,u.passiveState?.freezeTurns||0]})))});}
   return Object.freeze({battle,engine,kills,step,digest});
  }
- host.PortalRules=Object.freeze({MULTIPLIERS,BASE,ELEMENTS,CATEGORIES,TYPES,definition,typeOf,image,renderIcon,integer,tierName,validPortal,create,item,beanRange,slots,unit,enemies,generator,createCombat});
+ host.PortalRules=Object.freeze({MULTIPLIERS,BASE,ELEMENTS,CATEGORIES,TYPES,definition,typeOf,image,renderIcon,integer,tierName,tierRank,turnMs,advanceTarget,validPortal,create,item,beanRange,slots,unit,enemies,generator,createCombat});
 })(window);

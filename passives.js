@@ -2027,15 +2027,16 @@
     const push=(key,name,type,icon,tone,detail,turns,extra={})=>{
       effects.push({ key, name, type, icon, tone, detail, turns, label:name.toUpperCase()+(turns>0?' ('+turns+'t)':''),...extra });
     };
-    for(const [key,name,icon,tone] of [['bleed','Bleed','◆','bleed'],['burn','Burn','♨','burn'],['poison','Poison','☠','poison']]){
+    for(const [key,name,icon,tone] of [['bleed','Bleed','◆','bleed'],['burn','Burn','♨','burn'],['black-flame','Black Flame','♨','black-flame'],['poison','Poison','☠','poison']]){
       const stackOf=(e,amount,source=e.source,nonlethal=false)=>({turns:e.turns,amount,source:source?.display?.name||source?.card?.name||'Unattributed',nonlethal});
-      const stacks=(r[key]||[]).filter(e=>e?.turns>0).map(e=>stackOf(e,dotDamage(battleState,unit,key,e)));
+      const effectKind=key==='black-flame'?'burn':key;
+      const stacks=(r[effectKind]||[]).filter(e=>e?.turns>0&&(effectKind!=='burn'||Boolean(e.uncleansable)===(key==='black-flame'))).map(e=>stackOf(e,dotDamage(battleState,unit,effectKind,e)));
       if(key==='poison')for(const e of r.akatsukiPoison||[])if(e.turns>0)stacks.push(stackOf(e,akatsukiPoisonDamage(battleState,unit,e.damage),e.owner,true));
       if(!stacks.length)continue;
       const turns=stacks.reduce((max,row)=>Math.max(max,row.turns),0),total=stacks.reduce((n,row)=>n+row.amount,0);
       const groups=new Map();
       for(const row of stacks){const k=JSON.stringify(row),group=groups.get(k);if(group)group.count++;else groups.set(k,{...row,count:1});}
-      const detail=(key==='bleed'?'Blocks all incoming healing from every source. ':'')+
+      const detail=(key==='bleed'?'Blocks all incoming healing from every source. ':key==='black-flame'?'Uncleansable Burn. ':'')+
         `${fmt(total)} damage per turn with all current stacks, before shields and redirects. Each stack expires separately.`;
       push(key,name,'Debuff',icon,tone,detail,turns,{
         label:`${name.toUpperCase()} x${stacks.length} (${turns}t)`, stacks:stacks.length,
@@ -2047,11 +2048,11 @@
     };
     timed('stun','Stun','✚','stun',r.stunTurns,hasPassive(unit,'jaw-titan')?'Jaw Titan can still attack, but deals 30% less damage.':'Prevents the fighter from acting on its turn.');
     timed('freeze','Freeze','❄','freeze',r.freezeTurns,'Prevents the fighter from acting on its turn.');
-    timed('hindred','Hindred','⛓','debuff',r.hindredTurns,'Prevents follow-up attacks.');
-    timed('fear','Fear','◉','debuff',Math.max(r.fearTurns||0,r.deadlightsFearTurn!==undefined&&r.deadlightsFearTurn===battleState?.turnCount?1:0),'Gives eligible attacks a 15% chance to miss.');
+    timed('hindred','Hindred','⛓','hindred',r.hindredTurns,'Prevents follow-up attacks.');
+    timed('fear','Fear','◉','fear',Math.max(r.fearTurns||0,r.deadlightsFearTurn!==undefined&&r.deadlightsFearTurn===battleState?.turnCount?1:0),'Gives eligible attacks a 15% chance to miss.');
     timed('snail','Snail','◒','debuff',r.snailTurns,'Prevents the fighter from acting while transformed.');
-    timed('hypnosis','Hypnosis','◉','debuff',Math.max(r.hypnosisTurns||0,r.shibuyaHypnosis?.turns||0,r.sinsHypnosisTurns||0,r.deadlightsHypnosis?.turns||0,r.akatsukiHypnosis?.turns||0),'Attempts to redirect the attack to an eligible ally (80% chance).');
-    timed('hypnosis-skip','Hypnosis · Skip','◉','debuff',r.tensuraHypnosis,'Skips the affected fighter’s attack.');
+    timed('hypnosis','Hypnosis','◉','hypnosis',Math.max(r.hypnosisTurns||0,r.shibuyaHypnosis?.turns||0,r.sinsHypnosisTurns||0,r.deadlightsHypnosis?.turns||0,r.akatsukiHypnosis?.turns||0),'Attempts to redirect the attack to an eligible ally (80% chance).');
+    timed('hypnosis-skip','Hypnosis · Skip','◉','hypnosis',r.tensuraHypnosis,'Skips the affected fighter’s attack.');
     timed('immune','Immune','✦','shield',r.immuneTurns,'Grants damage immunity while active.','Buff');
     timed('incoming-immune','Incoming Damage Immunity','✦','shield',r.incomingImmuneTurns,'Prevents incoming attack damage while active.','Buff');
     timed('invincible','Invincible','◆','invincible',Math.max(r.invincibleTurns||0,r.hakariInvincible||0),'Prevents normal attack damage while active. Existing damage-over-time effects are tracked separately.','Buff');
@@ -2193,7 +2194,7 @@
           questSkills.damaged(battleState, unit, actualDamage);
           runtime.lastDamageTaken = actualDamage;
           if(battleState.mode==='auto-chess')battleState.tactical?.onDamage?.(effect.source,unit,actualDamage,{dot:true},{damage:actualDamage});
-          safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} takes ${actualDamage.toLocaleString('en-US')} ${kind.toUpperCase()} damage.`, 'status', effect.source || unit, battleState);
+          safeLog(`[STATUS] ${unit.display?.name || cardOf(unit)?.name || 'Unit'} takes ${actualDamage.toLocaleString('en-US')} ${kind==='burn'&&effect.uncleansable?'BLACK FLAME':kind.toUpperCase()} damage.`, 'status', effect.source || unit, battleState);
           if (unit.hp <= 0) {
             unit.defeated = true;
             champions.death(battleState, unit, effect.source);

@@ -201,6 +201,13 @@
     'Jump In': 'Open a mode, shop or feature directly from the release where it appeared.'
   }, { jumps:'arena autochess hextech', art:'item:hextech' });
 
+  release(33, 'Arena Polish & Encounter Planner', 'See combat thresholds clearly, plan affordable counter lineups and spend less time restarting your favorite challenges.', {
+    'Combat HUD': 'HP includes its remaining percentage. Shields display depletion from their peak during the current shield cycle. Black Flame, Fear, Hindred and Hypnosis have their own status colors.',
+    'Live inspections': 'Keep reading an effect while its stacks and turns update during combat. Color-coded logs distinguish Black Flame from Burn.',
+    'Recommend Team': 'Fixed-roster Boss Events and Raids offer Luck, Balanced and Overpower plans using the full Card Index, mutations and compatible Relics. Compare tested clear rates, inspect rewards and apply matching cards and Relics you already own. Encounters with randomized opponents or modifiers are excluded.',
+    'Automation': 'Speed Battle Potion now accelerates Portal turns to one second. Auto Go Up follows higher tiers while protecting the final remaining life. Normal Time Trial can automatically skip to its unlocked room after a failed automated run.'
+  }, { jumps:'arena marine_fort boss trial namek', art:'relic:alien_watch' });
+
   const jumps = {
     summon:['Summon','Return to the roll altar','unit:starter-common'],
     arena:['Clash Arena','Choose a lineup and battle','unit:jotaro-kujo'],
@@ -615,5 +622,5 @@
     host.addEventListener('resize',queuePlacement);
   }
 
-  host.UpdateLogs=Object.freeze({mount});
+  host.UpdateLogs=Object.freeze({mount,acquisition});
 })(window);

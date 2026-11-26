@@ -2881,6 +2881,31 @@ let battleState = null;
 let battleTurnTimer = null;
 let autoContinueBattleTimer = null;
 let autoContinueBattleEnabled = false;
+const AUTO_SKIP_ROOM_KEY='anime_card_rng_auto_skip_room';
+let autoSkipRoomEnabled=false;
+try{autoSkipRoomEnabled=localStorage.getItem(AUTO_SKIP_ROOM_KEY)==='true';}catch(_){}
+function renderAutoSkipRoom(){
+  const normal=getBattleMode()==='time-trial'&&!window.PortalsSystem?.active&&!window.InfinitySystem?.active;
+  for(const id of ['timeTrialAutoSkip','timeTrialAutoSkipHud']){
+    const input=document.getElementById(id);if(!input)continue;
+    input.checked=autoSkipRoomEnabled;input.closest('label').hidden=!normal;
+  }
+  for(const node of document.querySelectorAll('[data-auto-skip-state]'))node.textContent=autoSkipRoomEnabled?'ON':'OFF';
+}
+function autoSkipAfterDefeat(completed){
+  if(!autoSkipRoomEnabled||!autoContinueBattleEnabled||completed?.mode!=='time-trial'||completed.outcome!=='defeat'||completed.trial?.reason==='save-error')return true;
+  const trial=window.TimeTrialSystem,cap=trial.skipCap();
+  if(cap<=trial.room)return true;
+  const result=trial.skipRoom(cap),message=result.ok?'Auto Skip Room → Room '+result.room:'Auto Skip Room stopped: '+result.message;
+  setViewText('timeTrialSkipStatus',message);
+  const body=document.getElementById('timeTrialSummary');
+  if(body&&!body.classList.contains('hidden')&&!body.textContent.includes(message))body.textContent+='\n'+message;
+  if(result.ok){
+    setCachedText(els.battleAutoAgainButton,'Continue • Room '+result.room);
+    renderTimeTrialControls();
+  }
+  return result.ok;
+}
 try { autoContinueBattleEnabled = localStorage.getItem(AUTO_CONTINUE_STORAGE_KEY) === 'true'; }
 catch (error) { console.warn('Could not load Auto Continue preference:', error); }
 
@@ -2898,12 +2923,13 @@ function renderAutoContinueBattleToggle() {
 function scheduleAutoContinueBattle() {
   clearAutoContinueBattleTimer();
   const completedBattle = battleState;
-  if (isSpookyBattle() || !autoContinueBattleEnabled || !completedBattle?.finished || !['victory','defeat'].includes(completedBattle.outcome) || !canReplayBattleTeam()) return;
+  if (isSpookyBattle() || !autoContinueBattleEnabled || !completedBattle?.finished || completedBattle.trial?.reason==='save-error' || !['victory','defeat'].includes(completedBattle.outcome) || !canReplayBattleTeam()) return;
   autoContinueBattleTimer = window.setTimeout(() => {
     autoContinueBattleTimer = null;
     if (!autoContinueBattleEnabled || isImportingSave || saveTransferBusy || battleState !== completedBattle ||
         !completedBattle.finished || !['victory','defeat'].includes(completedBattle.outcome) ||
         els.battleModal?.classList.contains('hidden') || !canReplayBattleTeam()) return;
+    if(!autoSkipAfterDefeat(completedBattle))return;
     startBattle(true,true);
   }, AUTO_CONTINUE_DELAY_MS);
 }
@@ -3257,6 +3283,7 @@ function populateBattleFighterSelect() {
 }
 
 function renderBattleSelection() {
+  window.RecommendTeamView?.refreshEntry();renderAutoSkipRoom();
   restoreArenaSelection();
   renderTeamLoadouts();
   renderBattleTeamSlots();
@@ -3345,6 +3372,7 @@ function renderBattleSelectionPreview() {
 }
 
 function renderBattleModePicker() {
+  window.RecommendTeamView?.refreshEntry();
   const activeMode = getBattleMode();
   if (els.battleModePicker) {
     els.battleModePicker.querySelectorAll('[data-battle-mode]').forEach(button => {
@@ -3738,10 +3766,11 @@ function renderBattleCombatant(side, unit) {
   }
 
   if (hpEl) {
-    hpEl.textContent = `${Math.max(0, Number(unit?.hp) || 0).toLocaleString('en-US')} / ${Math.max(1, Number(unit?.maxHp) || 1).toLocaleString('en-US')}`;
+    const pct=ratio*100, percent=pct>0&&pct<.01?'<0.01%':pct<100&&pct>99.99?'>99.99%':pct.toLocaleString('en-US',{maximumFractionDigits:2})+'%';
+    setCachedText(hpEl,`${Math.max(0, Number(unit?.hp) || 0).toLocaleString('en-US')} / ${Math.max(1, Number(unit?.maxHp) || 1).toLocaleString('en-US')} (${percent})`);
   }
   if (hpBar) hpBar.style.setProperty('--game-meter',ratio);
-  if(unit?.isExpTrainingDummy&&hpEl)hpEl.textContent='∞';
+  if(unit?.isExpTrainingDummy&&hpEl)setCachedText(hpEl,'∞');
   if (atkEl) atkEl.textContent = Math.max(0, Number(unit?.atk) || 0).toLocaleString('en-US');
   if (levelEl) levelEl.textContent = `Lv. ${levelInfo.level}`;
   if (expTextEl) expTextEl.textContent = side === 'enemy'
@@ -3784,7 +3813,7 @@ function renderBattleCombatant(side, unit) {
       parts.expand?.remove();parts.expand=createPassiveExpandButton(passiveTooltip.name,passiveTooltip.description);
       passiveStatus.insertBefore(parts.expand,runtime);parts.expandKey=key;
     }
-    window.ArenaStatusView.render(runtime,window.ArenaStatusView.runtimeBadges(statuses),'passive');
+    window.ArenaStatusView.render(runtime,window.ArenaStatusView.runtimeBadges(statuses),'passive',side,unit);
   }
 
   renderBattleCombatModifiers(side, unit);
@@ -3826,11 +3855,21 @@ function renderBattleCombatModifiers(side, unit) {
     meta.append(label,value);track.append(fill);row.append(meta,track);statusEl.replaceChildren(row);
     shield={row,value,fill};battleShieldViews.set(statusEl,shield);
   }
-  shield.row.classList.toggle('has-shield',summary.shield>0);
-  setCachedText(shield.value,Math.round(summary.shield).toLocaleString('en-US'));
-  shield.fill.style.setProperty('--game-meter',Math.max(0,Math.min(1,summary.shieldPct/100)));
-
-  window.ArenaStatusView.render(effectsEl,summary.effects||[]);
+  const amount=Math.max(0,Number(summary.shield)||0);
+  if(shield.unit!==unit||!amount){shield.unit=unit;shield.peak=0;}
+  shield.peak=Math.max(shield.peak||0,amount);
+  const ratio=amount?Math.min(1,amount/Math.max(1,shield.peak)):0;
+  const fmt=n=>Math.round(n).toLocaleString('en-US');
+  shield.row.classList.toggle('has-shield',amount>0);
+  setCachedText(shield.value,amount?fmt(amount)+' / '+fmt(shield.peak):'0');
+  shield.row.title='Shield remaining / peak shield during the current shield cycle';
+  shield.fill.style.setProperty('--game-meter',ratio>0?Math.max(.02,ratio):0);
+  const track=shield.fill.parentElement;
+  track.setAttribute('role','progressbar');track.setAttribute('aria-label','Shield remaining');
+  track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax','100');
+  track.setAttribute('aria-valuenow',String(Math.round(ratio*100)));
+  track.setAttribute('aria-valuetext',fmt(amount)+' of '+fmt(shield.peak)+' shield');
+  window.ArenaStatusView.render(effectsEl,summary.effects||[],'effect',side,unit);
 }
 
 const battleLineupViews=new WeakMap();
@@ -4521,6 +4560,7 @@ function renderTimeTrialControls() {
   setViewText('timeTrialBalance', `${trial.shards.toLocaleString('en-US')} Shards`);
   const skip=document.getElementById('timeTrialSkipControls'),skipInput=document.getElementById('timeTrialSkipRoom'),skipButton=document.getElementById('timeTrialSkipButton');
   if(skip)skip.hidden=mode!==trial.MODES.normal;
+  renderAutoSkipRoom();
   const cap=trial.skipCap(),canSkip=mode===trial.MODES.normal&&canEvolveNow()&&cap>trial.room;
   if(skipInput){skipInput.min=trial.room+1;skipInput.max=cap;skipInput.disabled=!canSkip;if(document.activeElement!==skipInput&&(!skipInput.value||Number(skipInput.value)<=trial.room||Number(skipInput.value)>cap))skipInput.value=cap>trial.room?cap:'';}
   if(skipButton)skipButton.disabled=!canSkip;
@@ -4574,6 +4614,7 @@ function finishTimeTrialBattle(won, reason = '') {
   clearAutoContinueBattleTimer(); clearBattleTurnTimer(); clearBattleAnimationTimers();
   battleState.finished = true; battleState.isBattling = false;
   battleState.outcome = summary.won ? 'victory' : 'defeat';
+  battleState.trial.reason=summary.reason;
   refreshAchievements(); saveState(); updateStats(); renderCollection(); renderTimeTrialControls();
   const body = document.getElementById('timeTrialSummary');
   body.textContent = summary.material?`Material Room ${summary.room} ${summary.won?'Cleared':'Failed'}\n${Object.entries(summary.materials||{}).map(([id,n])=>(window.InventorySystem.getItem(id)?.name||id)+' +'+n).join('\n')||'No materials dropped.'}\nNo Shards • No EXP • No VNĐ\n${summary.won?'Next Material Room: '+summary.nextRoom:'Material progress reset to Room 1'}`:summary.exp
@@ -4600,7 +4641,7 @@ function finishTimeTrialBattle(won, reason = '') {
   els.battleVictory.classList.remove('hidden', 'battle-result--neutral', 'battle-result--victory', 'battle-result--defeat');
   els.battleVictory.classList.add(summary.won ? 'battle-result--victory' : 'battle-result--defeat');
   els.battleVictory.setAttribute('aria-hidden', 'false');
-  if (replayable) scheduleAutoContinueBattle();
+  if (replayable&&summary.reason!=='save-error'&&autoSkipAfterDefeat(battleState)) scheduleAutoContinueBattle();
 }
 
 const hubResourceNodes=['hubGems','hubRiftShards','hubOre','hubDropValue'].map(id=>document.getElementById(id));
@@ -5141,7 +5182,7 @@ function globalTick() {
   if(window.EquipmentSystem?.blocked)return;
   if (isImportingSave) return;
   window.PotionHudSystem?.render();
-  if(window.InfinitySystem?.active||window.PortalsSystem?.active){const now=Date.now(),previous=Number(state.weather.lastRealTimestamp);state.weather.lastRealTimestamp=now;advanceGameClock(Number.isFinite(previous)?Math.max(0,(now-previous)/1000):0);window.QuestsSystem?.tick(state.weather.gameSeconds);window.InventorySystem.tick(now);renderClockAndWeather(false);saveState(true,false);return;}
+  if(window.InfinitySystem?.active||window.PortalsSystem?.active){window.PortalCombatView?.refreshTiming();window.PortalsSystem?.refreshTiming();const now=Date.now(),previous=Number(state.weather.lastRealTimestamp);state.weather.lastRealTimestamp=now;advanceGameClock(Number.isFinite(previous)?Math.max(0,(now-previous)/1000):0);window.QuestsSystem?.tick(state.weather.gameSeconds);window.InventorySystem.tick(now);renderClockAndWeather(false);saveState(true,false);return;}
   if (gameInputLocked()) return;
   refreshAchievements(!(window.RollViewSystem?.enabled && isAutoRolling));
   const now = Date.now();
@@ -5158,6 +5199,7 @@ function globalTick() {
   window.TimeTrialSystem?.checkDeadline();
   window.RiftSystem.renderControls(isRiftBattle());
   if(isRiftBattle()&&!isBattleMatchActive()&&els.battleStartButton)els.battleStartButton.disabled=!isBattleSetupValid()||!window.RiftSystem.canEnter();
+  if(els.battleModal&&!els.battleModal.classList.contains('hidden'))window.RecommendTeamView?.refreshEntry();
   const bossRotation=window.BossEventSystem.rotation();
   setViewText('bossEventRotationHint',`${window.BossEventSystem.TYPES[bossRotation.type].name} • ${formatWeatherCountdown(bossRotation.remainingMs/1000)} • 5 vs 1`);
   if (els.battleModal && !els.battleModal.classList.contains('hidden')) { renderTimeTrialControls(); if(isSpookyBattle())renderSpookyControls(); if (isBossEventBattle()) renderBossEventControls(); }
@@ -5394,7 +5436,8 @@ function resetGame() {
   window.RollPerformanceSystem?.cancel(flushRollUi);
   clearAutoContinueBattleTimer();
   autoContinueBattleEnabled = false;
-  try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY); } catch (_) {}
+  try { localStorage.removeItem(AUTO_CONTINUE_STORAGE_KEY);localStorage.removeItem(AUTO_SKIP_ROOM_KEY); } catch (_) {}
+  autoSkipRoomEnabled=false;renderAutoSkipRoom();
   renderAutoContinueBattleToggle();
   returnToLobby();
   window.PenaltyStatsSystem?.reset();window.RiftSystem?.reset(); window.InfinitySystem?.reset(); window.PortalsSystem?.reset(); window.InventorySystem?.reset(); window.ExpFoodSystem?.reset(); window.SpookySystem?.reset(); window.EquipmentSystem?.reset(); window.TowerSystem?.reset(); window.TimeTrialSystem?.reset(); window.RaidSystem?.reset(); window.BossEventSystem?.reset(); window.AchievementSystem?.reset(); window.EvolutionSystem?.reset(); window.QuestSystem?.reset(); window.QuestsSystem?.reset(); window.RollViewSystem?.reset?.(); window.MaterialSystem.register();window.RelicSystem.register();window.RiftSystem.register();
@@ -5616,6 +5659,11 @@ els.upgradesButton?.addEventListener("click", () => openModal("upgradesModal"));
 els.battleButton?.addEventListener("click", openBattleModal);
 els.battleCloseButton?.addEventListener("click", event => { event.preventDefault(); if(window.PortalCombatView?.active){window.PortalsSystem.exit();return;}if(window.InfinityViewSystem?.active){window.InfinitySystem.exit();return;} surrenderBattle(); });
 els.resetButton?.addEventListener("click", resetGame);
+for(const id of ['timeTrialAutoSkip','timeTrialAutoSkipHud'])document.getElementById(id)?.addEventListener('change',event=>{
+  autoSkipRoomEnabled=Boolean(event.target.checked);
+  try{localStorage.setItem(AUTO_SKIP_ROOM_KEY,String(autoSkipRoomEnabled));}catch(_){}
+  renderAutoSkipRoom();if(autoContinueBattleEnabled&&battleState?.finished)scheduleAutoContinueBattle();
+});
 els.autoContinueBattleToggle?.addEventListener('change', () => {
   if(isSpookyBattle()){renderAutoContinueBattleToggle();return;}
   autoContinueBattleEnabled = els.autoContinueBattleToggle.checked;
@@ -5626,6 +5674,7 @@ els.autoContinueBattleToggle?.addEventListener('change', () => {
   else clearAutoContinueBattleTimer();
 });
 window.addEventListener('storage', event => {
+  if(event.key===AUTO_SKIP_ROOM_KEY||event.key===null){autoSkipRoomEnabled=event.newValue==='true';renderAutoSkipRoom();}
   if (event.key !== AUTO_CONTINUE_STORAGE_KEY && event.key !== null) return;
   autoContinueBattleEnabled = event.key === null ? false : event.newValue === 'true';
   renderAutoContinueBattleToggle();
@@ -5895,7 +5944,7 @@ window.ExpFoodSystem.configure({
   onCommit:()=>{window.CloudSaveSystem?.markDirty();state=loadState();window.RollPerformanceSystem?.invalidateOwnership();syncOwnershipRecords();updateStats();renderPreview();renderCollection();renderAvailableCards();renderPotionInventory();}
 });
 document.getElementById('previewFeedButton')?.addEventListener('click',()=>{if(previewSelection)window.ExpFoodSystem.open(previewSelection.cardId);});
-window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished){if(['time-trial','material-time-trial'].includes(getBattleMode()))window.TimeTrialSystem.remaining(battleState);else if(!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}}});
+window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActive()&&!isImportingSave&&!saveTransferBusy,openSource:()=>openModal('itemSourceModal'),onUse:id=>{updateStats();renderUpgradeShop();window.PotionHudSystem?.render();if(id==='speed_battle_potion'&&window.PortalCombatView?.active)window.PortalCombatView.refreshTiming();if(id==='speed_battle_potion'&&battleState?.isBattling&&!battleState.finished&&!window.PortalCombatView?.active){if(['time-trial','material-time-trial'].includes(getBattleMode()))window.TimeTrialSystem.remaining(battleState);else if(!isTimeTrialBattle()&&!isSpookyBattle())scheduleNextBattleTurn();}}});
 // Cosmetic ownership and Hextech unlocks stay in the canonical account save.
 window.CardSkinSystem.configure({get:()=>state,equip:(cardId,skinId)=>{
  const previous={...state.equippedSkins};if(skinId)state.equippedSkins[cardId]=skinId;else delete state.equippedSkins[cardId];
@@ -6135,7 +6184,7 @@ function renderPortalStandardSelector(size,reset,locked){
  const old=battleState.setup?.team||[];if(reset||old.length!==size)battleState.setup={team:Array.from({length:size},(_,i)=>reset?null:old[i]||null),activeIndex:0};
  node.classList.remove('hidden');renderBattleSelection();populateBattleFighterSelect();
  for(const id of ['battleTeamSlots','battleFighterGrid','battleVariantGrid']){const n=document.getElementById(id);if(n){n.style.pointerEvents=locked?'none':'';n.inert=Boolean(locked);}}
- els.battleStartButton.textContent=window.PortalParty?.active?'Lock In / Ready':'Start Portal · 2s turns';els.battleStartButton.disabled=Boolean(locked)||!isBattleSetupValid();
+ els.battleStartButton.textContent=window.PortalParty?.active?'Lock In / Ready':'Start Portal · '+window.PortalRules.turnMs()/1000+'s turns';els.battleStartButton.disabled=Boolean(locked)||!isBattleSetupValid();
  document.getElementById('teamLoadouts')?.classList.add('hidden');
 }
 function releasePortalStandardSelector(){if(!portalSelectorHome)return;const n=els.battleSetup;portalSelectorHome.parent.insertBefore(n,portalSelectorHome.next);for(const [node,hidden]of portalSelectorHidden)node.classList.toggle('hidden',hidden);portalSelectorHidden=[];for(const id of ['battleTeamSlots','battleFighterGrid','battleVariantGrid']){const node=document.getElementById(id);if(node){node.style.pointerEvents='';node.inert=false;}}battleState=portalSavedBattle;arenaDeckKey='';portalSelectorHome=null;portalSavedBattle=null;}
@@ -6216,6 +6265,64 @@ function jumpFromUpdateLogs(destination){
   return true;
 }
 window.UpdateLogs?.mount({canOpen:canOpenUpdateLogs,navigate:jumpFromUpdateLogs});
+function recommendationContext(){
+  // The planner is forbidden in simulations, Portals and other random-roster modes.
+  if(window.PortalsSystem?.active||window.InfinitySystem?.active||isSimulationActive())return null;
+  const mode=getBattleMode(),type=mode==='raid'?getRaidType():mode==='boss-event'?getBossEventType():mode==='rift'?window.RiftSystem.rotation().type:'';
+  const difficulty=mode==='raid'?window.RaidSystem.snapshot(type).difficulty:mode==='boss-event'?window.BossEventSystem.snapshot(type).difficulty:1;
+  return {mode,type,difficulty,weather:getActiveWeatherDefinitions().map(w=>w.name),
+    aqua:document.querySelector('input[name="aquaBattleMode"]:checked')?.value||'hp',turnMs:getBattleTurnMs()};
+}
+function canOpenRecommendation(){
+  return !isBattleMatchActive()&&!gameInputLocked()&&!isImportingSave&&!saveTransferBusy&&!window.PortalsSystem?.active;
+}
+function sameRecommendationEncounter(spec){
+  const c=recommendationContext();
+  return Boolean(c&&spec&&c.mode===spec.mode&&c.type===spec.type&&c.difficulty===spec.difficulty&&window.RecommendTeam.eligible(c.mode,c.type));
+}
+function recommendationVariant(cardId,mutationIds){
+  const wanted=[...mutationIds].sort().join('+');
+  return getBattleVariantEntries(cardId).find(entry=>entry.count>0&&entry.mutations.map(m=>m.id).sort().join('+')===wanted)||null;
+}
+function applyOwnedRecommendation(team,spec,matchRelic){
+  if(!canOpenRecommendation()||!sameRecommendationEncounter(spec)||!canEvolveNow()||!battleState?.setup||team.length!==getBattleTeamSize())return {ok:false,message:'Choose this encounter and difficulty in Arena before applying.'};
+  const selected=team.map(row=>{
+    const card=getCardById(row.cardId),entry=card&&recommendationVariant(card.id,row.mutationIds);
+    return entry?{card,row,slot:{cardId:card.id,variantKey:entry.key,copy:0}}:null;
+  });
+  const ready=selected.filter(Boolean);
+  if(!ready.length)return {ok:false,message:'No matching card variants are owned yet.'};
+  let equipped=0,missingRelics=0,lowLevels=0;
+  for(const item of ready){
+    if(getCardLevelInfo(item.card.id).level<item.row.level)lowLevels++;
+    if(!item.row.relic)continue;
+    const owned=matchRelic(item.card,item.row.relic);
+    if(owned&&(owned.metadata.binding?.cardId===item.card.id||window.RelicSystem.bind(owned.id,{cardId:item.card.id})))equipped++;
+    else missingRelics++;
+  }
+  clearAutoContinueBattleTimer();arenaDeckKey=arenaTeamKey();
+  battleState.setup={team:selected.map(item=>item?.slot||null),activeIndex:Math.max(0,selected.findIndex(item=>!item))};
+  renderBattleSelection();
+  return {ok:true,message:`Applied ${ready.length}/${team.length} matching cards · ${equipped} Relics equipped${lowLevels?' · '+lowLevels+' below target level':''}${missingRelics?' · '+missingRelics+' Relics still needed':''}. Review open slots before starting.`};
+}
+window.RecommendTeamView=window.RecommendTeam?.mount({
+  context:recommendationContext,canOpen:canOpenRecommendation,canApply:spec=>canOpenRecommendation()&&sameRecommendationEncounter(spec),
+  difficulty:(mode,type)=>mode==='raid'?window.RaidSystem.snapshot(type).difficulty:mode==='boss-event'?window.BossEventSystem.snapshot(type).difficulty:1,
+  variant:recommendationVariant,level:id=>getCardLevelInfo(id).level,owned:isCardOwned,apply:applyOwnedRecommendation,
+  message:value=>window.ShopBulkSystem.notify(value),
+  jump:(where,kind)=>{
+    if(where==='index'){
+      openModal('collectionModal');
+      const card=getCardById(kind);if(card&&els.searchInput){els.searchInput.value=card.name;collectionNeedsRefresh=false;renderCollection();els.searchInput.focus();}
+    }
+    else if(where==='craft'){
+      document.getElementById('craftingOpenButton')?.click();
+      const recipe=window.RelicSystem.DEFINITIONS.find(d=>d.kind===kind),search=document.getElementById('craftingSearch');
+      if(recipe&&search){search.value=recipe.name;search.dispatchEvent(new Event('input',{bubbles:true}));search.focus();}
+    }
+  }
+});
+
 window.AutoChessRanked.configure({getProfile:()=>state.autochessRank});
 window.AutoChessProfile.configure({get:()=>state.autochess_profile_stats,rank:()=>state.autochessRank,commit:profile=>{
  const previous=state.autochess_profile_stats;state.autochess_profile_stats=profile;

@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="./autochess.css?v=20261122-relic-compat-1" />
   <link rel="stylesheet" href="./hextech.css?v=20261121-ui-cartoon-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
-  <link rel="stylesheet" href="./game-ui.css?v=20261125-arena-readability-1" />
+  <link rel="stylesheet" href="./game-ui.css?v=20261126-arena-qol-1" />
   <link rel="stylesheet" href="./update_logs.css?v=20261125-update-logs-1" />
 </head>
 <body>
@@ -444,6 +444,23 @@
       <p>Holy → Dark <strong>x3</strong> and Dark → Holy <strong>x3</strong>. Elements do not grant passives.</p>
     </section>
   </div>
+  <!-- Fixed-roster encounter planner. No ownership or battle state is required to inspect. -->
+  <dialog id="recommendTeamModal" aria-labelledby="recommendTeamTitle" class="rec-dialog">
+    <article class="rec-shell">
+      <header class="rec-head"><div><p class="eyebrow">ENCOUNTER INTELLIGENCE</p><h2 id="recommendTeamTitle">Recommend Team</h2><p>Plan a clear from the full Card Index.</p></div><button type="button" class="modal-close" data-rec-close aria-label="Close Recommend Team" autofocus>×</button></header>
+      <div class="rec-controls">
+        <label>Mode<select data-rec-mode></select></label><label>Encounter<select data-rec-type></select></label><label>Difficulty<input type="number" data-rec-difficulty min="1" max="1000" value="1"></label>
+        <button type="button" data-rec-run class="rec-primary">Evaluate Teams</button>
+      </div>
+      <p class="rec-status" data-rec-status role="status" aria-live="polite"></p>
+      <div class="rec-body"><div data-rec-results class="rec-results"></div></div>
+      <footer class="rec-footer">Fixed enemy rosters only. Uses current weather and exact target card levels, mutations and Relic rolls. Combat luck still varies. Apply Owned Setup replaces the lineup with owned matching variants; missing units leave empty slots. Cards assigned lower levels are never upgraded automatically. Relics bound to other cards stay there. Click a Relic to pin its inspection.</footer>
+      <aside class="rec-inspection" data-rec-inspection hidden aria-labelledby="recInspectionTitle">
+        <header><h3 id="recInspectionTitle" data-rec-inspection-title></h3><button type="button" class="modal-close" data-rec-inspection-close aria-label="Close inspection">×</button></header>
+        <div class="rec-inspection-body" data-rec-inspection-body></div>
+      </aside>
+    </article>
+  </dialog>
   <!-- SOLO BATTLE -->
   <div id="battleModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="battleModalTitle">
     <section class="modal-panel battle-modal">
@@ -475,6 +492,7 @@
             <span class="battle-setup-hint">TEAM <b id="battleTeamCount">0/4</b></span>
           </div>
 
+          <button id="recommendTeamButton" type="button" class="rec-entry ghost-button" aria-haspopup="dialog" aria-controls="recommendTeamModal" hidden><span aria-hidden="true">✧</span> Recommend Team</button>
           <div id="battleModePicker" class="battle-mode-picker" role="group" aria-label="Battle mode">
             <button type="button" class="battle-mode-option is-selected" data-battle-mode="4v4" aria-pressed="true">
               <strong>Normal · 4v4</strong>
@@ -521,7 +539,7 @@
           <div id="timeTrialControls" class="time-trial-controls hidden">
             <strong id="timeTrialProgress">Room 1</strong><span id="timeTrialBalance">0 Shards</span>
             <button id="timeTrialShopOpenButton" class="tower-shop-button" type="button">◆ Time Trial Shop</button>
-            <div id="timeTrialSkipControls" class="time-trial-skip" hidden><label for="timeTrialSkipRoom">Skip to Room</label><input id="timeTrialSkipRoom" type="number" min="2" step="1" inputmode="numeric" aria-describedby="timeTrialSkipHint"><button id="timeTrialSkipButton" class="tower-shop-button" type="button">Skip Room</button><small id="timeTrialSkipHint"></small><span id="timeTrialSkipStatus" role="status" aria-live="polite"></span></div>
+            <div id="timeTrialSkipControls" class="time-trial-skip" hidden><label for="timeTrialSkipRoom">Skip to Room</label><input id="timeTrialSkipRoom" type="number" min="2" step="1" inputmode="numeric" aria-describedby="timeTrialSkipHint"><button id="timeTrialSkipButton" class="tower-shop-button" type="button">Skip Room</button><small id="timeTrialSkipHint"></small><span id="timeTrialSkipStatus" role="status" aria-live="polite"></span><label class="battle-auto-continue recommendation-toggle" for="timeTrialAutoSkip"><span>Auto Skip Room</span><input id="timeTrialAutoSkip" type="checkbox" role="switch" aria-label="Auto Skip Room"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-auto-skip-state aria-hidden="true">OFF</b></label></div>
             <p id="timeTrialRules"></p>
           </div>
           <div id="raidControls" class="raid-controls hidden">
@@ -603,7 +621,7 @@
           <section id="portalArenaHud" class="arena-run-hud portal-arena-hud" hidden aria-label="Portal battle">
             <div class="arena-run-hud__heading"><strong id="portalCombatWave">NAMEK PORTAL</strong><span id="portalCombatAttempts"></span></div>
             <p id="portalCombatModifiers"></p><p id="portalCombatResult" role="status"></p>
-            <div class="arena-run-hud__actions"><span>Shared Arena · Solo / Online Co-op</span><button id="portalRetrySave" class="ghost-button" type="button" hidden>Retry Save</button><button id="portalBattleExit" class="ghost-button" type="button">Exit Portal</button></div>
+            <div class="arena-run-hud__actions"><span>Shared Arena · Solo / Online Co-op</span><label class="battle-auto-continue recommendation-toggle" for="portalCombatAutoUp"><span>Auto Go Up Portal</span><input id="portalCombatAutoUp" type="checkbox" role="switch" aria-label="Auto Go Up Portal"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-up-state aria-hidden="true">OFF</b></label><button id="portalRetrySave" class="ghost-button" type="button" hidden>Retry Save</button><button id="portalBattleExit" class="ghost-button" type="button">Exit Portal</button></div>
           </section>
           <section id="infinityArenaHud" class="arena-run-hud" aria-label="Infinity run" hidden>
             <div class="arena-run-hud__heading"><strong id="infinityWave">Wave 1 - Continuous</strong><span id="infinityRunState">INFINITY</span></div>
@@ -622,7 +640,7 @@
             </div>
             <div id="arenaWeatherSlot" class="arena-weather-slot"></div>
             <button id="spookyInfoBattleButton" class="ghost-button spooky-info-button hidden" type="button" aria-label="View active Spooky run modifiers" aria-haspopup="dialog" aria-controls="spookyInfoModal">...</button><strong id="spookyLiveCoins" class="hidden"></strong>
-            <strong id="timeTrialTimer" class="trial-timer hidden" aria-live="off"></strong>
+            <strong id="timeTrialTimer" class="trial-timer hidden" aria-live="off"></strong><label hidden class="battle-auto-continue recommendation-toggle" for="timeTrialAutoSkipHud"><span>Auto Skip Room</span><input id="timeTrialAutoSkipHud" type="checkbox" role="switch" aria-label="Auto Skip Room"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-auto-skip-state aria-hidden="true">OFF</b></label>
             <div class="battle-timing-controls"><div id="battleStatus" class="battle-status" aria-live="polite">PLAYER STRIKE IN 3s</div><label id="spookySpeedUpControl" class="spooky-speed-switch hidden" for="spookySpeedUpToggle"><span>Speed Up <small id="spookySpeedUpState">OFF • 2s / turn</small></span><input id="spookySpeedUpToggle" type="checkbox" role="switch"></label></div>
           </div>
 
@@ -642,7 +660,7 @@
                 <div class="battle-exp-track"><div id="battlePlayerExpBar" class="battle-exp-fill"></div></div>
                 <div id="battlePlayerMutationBadges" class="battle-mutation-badges"></div>
                 <div id="battlePlayerPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Player passive status"></div>
-                <div class="battle-hp-meta"><span>HP</span><strong id="battlePlayerHp">0 / 0</strong></div>
+                <div class="battle-hp-meta"><span>HP</span><strong id="battlePlayerHp">0 / 0 (0%)</strong></div>
                 <div class="battle-hp-track"><div id="battlePlayerHpBar" class="battle-hp-fill"></div></div>
                 <div class="battle-stats-row"><span>ATK</span><strong id="battlePlayerAtk">0</strong></div>
                 <div id="battlePlayerCombatStatus" class="battle-combat-status" aria-label="Player combat modifiers"></div>
@@ -670,7 +688,7 @@
                 <div class="battle-exp-track"><div id="battleEnemyExpBar" class="battle-exp-fill"></div></div>
                 <div id="battleEnemyMutationBadges" class="battle-mutation-badges"></div>
                 <div id="battleEnemyPassiveStatus" class="battle-passive-status passive-status-list" aria-label="Enemy passive status"></div>
-                <div class="battle-hp-meta"><span>HP</span><strong id="battleEnemyHp">0 / 0</strong></div>
+                <div class="battle-hp-meta"><span>HP</span><strong id="battleEnemyHp">0 / 0 (0%)</strong></div>
                 <div class="battle-hp-track"><div id="battleEnemyHpBar" class="battle-hp-fill"></div></div>
                 <div class="battle-stats-row"><span>ATK</span><strong id="battleEnemyAtk">0</strong></div>
                 <div id="battleEnemyCombatStatus" class="battle-combat-status" aria-label="Enemy combat modifiers"></div>
@@ -754,7 +772,7 @@
         <div id="raidSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="riftSummary" class="time-trial-summary hidden" aria-live="polite"></div>
         <div id="bossEventSummary" class="time-trial-summary hidden" aria-live="polite"></div>
-        <div id="portalResultActions" class="battle-result__actions" hidden><label class="battle-auto-continue" for="portalResultAuto"><span>Auto Continue</span><input id="portalResultAuto" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label><button id="portalContinue" class="battle-primary-button" type="button">Continue / Next Match</button></div>
+        <div id="portalResultActions" class="battle-result__actions" hidden><label class="battle-auto-continue" for="portalResultAuto"><span>Auto Continue</span><input id="portalResultAuto" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label><label class="battle-auto-continue recommendation-toggle" for="portalResultAutoUp"><span>Auto Go Up Portal</span><input id="portalResultAutoUp" type="checkbox" role="switch" aria-label="Auto Go Up Portal"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-up-state aria-hidden="true">OFF</b></label><p id="portalAutomationStatus" role="status"></p><button id="portalContinue" class="battle-primary-button" type="button">Continue / Next Match</button></div>
         <div class="battle-result__actions">
           <button id="timeTrialResultShopButton" class="ghost-button hidden" type="button">◆ Time Trial Shop</button>
           <button id="riftResultShopButton" class="ghost-button hidden" type="button">◇ Rift Shop</button>
@@ -1074,7 +1092,7 @@
       </section>
       <section id="portalBuilder" hidden>
         <div id="portalStandardSelector"></div>
-        <label class="battle-auto-continue" for="portalAutoContinue"><span>Auto Continue</span><input id="portalAutoContinue" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label>
+        <label class="battle-auto-continue" for="portalAutoContinue"><span>Auto Continue</span><input id="portalAutoContinue" type="checkbox" role="switch" aria-label="Auto Continue"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-auto-state aria-hidden="true">OFF</b></label><label class="battle-auto-continue recommendation-toggle" for="portalAutoUp"><span>Auto Go Up Portal</span><input id="portalAutoUp" type="checkbox" role="switch" aria-label="Auto Go Up Portal"><span class="battle-auto-continue__track" aria-hidden="true"></span><b data-portal-up-state aria-hidden="true">OFF</b></label><small class="portal-auto-up-hint">Advance to higher tiers of this Portal type. Preserve attempts and stop at 1 remaining life. Party: host controls this.</small>
         <div class="portal-actions"><button id="portalReady" type="button" hidden>Lock In / Ready</button><button id="portalHostStart" type="button" hidden>Start Party</button></div>
       </section>
     </section>
@@ -1128,9 +1146,9 @@
   <script type="application/x-game-script" data-game-script src="./hextech_passives.js?v=20261122-alien-watch-1"></script>
 
   <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261125-arena-readability-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./materials.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./relics.js?v=20261122-alien-watch-1"></script>
@@ -1169,10 +1187,10 @@
   <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261125-arena-readability-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./portals_party.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./storage_sales.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./arena_loadouts.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261117-content-1"></script>
@@ -1188,7 +1206,7 @@
   <script type="application/x-game-script" data-game-script src="./autochess_strategy.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_profile.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261125-arena-readability-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_report.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261120-ac-adventure-1"></script>
@@ -1196,9 +1214,10 @@
   <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_relic_view.js?v=20261122-relic-compat-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261125-arena-readability-1"></script>
-  <script type="application/x-game-script" data-game-script src="./arena_status_view.js?v=20261125-arena-readability-1"></script>
-  <script type="application/x-game-script" data-game-script src="./update_logs.js?v=20261125-update-logs-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261125-update-logs-1"></script>
+  <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./arena_status_view.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./update_logs.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./recommend_team.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261126-arena-qol-1"></script>
 </body>
 </html>

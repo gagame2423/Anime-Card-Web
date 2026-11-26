@@ -91,15 +91,22 @@
  function getWires(){const slots=bridge.selection?.()||[];if(slots.length!==quota()||!slots.every(Boolean))throw Error('Fill all team slots first.');return slots.map(wire);}
  function resetSelection(){bridge.selector?.(quota(),true);renderPicker();}
  function renderPicker(){if(!setup||host.PortalCombatView?.active)return;bridge.selector?.(quota(),false,Boolean(host.PortalParty?.locked));ui.ready.disabled=!host.PortalParty?.canReady;text('portalReady',host.PortalParty?.locked?'✓ Ready / Waiting':'Lock In / Ready');}
+ function refreshTiming(){
+  if(!setup||!selectedPortal||host.PortalCombatView?.active)return;
+  if(host.PortalParty?.active&&!host.PortalParty.isHost){text('portalAttempts',selectedPortal.attempts+' / 5 attempts · Host controls combat pace');return;}
+  const ms=R.turnMs(),value=selectedPortal.attempts+' / 5 attempts · '+ms/1000+'s turns · Speed Battle Potion: 1s';
+  text('portalAttempts',value);
+  if(ui&&!ui.builder.hidden&&!host.PortalParty?.active)text('battleStartButton','Start Portal · '+ms/1000+'s turns');
+ }
  function inspector(portal){
   selectedPortal=clone(portal);R.renderIcon(el('portalInspectorImage'),portal);text('portalTitle',R.definition(portal).name+' · '+R.tierName(portal.tier));text('portalModifiers',`Enemy Element: ${portal.element} · ${portal.category} player cards: +${portal.bonus}% HP/ATK · Enemy scaling x${R.MULTIPLIERS[portal.tier]}`);
-  text('portalAttempts',`${portal.attempts} / 5 attempts · 2s turns · Speed Battle Potion ignored`);
+  refreshTiming();
   const range=R.beanRange(portal.tier,portal.type);text('portalRewards',`${range.min}–${range.max} ${R.definition(portal).foodName} per clear${portal.tier==='secret'?` · ${R.definition(portal).cardName}: Solo 100% / Party 10%`:''} · Tier 1–4: 50% upgrade · Tier 5: 1% Secret Portal`);
   ui.party.disabled=![4,5,'secret'].includes(portal.tier)||daily().hosted>=10;ui.party.title='Tier 4, Tier 5 or Secret; maximum 10 hosted starts/day (UTC).';ui.solo.disabled=false;
  }
- function open(id){if(!mount()||blocked||!bridge.canEnter?.()||!data.portals[id])return false;setup=true;selectedPortal=clone(data.portals[id]);bridge.onEnter?.();bridge.open?.('portalModal');inspector(selectedPortal);ui.room.hidden=true;ui.builder.hidden=true;ui.choices.hidden=false;message('Inspect modifiers, then choose Solo or Party.');return true;}
+ function open(id){if(!mount()||blocked||!bridge.canEnter?.()||!data.portals[id])return false;setup=true;selectedPortal=clone(data.portals[id]);bridge.onEnter?.();bridge.open?.('portalModal');inspector(selectedPortal);ui.room.hidden=true;ui.builder.hidden=true;ui.choices.hidden=false;host.PortalCombatView.syncAuto();message('Inspect modifiers, then choose Solo or Party.');return true;}
  function join(){if(!mount()||blocked||!bridge.canEnter?.())return false;setup=true;selectedPortal=null;bridge.onEnter?.();bridge.open?.('portalModal');text('portalTitle','Join Portal Party');const art=el('portalInspectorImage');if(art){art.hidden=true;art.removeAttribute('src');}text('portalModifiers','Host must provide a Tier 4, Tier 5 or Secret Portal.');text('portalAttempts','Guests do not consume their own Portal attempts.');text('portalRewards','Guests earn 50% rewards; 4-player MVP earns x3 item rewards.');ui.choices.hidden=true;ui.builder.hidden=true;ui.room.hidden=false;host.PortalParty.reset();message('Enter a Portal Room ID to join friends.');return true;}
- function partyChanged(info){if(info.portal)inspector(info.portal);ui.choices.hidden=true;ui.room.hidden=false;ui.builder.hidden=!info.connected;ui.ready.hidden=false;ui.hostStart.hidden=!info.isHost;ui.hostStart.disabled=!info.canStart;ui.create.disabled=info.busy||info.hasPeer;ui.join.disabled=info.busy||info.hasPeer;ui.size.disabled=info.hasPeer;ui.code.disabled=info.hasPeer;text('portalRoomCode',info.room||'No room');text('portalMembers',info.members.map((p,i)=>`${p.name}: ${R.slots(info.size,i)} cards ${p.ready?'✓ Ready':''}`).join(' · '));renderPicker();if(info.message)message(info.message);}
+ function partyChanged(info){host.PortalCombatView.syncAuto();if(info.portal)inspector(info.portal);ui.choices.hidden=true;ui.room.hidden=false;ui.builder.hidden=!info.connected;ui.ready.hidden=false;ui.hostStart.hidden=!info.isHost;ui.hostStart.disabled=!info.canStart;ui.create.disabled=info.busy||info.hasPeer;ui.join.disabled=info.busy||info.hasPeer;ui.size.disabled=info.hasPeer;ui.code.disabled=info.hasPeer;text('portalRoomCode',info.room||'No room');text('portalMembers',info.members.map((p,i)=>`${p.name}: ${R.slots(info.size,i)} cards ${p.ready?'✓ Ready':''}`).join(' · '));renderPicker();if(info.message)message(info.message);}
  function solo(){if(!ui||!selectedPortal)return;ui.choices.hidden=true;ui.room.hidden=true;ui.builder.hidden=false;ui.ready.hidden=true;resetSelection();message('Choose four unique owned cards, then Start Portal.');}
  // Exact tier comparison deliberately keeps Secret separate from numeric tiers.
  function sameTierPortal(tier,type=selectedPortal?.type){return Object.values(data?.portals||{}).find(p=>p.tier===tier&&p.type===type&&host.InventorySystem.quantity(p.id)>0)||null;}
@@ -110,11 +117,17 @@
   if(current)inspector(current);else {ui.solo.disabled=true;ui.party.disabled=true;}
   message(note);return false;
  }
- function continueMatch(auto=false){
-  if(host.PortalParty?.active)return host.PortalParty.continueMatch(auto);
-  const current=auto?sameTierPortal(selectedPortal?.tier):data.portals[selectedPortal?.id];
-  if(!current)return auto?returnMain():false;
-  host.PortalCombatView.release();selectedPortal=clone(current);return startSolo(auto);
+ function nextForAuto(previous,summary){
+  const current=data.portals[previous?.id],valid=Object.values(data.portals).filter(p=>host.InventorySystem.quantity(p.id)>0);
+  if(host.PortalCombatView.autoUp)return R.advanceTarget(previous,current&&host.InventorySystem.quantity(current.id)>0?current:null,valid,summary);
+  return sameTierPortal(previous?.tier,previous?.type);
+ }
+ function continueMatch(auto=false,summary){
+  if(host.PortalParty?.active)return host.PortalParty.continueMatch(auto,summary);
+  const previous=selectedPortal,up=auto&&host.PortalCombatView.autoUp;
+  const current=auto?nextForAuto(previous,summary):data.portals[previous?.id];
+  if(!current)return auto?returnMain(up?'Auto Go Up paused — no safe Portal with at least two attempts remains.':undefined):false;
+  host.PortalCombatView.release();selectedPortal=clone(current);inspector(selectedPortal);return startSolo(auto&&!up);
  }
  function startSolo(consumeOnEntry=false){if(startingSolo||data?.active||host.PortalCombatView?.active)return false;startingSolo=true;const button=el('battleStartButton');if(button)button.disabled=true;try{if(!selectedPortal||!data.portals[selectedPortal.id])throw Error('Portal item unavailable.');const id='portal_run_'+U.token(10),players=getWires().map(w=>R.unit(w,data.playerId));begin(id,selectedPortal,false,true,consumeOnEntry);host.PortalCombatView.start({id,portal:selectedPortal,players,seed:R.integer(1,0xffffffff),party:false,weather:bridge.weather?.()||[]});return true;}catch(error){returnMain(error.message);return false;}finally{startingSolo=false;if(!host.PortalCombatView?.active&&setup)renderPicker();}}
  function exit(){if(!setup&&!host.PortalCombatView?.active)return;host.PortalParty?.exit();host.PortalCombatView?.release();if(data?.active){try{abort();}catch(error){message(error.message);return false;}}setup=false;selection=[];selectedPortal=null;el('portalModal')?.classList.add('hidden');bridge.onExit?.();return true;}
@@ -132,7 +145,7 @@
   bindTouch(ui.root);ui.solo.addEventListener('click',solo);ui.party.addEventListener('click',()=>{ui.choices.hidden=true;ui.room.hidden=false;ui.builder.hidden=true;host.PortalParty.reset();message('Choose 2–4 players and create a Party room.');});
   ui.create.addEventListener('click',()=>host.PortalParty.create(selectedPortal,Number(ui.size.value)));ui.join.addEventListener('click',()=>host.PortalParty.join(ui.code.value));ui.ready.addEventListener('click',()=>{try{host.PortalParty.ready(getWires());}catch(error){message(error.message);}});ui.hostStart.addEventListener('click',()=>host.PortalParty.start());
   el('portalClose')?.addEventListener('click',exit);el('portalJoinStorage')?.addEventListener('click',join);return true;}
- host.PortalsSystem=Object.freeze({KEY,validSave,dropTimeTrial,begin,finish,abort,discard,open,join,exit,startSolo,continueMatch,partyChanged,showSummary,getWires,message,sameTierPortal,returnMain,
+ host.PortalsSystem=Object.freeze({KEY,validSave,dropTimeTrial,begin,finish,abort,discard,open,join,exit,startSolo,continueMatch,partyChanged,showSummary,getWires,message,sameTierPortal,nextForAuto,returnMain,refreshTiming,
   configure:options=>{bridge=options||{};mount();},get(id){return data?.portals[id]?clone(data.portals[id]):null;},get playerId(){return data?.playerId;},get selected(){return selectedPortal?clone(selectedPortal):null;},get weather(){return bridge.weather?.()||[];},get active(){return setup;},get blocked(){return blocked;},get hostedToday(){return data?daily().hosted:0;},get attempt(){return data?.active?clone(data.active):null;},
-  name:()=>bridge.displayName?.()||'Player',flush:()=>!blocked&&persist(),reset:()=>{data=fresh();blocked=false;persist();}});
+  name:()=>bridge.displayName?.()||'Player',flush:()=>!blocked&&persist(),reset:()=>{data=fresh();blocked=false;host.PortalCombatView?.stopAuto();persist();}});
 })(window);
