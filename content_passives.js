@@ -93,6 +93,7 @@
   }
   function finnAttack(bs,u,v,options){
    const c=state(u,FINN),stance=c.stance||0,attack=atk(u);
+   if(!bs.spatial){
    const hit=api.primary(bs,u,v,attack*(stance===1?.90*(1+.40*(c.grass||0)):1),
     {...options,specialAttack:true,adventureSword:true,ignoreShield:stance===0||options.ignoreShield});
    const target=hit.target||v;
@@ -103,9 +104,26 @@
     if(stance===2)api.dot(target,'bleed',2,attack*.30,u,{adventureSword:2});
    }
    return {...hit,attacker:u,target};
+   }
+   const targets=bs.spatial?api.spatial(bs,u,v,'strike',{label:SWORDS[stance]},[v,...enemies(bs,u).filter(x=>x!==v)]):[v];
+   const total={hit:false,damage:0,killed:false,attacker:u,target:v};
+   api.log('[PASSIVE] Adventure Sword: '+SWORDS[stance]+'.');
+   for(const victim of targets){
+    if(!alive(u)||!alive(victim))continue;
+    const hit=api.primary(bs,u,victim,attack*(stance===1?.90*(1+.40*(c.grass||0)):1),{...options,specialAttack:true,adventureSword:true,ignoreShield:stance===0||options.ignoreShield});
+    const target=hit.target||victim;
+    if(victim===v)Object.assign(total,{...hit,attacker:u,target});
+    else {total.hit ||= hit.hit;total.killed ||= hit.killed;total.damage+=hit.damage||0;}
+    if(hit.killed)swordKill(bs,u,stance);
+    if(hit.hit&&alive(target)){
+     if(stance===1)api.status(target,'stunTurns',1,u);
+     if(stance===2)api.dot(target,'bleed',2,attack*.30,u,{adventureSword:2});
+    }
+   }
+   return total;
   }
   function jakePierce(bs,u,v,options){
-   const others=enemies(bs,u).filter(x=>x!==v),targets=[v,...others].slice(0,3),attack=atk(u);
+   const others=enemies(bs,u).filter(x=>x!==v),targets=api.spatial(bs,u,v,'pierce',{label:'Stretchy Pierce'},[v,...others]).slice(0,3),attack=atk(u);
    const out={attacker:u,target:v,hit:false,killed:false,damage:0};
    for(let i=0;i<targets.length&&alive(u);i++)if(alive(targets[i])){
     const hit=api.primary(bs,u,targets[i],attack*[1.2,.9,.6][i],{...options,specialAttack:true,fearChecked:true});
@@ -146,7 +164,7 @@
    if(!options.isFollowUp&&has(u,'tung-tung-sahur')&&random()<.30){const pierce=random()<.5;return{...options,damageMultiplier:(options.damageMultiplier||1)*(pierce?1.5:3),ignoreShield:pierce||options.ignoreShield,specialAttack:true};}return options;
   }
   function pierce(bs,u,target,options={}){
-   const victims=[target,...enemies(bs,u).filter(v=>v!==target)].filter(alive),out={hit:false,damage:0,killed:false,target,attacker:u,contentPierce:true};
+   const victims=api.spatial(bs,u,target,'pierce',{label:'Thunderclap'},[target,...enemies(bs,u).filter(v=>v!==target)]).filter(alive),out={hit:false,damage:0,killed:false,target,attacker:u,contentPierce:true};
    for(let index=0;index<victims.length&&alive(u);index++){
     const result=api.primary(bs,u,victims[index],atk(u)*Math.max(.10,1-.30*index),{...options,passiveAttack:true,specialAttack:true,contentSkill:true});
     out.hit ||= result.hit;out.damage+=result.damage||0;out.killed ||= result.killed;
@@ -163,10 +181,10 @@
     const c=state(u,id),count=api.attackCount(u);if(c.processedCount===count)return;c.processedCount=count;c.attacks++;
     if(id==='vanilla-ice'&&random()<.10)c.voidTurns++;
     if(id==='hogus-eagle'&&c.attacks%5===0&&alive(target))api.status(target,'freezeTurns',2,u);
-    if(id==='bakugo'&&c.attacks%3===0)for(const v of [...enemies(bs,u)].slice(0,2))skillHit(bs,u,v,atk(u)*.10);
+    if(id==='bakugo'&&c.attacks%3===0)for(const v of api.spatial(bs,u,target,'blast',{label:'Explosion'},enemies(bs,u)).slice(0,2))skillHit(bs,u,v,atk(u)*.10);
     if(id==='iggy'&&random()<.10&&alive(target))api.status(target,'fearTurns',2,u);
     if(id==='pikachu'&&c.attacks%3===0&&alive(target)&&random()<.80&&api.status(target,'stunTurns',1,u)&&random()<.20)for(const v of [...enemies(bs,u)])if(v!==target)api.status(v,'stunTurns',1,u);
-    if(id==='ender-dragon'&&c.attacks%5===0){const victims=[...enemies(bs,u)],fear=random()<.10;for(const v of victims){skillHit(bs,u,v,atk(u)*.10);if(fear&&alive(v))api.status(v,'fearTurns',2,u);}}
+    if(id==='ender-dragon'&&c.attacks%5===0){const victims=api.spatial(bs,u,target,'blast',{label:'Magical Ball'},enemies(bs,u)),fear=random()<.10;for(const v of victims){skillHit(bs,u,v,atk(u)*.10);if(fear&&alive(v))api.status(v,'fearTurns',2,u);}}
     if(id==='zenitsu'&&c.attacks%3===0&&!out.contentPierce)pierce(bs,u,target,options);
     if(id==='askeladd'&&!options.contentChain){for(let n=0;n<12&&alive(u)&&api.canFollow(u);n++){
      if(random()>=api.followChance(bs,u,.10,n>0,.99))break;const v=alive(target)?target:enemies(bs,u)[0];if(!v)break;

@@ -116,7 +116,7 @@
         const c=state(unit,key);if(key==='the-legion'&&c.attacks%4!==0)return first;
         if(key==='the-clown'&&c.mode!=='haste')return first;
         const threshold=Math.max(1,enemies(bs,unit).length);let count=0,burst=false;
-        let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(unit)&&has(unit,key)&&canFollow(unit)&&enemies(bs,unit).length&&random()<api.followChance(bs,unit,key==='the-legion'?.44:.33,count>0))){
+        let passiveLoopGuard0=0;while((!['auto-chess','ball-arena'].includes(bs?.mode)||passiveLoopGuard0++<24)&&(alive(unit)&&has(unit,key)&&canFollow(unit)&&enemies(bs,unit).length&&random()<api.followChance(bs,unit,key==='the-legion'?.44:.33,count>0))){
           if(key==='the-clown'&&c.mode!=='haste')break;
           target=alive(target)?target:enemies(bs,unit)[0];count++;
           const shot=api.attack(bs,unit,target,{isFollowUp:true,passiveAttack:true,damageMultiplier:key==='the-legion'?.44:.66,chainDepth:0,spookyChainToken:token,grimoireDriver:options.grimoireDriver});
@@ -141,13 +141,13 @@
     }
     function endTurn(bs,actor){
       const r=runtime(actor);const hypnosis=r.deadlightsHypnosis;if(hypnosis&&hypnosis.applied!==bs.turnCount&&--hypnosis.turns<=0)delete r.deadlightsHypnosis;
-      for(const owner of all(bs))if(alive(owner)&&has(owner,'pennywise')){const c=state(owner,'pennywise');if(c.domain>0&&c.openedTurn!==bs.turnCount)c.domain--;}
+      for(const owner of all(bs))if(alive(owner)&&has(owner,'pennywise')){const c=state(owner,'pennywise');if(c.domain>0&&c.openedTurn!==bs.turnCount&&(bs.mode!=='ball-arena'||c.domainTick!==bs.turnCount)){c.domainTick=bs.turnCount;c.domain--;}}
       if(r.hindredTurns>0&&r.hindredAppliedTurn!==bs.turnCount)r.hindredTurns--;
       if(r.spookyFrogTurns>0&&r.spookyFrogAppliedTurn!==bs.turnCount)r.spookyFrogTurns--;
       if(has(actor,'the-oni')){const c=state(actor,'the-oni');if(c.entryTurns>0)c.entryTurns--;c.activeBleedBoost=false;}
-      for(const unit of all(bs))if(alive(unit)&&unit.spookyMyersDoomed){const c=unit.spookyDoomState;if(c?.doom>0&&(bs.turnCount||0)>c.doomStarted&&--c.doom===0){unit.championPermanentDeath=true;unit.hp=0;unit.defeated=true;api.death(bs,unit);refresh(unit);}}
+      for(const unit of all(bs))if(alive(unit)&&unit.spookyMyersDoomed){const c=unit.spookyDoomState;if(c?.doom>0&&(bs.turnCount||0)>c.doomStarted&&(bs.mode!=='ball-arena'||c.doomTick!==bs.turnCount)){c.doomTick=bs.turnCount;if(--c.doom===0){unit.championPermanentDeath=true;unit.hp=0;unit.defeated=true;api.death(bs,unit);refresh(unit);}}}
     }
-    function badges(unit){const r=runtime(unit),list=[];if(r.deadlightsFearTurn!==undefined&&api.currentBattle()?.turnCount===r.deadlightsFearTurn)list.push({icon:'◉',label:'FEAR · 15% MISS',tone:'debuff',category:'status'});if(r.deadlightsHypnosis?.turns>0)list.push({icon:'◈',label:'HYPNOTIZED '+r.deadlightsHypnosis.turns+'t',tone:'debuff',category:'status'});if(has(unit,'pennywise'))list.push({icon:'◉',label:'DEADLIGHTS '+(state(unit,'pennywise').domain||0)+'t · REVIVES '+(state(unit,'pennywise').revives||0)+'/5',tone:'passive'});if(r.hindredTurns>0)list.push({icon:'⛓',label:`HINDRED ${r.hindredTurns}t`,tone:'debuff',category:'status'});if(unit.spookyMyersDoomed)list.push({icon:'☠',label:`DOOM ${unit.spookyDoomState?.doom||0}t`,tone:'debuff',category:'status'});if(has(unit,'the-clown'))list.push({icon:'♧',label:(state(unit,'the-clown').mode||'').toUpperCase(),tone:'passive',category:'passive'});return list;}
+    function badges(unit){const r=runtime(unit),list=[];if(r.deadlightsFearTurn!==undefined&&api.currentBattle()?.turnCount===r.deadlightsFearTurn)list.push({icon:'◉',label:'FEAR · 15% MISS',tone:'debuff',category:'status'});if(r.deadlightsHypnosis?.turns>0)list.push({icon:'◈',label:'HYPNOTIZED '+r.deadlightsHypnosis.turns+'t',tone:'debuff',category:'status'});if(has(unit,'pennywise'))list.push({icon:'◉',label:'DEADLIGHTS '+(state(unit,'pennywise').domain||0)+'t · REVIVES '+(state(unit,'pennywise').revives||0)+'/5',tone:'passive'});if(r.hindredTurns>0)list.push({icon:'⛓',label:`HINDRED ${r.hindredTurns}t`,tone:'debuff',category:'status'});if(unit.spookyMyersDoomed)list.push({icon:'☠',label:`DOOM ${unit.spookyDoomState?.doom||0}t`,tone:'debuff',category:'status'});if(has(unit,'the-clown'))list.push({icon:'♧',label:(state(unit,'the-clown').mode||'Awaiting impact').toUpperCase(),tone:'passive',category:'passive'});return list;}
     const skills={IDS,state,attackTarget,hypnosisTarget,misses,revive,canFollow,hinder,entry,startTurn,counted,atkFactor,replacement,after,canChain:unit=>Boolean(chainKey(unit)),chain,linked,dodge,killed,death,defeated,onHit,endTurn,badges,eventBonus,
       hpBonus:unit=>has(unit,'myers')?state(unit,'myers').stalkHp:0,dodgeChance:unit=>has(unit,'freddy-krueger')?.33:0,reduction:(bs,unit)=>(runtime(unit).spookyFrogTurns>0?.50:0)+eventBonus(bs,unit,'reduction')};instances.set(api,skills);return skills;
   };

@@ -1,7 +1,7 @@
 /* Phase 5: fixed-step tactical scheduler plus an isolated native passive runtime per fight. */
 (function(host){
  'use strict';
- const C=host.AutoChessSystem,B=host.AutoChessBots,S=host.AutoChessSynergies,A=host.AutoChessAugments,T=host.AutoChessTelemetry,STEP=.05,LIMIT=60;
+ const C=host.AutoChessSystem,B=host.AutoChessBots,S=host.AutoChessSynergies,A=host.AutoChessAugments,T=host.AutoChessTelemetry,STEP=.05,LIMIT=60,Spatial=host.SpatialCombat,TURN=Spatial.TURN_SECONDS;
  function overtimeAt(time){if(time<30)return{damage:1,sustain:1};const p=Math.min(1,Math.max(0,(time-30)/15));return{damage:1.5+p,sustain:.5-.3*p};}
  function timeoutDecision(battle,metrics){
   const score=team=>{const max=team.reduce((n,u)=>n+Math.max(0,Number(u.maxHp)||0),0),hp=team.reduce((n,u)=>n+(alive(u)?Math.max(0,Number(u.hp)||0):0),0);return max>0?hp/max:0;};
@@ -24,6 +24,8 @@
   const random=rng(seed),events=[],logs=[],metrics=T.recorder(),augmentSets={player:A.effects(a),enemy:A.effects(b)};let effectDepth=0;const effectSources=new Set(),killStacks=new WeakMap(),augmented=new WeakSet();let time=0,accumulator=0,done=false,winner=null,serial=200,eventSerial=0,lastSecond=0,disposed=false;
   const unitsA=C.deployed(a).sort((x,y)=>x.board-y.board).map((u,i)=>makeUnit(u,'player',i)),unitsB=options.creep?creeps(options.stage,options.boss):C.deployed(b).sort((x,y)=>x.board-y.board).map((u,i)=>makeUnit(u,'enemy',100+i));
   const battle={mode:'auto-chess',sandbox:true,playerTeam:unitsA,enemyTeam:unitsB,mimicPools:{player:a.mimicPool||[],enemy:b?.mimicPool||[]},playerIndex:0,enemyIndex:0,turn:'player',finished:false,isBattling:true,championChoices:{aqua:'hp'}};
+  battle.spatial={scale:1,point:u=>u?.grid?{x:u.grid.x,y:u.grid.y}:null,radius:()=>.35,
+   emit(shape,source,label){events.push({id:++eventSerial,shape,label,side:source.grid?.side,at:time,tone:'aoe'});if(events.length>96)events.shift();}};
   const augmentOf=u=>augmentSets[u?.grid?.side||(battle.playerTeam.includes(u)?'player':battle.enemyTeam.includes(u)?'enemy':u?.side)]||A.effects(null);
   function augmentKill(u){if(!u||!alive(u))return;const e=augmentOf(u);if(e.killHeal)api.heal(u,u.maxHp*e.killHeal,u);if(e.killShield)api.shield(u,u.maxHp*e.killShield,u);if(e.killAtk){const n=Math.min(5,(killStacks.get(u)||0)+1);killStacks.set(u,n);api.buff(u,'atk',n*e.killAtk,'augment:kill');}}
   function popup(u,text,tone='damage'){if(!u?.grid)return;events.push({id:++eventSerial,x:u.grid.x,y:u.grid.y,text:String(text).slice(0,48),tone,at:time});if(events.length>96)events.shift();}
@@ -37,7 +39,13 @@
    shield:(u,n,source)=>u&&engine.tacticalEffect(battle,source,u,'shield',n),
    buff:(u,stat,n,key,fill=false)=>engine.tacticalEffect(battle,u,u,'buff',n,{stat,key,fill}),
    flat:(u,stat,n)=>engine.tacticalEffect(battle,u,u,'flatBuff',n,{stat,fill:true}),
-   cleanse:u=>engine.tacticalEffect(battle,u,u,'cleanse'),popup
+   cleanse:u=>engine.tacticalEffect(battle,u,u,'cleanse'),popup,
+   area:(u,v,kind,options,rows)=>Spatial.targets(battle,u,v,kind,options,rows),
+   energyCast(u,v){return Spatial.castEnergy(battle,u,v,{
+     atk:engine.combatAtk,enemies:source=>engine.tacticalTargets(battle,source),
+     allies:source=>(battle.playerTeam.includes(source)?battle.playerTeam:battle.enemyTeam),
+     heal:api.heal,shield:api.shield,hit:api.hit,announce:(source,name)=>popup(source,name,'mana')
+   });}
   };
   battle.tactical={time:0,overtime:1,sustainFactor:1,shieldFactor:u=>augmentOf(u)?.noShields?0:1,damageMultiplier:u=>1+(augmentOf(u)?.damage||0),crestCounts:{player:A.traits(a),enemy:A.traits(b)},onHeal:(u,n)=>popup(u,'+'+n,'heal'),onDamage(u,v,amount,meta,out){if(amount>0){popup(v,(u?.passiveState?.lastCrit&&!meta.dot?'✦ ':'')+'−'+Math.round(amount),meta.dot?'debuff':'damage');traits?.damage(u,v,amount,meta);traits?.hurt(v,u,amount,meta);if(u&&augmentSets[u.grid?.side]?.vamp)api.heal(u,amount*augmentSets[u.grid.side].vamp,u);}else if(out?.dodged)popup(v,'DODGE','dodge');}};
   engine.beginBattle(battle);
@@ -65,30 +73,54 @@
   const progress=team=>Object.fromEntries(team.filter(u=>u.cartoonProgress).map(u=>[u.grid.uid,{...u.cartoonProgress}]));
   function outcome(){return{winner,playerSurvivors:battle.playerTeam.filter(alive).length,enemySurvivors:battle.enemyTeam.filter(alive).length,time,timeout:battle.timeout||null,rewardFactors:clone(battle.contentRewardWinners||{}),metrics:done?metrics.snapshot():undefined,...(done?{cartoonProgress:{player:progress(unitsA),enemy:progress(unitsB)}}:{})};}
   function settle(){const a=battle.playerTeam.some(alive),b=battle.enemyTeam.some(alive);if(!a&&!b)return finish('draw');if(!a)return finish('enemy');if(!b)return finish('player');return null;}
-  function move(u,target){const blocked=occupied(),start=u.grid.y*7+u.grid.x,queue=[start],parents=new Map([[start,null]]);let goal=null;const range=rangeOf(u.card);
+  function move(u,target){const blocked=occupied(),start=u.grid.y*7+u.grid.x,queue=[start],parents=new Map([[start,null]]);let goal=null;const range=tacticalRole(u)==='Melee'?1:rangeOf(u.card);
    while(queue.length){const cell=queue.shift(),x=cell%7,y=Math.floor(cell/7);if(cell!==start&&Math.max(Math.abs(x-target.grid.x),Math.abs(y-target.grid.y))<=range){goal=cell;break;}const next=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const xx=x+dx,yy=y+dy;if(xx<0||xx>6||yy<0||yy>7)continue;const n=yy*7+xx;if(blocked.has(n)||parents.has(n))continue;next.push(n);}next.sort((a,b)=>Math.max(Math.abs(a%7-target.grid.x),Math.abs(Math.floor(a/7)-target.grid.y))-Math.max(Math.abs(b%7-target.grid.x),Math.abs(Math.floor(b/7)-target.grid.y))||a-b);for(const n of next){parents.set(n,cell);queue.push(n);}}
    if(goal===null)return false;while(parents.get(goal)!==start&&parents.get(goal)!==null)goal=parents.get(goal);u.grid.x=goal%7;u.grid.y=Math.floor(goal/7);return true;
   }
-  function fixed(){if(done||disposed)return;time=Math.round((time+STEP)*100)/100;battle.tactical.time=time;const overtime=overtimeAt(time);battle.tactical.overtime=overtime.damage;battle.tactical.sustainFactor=overtime.sustain;sync();if(settle())return;
+  function tacticalRole(u){
+   if(u.card?.id==='jake-the-dog'&&u.grid.frontline&&all().some(v=>alive(v)&&v.grid?.side===u.grid.side&&v.grid.frontline&&v.card.id==='finn-the-human'))return 'Melee';
+   return Spatial.roleOf(u.card);
+  }
+  // A support takes one safe step only when an enemy melee is closing.
+  // It must improve separation, stay near allies and still leave an attack window.
+  function retreat(u,opponents){
+   if(tacticalRole(u)!=='Support'||u.grid.retreatUntil>time||!all().some(v=>v!==u&&alive(v)&&v.grid?.side===u.grid.side))return false;
+   const danger=opponents.filter(v=>tacticalRole(v)==='Melee');
+   const gap=(x,y)=>Math.min(...danger.map(v=>Math.max(Math.abs(x-v.grid.x),Math.abs(y-v.grid.y))));
+   const current=gap(u.grid.x,u.grid.y);if(current>2)return false;
+   const blocked=occupied(),friends=all().filter(v=>v!==u&&alive(v)&&v.grid?.side===u.grid.side),candidates=[];
+   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if(!dx&&!dy)continue;const x=u.grid.x+dx,y=u.grid.y+dy;if(x<0||x>6||y<0||y>7||blocked.has(y*7+x))continue;
+    const g=gap(x,y),allyGap=Math.min(...friends.map(v=>Math.max(Math.abs(x-v.grid.x),Math.abs(y-v.grid.y))));
+    if(g<=current||allyGap>3)continue;
+    const nearest=Math.min(...opponents.map(v=>Math.max(Math.abs(x-v.grid.x),Math.abs(y-v.grid.y))));
+    candidates.push({x,y,score:g*4-allyGap-(nearest>rangeOf(u.card)?1.5:0)+(u.grid.side==='player'?y:7-y)*.08});
+   }
+   candidates.sort((a,b)=>b.score-a.score||a.y-b.y||a.x-b.x);
+   if(!candidates.length)return false;
+   const best=candidates[0];u.grid.x=best.x;u.grid.y=best.y;u.grid.retreatUntil=time+TURN*1.45;return true;
+  }
+  function fixed(){if(done||disposed)return;time=Math.round((time+STEP)*100)/100;battle.tactical.time=time;battle.spatial.time=time;const overtime=overtimeAt(time);battle.tactical.overtime=overtime.damage;battle.tactical.sustainFactor=overtime.sustain;sync();if(settle())return;
    if(Math.floor(time)>lastSecond){lastSecond=Math.floor(time);traits.second(lastSecond);if(lastSecond%4===0)for(const u of all())if(alive(u)&&augmentSets[u.grid?.side]?.regenWave)api.heal(u,u.maxHp*augmentSets[u.grid.side].regenWave,u);}
    const ready=all().filter(u=>alive(u)&&u.grid&&u.grid.next<=time).sort((a,b)=>a.grid.next-b.grid.next||a.grid.serial-b.grid.serial);
-   for(const u of ready){if(!alive(u))continue;const opponents=engine.tacticalTargets(battle,u).filter(v=>alive(v)&&v.grid);if(!opponents.length){u.grid.next=time+.25;continue;}opponents.sort((a,b)=>distance(u,a)-distance(u,b)||a.grid.serial-b.grid.serial);const target=opponents[0],r=engine.ensureRuntime(u),controlled=r.stunTurns>0||r.freezeTurns>0||r.snailTurns>0,range=rangeOf(u.card);
+   for(const u of ready){if(!alive(u))continue;const opponents=engine.tacticalTargets(battle,u).filter(v=>alive(v)&&v.grid);if(!opponents.length){u.grid.next=time+.25;continue;}opponents.sort((a,b)=>distance(u,a)-distance(u,b)||a.grid.serial-b.grid.serial);const target=opponents[0],r=engine.ensureRuntime(u),controlled=r.stunTurns>0||r.freezeTurns>0||r.snailTurns>0,range=tacticalRole(u)==='Melee'?1:rangeOf(u.card);
+    if(!controlled&&retreat(u,opponents)){u.grid.next=time+.32;continue;}
     if(distance(u,target)>range&&!controlled){move(u,target);u.grid.next=time+.28;continue;}
-    const before=r.ownAttackCount||0;engine.resolveTacticalTurn(battle,u,target);sync();if((u.passiveState?.ownAttackCount||0)>before)traits.attack(u,target);u.grid.next=time+1.35/(1+Math.min(1.5,traits.speed(u)+engine.tacticalSpeed(u)+(u.grid.augmentSpeed??augmentSets[u.grid.side]?.speed??0)));if(settle())return;
-   }events.splice(0,events.findIndex(e=>time-e.at<1.5)<0?events.length:events.findIndex(e=>time-e.at<1.5));if(time>=LIMIT){battle.timeout=timeoutDecision(battle,metrics.snapshot());finish(battle.timeout.winner);}
+    const before=r.ownAttackCount||0;engine.resolveTacticalTurn(battle,u,target);sync();if((u.passiveState?.ownAttackCount||0)>before)traits.attack(u,target);for(const v of all())if(v.grid?.mana>=100&&alive(v))traits.releaseEnergy(v,v===u?target:null);sync();u.grid.next=time+TURN/(1+Math.min(1.5,traits.speed(u)+engine.tacticalSpeed(u)+(u.grid.augmentSpeed??augmentSets[u.grid.side]?.speed??0)));if(settle())return;
+   }for(const u of all())if(alive(u)&&u.grid?.mana>=100)traits.releaseEnergy(u,null);sync();if(settle())return;events.splice(0,events.findIndex(e=>time-e.at<1.5)<0?events.length:events.findIndex(e=>time-e.at<1.5));if(time>=LIMIT){battle.timeout=timeoutDecision(battle,metrics.snapshot());finish(battle.timeout.winner);}
   }
   function step(dt=STEP){if(done||disposed)return outcome();accumulator+=Math.max(0,Math.min(.5,dt));while(accumulator+1e-9>=STEP&&!done){accumulator-=STEP;fixed();}return outcome();}
   function interpolate(dt){for(const u of all())if(u.grid){const factor=1-Math.exp(-18*dt);u.grid.renderX+=(u.grid.x-u.grid.renderX)*factor;u.grid.renderY+=(u.grid.y-u.grid.renderY)*factor;}}
-  return{battle,engine,events,logs,traits,step,interpolate,telemetry:()=>metrics.snapshot(),telemetryFrame:()=>metrics.compact(),get done(){return done;},get time(){return time;},get remaining(){return Math.max(0,LIMIT-time);},outcome,dispose(){disposed=true;events.length=0;logs.length=0;delete battle.tactical;},snapshot(){return host.OnlineUtils.stable({time,winner,units:all().map(u=>({id:u.card.id,hp:u.hp,maxHp:u.maxHp,atk:u.atk,x:u.grid?.x,y:u.grid?.y,own:u.passiveState?.ownAttackCount||0}))});}};
+  return{battle,engine,events,logs,traits,step,interpolate,telemetry:()=>metrics.snapshot(),telemetryFrame:()=>metrics.compact(),get done(){return done;},get time(){return time;},get remaining(){return Math.max(0,LIMIT-time);},outcome,dispose(){disposed=true;events.length=0;logs.length=0;delete battle.tactical;delete battle.spatial;},snapshot(){return host.OnlineUtils.stable({time,winner,units:all().map(u=>({id:u.card.id,hp:u.hp,maxHp:u.maxHp,atk:u.atk,x:u.grid?.x,y:u.grid?.y,own:u.passiveState?.ownAttackCount||0}))});}};
  }
  // One worker per open mode keeps expensive native passive chains off the UI thread.
  // It imports only source modules, owns no browser storage and dies on Save & Exit.
  function createWorkerPool(){
-  const modules=['cards','skins','category','elements','grimoire','yuno','requiem','reagan','fate','spooky_passives','gomen','shibuya','companions','combat_stats','dragon_skills','relic_combat','tower_200_passives','ragna_passives','mourner','akatsuki_passives','enten','titan_passives','turn_phase','baller_passives','tensura_passives','sins_passives','bleach_passives','hextech_passives','content_passives','passives','relics','autochess_ranked','autochess','autochess_synergies','autochess_telemetry','autochess_augments','autochess_ai','autochess_strategy','autochess_bots','autochess_combat'];
+  const modules=['cards','skins','category','elements','grimoire','yuno','requiem','reagan','fate','spooky_passives','gomen','shibuya','companions','spatial_combat','combat_stats','dragon_skills','relic_combat','tower_200_passives','ragna_passives','mourner','akatsuki_passives','enten','titan_passives','turn_phase','baller_passives','tensura_passives','sins_passives','bleach_passives','hextech_passives','content_passives','passives','relics','autochess_ranked','autochess','autochess_synergies','autochess_telemetry','autochess_augments','autochess_ai','autochess_strategy','autochess_bots','autochess_combat'];
   const relicUpdate=new Set(['akatsuki_passives','autochess_ai','autochess_bots','autochess_combat','baller_passives','bleach_passives','combat_stats','content_passives','dragon_skills','enten','fate','gomen','hextech_passives','mourner','passives','ragna_passives','relic_combat','relics','shibuya','sins_passives','spooky_passives','tensura_passives','titan_passives','tower_200_passives']);
   const updated=new Set(['cards','autochess']);
   const adventure=new Set(['category','autochess_ranked','autochess_synergies']);
-  const urls=modules.map(name=>new URL(name+'.js?v='+(['passives','autochess_combat'].includes(name)?'20261126-arena-qol-1':relicUpdate.has(name)?'20261122-alien-watch-1':updated.has(name)?'20261121-ui-cartoon-1':adventure.has(name)?'20261120-ac-adventure-1':'20261119-hextech-1'),host.document.baseURI).href);
+  const urls=modules.map(name=>new URL(name+'.js?v='+(['passives','autochess_combat','spatial_combat','turn_phase','requiem','spooky_passives','shibuya','akatsuki_passives','dragon_skills','sins_passives','titan_passives'].includes(name)?'20261126-ball-polish-1':['content_passives','hextech_passives','reagan','relic_combat','autochess_synergies','autochess_bots','tensura_passives','fate','gomen'].includes(name)?'20261126-ball-arena-1':relicUpdate.has(name)?'20261122-alien-watch-1':updated.has(name)?'20261121-ui-cartoon-1':adventure.has(name)?'20261120-ac-adventure-1':'20261119-hextech-1'),host.document.baseURI).href);
   const bootstrap=`self.window=self;self.InventorySystem={registerItem(){}};self.OnlineUtils={stable:JSON.stringify};self.localStorage={getItem(){return null},setItem(){throw Error('Combat workers cannot write storage')}};\nimportScripts(...${JSON.stringify(urls)});\nconst fights=new Map();\nfunction visual(u){const r=u.passiveState||{},c=u.card,g=u.grid;return {card:{id:c.id,skinId:c.skinId||null,name:c.name,element:c.element,rarity:c.rarity,image:c.image,category:c.category||[],passive:{name:c.passive?.name||'No Passive'}},hp:u.hp,maxHp:u.maxHp,atk:u.atk,defeated:u.defeated,isClone:u.isClone,isSummoned:u.isSummoned,cartoonProgress:u.cartoonProgress||null,relic:u.relic||null,relicCapabilities:self.RelicSystem.capabilities(u),relicCategory:u.relicCategory,grid:g?{uid:g.uid,serial:g.serial,side:g.side,fusionDepth:g.fusionDepth||0,x:g.x,y:g.y,mana:g.mana}:null,passiveState:{cartoonMode:r.contentSkills?.['mordecai-rigby']?.mode||null,hextechSkills:r.hextechSkills||null,shield:r.shield||0,freezeTurns:r.freezeTurns||0,stunTurns:r.stunTurns||0,hypnosisTurns:r.hypnosisTurns||0,fearTurns:r.fearTurns||0,voidTurns:r.contentSkills?.['vanilla-ice']?.voidTurns||0,poison:r.poison?.length?[{}]:[],burn:r.burn?.length?[{}]:[],bleed:r.bleed?.length?[{}]:[],bleach:r.bleach?{hakka:r.bleach.hakka,vista:r.bleach.vista}:null,tensura:r.tensura?{sage:r.tensura.sage}:null}};}\nfunction publish(id,row){const f=row.fight,events=f.events.filter(e=>e.id>row.event);if(events.length)row.event=events.at(-1).id;postMessage({id,type:'frame',done:f.done,time:f.time,remaining:f.remaining,outcome:f.outcome(),metrics:f.telemetryFrame(),playerTeam:f.battle.playerTeam.map(visual),enemyTeam:f.battle.enemyTeam.map(visual),events});}\nonmessage=event=>{const m=event.data;try{if(m.type==='init'){const row={fight:AutoChessCombat.create(m.a,m.b,m.seed,m.options),event:0};fights.set(m.id,row);publish(m.id,row);}else if(m.type==='step'){const row=fights.get(m.id);if(row){row.fight.step(m.dt);publish(m.id,row);}}else if(m.type==='dispose'){fights.get(m.id)?.fight.dispose();fights.delete(m.id);}}catch(e){postMessage({id:m.id,type:'error',message:e.message});}};postMessage({type:'ready'});`;
   const url=host.URL.createObjectURL(new Blob([bootstrap],{type:'application/javascript'})),worker=new Worker(url),listeners=new Map();let next=0,closed=false,failed=false;
   worker.onmessage=e=>{if(e.data.type==='ready'){host.URL.revokeObjectURL(url);return;}listeners.get(e.data.id)?.(e.data);};
@@ -222,6 +254,6 @@
   if(terminal())finish();else if(state.phase==='combat')prepareCombat();else checkpoint();
   return{get state(){return state;},get speed(){return speed;},set speed(v){speed=[1,2,3].includes(v)?v:1;},get workerCount(){return pool&&!pool.failed?1:0;},get combat(){return current||jobs.find(j=>j.combat)?.combat;},dispatch,dispatchFor,startCombat,advanceResults,ready,tick,claim,abandon,forfeit:abandon,checkpoint,opponentLabel(id){const job=jobs.find(j=>j.a===id||!j.ghost&&j.b===id);if(!job)return C.roundKind(state)==='carousel'?'A card and Relic for every tactician':C.roundKind(state)==='boss'?'Neutral Boss Round':'Planning · '+C.roundKind(state).toUpperCase();return 'VS '+(job.creep?'Arcane Guardians':C.get(state,job.a===id?job.b:job.a)?.name)+(job.ghost?' · Echo':'');},combatFor(id){return jobs.find(j=>j.a===id||!j.ghost&&j.b===id)?.combat||null;},dispose(){if(disposed)return;disposed=true;disposeJobs();pool?.dispose();pool=null;}};
  }
- function rangeOf(card){return Number(card?.attackRange)>0?Math.min(4,Math.max(1,Math.floor(card.attackRange))):B.ranged(card)?card.category.includes('Gunner')?4:3:1;}
- host.AutoChessCombat=Object.freeze({rangeOf,STEP,LIMIT,overtimeAt,timeoutDecision,stats,makeUnit,creeps,create,createSession,createWorkerPool,remoteCombat});
+ function rangeOf(card){return Spatial.rangeOf(card);}
+ host.AutoChessCombat=Object.freeze({rangeOf,roleOf:Spatial.roleOf,TURN_SECONDS:TURN,STEP,LIMIT,overtimeAt,timeoutDecision,stats,makeUnit,creeps,create,createSession,createWorkerPool,remoteCombat});
 })(window);

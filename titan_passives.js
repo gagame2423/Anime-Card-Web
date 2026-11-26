@@ -37,8 +37,17 @@
   }
   function turn(bs,actor){
    for(const u of all(bs))if(alive(u)){
-    if(u!==actor&&has(u,'beast-titan')){const c=state(u,'beast-titan'),amount=1+Math.floor(random()*2);c.rocks=Math.min(Number.MAX_SAFE_INTEGER,c.rocks+(api.watch?.gain(u,amount)??amount));}
-    if(linked(u))api.heal(u,u.hp*.01,'Crystal Heart',bs,u);
+    if(has(u,'beast-titan')){
+     const c=state(u,'beast-titan'),count=runtime(u).ownAttackCount||0;
+     if(bs.mode!=='ball-arena'?u!==actor:c.lastRockTick!==bs.turnCount){
+      const idle=bs.mode!=='ball-arena'||count===(c.lastRockAttacks||0);c.lastRockTick=bs.turnCount;c.lastRockAttacks=count;
+      if(idle){const amount=1+Math.floor(random()*2);c.rocks=Math.min(Number.MAX_SAFE_INTEGER,c.rocks+(api.watch?.gain(u,amount)??amount));}
+     }
+    }
+    if(linked(u)){
+     const c=state(u,'war-hammer-titan');
+     if(bs.mode!=='ball-arena'||c.lastCrystalHealTick!==bs.turnCount){c.lastCrystalHealTick=bs.turnCount;api.heal(u,u.hp*.01,'Crystal Heart',bs,u);}
+    }
    }
   }
   function fatal(bs,u){

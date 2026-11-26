@@ -208,8 +208,24 @@
     'Automation': 'Speed Battle Potion now accelerates Portal turns to one second. Auto Go Up follows higher tiers while protecting the final remaining life. Normal Time Trial can automatically skip to its unlocked room after a failed automated run.'
   }, { jumps:'arena marine_fort boss trial namek', art:'relic:alien_watch' });
 
+  release(34, 'Ball vs Ball & Tactical Roles', 'Enter a retro physics arena where every collision matters and every wall rebound charges your next Energy trigger.', {
+    'Ball vs Ball': 'Choose a 1v1 Duel or 4v4 Squad Brawl with your owned cards, mutations, levels and equipped Relics. Win standard Arena rewards plus 0–5 bonus Gems.',
+    'Physics arena': 'Orbs rebound against walls and each other. Enemy impacts execute attacks, and wall rebounds grant 20 Energy. The first enemy impact activates battle-entry effects.',
+    'Energy and spatial skills': 'At 100 Energy, unleashes a piercing line, radial blast, frontal strike or ally-protecting Guardian Pulse based on the card. Native spatial skills hit enemies intersecting their area.',
+    'Ball Index and live HUD': 'Inspect owned variants, Energy triggers and combat mechanics, then assign a lineup. Watch live HP, shields, Energy, timed statuses and separate Player and Enemy battle logs.',
+    'Auto Chess': 'Melee units advance, Ranged units keep distance, and Supports retreat from melee threats while staying close to their team. Inspect each unit’s role and Energy Trigger.'
+  }, { jumps:'ball autochess', art:'unit:sonic' });
+
+  release(34.5, 'Rebound Refinements', 'A cleaner Ball vs Ball experience, with optional sound effects and live native passive progress.', {
+    'Compact Pixel HUD': 'Enjoy smaller pixel typography, compact Arena text, one collection tile per card, and a streamlined selector for owned mutations and copies.',
+    'Live Passive Progress': 'Equinox now displays both sides of its Emotional Meter throughout a match. Tap passive counters to inspect resources, modes, timed effects, and survival charges.',
+    'Battle Readability': 'Damage popups are compact and grouped. Equinox’s arena-wide burst and other specified full-team attacks reach their intended targets, and combat timers stay consistent in squad battles.',
+    'Sound Effects': 'A new sound toggle and volume slider control optional Ball Arena effects, including countdowns, impacts, passive triggers, shields, healing, and match results.'
+  }, { jumps:'ball', art:'unit:tower-champion-normal' });
+
   const jumps = {
     summon:['Summon','Return to the roll altar','unit:starter-common'],
+    ball:['Ball vs Ball','Enter the physics arena','unit:sonic'],
     arena:['Clash Arena','Choose a lineup and battle','unit:jotaro-kujo'],
     tower:['Tower','Challenge the next floor','unit:tower-champion-normal'],
     trial:['Normal Time Trial','Race through timed rooms','unit:tower-champion-heavenly'],
@@ -241,7 +257,7 @@
 
   const specialItems = {
     hextech:{name:'Hextech Chest',image:'assets/items/hextech.png',tier:'secret',icon:'◆',description:'Open for a 99% chance at a skin or a 1% chance at a card from the exclusive pool. Duplicate skins return 150 Gems.',source:'Buy for 500 Gems in the Hextech Vault.'},
-    gems:{description:'Account currency used to open Hextech Chests. Separate from the Gold spent during Auto Chess matches.',source:'Earn Gems from Auto Chess placements.'},
+    gems:{description:'Account currency used to open Hextech Chests. Separate from the Gold spent during Auto Chess matches.',source:'Earn Gems from Auto Chess placements and Ball vs Ball victories.'},
     football_token:{name:'Football Token',tier:'rare',icon:'⚽',description:'Spend tokens on permanent Penalty Kick upgrades.',source:'Earn tokens by playing Penalty Kick.'},
     star_orb:{source:'Earn from Infinity waves, personal weekly rewards and Auto Chess placements.'},
     rift_shard:{source:'Earn from victories in the active Rift.'}

@@ -9,11 +9,12 @@
   <link rel="stylesheet" href="./passives.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./pvp.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./infinity.css?v=20261117-content-1" />
-  <link rel="stylesheet" href="./autochess.css?v=20261122-relic-compat-1" />
+  <link rel="stylesheet" href="./autochess.css?v=20261126-ball-arena-1" />
   <link rel="stylesheet" href="./hextech.css?v=20261121-ui-cartoon-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./game-ui.css?v=20261126-arena-qol-1" />
   <link rel="stylesheet" href="./update_logs.css?v=20261125-update-logs-1" />
+  <link rel="stylesheet" href="./ball_arena.css?v=20261126-ball-polish-1" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -81,6 +82,7 @@
       <button id="hubTrialButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="timeTrialModeModal"><i aria-hidden="true">◷</i><span>Time Trial<small>Normal &amp; More</small></span></button>
       <button id="battleButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">⚔</i><span>Arena<small>Combat Modes</small></span></button>
       <button id="hubChessButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="autochessModal"><i aria-hidden="true">♜</i><span>Auto Chess<small>Tactical Grid</small></span></button>
+      <button id="hubBallButton" type="button" class="hub-command__item" aria-haspopup="dialog" aria-controls="ballArenaModal"><i aria-hidden="true">●</i><span>Ball vs Ball<small>Physics Arena</small></span></button>
       <button id="inventoryOpenButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">▣</i><span>Inventory<small>Vault &amp; Relics</small></span></button>
       <button id="craftingOpenButton" type="button" class="hub-command__item" aria-haspopup="dialog"><i aria-hidden="true">⬡</i><span>Craft<small>Forge Relics</small></span></button>
       <button id="collectionButton" type="button" class="hub-command__item" aria-label="Open collection"><i aria-hidden="true">▦</i><span>Card Index<small id="collectionSummary">Cards: 0/0</small></span></button>
@@ -332,6 +334,7 @@
   </div>
 
   <!-- UPDATE LOGS: release history, inspections and mode shortcuts -->
+  <dialog id="ballArenaModal" aria-labelledby="ballArenaTitle"></dialog>
   <dialog id="updateLogsModal" class="ul-dialog" aria-labelledby="updateLogsTitle" aria-describedby="updateLogsVersion">
     <article class="ul-shell">
       <header class="ul-top">
@@ -1121,36 +1124,37 @@
   <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261122-alien-watch-1"></script>
+  <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./fate.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./companions.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261122-alien-watch-1"></script>
+  <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./relic_combat.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./tower_200_passives.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261122-relic-compat-1"></script>
-  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261122-alien-watch-1"></script>
+  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./enten.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./titan_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./turn_phase.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./titan_passives.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./turn_phase.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./baller_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tensura_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./sins_passives.js?v=20261122-alien-watch-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tensura_passives.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./sins_passives.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./bleach_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./hextech_passives.js?v=20261122-alien-watch-1"></script>
+  <script type="application/x-game-script" data-game-script src="./hextech_passives.js?v=20261126-ball-arena-1"></script>
 
-  <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./spatial_combat.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261119-hextech-1"></script>
+  <script type="application/x-game-script" data-game-script src="./materials.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./relics.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./relic_inspection.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./relic_fusion.js?v=20261117-content-1"></script>
@@ -1198,26 +1202,31 @@
   <script type="application/x-game-script" data-game-script src="./autochess_audio.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_ranked.js?v=20261120-ac-adventure-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_synergies.js?v=20261120-ac-adventure-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_synergies.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_telemetry.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_augments.js?v=20261119-hextech-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_runs.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_ai.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_strategy.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_profile.js?v=20261117-ac-polish-augments-3"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_report.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261120-ac-adventure-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_lobby.js?v=20261120-ac-adventure-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_relic_view.js?v=20261122-relic-compat-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261121-ui-cartoon-1"></script>
-  <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_view.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./battle_log_view.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./arena_status_view.js?v=20261126-arena-qol-1"></script>
-  <script type="application/x-game-script" data-game-script src="./update_logs.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./update_logs.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./recommend_team.js?v=20261126-arena-qol-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ball_audio.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ball_combat.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ball_index.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ball_view.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ball_arena.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261126-ball-arena-1"></script>
 </body>
 </html>

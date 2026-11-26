@@ -17,7 +17,11 @@
   function effectAllowed(bs,source,target){const d=duel(bs);return !d||Boolean(source&&participant(d,source)&&participant(d,target));}
   function allies(bs,u,list){const d=duel(bs);return d?list.filter(v=>v===u&&participant(d,u)):list;}
   function opponents(bs,u,list){const d=duel(bs);return d?list.filter(v=>participant(d,v)&&v!==u):list;}
-  function start(bs){
+  function start(bs,actor=null,target=null){
+   if(bs.mode==='ball-arena'){
+    if(!alive(actor)||!alive(target)||duel(bs)||!api.owns(actor,DIA)||(bs.playerTeam.includes(actor)?bs.playerTeam:bs.enemyTeam)[0]!==actor||state(actor,DIA).isolated)return;
+    state(actor,DIA).isolated=true;bs.tensuraDuel={a:actor,b:target};api.log('[PASSIVE] Immortal Spirit · isolated impact duel.','passive');return;
+   }
    bs.tensuraDuel=null;
    for(const line of [bs.playerTeam,bs.enemyTeam]){const u=line?.[0];if(u&&api.owns(u,DIA)){const enemy=(line===bs.playerTeam?bs.enemyTeam:bs.playerTeam)?.[0];if(enemy&&alive(enemy)){state(u,DIA).isolated=true;bs.tensuraDuel={a:u,b:enemy};bs.tensuraWaiting=[...(bs.playerTeam||[]),...(bs.enemyTeam||[])].filter(v=>v!==u&&v!==enemy);api.log('[PASSIVE] Immortal Spirit · isolated lead duel.','passive');break;}}}
   }

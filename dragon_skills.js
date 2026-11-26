@@ -14,7 +14,13 @@
    bs.dragonActor=actor;
    for(const u of all(bs)){
     if(!alive(u))continue;
-    if(has(u,'broly')){const c=state(u,'broly');const n=u===actor?.03:.012;c.bonus+=api.watch?.gain(u,n)??n;api.setAtk(u,'legendary-super-saiyan',c.bonus);}
+    if(has(u,'broly')){
+     const c=state(u,'broly'),count=api.runtime(u).ownAttackCount||0;
+     if(bs.mode!=='ball-arena'||c.lastBallTick!==bs.turnCount){
+      const n=bs.mode==='ball-arena'?(count>(c.lastBallAttacks||0)?.03:.012):u===actor?.03:.012;
+      c.lastBallTick=bs.turnCount;c.lastBallAttacks=count;c.bonus+=api.watch?.gain(u,n)??n;api.setAtk(u,'legendary-super-saiyan',c.bonus);
+     }
+    }
     const aura=allies(bs,u).some(owner=>has(owner,'golden-frieza')&&owner!==actor);
     api.runtime(u).dragonAuraApplied=aura;api.setAtk(u,'supernova-aura',aura?.10:0);api.setHp(u,'supernova-aura',aura?.10:0);
    }
@@ -49,7 +55,7 @@
   function after(bs,u,target,result,options={}){
    if(!has(u,'goku-ssj3')||options.isFollowUp||!alive(u)||result.skipped||!api.canFollow(u))return;
    const c=state(u,'goku-ssj3');let count=0;
-   let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,'goku-ssj3')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.30,count>0))){
+   let passiveLoopGuard0=0;while((!['auto-chess','ball-arena'].includes(bs?.mode)||passiveLoopGuard0++<24)&&(alive(u)&&has(u,'goku-ssj3')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.30,count>0))){
     target=alive(target)?target:enemies(bs,u)[0];
     const shot=api.attack(bs,u,target,{isFollowUp:true,passiveAttack:true,damageMultiplier:.30,dragonChain:true});
     if(shot.skipped||shot.outOfTurn)break;count++;c.next+=.05;

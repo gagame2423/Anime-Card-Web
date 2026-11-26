@@ -17,10 +17,10 @@
    for(const u of api.all(bs))if(alive(u)){
     lastStanding(bs,u);
     const side=bs.playerTeam.includes(u)?'player':'enemy';
-    if(has(u,WIND)&&bs.turn!==side){const guard=state(u,WIND);guard.guardTurn=guard.pendingGuard&&(guard.guardCreatedAt||0)<(bs.turnCount||0)?bs.turnCount:-1;guard.pendingGuard=false;}
+    if(has(u,WIND)&&bs.turn!==side){const guard=state(u,WIND);if(bs.mode!=='ball-arena'||guard.lastGuardTick!==bs.turnCount){guard.lastGuardTick=bs.turnCount;guard.guardTurn=guard.pendingGuard&&(guard.guardCreatedAt||0)<(bs.turnCount||0)?bs.turnCount:-1;guard.pendingGuard=false;}}
     for(const key of [SPR,STWR])if(api.owns(u,key)){
      const c=state(u,key);
-     if(bs.turn===side)c.ownTurns=(c.ownTurns||0)+1;
+     if(bs.turn===side&&(bs.mode!=='ball-arena'||bs.activeAttacker===u))c.ownTurns=(c.ownTurns||0)+1;
      if(c.pendingStun&&team(bs,u)!==team(bs,c.pendingStun.target)&&bs.turn!== (bs.playerTeam.includes(u)?'player':'enemy')){
       const target=c.pendingStun.target;c.pendingStun=null;if(alive(target))status(target,'stunTurns',1,u);
      }
@@ -74,13 +74,13 @@
      const victim=alive(target)?target:api.enemyFront(bs,supporter);if(victim)hit(bs,supporter,victim,atk(supporter)*1.2,{requiemSupport:true});
     }
    }
-   if(id(u)===STWR&&random()<.12)bs.requiemExtraSide=bs.playerTeam.includes(u)?'player':'enemy';
+   if(id(u)===STWR&&random()<.12){if(bs.mode==='ball-arena')bs.ballExtraAttacker=u;else bs.requiemExtraSide=bs.playerTeam.includes(u)?'player':'enemy';}
   }
   function chain(bs,u,target,options={}){
    const result=options.grimoireInitialResult || api.attack(bs,u,target,{...options,requiemChain:true});
    if(result.skipped||result.outOfTurn||options.isFollowUp)return result;
    let count=0;
-   let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,SPR)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.33,count>0))){
+   let passiveLoopGuard0=0;while((!['auto-chess','ball-arena'].includes(bs?.mode)||passiveLoopGuard0++<24)&&(alive(u)&&has(u,SPR)&&enemies(bs,u).length&&random()<api.followChance(bs,u,.33,count>0))){
     target=alive(target)?target:api.enemyFront(bs,u);
     const next=api.attack(bs,u,target,{...options,isFollowUp:true,requiemChain:true,chainDepth:0});if(next.skipped||next.outOfTurn)break;count++;
    }

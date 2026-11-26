@@ -11,7 +11,7 @@
   {name:'Maid Girl',style:'Support Curator',trait:'Supporter',save:25,rerolls:1,xp:1},
   {name:'Blox Fruit Kid',style:'Frontline Builder',trait:'Titan',save:15,rerolls:1,xp:2}
  ].map(Object.freeze));
- const ranged=c=>(c?.category||[]).some(x=>['Gunner','Magician','Supporter'].includes(x));
+ const ranged=c=>host.SpatialCombat?host.SpatialCombat.roleOf(c)!=='Melee':(c?.category||[]).some(x=>['Gunner','Magician','Supporter'].includes(x));
  function initialize(s){for(const[p,i]of s.players.filter(p=>p.bot).map((p,i)=>[p,i])){p.name=PERSONALITIES[i].name;p.personality=i;p.aiTier=Number.isInteger(s.rankedStart?.tier)?s.rankedStart.tier:0;p.botActions=0;p.botRound='';}return s;}
  function profile(p){return PERSONALITIES[p.personality??0];}
  function score(p,id){if((p.aiTier||0)>=4)return host.AutoChessAI.score(p,id);const c=C.card(id),r=C.RARITIES.indexOf(c.rarity),d=profile(p),units=C.deployed(p),tags=[c.element,...c.category];let synergy=0;for(const tag of tags){const n=(host.AutoChessAugments?.traits(p)?.[tag]||0)+new Set(units.filter(u=>u.cardId!==id&&[C.card(u).element,...C.card(u).category].includes(tag)).map(u=>u.cardId)).size;synergy+=n%2===1?1.4:n*.15;}return 2+r*2+synergy+(tags.includes(d.trait)?3:0)+(c.category.includes('Supporter')&&!units.some(u=>C.card(u).category.includes('Supporter'))?1.5:0);}

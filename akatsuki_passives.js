@@ -166,13 +166,24 @@
     if(!alive(u))continue;restoreBurn(u);
     if(has(u,'hidan')){const c=state(u,'hidan');c.healBuffs=(c.healBuffs||[]).filter(b=>b.expires>=now);api.percent(u,'atk','hidan-healing',c.healBuffs.reduce((n,b)=>n+b.percent,0));}
     if(u===actor&&api.ownTurn(bs,u)&&isPain(u)&&painState(u).path==='Asura'&&api.ownTurns(bs,u)%3===0)api.shield(u,atk(u)*.25,null);
-    for(const {owner} of runtime(u).akatsukiPuppets||[])if(alive(owner)&&has(owner,'sasori')&&!hasClone(u))api.heal(u,u.maxHp*.01,'Puppet',bs,owner);
-    if(u!==actor&&has(u,'deidara')&&team(bs,u).includes(actor)&&random()<.40){const enemy=pick(enemies(bs,u));if(enemy)api.hit(bs,u,enemy,atk(actor)*.50,{specialAttack:true});}
+    for(const puppet of runtime(u).akatsukiPuppets||[]){
+     const owner=puppet.owner;if(alive(owner)&&has(owner,'sasori')&&!hasClone(u)&&(bs.mode!=='ball-arena'||puppet.lastHealTick!==now)){
+      puppet.lastHealTick=now;api.heal(u,u.maxHp*.01,'Puppet',bs,owner);
+     }
+    }
+    if(bs.mode!=='ball-arena'&&u!==actor&&has(u,'deidara')&&team(bs,u).includes(actor)&&random()<.40){const enemy=pick(enemies(bs,u));if(enemy)api.hit(bs,u,enemy,atk(actor)*.50,{specialAttack:true});}
    }
    const r=runtime(actor);for(const poison of r.akatsukiPoison||[]){if(poison.turns>0&&alive(actor))api.poisonDamage(bs,poison.owner,actor,poison.damage);poison.turns--;}
    r.akatsukiPoison=(r.akatsukiPoison||[]).filter(p=>p.turns>0);restoreBurn(actor);
   }
-  function observeAttack(bs,actor,out){if(out?.skipped)return;for(const enemy of enemies(bs,actor))if(has(enemy,'itachi-awakened'))state(enemy,'itachi-awakened').lastEnemyAttack=Math.max(0,out?.damage||0);}
+  function observeAttack(bs,actor,out,options={}){
+   if(out?.skipped)return;
+   for(const enemy of enemies(bs,actor))if(has(enemy,'itachi-awakened'))state(enemy,'itachi-awakened').lastEnemyAttack=Math.max(0,out?.damage||0);
+   if(bs.mode==='ball-arena'&&!options.isFollowUp&&!options.isCounter)
+    for(const owner of allies(bs,actor,false))if(alive(owner)&&has(owner,'deidara')&&random()<.40){
+     const enemy=pick(enemies(bs,owner));if(enemy)api.hit(bs,owner,enemy,atk(actor)*.50,{specialAttack:true});
+    }
+  }
   function endTurn(bs,actor){
    if(!actor)return;const r=runtime(actor),now=bs.turnCount;
    for(const key of ['akatsukiMiss','akatsukiHypnosis'])if(r[key]&&r[key].applied!==now&&--r[key].turns<=0)r[key]=null;
@@ -181,7 +192,7 @@
    if(actor.akatsukiCrow){const owner=actor.akatsukiCrowOwner,line=team(bs,actor);if(alive(actor)&&alive(owner)){line.splice(line.indexOf(actor),1);line.push(actor);bs[line===bs.playerTeam?'playerIndex':'enemyIndex']=line.indexOf(owner);api.indices(bs);}}
   }
   function hypnosisTarget(bs,u,fallback){return runtime(u).akatsukiHypnosis?.turns>0&&random()<.80?pick(allies(bs,u,false))||fallback:fallback;}
-  function badges(u){const r=runtime(u),rows=[];if(r.burn.some(e=>e.uncleansable&&e.turns>0))rows.push({label:'BLACK FLAME',icon:'♨',tone:'debuff',category:'status'});if(r.akatsukiPaper)rows.push({label:'PAPER '+r.akatsukiPaper,icon:'▤',tone:'debuff',category:'status'});if(r.akatsukiPoison?.length)rows.push({label:'POISON '+Math.max(...r.akatsukiPoison.map(p=>p.turns))+'t',icon:'☠',tone:'debuff',category:'status'});if(r.akatsukiVoodoo?.length)rows.push({label:'VOODOO',icon:'◈',tone:'debuff',category:'status'});if(r.akatsukiPuppets?.some(p=>alive(p.owner)))rows.push({label:'PUPPET · ATK +10% / HP +15%',icon:'♟',tone:'buff',category:'buff'});if(has(u,'kakuzu'))rows.push({label:'HEART '+(state(u,'kakuzu').hearts||0)+'/5 · '+(u.akatsukiElements||[]).join('/'),icon:'♥',tone:'passive',category:'passive'});if(isPain(u))rows.push({label:'RINNEGAN · '+painState(u).path+(painState(u).path==='Deva'?' '+(painState(u).charge||0)+'/3':''),icon:'◉',tone:'passive',category:'passive'});if(has(u,'itachi-awakened')){const c=state(u,'itachi-awakened');rows.push({label:'TECHNIQUES '+(c.pool?.length||0)+' · COOLDOWN '+(c.cooldown||0),icon:'◉',tone:'passive',category:'passive'});}return rows;}
+  function badges(u){const r=runtime(u),rows=[];if(r.burn.some(e=>e.uncleansable&&e.turns>0))rows.push({label:'BLACK FLAME',icon:'♨',tone:'debuff',category:'status'});if(r.akatsukiPaper)rows.push({label:'PAPER '+r.akatsukiPaper,icon:'▤',tone:'debuff',category:'status'});if(r.akatsukiPoison?.length)rows.push({label:'POISON '+Math.max(...r.akatsukiPoison.map(p=>p.turns))+'t',icon:'☠',tone:'debuff',category:'status'});if(r.akatsukiVoodoo?.length)rows.push({label:'VOODOO',icon:'◈',tone:'debuff',category:'status'});if(r.akatsukiPuppets?.some(p=>alive(p.owner)))rows.push({label:'PUPPET · ATK +10% / HP +15%',icon:'♟',tone:'buff',category:'buff'});if(has(u,'kakuzu'))rows.push({label:'HEART '+(state(u,'kakuzu').hearts||0)+'/5 · '+(u.akatsukiElements||[]).join('/'),icon:'♥',tone:'passive',category:'passive'});if(isPain(u))rows.push({label:'RINNEGAN · '+(painState(u).path||'Awaiting impact')+(painState(u).path==='Deva'?' '+(painState(u).charge||0)+'/3':''),icon:'◉',tone:'passive',category:'passive'});if(has(u,'itachi-awakened')){const c=state(u,'itachi-awakened');rows.push({label:'TECHNIQUES '+(c.pool?.length||0)+' · COOLDOWN '+(c.cooldown||0),icon:'◉',tone:'passive',category:'passive'});}return rows;}
   const skills={IDS,PATHS,state,painState,entry,counted,attack,skipTurn,cloneChance,hasClone,hasLife,uncloneable,noLife,noExternalRevive,reviveAlly,died,killed,fatal,interceptHeal,dodgeChance,dodge,misses,immune,incoming,reflect,damaged,startTurn,endTurn,hypnosisTarget,observeAttack,rememberBurn,restoreBurn,cleanse,clearBuffs,shieldGranted,shieldBroken:u=>{state(u,'itachi-awakened').yata=false;},paperReduction,badges};
   instances.set(api,skills);return skills;
  };

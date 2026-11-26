@@ -55,7 +55,8 @@
   }
   function startTurn(bs,actor){
    for(const diane of active(bs,DIANE)){
-    const c=state(diane,DIANE);if(!c.lead||!api.canClone(bs,diane))continue;
+    const c=state(diane,DIANE);if(!c.lead||!api.canClone(bs,diane)||bs.mode==='ball-arena'&&c.lastCloneTick===bs.turnCount)continue;
+    c.lastCloneTick=bs.turnCount;
     const candidates=all(bs).filter(u=>u!==diane&&alive(u)&&u.card?.element==='Nature'&&!api.generated(u)&&!c.cloned.has(u)&&!api.uncloneable(u));
     const target=candidates[Math.floor(random()*candidates.length)];
     if(target&&api.clone(bs,diane,target))c.cloned.add(target);

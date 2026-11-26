@@ -39,14 +39,16 @@
     if(out.killed){const next=enemies(bs,u)[0];if(next)hit(bs,u,next,v.maxHp*.10);c.bolts=Math.min(5,c.bolts+gain(u,3));}return out;
    });}
    if(has(u,'veera')&&state(u,'veera').bhain>=4)return scope(u,'veera',()=>{const c=state(u,'veera'),out=result(u,v);c.bhain=0;for(const target of [v,...enemies(bs,u).filter(x=>x!==v)].filter(alive).slice(0,4))merge(out,primary(bs,u,target,atk(u)*.50,options));api.heal(bs,u,u,out.damage*.50,'Blood Chain');return out;});
-   if(has(u,'krixi')&&state(u,'krixi').attacks%3===0)return scope(u,'krixi',()=>{const out=result(u,v),targets=[v,...enemies(bs,u).filter(x=>x!==v)].filter(alive);for(let i=0;i<targets.length&&alive(u);i++){const r=primary(bs,u,targets[i],atk(u)*Math.max(.10,1-.10*i),options);merge(out,r);if(r.hit&&alive(targets[i])&&random()<.50)api.status(targets[i],'stunTurns',1,u);}return out;});
+   if(has(u,'krixi')&&state(u,'krixi').attacks%3===0)return scope(u,'krixi',()=>{const out=result(u,v),targets=api.spatial(bs,u,v,'pierce',{label:'Nature Wrath'},[v,...enemies(bs,u).filter(x=>x!==v)]).filter(alive);for(let i=0;i<targets.length&&alive(u);i++){const r=primary(bs,u,targets[i],atk(u)*Math.max(.10,1-.10*i),options);merge(out,r);if(r.hit&&alive(targets[i])&&random()<.50)api.status(targets[i],'stunTurns',1,u);}return out;});
    if(has(u,'yasuo')&&state(u,'yasuo').flow>=2)return scope(u,'yasuo',()=>{const c=state(u,'yasuo'),last=runtime(v).stunTurns>0;c.flow=0;const out=primary(bs,u,v,atk(u)*(last?2:1.5),options);
-    if(out.hit){if(last){for(const target of enemies(bs,u))if(target!==v)api.status(target,'stunTurns',2,u);if(out.killed)c.flow=2;}else{if(alive(v))api.status(v,'stunTurns',1,u);if(random()<.33)duration(bs,u,c,'immuneTurns',3);}}return out;
+    const cleave=bs.spatial?api.spatial(bs,u,v,'strike',{label:last?'Last Breath':'Steel Tempest'},enemies(bs,u).filter(x=>x!==v)):null;
+    if(cleave)for(const target of cleave){if(alive(u))hit(bs,u,target,atk(u)*(last?1:.75));}
+    if(out.hit){if(last){for(const target of (cleave||enemies(bs,u)))if(target!==v)api.status(target,'stunTurns',2,u);if(out.killed)c.flow=2;}else{if(alive(v))api.status(v,'stunTurns',1,u);if(random()<.33)duration(bs,u,c,'immuneTurns',3);}}return out;
    });
    if(has(u,'yone'))return scope(u,'yone',()=>{const c=state(u,'yone'),wind=c.attacks%2===1,out=result(u,v);
     if(wind){merge(out,primary(bs,u,v,atk(u)*1.10,options));if(out.hit&&alive(v)&&random()<.30)api.status(v,'stunTurns',1,u);}
     else {merge(out,primary(bs,u,v,atk(u)*.50,options));if(alive(v))merge(out,hit(bs,u,v,atk(u)*.50,{ignoreShield:true}));}
-    if(c.soulTurns>0)for(const target of [...enemies(bs,u)].filter(x=>x!==v)){hit(bs,u,target,atk(u)*(wind?.55:.25));if(!wind&&alive(target))hit(bs,u,target,atk(u)*.25,{ignoreShield:true});}
+    if(c.soulTurns>0)for(const target of api.spatial(bs,u,v,'strike',{label:'Soul Unbound'},enemies(bs,u).filter(x=>x!==v))){hit(bs,u,target,atk(u)*(wind?.55:.25));if(!wind&&alive(target))hit(bs,u,target,atk(u)*.25,{ignoreShield:true});}
     return out;
    });
    return null;
@@ -57,12 +59,12 @@
     if(id==='tulen'&&c.attacks%3===0)for(let i=0;i<3&&alive(u);i++){const target=pick(enemies(bs,u));if(target&&random()<.65){const r=hit(bs,u,target,atk(u)*.30);if(r.hit)c.bolts=Math.min(5,c.bolts+gain(u,1));}}
     if(id==='veera'&&alive(v)&&random()<.44)api.dot(v,'bleed',3,atk(u)*.33,u);
     if(id==='jinx'){
-     if(c.attacks%4===0)for(const target of [...enemies(bs,u)].slice(0,5)){const shield=runtime(target).shield>0;if(shield)api.breakShield(bs,target,u);const r=hit(bs,u,target,atk(u)*1.50);if(!shield&&r.hit&&alive(target))api.status(target,'stunTurns',2,u);}
+     if(c.attacks%4===0)for(const target of api.spatial(bs,u,v,'blast',{label:'Fishbones Blast'},enemies(bs,u)).slice(0,5)){const shield=runtime(target).shield>0;if(shield)api.breakShield(bs,target,u);const r=hit(bs,u,target,atk(u)*1.50);if(!shield&&r.hit&&alive(target))api.status(target,'stunTurns',2,u);}
      if(options.isFollowUp)return;
      for(let chain=0;chain<32&&alive(u)&&api.canFollow(u);chain++){if(random()>=Math.min(.95,api.followChance(bs,u,.35+c.killChance+Math.min(.10,chain*.01),chain>0,.95)))break;const target=alive(v)?v:enemies(bs,u)[0];if(!target)break;const r=api.follow(bs,u,target,.30,{hextechChain:true});if(r.skipped||r.outOfTurn)break;}
     }
     if(id==='ahri'){
-     if(bs.mode==='auto-chess'&&random()<.20)duration(bs,u,c,'speedTurns',3);
+     if(['auto-chess','ball-arena'].includes(bs.mode)&&random()<.20)duration(bs,u,c,'speedTurns',3);
      if(c.fox){if(alive(v)&&out.hit){const hinder=random()<.50;api.status(v,hinder?'hindredTurns':'hypnosisTurns',hinder?2:1,u);}api.heal(bs,u,u,out.damage*(.75+random()*.30),'Fox Theft');}
      else {c.spirit=Math.min(100,c.spirit+gain(u,rollInt(1,5)));enterFox(u,c);if(c.fox)api.heal(bs,u,u,out.damage*(.75+random()*.30),'Fox Theft');else if(c.spirit>=1){c.spirit--;api.heal(bs,u,u,out.damage*(.35+random()*.60),'Fox Spirit');}}
     }

@@ -38,7 +38,7 @@
         const first=options.grimoireInitialResult||api.attack(bs,u,target,{...options,gomenToken:token});
         if(first.skipped||first.outOfTurn||!alive(u))return first;
         const c=state(u,TOJI),initialChance=api.followChance(bs,u,.80);let index=0;
-        let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,TOJI)&&c.mode==='spear'&&api.canFollow(u)&&enemies(bs,u).length)){
+        let passiveLoopGuard0=0;while((!['auto-chess','ball-arena'].includes(bs?.mode)||passiveLoopGuard0++<24)&&(alive(u)&&has(u,TOJI)&&c.mode==='spear'&&api.canFollow(u)&&enemies(bs,u).length)){
           // 80%, 75%, ... 5%, 0%: termination comes from the skill's own rule.
           const raw=Math.max(0,initialChance-index*.05),chance=raw>0?api.chainChance(u,raw,index>0):0;if(chance<=0||random()>=chance)break;
           target=alive(target)?target:enemies(bs,u)[0];

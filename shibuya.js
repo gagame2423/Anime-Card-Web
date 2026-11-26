@@ -99,7 +99,7 @@
         if(c.doubleStreak>=2&&!c.trueForm){c.trueForm=true;api.watch?.change(u,'base','true');api.atkBonus(u,1);api.shield(u,u.maxHp);}
         if(c.trueForm&&!options.isFollowUp&&!c.chaining){
           c.chaining=true;
-          try{let count=0,chance=.24;let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(u)&&has(u,'true-mahito')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,chance,count>0))){
+          try{let count=0,chance=.24;let passiveLoopGuard0=0;while((!['auto-chess','ball-arena'].includes(bs?.mode)||passiveLoopGuard0++<24)&&(alive(u)&&has(u,'true-mahito')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,chance,count>0))){
             const next=alive(target)?target:enemies(bs,u)[0];api.countFollow(bs,u,next);const shot=api.primary(bs,u,next,atk(u)*.15,{isFollowUp:true,passiveAttack:true});
             count++;if(shot.hit)chance=Math.min(.72,chance+.12);if(shot.skipped)break;
           }}finally{c.chaining=false;}
@@ -129,13 +129,13 @@
     function startTurn(bs,actor,side){
       for(const u of [...all(bs)]){
         if(alive(u)){
-          if(has(u,'choso')&&(bs.playerTeam.includes(u)?'player':'enemy')===side){const c=state(u,'choso');if(c.cleanseCooldown>0&&c.cooldownTurn!==bs.turnCount)c.cleanseCooldown--;}
-          if(has(u,'jogo')&&state(u,'jogo').domain)for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.20,{shibuyaDomain:true});
-          if(has(u,'sukuna-shibuya')){const c=state(u,'sukuna-shibuya');if(c.domainTurns>0&&c.domainStarted!==bs.turnCount){c.domainTurns=Math.max(0,c.domainTurns-1);if(!c.domainTurns)api.watch?.change(u,'domain','base');for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.09,{shibuyaDomain:true});}}
+          if(has(u,'choso')&&(bs.playerTeam.includes(u)?'player':'enemy')===side){const c=state(u,'choso');if(c.cleanseCooldown>0&&c.cooldownTurn!==bs.turnCount&&(bs.mode!=='ball-arena'||c.lastCooldownTick!==bs.turnCount)){c.lastCooldownTick=bs.turnCount;c.cleanseCooldown--;}}
+          if(has(u,'jogo')&&state(u,'jogo').domain){const c=state(u,'jogo');if(bs.mode!=='ball-arena'||c.lastDomainTick!==bs.turnCount){c.lastDomainTick=bs.turnCount;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.20,{shibuyaDomain:true});}}
+          if(has(u,'sukuna-shibuya')){const c=state(u,'sukuna-shibuya');if(c.domainTurns>0&&c.domainStarted!==bs.turnCount&&(bs.mode!=='ball-arena'||c.lastDomainTick!==bs.turnCount)){c.lastDomainTick=bs.turnCount;c.domainTurns=Math.max(0,c.domainTurns-1);if(!c.domainTurns)api.watch?.change(u,'domain','base');for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.09,{shibuyaDomain:true});}}
         }else{
           // Death effects are permanent runtime records, even if the passive was disabled later.
           const c=api.passiveRuntimeFor(u,'jogo').shibuya;
-          if(c?.meteorPending&&c.deathTurn!==bs.turnCount){if(c.countdown>0)c.countdown=Math.max(0,c.countdown-1);if(c.countdown===0){c.meteorPending=false;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*(c.meteor||0),{shibuyaMeteor:true});}}
+          if(c?.meteorPending&&c.deathTurn!==bs.turnCount&&(bs.mode!=='ball-arena'||c.lastMeteorTick!==bs.turnCount)){c.lastMeteorTick=bs.turnCount;if(c.countdown>0)c.countdown=Math.max(0,c.countdown-1);if(c.countdown===0){c.meteorPending=false;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*(c.meteor||0),{shibuyaMeteor:true});}}
         }
       }
       api.indices(bs);

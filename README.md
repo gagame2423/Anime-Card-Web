@@ -1,533 +1,376 @@
-# Anime Card RNG — Nhật ký cập nhật và thông số kỹ thuật
+# Update 34.5 — Ball vs Ball: sửa passive, giao diện và âm thanh
 
-**Ngày đối chiếu mã nguồn:** 12/10/2026.  
-**Phạm vi:** bản game đã bổ sung kho vật phẩm tổng quát, Tower vô hạn, thành tựu và save bảo vệ `.acrsave` với checksum/cooldown riêng.
+**Bản vá dành cho mã nguồn Update 34 trong tệp anime-card-rng-autochess.rar bạn gửi.** Chỉ chép các tệp trong ZIP vào thư mục game hiện tại. Không thay thư mục assets, dữ liệu thẻ, vật phẩm hoặc ID lưu game.
 
-Tài liệu này mô tả mã nguồn của bản cập nhật bảo vệ save. Bản phát hành gồm nguồn game và README; không kèm runner kiểm thử, log hay file tạm. Các hệ thống gameplay giữ cơ chế hiện hành.
+## 1. Sửa Equinox (Emotional Meter)
 
-Tên thẻ, tên potion, tên thời tiết, ID và tên file được giữ nguyên để đối chiếu chính xác với mã nguồn. Các phần giải thích được viết bằng tiếng Việt.
+### Nguyên nhân
 
-## 1. Tính Năng Mới
+- Logic native của Equinox trong `passives.js` (ID `tower-champion-normal`) vẫn có thể thay đổi giá trị meter, nhưng Ball HUD chỉ đọc danh sách hiệu ứng trạng thái, không đọc badge nội tại. Vì vậy thanh biến mất. Trong va chạm hai bên cùng đánh, hai lần thay đổi trái dấu còn có thể gần như triệt tiêu nhau.
+- Khi đạt 100% Negative, đường xử lý AoE dùng chung đã giới hạn vụ nổ trong bán kính mặc định, bỏ sót các orb xa mặc dù mô tả yêu cầu đánh toàn bộ đội địch.
+- Một số đường hồi sinh đồng đội chưa thống nhất điều kiện cấm hồi sinh và clone của Equinox.
 
-### 1.1. Các đợt cập nhật đã thực hiện
+### Cách sửa
 
-| Đợt cập nhật | Nội dung chính |
+- Giữ cùng bộ đếm của engine. Bắt đầu 50% Positive / 50% Negative. Mỗi đòn chính dịch 10–20 điểm % sang Positive; mỗi đòn nhận vào dịch 10–20 điểm % sang Negative. Tổng luôn là 100%; bonus tài nguyên hợp lệ từ Relic vẫn theo cơ chế gốc.
+- +100%: khóa cho đến hết trận; tất cả đồng minh còn sống, gồm Equinox, nhận +100% Max HP và +25% ATK đúng một lần.
+- −100%: khóa, đánh mọi địch còn sống bằng x25 ATK hiện tại, áp dụng quy tắc nguyên tố/phòng thủ hiện có, sau đó chết vĩnh viễn. Hiệu ứng nổ bao phủ cả các mục tiêu xa. Quy tắc hồi sinh/clone của Equinox được kiểm tra nhất quán.
+- HUD hiện thanh hai màu, số Positive/Negative, POSITIVE LOCK hoặc NEGATIVE LOCK. Bấm hoặc rê chuột để xem tooltip. Nhật ký hiển thị thay đổi meter và thông báo khi khóa. Sau khi bị loại, meter vẫn hiện trên dòng đội hình gốc.
+- Không tạo bộ đếm thứ hai ở giao diện, không reset theo mỗi tick hay mở tooltip.
+
+### Kết quả kiểm thử riêng
+
+- Positive, seed cố định: 50 → 67 → 85 → 100. Bốn thành viên mẫu có Max HP từ 10.000.000 lên 20.000.000 và ATK từ 1.000 lên 1.250. Đòn đánh tiếp theo giữ nguyên khóa, không cấp buff lần hai.
+- Negative: 50 → 63 → 76 → 96 → 100. Equinox còn 0 HP, chết vĩnh viễn. Bốn orb địch đặt xa đều nhận đúng 8.333 sát thương trong mẫu (25 × 1.000 ATK, sau điều chỉnh nguyên tố và làm tròn của engine). Không bị hồi sinh hoặc tạo clone.
+
+## 2. Sửa passive và đồng hồ combat
+
+- Tách cổng hành động cho từng đòn chính từ va chạm. Đồng hồ lượt riêng vẫn tiến mỗi 1,35 giây. Sửa các chuỗi form, stance, kỹ thuật và đòn kích hoạt của Kuuga, Demon Asta, Enten, Kaiser, Yamamoto, Itachi...
+- Son Goku: Kamehameha đòn thứ 5 gây đúng 10 hit × 10% ATK theo mô tả, không biến thành Burn kéo dài. WhiteBeard, Grimmjaw và Cid Atomic dùng một hành động AoE đúng số mục tiêu, không gọi đòn thường lặp làm nhảy bộ đếm.
+- Những passive ghi rõ đánh toàn đội (Tsunami, Aizen Beyond, Thukuna...) giữ đủ phạm vi quy định. Kỹ năng Pierce, Blast, Strike được thiết kế theo hình học của Ball Arena vẫn có vùng va chạm tương ứng.
+- Timer (Pennywise, Myers, Kaguya, Jogo, Sukuna, Choso, Broly, Crystal Heart, Diane, Aura/Rock, Puppet...) được xử lý một lần mỗi tick, không bị trừ/tích lặp theo số orb. Thời gian tính theo lượt riêng vẫn thuộc đúng chủ sở hữu.
+- Bulma/Senku xử lý lượt đồng minh, Deidara hỗ trợ khi đồng minh thực sự tấn công. Shadow The World Requiem có đường kích hoạt đòn bổ sung Time Rewind trong chế độ vật lý, có giới hạn chuỗi an toàn.
+- The Clown và Pain hiện Awaiting impact trước khi chọn mode/path, không còn badge rỗng hoặc chữ undefined.
+- HUD đọc tài nguyên, tiến trình đòn, form, số lần sống sót và timer từ chính runtime native. Các badge quan trọng ở thanh compact; bấm PASSIVE xem toàn bộ thông tin hiện có, số đòn, hit, follow-up, lượt riêng, kill. Tooltip không kích hoạt passive hay tiêu tài nguyên.
+- Giữ quy tắc shield gốc, giới hạn follow-up và cách Relic áp dụng. Không đổi rarity, ID, mutation, chỉ số gốc, tỷ lệ roll hoặc dữ liệu sở hữu. Các chỉnh sửa riêng của Ball được giới hạn theo mode; worker Auto Chess đồng bộ phiên bản module dùng chung.
+
+## 3. Giao diện Pixel gọn hơn
+
+- Đã sử dụng chính file font **RobloxPixel.otf** bạn gửi để kiểm tra. Giảm font-size, line-height và padding tương ứng với font rộng. Chữ HUD thông thường khoảng 7,5–10 px, tiêu đề lớn hơn theo vai trò. Không giả lập font đậm. Nút, bộ lọc, tên thẻ, chỉ số giữ một dòng hoặc ellipsis có title/tooltip.
+- Ball Index chỉ có **một ô cho mỗi card ID**. Các variant Normal / Wet / Solar / mutation kép được nhóm; số thẻ sở hữu và số variant hiển thị trên ô. Mutation là dropdown nhỏ gọn, bản sao cụ thể và Relic đang gắn được chọn bên dưới. Không gán trùng bản sao vào hai slot hay cộng thêm số lượng do record trùng.
+- Canvas thu gọn chữ, viết tắt số K/M/B khi cần và nhóm popup nhiều hit gần nhau ở mức hiển thị, tránh chữ chồng nhau. Hit thật, sát thương và log chi tiết không thay đổi. HP/Energy có thanh rõ ràng và % riêng. Nhật ký Player/Enemy giữ màu passive, crit, status; dùng luồng chữ bình thường, không ép từng mảnh chữ thành flex.
+- Giữ sân vuông 1:1. Desktop 3 cột, mobile dọc xếp sân trước hai bảng chi tiết, mobile ngang ngắn thu sân để vừa màn hình. Tooltip theo cùng orb và dữ liệu, không thay node của badge mỗi tick.
+- Update Logs có mục 34.5 — Rebound Refinements.
+
+## 4. Âm thanh Ball vs Ball
+
+Module mới `ball_audio.js` quản lý cache/voice và khoảng cách phát tối thiểu cho từng cue. Ưu tiên crit, kỹ năng, vỡ khiên, kết quả; tối đa 8 voice đồng thời. Các va chạm cùng khung hình được chọn theo nhóm âm thanh, không tạo Audio mới cho mỗi hit. Hàng đợi âm thanh không ảnh hưởng RNG hoặc cơ chế combat.
+
+- Nút SFX ON / OFF và thanh VOL ở header. Âm lượng riêng lưu localStorage, tôn trọng cài đặt SFX/volume chung của game. Tắt tiếng, đóng chế độ hoặc chuyển tab trình duyệt sẽ dừng âm thanh đang phát.
+- Đếm ngược 3–2–1 trước trận, tiếng bắt đầu, va tường, va cầu, crit, passive, kỹ năng, khiên, heal, dodge, status, KO và thắng/thua/hòa.
+- MP3 tùy chọn. Thiếu file vẫn chơi được. Lỗi tải được cache, không thử lại liên tục; lỗi autoplay được xử lý. Trình duyệt có thể báo 404 một lần với đường dẫn không tồn tại.
+- **Đặt file MP3 bạn tự chuẩn bị vào `assets/audio/ball/`**, đúng tên sau:
+
+| Tên file MP3 | Sự kiện |
 |---|---|
-| Nền tảng module Tower và potion | Tách lưu vật phẩm/Tower khỏi dữ liệu thẻ; tích hợp potion, Tower 4v4, cửa hàng và các điều chỉnh hồi máu/trạng thái đã có trong bản đầu vào. |
-| Kho vật phẩm tổng quát và Tower vô hạn | Mở rộng `inventory.js`, sửa lọc đội hình Weather Tower, bỏ giới hạn tầng 100, thêm Speed Battle Potion độc quyền cửa hàng. |
-| Thành tựu và chuyển dữ liệu | Thêm `achievements.js`, 11 thẻ thưởng tầng 100, mở khóa pool roll, xuất/nhập JSON và xử lý lỗi lưu dữ liệu. |
-| Tài liệu độc lập trước đó | Tổng hợp thông số và ghi chú phát hành bằng tiếng Việt; đợt đó không sửa game. |
-| Bảo vệ chuyển save hiện tại | Đóng gói `.acrsave`, HMAC-SHA-256, kiểm tra Base64/UTF-8 chuẩn, cooldown xuất/nhập 7 ngày độc lập, khóa giữa các tab và bảo toàn timestamp khi nhập. |
-
-### 1.2. Kho vật phẩm tổng quát
-
-`inventory.js` quản lý vật phẩm độc lập với kho thẻ trong `app.js`.
-
-- Mỗi vật phẩm có `id`, `name`, `quantity`, `description`, `type`, `icon`, `image`, `tier` và `metadata`.
-- Hỗ trợ potion, tiền tệ, nguyên liệu, trang bị, vé và loại tùy chỉnh. Việc có loại `gear` hoặc `ticket` trong kho chưa đồng nghĩa đã có cơ chế trang bị hay dùng vé mới.
-- Vật phẩm cùng ID được cộng dồn số lượng. Các loại không phải potion được lưu trong kho, không xuất hiện nút tiêu thụ potion.
-- Giao diện dạng ô: bốn cột trên màn hình lớn, hai cột khi chiều rộng không quá 640 px; có tìm kiếm, lọc loại, viền cấp vật phẩm và số lượng rút gọn như `x150`, `x2.56K`.
-- Chú giải số lượng giữ giá trị đầy đủ. Khi chưa có kết quả phù hợp, giao diện hiển thị trạng thái trống.
-- Save potion cũ dạng số được chuyển sang bản ghi vật phẩm phiên bản 2, giữ số lượng, thời điểm hết hiệu lực, bộ đếm bảo hiểm và ID vật phẩm chưa biết.
-
-Các thao tác mở rộng chính: `registerItem()`, `grant()`, `remove()`, `getItem()`, `list()` và `use()`. Định nghĩa vật phẩm mới không tự động đưa vật phẩm đó vào danh sách rơi thưởng chiến đấu.
-
-### 1.3. Tower vô hạn và cửa hàng
-
-- Có 11 loại Tower: Normal và 10 Weather Tower.
-- Mỗi trận sử dụng đội hình bốn thẻ; đối thủ ban đầu gồm ba lính và một trùm.
-- Mỗi Tower lưu tầng đã vượt riêng. Tầng tiếp theo bằng tầng đã vượt cộng một; không còn trạng thái kết thúc ở tầng 100.
-- Chỉ vượt đúng tầng kế tiếp mới nhận Tower Coins. Gọi lại kết quả của tầng đã vượt không cấp thưởng lần nữa.
-- Cứ mỗi 10 tầng có một tầng tinh nhuệ, tăng chỉ số và thưởng xu.
-- Tower Coins tách biệt hoàn toàn với VNĐ. Tower Shop dùng Tower Coins; cửa hàng nâng cấp thường dùng VNĐ.
-- Speed Battle Potion có giá riêng 100 Tower Coins. Bốn potion thông thường giữ giá 25 Tower Coins mỗi chai.
-
-### 1.4. Thành tựu trong module riêng
-
-`achievements.js` phụ trách danh sách mốc, theo dõi tiến độ, kiểm tra hoàn thành, lưu trạng thái nhận thưởng, mở khóa yêu cầu và dựng giao diện thành tựu. `app.js` chỉ cung cấp số liệu hiện tại và thực hiện cấp thưởng vào trạng thái game.
-
-| Nhóm | Các mốc hiện tại |
-|---|---|
-| Số thẻ độc nhất sở hữu | 25, 50, 75, 100; tự bổ sung các mốc cách nhau 25 khi số thẻ trong cơ sở dữ liệu đủ đạt mốc đó. |
-| Số trận thắng | 1; 10; 100; 1.000; 10.000; 100.000; 1.000.000. |
-| VNĐ sở hữu/đã kiếm | 1K; 10K; 100K; 1M; 10M; 100M; 1B; 10B; 100B; 1T; 10T; 100T. |
-| Tổng lượt roll | 1K; 10K; 100K; 1M; 10M; 100M. |
-| Tầng Tower đã vượt, xét Tower sâu nhất | 10; 25; 50; 100; 250; 500; 1.000; 2.500; 5.000; 10.000; 25.000; 50.000; 100.000; 1.000.000. |
-| Thẻ Champion riêng từng Tower | Vượt tầng 100 của từng loại Tower. |
-
-Quy ước: K = 1.000; M = 1.000.000; B = 1.000.000.000; T = 1.000.000.000.000. **100T = 100.000.000.000.000 VNĐ.**
-
-- Hiện có 111 thẻ và 54 mục thành tựu: 43 mốc thường cùng 11 mốc Champion. Mốc collection 125 chưa được hiển thị vì cơ sở dữ liệu hiện chưa có đủ 125 thẻ.
-- Collection tính số ID thẻ khác nhau, không cộng thêm thẻ độc nhất khi có bản trùng hoặc mutation khác của cùng thẻ.
-- Tiến độ collection dùng mức cao nhất từng đạt; salvage không làm mất mốc đã hoàn thành.
-- Tiến độ tiền dùng giá trị lớn hơn giữa tổng VNĐ đã ghi nhận kiếm được và số dư cao nhất từng đạt. Chi tiêu không làm mất mốc.
-- Trận thắng Arena và Tower mới đều được ghi nhận. Thua trận không tăng bộ đếm thắng.
-- Modal có lọc nhóm, thanh tiến độ, trạng thái đang thực hiện/đủ điều kiện/đã nhận và nút nhận thưởng. Thanh điều hướng có số phần thưởng thường đang chờ nhận.
-- Mốc thường cần bấm nhận. Thẻ Champion được cấp tự động.
-- Cờ đã nhận trong module và biên nhận `achievementRewardReceipts` trong save thẻ ngăn cấp trùng khi reload hoặc thử nhận lại.
-
-**Đối chiếu save cũ:** số dư đang có và số thắng Tower đã lưu được dùng làm lịch sử khởi đầu. Save trước đây không có tổng thắng Arena hay tổng VNĐ từng kiếm, nên không thể phục dựng chính xác hai giá trị đó. Tower đã vượt tầng 100 được đối chiếu để cấp Champion còn thiếu.
-
-### 1.5. Thẻ thưởng tầng 100 và mở khóa roll
-
-Mỗi Tower có một thẻ thưởng độc nhất, khai báo trong `TOWER_REWARD_CARDS` tại `cards.js`. Yêu cầu tiêu biểu:
-
-```js
-unlockRequirement: 'tower_floor_100_normal'
-```
-
-- Khi vượt tầng 100, người chơi nhận ngay **một bản Normal**, không gắn mutation.
-- Thẻ có ID mới, chỉ số riêng, ảnh dùng lại từ thẻ nguồn và không có passive bổ sung: `passive: null`.
-- Khi chưa mở khóa, thẻ bị loại khỏi pool roll. Sau khi mở khóa, thẻ vào pool roll chuẩn và không yêu cầu thời tiết đang hoạt động.
-- Mở khóa giữ vĩnh viễn dù bản được thưởng đã bị salvage; game không cấp lại bản miễn phí sau salvage.
-- Các lần roll sau vẫn áp dụng mutation và EXP theo cơ chế hiện có.
-- Champion của Weather Tower có `nativeWeather` tương ứng, nên bản Normal vẫn có thể tham gia Tower thời tiết đó.
-- Thẻ thưởng bị loại khỏi pool tạo đối thủ Tower. Quy tắc không tạo đối thủ Griffith được giữ nguyên.
-
-Bảng chỉ số và tỷ lệ của đủ 11 thẻ nằm ở mục 3.6.
-
-### 1.6. Xuất và nhập save bảo vệ `.acrsave`
-
-Modal chuyển save giữ hai nút Export Save và Import Save, nhưng định dạng ngoài đổi từ `.json` sang `.acrsave`. Dữ liệu bên trong vẫn là gói JSON đầy đủ của game.
-
-**Quy trình xuất:**
-
-1. Kiểm tra Web Crypto, Web Locks và cooldown xuất trước khi thực hiện.
-2. Đồng bộ đồng hồ/thành tựu, ghi đủ bốn store game, kể cả game mới chưa từng vào Tower.
-3. Tạo JSON gồm collection, biến thể, level/EXP, VNĐ, nâng cấp, trang bị, thời tiết, vật phẩm, buff, Tower và thành tựu. Khóa tương thích cũ được kèm theo nếu tồn tại; không thu thập dữ liệu ngoài game.
-4. Ghi timestamp của lần xuất vào gói, tính HMAC-SHA-256, tạo payload rồi biểu diễn UTF-8 dưới dạng Base64.
-5. Tạo file `anime-card-save-YYYY-MM-DD.acrsave`; ngày trong tên file dùng UTC.
-6. Lưu cooldown ngay trước khi giao download tới trình duyệt; nếu giao download lỗi, khôi phục timestamp cũ. Không giao file nếu không thể ghi cooldown.
-
-Trình duyệt không cung cấp xác nhận người dùng đã lưu file xuống ổ đĩa qua cách tải này. “Xuất thành công” ở đây là game đã tạo file và gọi giao download thành công; hủy hộp thoại lưu của trình duyệt sau đó không tự hoàn lại cooldown.
-
-**Quy trình nhập:**
-
-1. Kiểm tra cooldown nhập trước khi mở bộ chọn file và kiểm tra lại trong thao tác nhập.
-2. Chỉ nhận file `.acrsave`. Đọc UTF-8 nghiêm ngặt, giữ BOM để không bỏ qua ký tự bị thêm.
-3. Kiểm tra Base64 chuẩn, cấu trúc/phiên bản payload, checksum và biểu diễn ngoài đúng dạng chuẩn.
-4. Sau khi xác thực, kiểm tra cấu trúc JSON, các store bắt buộc, kiểu dữ liệu, số hữu hạn, số lượng không âm và tên bản ghi không hợp lệ bằng bộ kiểm tra dữ liệu hiện có.
-5. Hợp nhất timestamp theo giá trị lớn nhất: file cũ không được giảm cooldown đang có trên trình duyệt nhận.
-6. Sao lưu giá trị các khóa hiện tại, ghi các store và timestamp nhập. Nếu ghi lỗi, khôi phục cả dữ liệu game lẫn cooldown, không dừng phiên đang chơi.
-7. Khi ghi thành công, dừng auto-roll/timer tạm thời rồi `location.reload()`. Các chốt bảo vệ autosave, `pagehide` và thay đổi trạng thái hiển thị vẫn ngăn ghi đè dữ liệu vừa nhập.
-
-Giới hạn dữ liệu JSON bên trong: **10 MiB**. Giới hạn tệp/chuỗi Base64 ngoài: **32 MiB**, dành chỗ cho escape JSON và phần tăng kích thước Base64. Trận chiến đang diễn ra không được phục hồi giữa chừng vì trạng thái trận tạm thời không nằm trong các store lưu bền. Timer potion giữ nguyên thời điểm hết hạn sau chuyển máy.
-
-Save `.json` và JSON lõi cũ không được nhập trực tiếp qua giao diện mới, vì chấp nhận dữ liệu không có checksum sẽ tạo đường bỏ qua bảo vệ. Dữ liệu `localStorage` của người chơi đang có vẫn được đọc/chuyển đổi như trước; bản cập nhật không reset collection hay các hệ thống gameplay.
-
-### 1.7. Kiểm tra toàn vẹn và cooldown 7 ngày
-
-**Giới hạn bảo mật phải hiểu đúng:** Base64 không phải mã hóa và không bảo đảm tính bí mật. Tên hàm `encryptGameSave`/`decryptGameSave` giữ theo giao diện được yêu cầu, nhưng chức năng thực tế là đóng gói/mở gói có xác thực toàn vẹn. Khóa HMAC nằm trong JavaScript phía người chơi nên không có tính bí mật đối với người có thể xem/sửa mã nguồn. Hệ thống phát hiện file bị chỉnh sửa thông thường, không phải giải pháp chống gian lận tuyệt đối.
-
-Checksum sử dụng **HMAC-SHA-256** với khóa được yêu cầu:
-
-```js
-const SECRET_SALT = 'ANIME_CARD_RNG_SECURE_SECRET_KEY_2026';
-```
-
-Payload có bốn trường cố định: `format`, `version`, `data`, `checksum`. `data` là nguyên chuỗi JSON đã xuất; checksum được tính trên đúng chuỗi UTF-8 này, không parse rồi stringify lại trước khi xác minh.
-
-Khi file lỗi định dạng, thay đổi dữ liệu/checksum, thêm khoảng trắng/BOM hoặc đổi biểu diễn ngoài không đúng chuẩn, import bị từ chối và hiện alert:
-
-> Phát hiện dữ liệu đã bị chỉnh sửa trái phép!
-
-Import bị từ chối không ghi dữ liệu và không bắt đầu cooldown mới. JSON qua checksum nhưng sai cấu trúc game cũng bị từ chối; thông báo cấu trúc dữ liệu phân biệt với thông báo checksum.
-
-Hai timestamp độc lập được lưu trong `localStorage`:
-
-| Khóa | Ý nghĩa |
-|---|---|
-| `save_cooldown_export` | Thời điểm lần xuất đã giao thành công tới trình duyệt. |
-| `save_cooldown_import` | Thời điểm lần nhập đã ghi thành công trước reload. |
-
-Mỗi hành động có cooldown **7 ngày = 604.800.000 ms**. Xuất không tự khởi động cooldown nhập; nhập không tự coi là một lần xuất. Tuy nhiên, import giữ timestamp xuất từ file và giá trị lớn hơn đang có để không rút ngắn lịch sử cooldown. Timestamp nhập mới lấy giá trị lớn nhất giữa lịch sử hiện tại, lịch sử trong file và thời gian nhập hiện tại.
-
-Thao tác trong cùng tab có cờ bận; các tab cùng origin phối hợp qua Web Locks với khóa `anime_card_rng_save_transfer`. Nếu API bảo mật/khóa không có, chức năng chuyển save dừng an toàn với thông báo, không hạ xuống checksum yếu. Modal hiển thị số ngày còn lại cùng ngày/giờ/phút/giây; nút bị chặn khi đang xử lý để tránh bấm lặp.
-
-Cooldown sử dụng `Date.now()` và bộ nhớ của trình duyệt. Đổi đồng hồ, xóa/sửa localStorage, dùng browser/origin mới hoặc sửa mã phía client có thể vượt qua giới hạn này. Muốn chống gian lận và áp dụng cooldown theo tài khoản trên mọi thiết bị cần máy chủ có khóa bí mật, dữ liệu có thẩm quyền và thời gian phía máy chủ; bản game offline hiện không có các thành phần đó.
-
-## 2. Cân Bằng & Sửa Lỗi
-
-### 2.1. Các lỗi đã sửa trong những đợt mở rộng gần nhất
-
-| Hạng mục | Hành vi sau sửa |
-|---|---|
-| Weather Tower bỏ sót mutation | Đọc `mutationId` của dữ liệu thời tiết thô, hoặc đối tượng mutation đã phân giải; kiểm tra thẻ native và cả hai mutation. |
-| Dữ liệu mutation cũ | Hợp nhất `mutations`, `mutationIds`, `mutation`; mảng rỗng ở một trường không che dữ liệu ở trường khác. Giữ alias `blizzard → frost`, `sacrifice → eclipsed`. |
-| Giới hạn tầng 100 | Gỡ giới hạn khỏi tải save, tầng kế tiếp, tính chỉ số, thưởng và nhãn giao diện. Save sau tầng 100 không bị hạ xuống 100. |
-| Potion chỉ có thể rơi/mua theo cùng danh sách | Tách danh mục Tower Shop và danh sách rơi thưởng. Speed Battle Potion không thể lọt vào drop thường. |
-| Kho chỉ lưu potion | Chuyển sang bản ghi vật phẩm tổng quát, giữ vật phẩm chưa biết và thông tin tùy chỉnh. |
-| Timer qua reload | Dùng thời điểm hết hạn tuyệt đối; mở lại game không khởi động lại timer. |
-| Cấp trùng phần thưởng thành tựu | Lưu cờ nhận cùng biên nhận cấp thưởng trong save thẻ; lần thử lại dùng biên nhận để tránh cấp thêm. |
-| Thẻ thưởng thiếu passive | Hiển thị thông tin phù hợp khi `passive` là `null`, tránh lỗi ở kết quả roll và màn hình xem thẻ. |
-| Import bị autosave ghi đè | Chặn các đường ghi trạng thái cũ trong giai đoạn nhập và reload. |
-| Sửa file chuyển save | Kiểm tra HMAC trên dữ liệu, định dạng ngoài chuẩn và UTF-8/Base64 nghiêm ngặt trước khi chấp nhận import. |
-| Chuyển save liên tục hoặc bấm đồng thời | Cooldown độc lập, cờ bận và Web Locks; không cho file cũ hạ timestamp đang có. |
-| Export của game mới thiếu Tower | Chủ động ghi đủ dữ liệu các module, kể cả store Tower còn trống. |
-| File nhập lỗi hoặc ghi lỗi | File sai bị từ chối trước khi thay đổi dữ liệu; lỗi ghi được xử lý bằng khôi phục các khóa đã sao lưu. |
-
-### 2.2. Cân bằng và sửa trạng thái được kế thừa
-
-Các quy tắc dưới đây đã tồn tại trong bản game modular đầu vào và được giữ nguyên trong các đợt thêm kho tổng quát/thành tựu. Chúng không phải nerf/buff mới của đợt bảo vệ save này.
-
-| Cơ chế | Quy tắc hiện hành |
-|---|---|
-| Bleed chống hồi máu | Khi còn hiệu ứng Bleed với lượt hiệu lực dương, hàm hồi máu không tăng HP; giao diện thể hiện trạng thái chặn hồi máu. |
-| Tăng HP tối đa khi đang Bleed | HP tối đa vẫn có thể tăng theo kỹ năng, nhưng phần hồi HP đi kèm việc tăng HP tối đa bị chặn. |
-| Hồi HP sau hạ gục/hồi sinh | Các đường phục hồi HP được bảo vệ bởi kiểm tra Bleed; hồi sinh không được phục hồi HP khi Bleed còn hiệu lực. |
-| Senku | Ở nhánh hỗ trợ khi không phải người tấn công, hồi 2,5% HP tối đa cho đồng đội phù hợp; vẫn chịu giới hạn HP và luật Bleed. |
-| Meruem | Mỗi lần nhận đòn tăng một Aura, tối đa 5. Lần đầu đạt 5/5 thử hồi 5% HP tối đa một lần; nếu đang Bleed, lần thử bị chặn và không lặp vô hạn ở các đòn sau. |
-| Homura | Khi hồi máu đưa một đơn vị từ dưới 60% HP lên ít nhất 60%, chỉ Homura còn sống có passive hiệu lực tương ứng mới kích hoạt đóng băng hỗ trợ. Cờ sử dụng giới hạn một lần cho đơn vị Homura đó trong trận. |
-| Đóng băng | Hiệu ứng hỗ trợ Homura đặt 5 lượt đóng băng; bộ đếm giảm theo lượt xử lý của đơn vị chịu hiệu ứng, không được tái kích hoạt liên tục bởi mọi lần hồi máu. |
-| Level thẻ | Tăng tuyến tính 7,5% HP/ATK gốc mỗi level sau level 1; các mutation của cùng ID dùng chung level. |
-| Thua trận | Không xóa hoặc làm mất thẻ của người chơi. |
-
-### 2.3. Phạm vi thay đổi chỉ số thẻ
-
-- 100 thẻ gốc giữ nguyên định nghĩa trong đợt thêm thành tựu và thẻ thưởng.
-- 11 Champion là thẻ mới; chỉ số gốc, tỷ lệ roll và điều kiện mở khóa được công bố tại mục 3.6.
-- `passives.js`, `passives.css` và `weathers.js` được giữ nguyên trong đợt thêm achievements/JSON save.
-- Trong đợt bảo vệ save này, không chỉnh chỉ số, passive, trạng thái, tỷ lệ roll hoặc nhịp thời tiết. Thay đổi tập trung vào định dạng chuyển save, xác thực và timestamp cooldown.
-
-## 3. Thông Số & Công Thức Chi Tiết
-
-### 3.1. Quy ước tính toán
-
-- `floor(x)`: lấy phần nguyên xuống.
-- `round(x)`: làm tròn theo `Math.round` của JavaScript.
-- `clamp(x, a, b)`: giới hạn x trong đoạn từ a đến b.
-- `L`: level thẻ, bắt đầu từ 1; `u`: cấp nâng cấp trong shop, bắt đầu từ 0.
-- Chỉ số HP/ATK dưới đây là chỉ số trước các hiệu ứng passive/trạng thái phát sinh trong trận, trừ khi có ghi khác.
-
-### 3.2. RNG, Luck và cooldown roll
-
-```text
-M_Luck = (1 + 0,25 × u_Luck) × P_Lucky
-Cooldown_ms = 1.500 / [(1 + 0,15 × u_Speed) × P_Speed]
-Chance_hiệu_dụng = max(0,000001; chance_thẻ / M_Luck)
-p_thử_thẻ = min(1; 1 / Chance_hiệu_dụng)
-```
-
-`P_Lucky` bằng 1,25 khi Lucky Potion có hiệu lực, ngoài ra bằng 1. `P_Speed` bằng 1,10 khi Speed Potion có hiệu lực, ngoài ra bằng 1.
-
-Pool gồm thẻ thỏa điều kiện mở khóa và thời tiết. Game sắp xếp từ `chance` lớn xuống nhỏ, thử từng thẻ, dừng ở thẻ đầu tiên thành công; có thể không nhận được thẻ nếu mọi lần thử đều trượt. Vì vậy, nhãn “1 trên N” là tỷ lệ thử của thẻ, không phải xác suất cuối cùng của một bảng trọng số đã chuẩn hóa.
-
-Với thứ tự pool cố định, xác suất thực nhận thẻ i là:
-
-```text
-p_nhận_i = p_thử_i × tích(1 - p_thử_j) với tất cả j đứng trước i
-```
-
-Cooldown được khóa trước khi xử lý kết quả. Auto-roll dùng vòng lặp toàn cục và callback hết cooldown, không thêm một interval roll riêng. Mỗi lượt thực hiện tăng tổng roll một lần; roll không tự cấp VNĐ ngay.
-
-### 3.3. Thời tiết và mutation
-
-| Thông số | Giá trị |
-|---|---:|
-| Đồng hồ game | 1 giây thực = 1 giây game |
-| Nhịp vòng lặp toàn cục | 1.000 ms |
-| Khoảng xét sinh thời tiết | 300 giây |
-| Thời gian hiệu lực thời tiết | 600 giây |
-| Tỷ lệ sinh thời tiết đặc biệt khi xét | 55% |
-| Tỷ trọng nhóm phổ biến khi đã sinh thời tiết | 65% |
-| Tỷ trọng nhóm trung bình khi đã sinh thời tiết | 25% |
-| Tỷ trọng nhóm hiếm khi đã sinh thời tiết | 10% |
-| Tỷ lệ thử mutation sau khi roll được thẻ | 6,5%, khi có thời tiết đặc biệt đang hoạt động |
-| Tỷ lệ mutation thứ hai sau lần đầu thành công | 10%, khi có ít nhất hai thời tiết khác nhau |
-| Tỷ lệ mutation đôi trên một lần roll trúng thẻ, đủ điều kiện | 6,5% × 10% = 0,65% |
-| Số mutation tối đa mỗi lần roll | 2 |
-
-Thời tiết có thể tồn tại đồng thời. Khi không có thời tiết đặc biệt, roll không tạo mutation từ cơ chế thời tiết này.
-
-| Weather Tower / thời tiết | Mutation | Hệ số HP/ATK |
-|---|---|---:|
-| Raining | Wet | 1,50 |
-| Snowing | Frost | 1,75 |
-| Sunny | Solar | 1,60 |
-| Sugar | Sweat | 1,45 |
-| Reaper | Hollow | 3,00 |
-| Eclipse | Eclipsed | 2,00 |
-| Malevolent | Cursed | 3,25 |
-| Tsukuyomi | Mangekyo | 2,80 |
-| Heavenly | Angelic | 2,60 |
-| Shadow | Monarch | 2,40 |
-
-Mutation đôi nhân các hệ số với nhau. Ví dụ Wet + Solar có hệ số 1,50 × 1,60 = **2,40**.
-
-Weather Tower chấp nhận thẻ có `requiredWeather`, `requiredWeathers` hoặc `nativeWeather` phù hợp, hoặc biến thể sở hữu chứa mutation phù hợp. Normal Tower chấp nhận mọi thẻ còn bản sao sở hữu. Bộ chọn đội vẫn kiểm tra số bản sao, không cho dùng nhiều hơn số lượng đang có.
-
-### 3.4. Level, EXP và giá trị salvage
-
-```text
-M_Level = 1 + 0,075 × (L - 1)
-HP_hiển_thị = round(HP_gốc × M_Mutation × M_Level)
-ATK_hiển_thị = round(ATK_gốc × M_Mutation × M_Level)
-EXP_cần = max(1; floor(100 × R × L))
-```
-
-Level tối đa là **999**. Mức tăng 7,5% là tuyến tính theo chỉ số gốc, không phải nhân lãi kép 1,075 mỗi level.
-
-| Rarity nội bộ | Hệ số R cho EXP |
-|---|---:|
-| Common | 1 |
-| Rare | 1,6 |
-| Epic | 2,4 |
-| Legendary | 3,6 |
-| Mythic | 5,2 |
-| Secret | 8 |
-
-```text
-EXP_roll_mới = max(1; floor(8 × R × M_Mutation × M_EXP))
-EXP_roll_trùng = max(1; floor(EXP_cần_hiện_tại × 0,50 × P_EXP))
-Giá_trị_gốc_thẻ = floor(10 × chance_thẻ^0,45)
-Salvage_mỗi_bản = floor(Giá_trị_gốc_thẻ × M_Mutation)
-VNĐ_salvage = floor[(Salvage_mỗi_bản × số_bản_thực_xóa) × M_VNĐ]
-```
-
-EXP roll trùng đọc trực tiếp hệ số EXP Potion; không nhân thêm toàn bộ hệ số nâng cấp EXP. Level thẻ không tăng giá trị salvage trong công thức hiện hành.
-
-### 3.5. Tower vô hạn, đối thủ và Tower Coins
-
-Gọi F là tầng cần đánh, sau khi làm tròn xuống và giới hạn tối thiểu 1. Hệ số tinh nhuệ E bằng 1,18 nếu F chia hết cho 10, ngoài ra bằng 1.
-
-```text
-HP_lính(F) = max(1; round(100 × 1,055^(F - 1) × E))
-ATK_lính(F) = max(1; round(10 × 1,05^(F - 1) × E))
-HP_trùm(F) = max(1; round(500 × 1,055^(F - 1) × E))
-ATK_trùm(F) = max(1; round(50 × 1,05^(F - 1) × E))
-```
-
-- HP nền tăng lãi kép 5,5% mỗi tầng; ATK nền tăng lãi kép 5% mỗi tầng.
-- Chỉ số Tower lấy từ tầng, không lấy sức mạnh đội người chơi làm nền.
-- Tầng thường ưu tiên lính đến Legendary và trùm từ Legendary; tầng tinh nhuệ ưu tiên Mythic/Secret, có pool dự phòng khi thiếu thẻ.
-- Trong Weather Tower, khi pool đủ điều kiện có thẻ native phù hợp, 75% lượt chọn ưu tiên pool đó. Phần chọn từ pool nền vẫn có thể chọn thẻ phù hợp; đây không phải bảo đảm chính xác 75% đội hình thuộc thời tiết.
-- Mutation thời tiết của đối thủ Tower được thử với xác suất 75% cho từng vị trí.
-- Tầng sau một tầng tinh nhuệ có thể có chỉ số thấp hơn tầng tinh nhuệ trước đó do mất bonus 18%, dù nền lãi kép vẫn tăng.
-- Không có tầng kết thúc được thiết kế. Để tránh tràn số JavaScript, phép tính chỉ số có chặn số học ở `Number.MAX_VALUE / 1024`; đây là giới hạn biểu diễn số, không phải mốc kết thúc Tower.
-
-Thưởng Tower Coins:
-
-```text
-B = floor((F - 1) / 6)
-A = 10 + floor(F / 10) nếu F là tầng tinh nhuệ; ngoài ra A = 0
-Xu_tối_thiểu = 3 + B + A
-Xu_tối_đa = 5 + B + A
-```
-
-Game chọn ngẫu nhiên một số nguyên trong khoảng trên cho lần vượt tầng hợp lệ. Ví dụ tầng 1 thưởng 3–5 xu, tầng 10 thưởng 15–17 xu, tầng 100 thưởng 39–41 xu. VNĐ/EXP chiến đấu được tính riêng, không thay thế Tower Coins.
-
-### 3.6. Thông số 11 thẻ Champion
-
-Các giá trị là ở level 1, bản Normal, trước hiệu ứng trận đấu. Tất cả có rarity nội bộ `Secret`, không có passive bổ sung và không yêu cầu thời tiết đang hoạt động để roll sau mở khóa.
-
-| Tower | Thẻ thưởng | HP gốc | ATK gốc | Tỷ lệ thử nền khi đã mở khóa |
-|---|---|---:|---:|---:|
-| Normal | Naruto • Tower Champion | 12.000 | 1.800 | 1 trên 500.000 |
-| Raining | Aquaman • Storm Champion | 12.800 | 1.920 | 1 trên 550.000 |
-| Snowing | Toshiro • Frost Champion | 13.600 | 2.040 | 1 trên 600.000 |
-| Sunny | Solar Deity • Sun Champion | 14.400 | 2.160 | 1 trên 650.000 |
-| Sugar | Android 21 • Sugar Champion | 15.200 | 2.280 | 1 trên 700.000 |
-| Reaper | Hollow • Reaper Champion | 16.000 | 2.400 | 1 trên 750.000 |
-| Eclipse | Eclipse Harvester • Eclipse Champion | 16.800 | 2.520 | 1 trên 800.000 |
-| Malevolent | Malevolent King • Cursed Champion | 17.600 | 2.640 | 1 trên 850.000 |
-| Tsukuyomi | Tsukuyomi Eye • Moon Champion | 18.400 | 2.760 | 1 trên 900.000 |
-| Heavenly | Heavenly Seraph • Light Champion | 19.200 | 2.880 | 1 trên 950.000 |
-| Shadow | Shadow Monarch • Shadow Champion | 20.000 | 3.000 | 1 trên 1.000.000 |
-
-Với chỉ số thứ tự i từ 0 đến 10 theo bảng:
-
-```text
-HP_gốc = 12.000 + 800 × i
-ATK_gốc = 1.800 + 120 × i
-chance = 500.000 + 50.000 × i
-```
-
-Cấp thẻ tự động không cần roll trúng tỷ lệ trên. Tỷ lệ chỉ áp dụng cho các lần gacha sau khi mở khóa, cùng hệ số Luck và quy tắc thử tuần tự ở mục 3.2.
-
-### 3.7. Potion, timer và tỷ lệ rơi thưởng
-
-| Vật phẩm | Tác dụng khi hoạt động | Thời gian mỗi chai | Giá Tower Shop | Nguồn rơi từ thắng trận |
-|---|---|---:|---:|---|
-| Lucky Potion | Nhân Luck 1,25 | 600 giây | 25 Tower Coins | Có |
-| Speed Potion | Nhân tốc độ roll 1,10; cooldown chia 1,10 | 600 giây | 25 Tower Coins | Có |
-| Rich Potion | Nhân hệ số VNĐ 1,25 | 600 giây | 25 Tower Coins | Có |
-| EXP Potion | Nhân hệ số EXP 1,25 | 600 giây | 25 Tower Coins | Có |
-| Speed Battle Potion | Lượt combat từ 3 giây xuống 1 giây, áp dụng Arena và Tower | 600 giây | 100 Tower Coins | Không; độc quyền Tower Shop |
-
-```text
-Thời_điểm_hết_hạn_mới = max(thời_gian_hiện_tại; thời_điểm_hết_hạn_cũ) + 600.000 ms
-```
-
-Dùng thêm chai cùng loại kéo dài timer; không cộng dồn thêm phần trăm buff. Timer dùng thời gian thực tuyệt đối, tiếp tục hết hạn khi đóng game. Speed Battle Potion không thay đổi tốc độ roll. Sau hết hiệu lực, lượt combat được lên lịch tiếp theo dùng nhịp gốc 3 giây.
-
-Gọi m là số lần thắng liên tiếp không rơi potion, lưu tối đa 10; D là chỉ số Drop Chance, đơn vị điểm phần trăm, giới hạn từ 0 đến 20:
-
-```text
-p_rơi = min(0,30; 0,10 + 0,02 × m + clamp(D, 0, 20) / 100)
-```
-
-- Khi D = 0, cơ hội bắt đầu ở 10%, tăng 2 điểm phần trăm sau mỗi lần thắng không rơi và đạt trần 30% ở m = 10.
-- Khi rơi, chọn đều một trong bốn potion thường: mỗi loại có xác suất 25% có điều kiện trên việc đã rơi; cấp một chai và đưa m về 0.
-- Speed Battle Potion không nằm trong danh sách này. Vật phẩm mới đăng ký cũng không tự được thêm vào.
-- D và m là đầu vào của xác suất rơi; hệ số VNĐ/EXP hoặc bonus thưởng passive không trực tiếp nhân xác suất rơi potion.
-
-### 3.8. Công thức nâng cấp
-
-```text
-M_EXP = (1 + 0,12 × u_EXP + 0,03 × u_EXP^1,15) × P_EXP
-M_VNĐ = (1 + 0,15 × u_VNĐ + 0,02 × u_VNĐ^1,20) × P_Rich
-```
-
-`P_EXP` và `P_Rich` bằng 1,25 khi potion tương ứng có hiệu lực, ngoài ra bằng 1.
-
-| Nâng cấp | Giá mua cấp kế tiếp tại cấp hiện tại u | Cấp tối đa |
-|---|---|---:|
-| Roll Speed | `floor(100 × 1,65^u)` | 20 |
-| Luck | `floor(250 × 1,65^u)` | 500 |
-| Hệ số EXP | `min(Number.MAX_SAFE_INTEGER; floor(2.500 × 1,40^u))` | 100 |
-| Hệ số VNĐ | `min(Number.MAX_SAFE_INTEGER; floor(4.000 × 1,45^u))` | 100 |
-
-Các giá trên là VNĐ, không phải Tower Coins.
-
-### 3.9. Combat và phần thưởng chiến đấu
-
-- Lượt combat gốc: 3.000 ms; khi Speed Battle Potion còn hiệu lực: 1.000 ms.
-- Sức mạnh đơn vị: `round(HP_tối_đa + 2 × ATK)`; sức mạnh đội là tổng sức mạnh các đơn vị.
-- Arena 1v1 dùng tỷ lệ mục tiêu sức mạnh từ 0,92 đến 1,22; hệ số giới hạn scale của đối thủ là 0,78–1,32.
-- Arena 4v4 dùng tỷ lệ mục tiêu từ 0,85 đến 1,30. Đây là đầu vào tạo đối thủ, không bảo đảm thắng hoặc bảo đảm tỷ lệ cuối sau mọi passive.
-- Level đối thủ Arena được chọn từ level người chơi, tỷ lệ mục tiêu và nhiễu ngẫu nhiên 0,92–1,08, rồi làm tròn/giới hạn trong 1–999.
-- Trong Arena thường, khi có thời tiết đặc biệt, xác suất thử mutation đối thủ là 70%.
-
-Gọi t là thời gian trận tính bằng giây, V là tổng giá trị salvage của các thẻ đối thủ không phải clone, Lp/Le là level trung bình ban đầu của hai đội:
-
-```text
-M_Thời_gian = 1 + min(0,02 × t; 0,50)
-M_Chênh_level = clamp(Le / Lp; 0,50; 1,50)
-VNĐ_nền = floor(V × M_Thời_gian × M_Chênh_level)
-VNĐ_trước_bonus_passive = floor(VNĐ_nền × M_VNĐ)
-EXP_nền = max(1; floor(100 × min(1,50; M_Thời_gian)))
-EXP_trước_bonus_passive = floor(EXP_nền × M_EXP)
-Bonus_thời_gian_% = round((M_Thời_gian - 1) × 100)
-Tăng_D_nền = làm_tròn_2_chữ_số(min(5; 0,50 + 0,02 × Bonus_thời_gian_%))
-```
-
-Bonus thời gian đạt tối đa 50% ở 25 giây. Trong công thức hiện tại, `Tăng_D_nền` nằm trong khoảng 0,50–1,50 điểm phần trăm. Khi thắng, D được cộng giá trị nền này rồi giới hạn tối đa 20. Bộ đếm potion không tăng khi thua. Passive có thể điều chỉnh phần thưởng VNĐ/EXP thông qua bước xử lý thưởng riêng.
-
-Các hằng số cũ ghi “base cash” hay “base XP” cho 1v1/4v4 không phải nguồn quyết định khoản thưởng cố định trong hàm thưởng hiện hành; công thức ở trên mới là đường thực thi đang dùng.
-
-### 3.10. Thưởng thành tựu
-
-Gọi N là ngưỡng thành tựu:
-
-| Nhóm mốc thường | VNĐ cấp khi nhận |
-|---|---:|
-| Collection | `100 × N` |
-| Số trận thắng | `500 × N` |
-| VNĐ | `max(100; floor(0,05 × N))` |
-| Tổng lượt roll | `N` |
-| Tầng Tower sâu nhất | `100 × N` |
-
-Ví dụ: collection 25 thưởng 2.500 VNĐ; trận thắng đầu tiên thưởng 500 VNĐ; mốc VNĐ 1K thưởng 100 VNĐ; mốc VNĐ 100T thưởng 5T VNĐ.
-
-Khoản thưởng thành tựu được cộng trực tiếp theo bảng, không nhân hệ số nâng cấp VNĐ hoặc Rich Potion. Thẻ Champion tự động là phần thưởng riêng của từng Tower, không thay thế mốc thưởng VNĐ “Tower tầng 100” nhận thủ công.
-
-### 3.11. Công thức bảo vệ save và cooldown
-
-```text
-K = UTF8(SECRET_SALT)
-D = UTF8(chuỗi_JSON_gói_game)
-checksum = hex_chữ_thường(HMAC_SHA256(K, D))
-payload = JSON_canonical({format, version, data, checksum})
-nội_dung_acrsave = Base64(UTF8(payload))
-```
-
-Checksum dài **64 ký tự hex**, tương ứng **256 bit**. Định dạng ngoài có `format = "anime-card-rng-protected-save"`, `version = 1`; định dạng JSON game bên trong vẫn là `anime-card-rng-save`, phiên bản gói 1. Đây là HMAC với khóa, không phải phép cộng ký tự hay checksum không có khóa.
-
-Gọi T là timestamp hành động, t là `Date.now()`:
-
-```text
-Cooldown = 7 × 24 × 60 × 60 × 1.000 = 604.800.000 ms
-Còn_lại = max(0; T + Cooldown - t), nếu T > 0
-Còn_lại = 0, nếu chưa có timestamp hoặc T = 0
-Số_ngày_còn = Còn_lại / 86.400.000
-```
-
-Số ngày trên alert dùng tối đa tám chữ số thập phân; phần ngày/giờ/phút/giây làm tròn lên đến giây để không hiển thị đã sẵn sàng khi còn một phần giây. Đúng tại `t = T + Cooldown`, thao tác được phép. Timestamp sai định dạng bị chặn, không tự đặt về 0. Timestamp tương lai làm thời gian chờ kéo dài đến đủ bảy ngày sau timestamp đó.
-
-```text
-T_export_sau_nhập = max(T_export_hiện_tại; T_export_trong_file)
-T_import_sau_nhập = max(T_import_hiện_tại; T_import_trong_file; t_nhập)
-```
-
-File xuất mang timestamp của lần xuất đó trong phần dữ liệu được xác thực. Vì vậy, chuyển sang thiết bị khác không chủ động xóa lịch sử xuất có trong file. Lịch sử trong một bản backup cũ không thể ghi nhận các thao tác diễn ra sau thời điểm tạo backup; không có máy chủ thì không thể ngăn tuyệt đối việc dùng lại backup trên trình duyệt mới.
-
-## 4. Cấu Trúc Module & File
-
-### 4.1. Cây file sản xuất
-
-Tất cả file sau nằm cùng cấp trong thư mục game:
-
-```text
-Thư mục game/
-    index.html
-    styles.css
-    passives.css
-    app.js
-    inventory.js
-    tower.js
-    achievements.js
-    cards.js
-    passives.js
-    weathers.js
-    README.md
-```
-
-| File | Trách nhiệm |
-|---|---|
-| `index.html` | Bố cục, thanh điều hướng, các modal và thứ tự nạp script. |
-| `styles.css` | Giao diện chung, thẻ, mutation, battle, responsive, kho vật phẩm, thành tựu và chuyển save. |
-| `passives.css` | Trình bày trạng thái, badge và thông tin passive. |
-| `app.js` | Điều phối RNG, đồng hồ/thời tiết, kho thẻ, level/EXP, UI, chiến đấu, cấp thưởng, gói save/HMAC/Base64, kiểm tra cooldown, khóa chuyển save và import có khôi phục khi lỗi. |
-| `inventory.js` | Định nghĩa và lưu vật phẩm, chuyển đổi save cũ, stack, tiêu thụ potion, buff/timer, drop potion và giao diện kho. |
-| `tower.js` | Tiến độ từng Tower, lọc thời tiết, tạo đối thủ, chỉ số theo tầng, Tower Coins, danh mục cửa hàng và thông tin yêu cầu thưởng. |
-| `achievements.js` | Định nghĩa mốc, theo dõi tiến độ, lưu cờ nhận/mở khóa, xử lý nhận thưởng và giao diện thành tựu. |
-| `cards.js` | Cơ sở dữ liệu 111 thẻ, thông số/tỷ lệ/ảnh, điều kiện thời tiết và cấu hình 11 thẻ thưởng Tower. |
-| `passives.js` | Runtime passive, trạng thái, hồi máu, hồi sinh, hook chiến đấu và điều chỉnh thưởng theo passive. |
-| `weathers.js` | Cấu hình nhịp thời tiết, nhóm xác suất, mutation, hệ số và alias. |
-| `README.md` | Nhật ký cập nhật, thông số, công thức và tài liệu cấu trúc bằng tiếng Việt. |
-
-Thứ tự nạp script hiện hành:
-
-1. `weathers.js`
-2. `cards.js`
-3. `passives.js`
-4. `inventory.js`
-5. `tower.js`
-6. `achievements.js`
-7. `app.js`
-
-Game sử dụng JavaScript thuần và không yêu cầu bước build. Có thể mở `index.html` trong trình duyệt. Đường dẫn ảnh nguồn được giữ nguyên; nếu ảnh không có hoặc tải thất bại, game dùng cơ chế hình dự phòng. Các thẻ Champion dùng ảnh nguồn hiện có, không kèm bộ ảnh mới trong bản mở rộng.
-
-### 4.2. Các store lưu dữ liệu
-
-| Khóa `localStorage` | Phiên bản dữ liệu hiện hành | Nội dung |
-|---|---:|---|
-| `anime_card_rng_save_v1` | `schemaVersion: 7` | Roll, VNĐ, EXP, collection, mutation, kho biến thể, level, trang bị, nâng cấp, thời tiết và biên nhận thưởng thành tựu. |
-| `anime_card_rng_items_v1` | `version: 2` | Vật phẩm, số lượng, metadata, thời điểm hết hạn buff và số lần thắng chưa rơi potion. |
-| `anime_card_rng_tower_v1` | `version: 1` | Tower Coins, tầng đã vượt từng loại và tổng lượt vượt tầng hợp lệ. |
-| `anime_card_rng_achievements_v1` | `version: 1` | Thống kê thành tựu, tiến độ Tower, cờ nhận và yêu cầu mở khóa vĩnh viễn. |
-| `save_cooldown_export` | Timestamp mili giây | Lịch sử xuất; được kèm trong save bảo vệ khi có. |
-| `save_cooldown_import` | Timestamp mili giây | Lịch sử nhập; được bảo toàn/hợp nhất khi chuyển save. |
-
-Khóa tương thích cũ: `animeCardRngSave_v1`. Đuôi `_v1` trong tên khóa không có nghĩa phiên bản cấu trúc bên trong vẫn là 1.
-
-Dữ liệu localStorage phụ thuộc trình duyệt và origin; hành vi với đường dẫn `file://` cũng phụ thuộc trình duyệt. Dùng xuất/nhập `.acrsave` để chuyển máy hoặc chuyển origin thay vì kỳ vọng save tự đi theo file HTML.
-
-### 4.3. Chính sách bảo trì và đầu ra sạch
-
-- Sau mỗi lần thêm tính năng, sửa cân bằng hoặc sửa lỗi, cập nhật README tiếng Việt với hành vi thực tế, thông số, công thức và module liên quan.
-- Phân biệt rõ thay đổi mới, cơ chế kế thừa và việc chỉ sửa tài liệu; không mô tả một hằng số chưa được dùng như hành vi gameplay.
-- Giữ logic vật phẩm trong `inventory.js`, Tower trong `tower.js`, thành tựu trong `achievements.js`; không dồn các hệ thống này vào `app.js`.
-- Bản phát hành đầy đủ theo quy ước mới chỉ gồm 11 file sản xuất ở mục 4.1. Không kèm script kiểm thử, runner `.cjs`, báo cáo xác minh, log hoặc file tạm.
-- Những kiểm tra phát hành đã thực hiện gồm cú pháp module, giao diện desktop/mobile, RNG/auto-roll, lọc Weather Tower, thưởng tầng 100, chống nhận trùng, xác thực file .acrsave, mốc cooldown 7 ngày, rollback lỗi ghi và chuyển save ở phiên trình duyệt riêng. Đây là các kịch bản kiểm tra đại diện, không phải bảo đảm đã thử mọi tổ hợp passive hoặc chơi thủ công mọi tầng.
-- Bản cập nhật hiện tại gồm 10 file nguồn và README này, tổng cộng 11 file sản xuất. Không đưa script kiểm thử, log hoặc file trung gian vào ZIP; lớp bảo vệ save không thay đổi phân tách module gameplay.
+| ui_click.mp3 | Bấm nút / điều khiển |
+| tab_switch.mp3 | Chuyển tab, mode, slot, trang |
+| card_select.mp3 | Chọn thẻ |
+| card_equip.mp3 | Gán thẻ vào slot |
+| mutation_change.mp3 | Đổi / lọc mutation |
+| modal_open.mp3 | Mở chế độ hoặc xác nhận |
+| modal_close.mp3 | Đóng chế độ hoặc xác nhận |
+| countdown.mp3 | Mỗi nhịp đếm ngược 3–2–1 |
+| match_start.mp3 | Bắt đầu trận |
+| wall_bounce.mp3 | Va tường / nạp Energy |
+| collision_light.mp3 | Va cầu nhẹ |
+| collision_heavy.mp3 | Va mạnh hoặc sát thương lớn |
+| critical_hit.mp3 | Chí mạng |
+| skill_cast.mp3 | Kỹ năng / Energy / AoE |
+| passive_trigger.mp3 | Kích hoạt nội tại |
+| shield_hit.mp3 | Khiên hấp thụ đòn |
+| shield_break.mp3 | Vỡ khiên |
+| heal.mp3 | HP thực sự được hồi |
+| dodge.mp3 | Né đòn |
+| status_apply.mp3 | Hiệu ứng trạng thái |
+| knockout.mp3 | Loại đơn vị |
+| victory.mp3 | Thắng |
+| defeat.mp3 | Thua |
+| draw.mp3 | Hòa |
+
+Không kèm MP3, font hoặc ảnh. Chuỗi fallback font: `assets/fonts/RobloxPixel.ttf`, `RobloxPixel.otf`, `RobloxPixel.woff2`. Chỉ cần đặt OTF bạn đã gửi vào `assets/fonts/RobloxPixel.otf`, đúng hoa thường.
+
+## 5. Kiểm thử và checklist toàn bộ thẻ
+
+Đã đối chiếu **247/247** card có passive trong dữ liệu, **247/247** đăng ký và phân loại hook; không thiếu ID/phân loại. Bảng dưới đây được tạo từ kết quả chạy thực tế.
+
+- **741 ca chạy** (3 ca/thẻ): Duel 1v1; Squad 4v4, mỗi ca tối đa 25 giây giả lập hoặc kết thúc sớm; ca hook điều khiển gồm vào trận, tối đa 24 chuỗi đòn, lượt riêng, giảm HP, đòn chí tử và kill. Sử dụng seed cố định. Kiểm tra trạng thái, HP/ATK/Max HP/Shield/Energy hữu hạn, dữ liệu tooltip và nhãn bộ đếm.
+- Kết quả: **741/741 ca hoàn thành**, không ghi nhận lỗi JavaScript, trạng thái không hữu hạn hoặc nhãn/bộ đếm lỗi trong các ca này.
+- Kiểm thử riêng: hai nhánh Equinox; Kuuga đủ 3 form trong cùng tick; Demon Asta; Son Goku 10 hit; Quake 2 địch; Grimmjaw/Cid 4 địch; Pennywise/Kaguya; Gumball 9 lần sống sót; Time Rewind; các timer Broly/Beast Titan/Piccolo/Diane; heal & shield break. Kiểm tra Bleed chặn hồi máu, Poison/Bleed hết đúng giờ, tooltip giữ node, thưởng 0–5 Gems và không trả hai lần. Auto Chess native và worker cho cùng kết quả trong trận hồi quy có cả 3 kiểu AoE.
+- Kiểm thử UI bằng font OTF thật ở 1440×900, 1280×720, 1024×768, 390×844, 320×640 và 844×390. 10 card mẫu / 30 variant hiện 10 ô. Kiểm tra chọn mutation, chống gán trùng bản sao, meter, tooltip và audio. Thử thiếu toàn bộ 24 MP3: mỗi file chỉ được yêu cầu một lần; mute/volume lưu, không lỗi JS. Các cue âm thanh còn được kiểm tra bằng đối tượng Audio giả lập; chưa có MP3 thật để kiểm tra âm sắc.
+- **Cách đọc bảng:** “Đạt 3/3; giữ logic” = khớp registry, vượt qua 3 ca kiểm tra trạng thái/HUD, chưa phát hiện lỗi cần sửa riêng ở thẻ đó. “Đã sửa” = có thay đổi native hoặc badge/đường hook cụ thể, sau đó cũng đạt 3/3. Tất cả thẻ hưởng HUD passive dùng chung. Số đòn là đếm native cao nhất ghi nhận trong từng ca Duel / Squad / Hook; thẻ tự hy sinh có thể bằng 0.
+- Các ca có seed và sự kiện chủ động bao phủ nhiều nhánh thực tế, nhưng không chứng minh mọi tổ hợp RNG, Relic, mutation, cấp độ, passive sao chép. Không khẳng định đã xác minh tuyệt đối mọi nhánh ngẫu nhiên hiếm chưa chạy.
+
+| # | Thẻ (ID gốc) | Passive | Đòn Duel / Squad / Hook | Kết quả kiểm tra riêng |
+|---:|---|---|---:|---|
+| 1 | Naruto Kid (starter-common) | First Strike | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 2 | Normal Demon (normal-demon) | Lifesteal | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 3 | Sasuke Kid (sasuke-kid) | Chidori | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 4 | Powerless Guy (deku-mc) | What can i get you sir | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 5 | Ichigo Young (starter-rare) | Afterimage | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 6 | Gon Kid (gon-kid) | Rock | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 7 | Tanjiro (tanjiro) | Rock | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 8 | Luffy Kid (starter-epic) | GOMU NO MU NO PISTOL | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 9 | Six Seven (six-seven) | SIX SEVEN | 5 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 10 | Kaneki (kaneki-ghoul) | GHOUL | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 11 | The Trapper (the-trapper) | Trap | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 12 | Nezuko (nezuko) | Bleed | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 13 | Buggy (buggy) | Chop Chop | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 14 | Bounty Hunter (bounty-hunter) | BOUNTY | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 15 | Jotaro Kujo (jotaro-kujo) | Ora Ora | 27 / 36 / 50 | Đạt 3/3; giữ logic. |
+| 16 | Hakari (hakari) | Lucky Train | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 17 | Saber (saber) | EXCALIBUR!!! | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 18 | Jonathan Joestar (jonathan-joestar) | HAMONNN | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 19 | Son Goku (starter-legendary) | Kamehameha | 8 / 16 / 9 | Đã sửa, đạt 3/3: Kamehameha thành 10 hit x10% ATK vào đòn thứ 5. |
+| 20 | Vegeta (vegeta) | Super Vegeta | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 21 | Kakashi (kakashi) | Kamui | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 22 | Kamen Rider Kuuga (kr-kuuga) | KUUGA | 8 / 16 / 23 | Đã sửa, đạt 3/3: Đổi form theo đòn chính, kể cả nhiều va chạm cùng tick. |
+| 23 | Bulma (bulma) | WISH | 8 / 16 / 24 | Đã sửa, đạt 3/3: Buff chỉ áp dụng ở lượt đồng minh. |
+| 24 | Denji (denji) | POCHITA | 11 / 19 / 38 | Đạt 3/3; giữ logic. |
+| 25 | Uchiha Itachi (uchiha-itachi) | Amaterasu | 11 / 19 / 35 | Đạt 3/3; giữ logic. |
+| 26 | Madness Doctor (madness-doctor) | Madness | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 27 | Erza (erza) | MAGIC ARMOR | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 28 | Yuji Itadori (yuji-itadori) | BLACK FLASH | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 29 | Guts (guts) | OUTRAGE | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 30 | Polnareff (polnareff) | SILVER CHARIOT | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 31 | The Flash (the-flash) | FLASH | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 32 | Rimuru (rimuru) | SLIME | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 33 | The Truth (starter-secret) | Omniscience | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 34 | Viltrumite (viltrumite) | PUNCH | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 35 | Mahito (mahito) | Idle Transfiguration | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 36 | BlackBeard (blackbeard) | Liberation | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 37 | Garp (garp) | Fist of Love | 8 / 15 / 23 | Đạt 3/3; giữ logic. |
+| 38 | Erwin (erwin) | CAPTAIN | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 39 | Boa Hancock (boa-hancock) | Mero Mero | 6 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 40 | Senku (senku) | Chemistry | 8 / 16 / 23 | Đã sửa, đạt 3/3: Chỉ hồi đội ở lượt đồng minh. |
+| 41 | Grimmjaw (grimmjaw) | Gran Rey Cero | 8 / 16 / 23 | Đã sửa, đạt 3/3: Đòn thứ 5 x2 toàn bộ địch, không đánh trùng. |
+| 42 | Reigen (reigen) | Scam | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 43 | Kamen Rider Kabuto (kamen-rider-kabuto) | CLOCK UP | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 44 | Meruem (meruem) | Aura Synthesis | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 45 | Frieza (frieza) | Telekinesis | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 46 | Adam Francis (adam-francis) | Champion of Light | 8 / 18 / 23 | Đạt 3/3; giữ logic. |
+| 47 | Katakuri (katakuri) | MOCHI | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 48 | WhiteBeard (whitebeard) | Quake Hermit | 6 / 14 / 23 | Đã sửa, đạt 3/3: Quake đánh đúng 2 mục tiêu gần, không đếm thêm đòn. |
+| 49 | Doppio (doppio) | FROG | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 50 | Shanks (shanks) | HAKI | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 51 | Metal Cooler (metal-cooler) | CLONE | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 52 | Gohan (gohan) | MASENKO | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 53 | Yuno (yuno) | Zephyr Bow | 8 / 23 / 30 | Đạt 3/3; giữ logic. |
+| 54 | Asta (asta) | ANTI MAGIC | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 55 | Demon Asta (asta-demon) | ANTI MAGIC BOOK | 8 / 16 / 23 | Đã sửa, đạt 3/3: Chọn mode theo mỗi đòn chính trong Ball. |
+| 56 | Nami (nami) | Greedy | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 57 | Giyu Tomioka (giyu-tomioka) | Dead Calm | 7 / 11 / 23 | Đạt 3/3; giữ logic. |
+| 58 | Sea Beast (sea-beast) | Big Fish | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 59 | Arlong (arlong) | ZAWATER | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 60 | Aquaman (aquaman) | AQUARIUM | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 61 | Noelle Silva (noelle-silva) | Tsunami Water | 8 / 16 / 23 | Đã sửa, đạt 3/3: Tsunami đánh toàn đội địch. |
+| 62 | Weather Report (weather-report) | BUBBLE CONTROL | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 63 | Piccolo (piccolo) | AURA FARMER | 8 / 16 / 23 | Đã sửa, đạt 3/3: Aura khi không đánh, một lần mỗi tick. |
+| 64 | Peashooter (peashooter) | Plant | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 65 | Hutao (hutao) | Fire Burst | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 66 | Escanor (weather-solar-deity) | SUNNY | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 67 | Builderman (builderman) | DEVELOPER | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 68 | Aatrox (aatrox) | WORLD ENDER | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 69 | Griffith (weather-eclipse-harvester) | ECLIPSED | 8 / 20 / 23 | Đạt 3/3; giữ logic. |
+| 70 | Dante Limbus (dante-limbus) | M@!L%#TH | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 71 | Adult Gon (adult-gon) | END!!! | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 72 | Rukia (rukia) | Freeze | 8 / 15 / 23 | Đạt 3/3; giữ logic. |
+| 73 | Ice Admiral (ice-admiral) | Ice Age | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 74 | Esdeath (weather-frost-sovereign) | Absolute Zero | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 75 | Toshiro (toshiro) | Absolute Zero | 8 / 13 / 23 | Đạt 3/3; giữ logic. |
+| 76 | Android 21 (android-21) | Sweet Destruction | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 77 | Yuta Okkotsu (yuta-okkotsu) | Cursed Love | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 78 | Luffy Nightmare (luffy-nightmare) | ENHANCE | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 79 | Igris (weather-shadow-monarch) | SHADOW KNIGHT | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 80 | Cid Atomic (cid-shadow) | I AM ATMOIC !!! | 8 / 16 / 20 | Đã sửa, đạt 3/3: Đòn thứ 10 x100 toàn bộ địch, không đếm thêm đòn. |
+| 81 | Enderman (enderman) | PEARL | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 82 | Homura Akemi (homura-akemi) | Time Manipulation | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 83 | Kamen Rider Decade (kr-decade) | Rider Card | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 84 | Uchiha Sasuke (uchiha-sasuke) | Storm Susano | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 85 | Light Admiral (light-admiral) | Light Speed | 8 / 15 / 9 | Đạt 3/3; giữ logic. |
+| 86 | Gojo Young (gojo-young) | Infinity | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 87 | The First Human (weather-heavenly-seraph) | Ascension | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 88 | Sailor Moon (sailor-moon) | Moon Manipulation | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 89 | Jin Mori (jin-mori) | 72 Magic Spell | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 90 | Wish (wish) | Heavenly Blessing | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 91 | Uchiha Shisui (weather-tsukuyomi-eye) | TSUKUYOMI | 8 / 14 / 23 | Đạt 3/3; giữ logic. |
+| 92 | Diavolo (diavolo) | EPITAH | 8 / 13 / 23 | Đạt 3/3; giữ logic. |
+| 93 | Kaguya (kaguya) | Dimensional Domain | 7 / 15 / 6 | Đã sửa, đạt 3/3: Domain 3 tick, khóa tấn công một chu kỳ. |
+| 94 | Vasto Lord (weather-reaper-hollow) | Last Breath | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 95 | Subaru (subaru) | Return By Death | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 96 | Dio Brando (dio-brando) | WGRYYYY | 8 / 13 / 23 | Đạt 3/3; giữ logic. |
+| 97 | Malevolent King (weather-malevolent-king) | Malevolent Kitchen | 29 / 169 / 196 | Đạt 3/3; giữ logic. |
+| 98 | Doflamingo (doflamingo) | STRING ARMY | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 99 | Hakari Jackpot (hakari-jackpot) | JACKPOT | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 100 | Mahoraga (mahoraga) | ADAPTION | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 101 | Equinox (tower-champion-normal) | Emotional Meter | 8 / 16 / 9 | Đã sửa, đạt 3/3: Emotional Meter, khóa một lần, nổ toàn đội địch, cấm hồi sinh/clone. |
+| 102 | Aqua (tower-champion-raining) | Useless | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 103 | Ice King (tower-champion-snowing) | Ice Manipulation | 7 / 21 / 24 | Đạt 3/3; giữ logic. |
+| 104 | Charizard Mega X (tower-champion-sunny) | Solar Claw | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 105 | Majin Buu (tower-champion-sugar) | Candy Eater | 8 / 16 / 9 | Đã sửa, đạt 3/3: Phạm vi các đòn đa mục tiêu của form. |
+| 106 | Aizen Beyond (tower-champion-reaper) | Illusion Shattering Flower | 8 / 16 / 24 | Đã sửa, đạt 3/3: Đòn diện toàn đội địch mỗi 2 đòn chính. |
+| 107 | Wonder Of You (tower-champion-eclipse) | Calamity | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 108 | Thukuna (tower-champion-malevolent) | Malevolent Kitchen | 8 / 16 / 23 | Đã sửa, đạt 3/3: Phạm vi Kitchen toàn đội địch. |
+| 109 | Naruto x Sasuke (tower-champion-tsukuyomi) | Datebayo | 8 / 13 / 23 | Đã sửa, đạt 3/3: Phạm vi bộc phát Sasuke toàn đội địch. |
+| 110 | The Judgement (tower-champion-heavenly) | Divine Light | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 111 | Kamen Rider Dark Decade (tower-champion-shadow) | Dark Aurora | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 112 | Mihawk (raid-secret-mihawk) | Hawkeye | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 113 | Ace (raid-secret-ace) | Mera Mera | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 114 | Marco (raid-secret-marco) | Phoenix Inferno | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 115 | Funny Valentine (funny-valentine) | D4C | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 116 | Dio The World (dio-the-world) | The World | 8 / 17 / 9 | Đạt 3/3; giữ logic. |
+| 117 | Joseph Joestar (joseph-joestar) | Secret Techniques | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 118 | Jolyne Joestar (jolyne-joestar) | Stone Free | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 119 | Tohth (tohth) | OinGo BoinGo | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 120 | Emmu (emmu) | Sleep Demon Art | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 121 | Josuke (josuke) | Crazy Diamond | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 122 | Akaza (akaza) | Destructive Demon Art | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 123 | Awakened Doflamingo (awakened-doflamingo) | Ito Ito | 8 / 15 / 23 | Đã sửa, đạt 3/3: Đòn x10 vào lượt thứ 10 đánh toàn đội địch. |
+| 124 | Prime Garp (prime-garp) | Galaxy Impact | 7 / 14 / 23 | Đạt 3/3; giữ logic. |
+| 125 | Alucard (boss-event-alucard) | Bird of Hermes | 14 / 37 / 73 | Đạt 3/3; giữ logic. |
+| 126 | Madara Lubu (madara-lubu) | Divine Steed | 4 / 29 / 36 | Đạt 3/3; giữ logic. |
+| 127 | Sung Jin Woo (sung-jin-woo) | Systems Stats | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 128 | Frieren (frieren) | Endless Mana | 5 / 13 / 23 | Đạt 3/3; giữ logic. |
+| 129 | Alexander Anderson (alexander-anderson) | Pray to God | 33 / 70 / 116 | Đạt 3/3; giữ logic. |
+| 130 | Julius (julius) | Time Grimoire | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 131 | Speed Wizard (speed-wizard) | Godspeed | 8 / 14 / 7 | Đạt 3/3; giữ logic. |
+| 132 | Lucius Zogratis (boss-event-lucius) | All Grimoire | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 133 | Sea Goddess Valkyrie (sea-goddess-valkyrie) | Ultimate Tsunami | 5 / 10 / 23 | Đạt 3/3; giữ logic. |
+| 134 | Yuno Spirit (yuno-spirit) | Spirit Wind Grimoire | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 135 | Yuno Spirit Demonic (tower-champion-lucky) | Anti Spirit Grimoire | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 136 | Xtreme Chan (tower-champion-wind) | The Fuuto Wind | 8 / 12 / 23 | Đã sửa, đạt 3/3: Guard không bị ghi đè bởi nhiều lượt địch cùng tick. |
+| 137 | Star Plantinum Requiem (tower-champion-bizare) | SPR | 10 / 25 / 17 | Đã sửa, đạt 3/3: Số lượt riêng cho hồi chiêu thanh tẩy. |
+| 138 | Shadow The World Requiem (tower-champion-shadow-200) | STWR | 8 / 20 / 26 | Đã sửa, đạt 3/3: Hồi chiêu lượt riêng và Time Rewind tạo đòn bổ sung. |
+| 139 | Reagan Ridley (tower-champion-normal-200) | Mad Scientist | 0 / 0 / 0 | Đạt 3/3; hy sinh khi va chạm đầu, nên số đòn có thể bằng 0. |
+| 140 | Shirou (shirou) | Rose Shield | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 141 | Kiritsu (kiritsu) | Hitman | 19 / 29 / 56 | Đạt 3/3; giữ logic. |
+| 142 | Mash (mash) | Shield | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 143 | Gilgamesh (gilgamesh) | King of Heros | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 144 | Cu Chalinn (cu-chalinn) | Gae Blog | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 145 | Saber Knight (saber-knight) | EXCALIBURH | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 146 | Iskandar (iskandar) | Ionian Hetairoi | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 147 | Medea (medea) | Rule Breaker | 8 / 17 / 23 | Đạt 3/3; giữ logic. |
+| 148 | Merlin (merlin) | Noble Phantasm | 8 / 14 / 23 | Đạt 3/3; giữ logic. |
+| 149 | Gilgamesh Chan (tower-champion-heavenly-200) | Enuma English | 3 / 15 / 9 | Đạt 3/3; giữ logic. |
+| 150 | The Legion (the-legion) | Frenzy | 8 / 18 / 25 | Đạt 3/3; giữ logic. |
+| 151 | The Clown (the-clown) | Potion | 8 / 16 / 33 | Đã sửa, đạt 3/3: Badge mode trống trước va chạm. |
+| 152 | The Oni (the-oni) | Cursed Blood | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 153 | Jason 13th (jason-13th) | Ki ki ma ma | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 154 | Freddy Krueger (freddy-krueger) | Nightmare | 3 / 15 / 23 | Đạt 3/3; giữ logic. |
+| 155 | Myers (myers) | Stalking | 8 / 16 / 23 | Đã sửa, đạt 3/3: Doom giảm một lần mỗi tick. |
+| 156 | Gojo Revice (gojo-revice) | Gomen Amanai | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 157 | Geto Young (geto-young) | Summon Technique | 8 / 17 / 23 | Đạt 3/3; giữ logic. |
+| 158 | Toji (toji) | Heavenly Restriction | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 159 | Jogo (jogo) | Inferno Domain | 8 / 16 / 23 | Đã sửa, đạt 3/3: Domain và đếm ngược Meteor theo thời gian toàn trận. |
+| 160 | True Mahito (true-mahito) | Heni Satsu Rei Tai | 8 / 18 / 23 | Đạt 3/3; giữ logic. |
+| 161 | Todo (todo) | Besto Friendo | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 162 | Dagon (dagon) | Water Manipulation | 8 / 14 / 23 | Đạt 3/3; giữ logic. |
+| 163 | Choso (choso) | Blood Technique | 8 / 16 / 23 | Đã sửa, đạt 3/3: Hồi chiêu phản Bleed trong trận nhiều orb. |
+| 164 | Haruta (haruta) | Coward | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 165 | Mechamaru (mechamaru) | Puppet Manipulation | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 166 | Hanami (hanami) | Flower Field | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 167 | Sukuna Shibuya (sukuna-shibuya) | FUGA x Domain | 8 / 16 / 24 | Đã sửa, đạt 3/3: Thời gian domain sau hồi sinh. |
+| 168 | Goku SSJ3 (goku-ssj3) | Dragon Combo | 12 / 19 / 14 | Đạt 3/3; giữ logic. |
+| 169 | Vegeta SSJ2 (vegeta-ssj2) | Saiyan Prince | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 170 | Broly (broly) | LEGENDARY SUPER SAIYAN | 8 / 16 / 23 | Đã sửa, đạt 3/3: Tăng ATK 1,2% hoặc 3% một lần mỗi tick. |
+| 171 | Ultimate Gohan (ultimate-gohan) | MASENKOO | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 172 | Golden Frieza (golden-frieza) | Supernova | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 173 | Pennywise (pennywise) | The Deadlights | 8 / 16 / 24 | Đã sửa, đạt 3/3: Domain giảm một lần mỗi tick toàn trận. |
+| 174 | Florentino (tower-champion-raining-200) | Flower Dance | 11 / 28 / 35 | Đạt 3/3; giữ logic. |
+| 175 | Kafka (tower-champion-sugar-200) | Manipulator | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 176 | Escanor The Indomitable (tower-champion-sunny-200) | Ultimate Divine Lance | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 177 | Yhwach Omniscience (tower-champion-reaper-200) | Auswahlen | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 178 | Ragna (boss-event-ragna) | Dragon Slayer | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 179 | Woltekamui (woltekamui) | Godlike Speed | 8 / 23 / 16 | Đạt 3/3; giữ logic. |
+| 180 | Kagurabachi (kagurabachi) | Enten | 8 / 16 / 24 | Đã sửa, đạt 3/3: Cổng hành động cho lượt chọn Enten. |
+| 181 | The Mourner (the-mourner) | The Solemn Lament | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 182 | Itachi Awakened (itachi-awakened) | Mangekyou Awakening | 9 / 12 / 12 | Đã sửa, đạt 3/3: Cổng hành động cho lượt dùng kỹ thuật. |
+| 183 | Konan (konan) | Paper Genkai | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 184 | Kisame Hoshigaki (kisame-hoshigaki) | Samehada | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 185 | Deidara (deidara) | Clay Genkai | 8 / 16 / 23 | Đã sửa, đạt 3/3: Hỗ trợ 40% khi đồng minh thực sự tấn công. |
+| 186 | Sasori (sasori) | Puppet Genkai | 8 / 16 / 23 | Đã sửa, đạt 3/3: Hồi HP Puppet một lần mỗi tick. |
+| 187 | Kakuzu (kakuzu) | Grudge Fear | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 188 | Hidan (hidan) | Undead Genkai | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 189 | Zetsu (zetsu) | White / Black | 0 / 0 / 23 | Đạt 3/3; giữ logic. |
+| 190 | Orochimaru (orochimaru) | Snake Genkai | 8 / 16 / 24 | Đã sửa, đạt 3/3: Chặn hồi sinh thẻ bị cấm hồi sinh qua cơ chế hồi đồng đội. |
+| 191 | Pain (pain) | Rinnegan | 8 / 16 / 9 | Đã sửa, đạt 3/3: Badge Rinnegan bị undefined trước va chạm. |
+| 192 | Dumb Titan (dumb-titan) | Stomp | 8 / 14 / 23 | Đạt 3/3; giữ logic. |
+| 193 | War Hammer Titan (war-hammer-titan) | Crystal Heart | 8 / 14 / 24 | Đã sửa, đạt 3/3: Hồi HP Crystal Heart một lần mỗi tick. |
+| 194 | Jaw Titan (jaw-titan) | Iron Jaw | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 195 | Armored Titan (armored-titan) | Titan Shield | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 196 | Eren (eren-rumbling) | Titan Wrath | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 197 | Beast Titan (beast-titan) | Rock Throw | 8 / 16 / 23 | Đã sửa, đạt 3/3: Tích 1–2 Rock khi không đánh, một lần mỗi tick. |
+| 198 | Michael Kaiser (michael-kaiser) | Predator Instinct | 6 / 8 / 4 | Đã sửa, đạt 3/3: Cổng hành động cho EyE và đòn chính. |
+| 199 | Isagi Yoichi (isagi-yoichi) | Metavision | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 200 | Don Lorenzo (don-lorenzo) | Ace Eater | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 201 | Meliodas (meliodas) | Hellblaze | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 202 | Ban (ban) | Snatch | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 203 | Diane (diane) | Envy Creation | 6 / 22 / 23 | Đã sửa, đạt 3/3: Chỉ tạo tối đa một clone mỗi tick toàn trận. |
+| 204 | King Harlequin (king-harlequin) | Disaster | 8 / 16 / 24 | Đạt 3/3; giữ logic. |
+| 205 | Gowther (gowther) | Puppet Invasion | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 206 | Escanor The One (escanor-the-one) | The One | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 207 | Rimuru Demon Lord (rimuru-demon-lord) | Universal Predator | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 208 | Veldora (veldora) | Storm Dragon | 5 / 13 / 9 | Đạt 3/3; giữ logic. |
+| 209 | Diablo (diablo) | Immortal Spirit | 8 / 15 / 24 | Đạt 3/3; giữ logic. |
+| 210 | Benimaru Jura (benimaru-jura) | Shimmering Flame | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 211 | Yuuki Kagurazaka (yuuki-kagurazaka) | Mammon Creator | 8 / 17 / 23 | Đạt 3/3; giữ logic. |
+| 212 | Rukia Bankai (rukia-bankai) | Hakka no Togame | 6 / 20 / 23 | Đạt 3/3; giữ logic. |
+| 213 | Ulquiorra (ulquiorra) | Resurrección Segunda Etapa | 20 / 39 / 71 | Đạt 3/3; giữ logic. |
+| 214 | Yamamoto (yamamoto) | Zanka No Tachi | 8 / 16 / 23 | Đã sửa, đạt 3/3: Cổng hành động cho các hướng kỹ thuật. |
+| 215 | Coyote Starrk (coyote-starrk) | Cero Metralleta | 6 / 37 / 37 | Đạt 3/3; giữ logic. |
+| 216 | Kisuke Urahara (kisuke-urahara) | Zanpakutō Benihime | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 217 | Normal Arrancar (normal-arrancar) | Cero | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 218 | Yoshino Junpei (yoshino-junpei) | Moon Dregs | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 219 | N Doul (n-doul) | Geb | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 220 | Oingo (oingo) | Khnum | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 221 | D Arby (d-arby) | Osiris | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 222 | Hogus Eagle (hogus-eagle) | Hogus | 9 / 14 / 23 | Đạt 3/3; giữ logic. |
+| 223 | Vanilla Ice (vanilla-ice) | Cream | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 224 | Bakugo (bakugo) | Explosion | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 225 | Askeladd (askeladd) | Sword Style | 8 / 16 / 26 | Đạt 3/3; giữ logic. |
+| 226 | Pochita (pochita) | Saw Contract | 0 / 0 / 0 | Đạt 3/3; hy sinh khi vào giao tranh, số đòn có thể bằng 0. |
+| 227 | Kon (kon) | IdontKnow | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 228 | Iggy (iggy) | The Fool | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 229 | Pikachu (pikachu) | Electric Stroke | 8 / 19 / 9 | Đạt 3/3; giữ logic. |
+| 230 | Ender Dragon (ender-dragon) | Magical Ball | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 231 | Onana (onana) | ONANA | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 232 | Zenitsu (zenitsu) | Thunderclap | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 233 | Antony MU (antony-mu) | Spinning Trick | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 234 | Tung Tung Sahur (tung-tung-sahur) | Tung Tung Bat | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 235 | Tulen (tulen) | God of Thunder | 8 / 16 / 9 | Đạt 3/3; giữ logic. |
+| 236 | Veera (veera) | Blood Chain | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 237 | Jinx (jinx) | Fishbones | 9 / 23 / 51 | Đạt 3/3; giữ logic. |
+| 238 | Ahri (ahri) | Essence Fox | 8 / 16 / 23 | Đạt 3/3; giữ logic. |
+| 239 | Krixi (krixi) | Nature Wrath | 7 / 14 / 23 | Đạt 3/3; giữ logic. |
+| 240 | Neeko (neeko) | Blooming Burst | 4 / 11 / 23 | Đạt 3/3; giữ logic. |
+| 241 | Sonic (sonic) | Aerokinesis | 24 / 58 / 28 | Đạt 3/3; giữ logic. |
+| 242 | Yasuo (yasuo) | Wanderer Way | 7 / 18 / 24 | Đạt 3/3; giữ logic. |
+| 243 | Yone (yone) | Twin Blades | 3 / 17 / 23 | Đạt 3/3; giữ logic. |
+| 244 | Finn The Human (finn-the-human) | Adventure Sword | 7 / 10 / 24 | Đạt 3/3; giữ logic. |
+| 245 | Jake The Dog (jake-the-dog) | Stretchy Magic | 8 / 29 / 23 | Đạt 3/3; giữ logic. |
+| 246 | Mordecai & Rigby (mordecai-rigby) | Regular Show | 4 / 9 / 28 | Đạt 3/3; giữ logic. |
+| 247 | Gumball (gumball) | Amazing World | 8 / 16 / 24 | Đạt 3/3; kiểm thử riêng 9 lần sống sót, đòn chí tử thứ 10 loại khỏi trận. |
+
+## 6. Danh sách tệp trong patch
+
+- `README.md` — Hướng dẫn và checklist này.
+- `akatsuki_passives.js` — Rinnegan, Puppet, hỗ trợ Deidara.
+- `autochess_combat.js` — Đồng bộ phiên bản module dùng chung trong combat worker.
+- `ball_arena.css` — Font, bố cục, thẻ, dropdown, counter, audio controls.
+- `ball_arena.js` — Vòng đời trận, countdown, audio, thoát trận, lọc sở hữu.
+- `ball_audio.js` — Mới — SoundManager, 24 MP3 và lưu cấu hình.
+- `ball_combat.js` — Trạng thái passive, hàng đợi âm thanh, popup và va chạm.
+- `ball_index.js` — Nhóm card ID, mutation, copy và Relic.
+- `ball_view.js` — HUD, meter, tooltip, canvas và audio controls.
+- `dragon_skills.js` — Đồng hồ tích ATK Broly.
+- `index.html` — Nạp SoundManager và tăng phiên bản cache.
+- `passives.js` — Equinox, passive progress, đòn AoE, hook và thời gian.
+- `requiem.js` — Lượt riêng, Time Rewind và Guard.
+- `shibuya.js` — Domain, Meteor và timer Choso/Sukuna.
+- `sins_passives.js` — Một lần tạo clone Diane mỗi tick.
+- `spatial_combat.js` — Kỹ năng native đánh toàn đội và telegraph đúng phạm vi.
+- `spooky_passives.js` — Timer Pennywise/Myers và nhãn mode.
+- `titan_passives.js` — Rock và Crystal Heart theo đồng hồ thực.
+- `turn_phase.js` — Cổng hành động cho từng va chạm.
+- `update_logs.js` — Thông báo Update 34.5.
+
+
+## 7. Cài đặt
+
+1. Sao lưu hoặc commit bản game hiện tại.
+2. Giải nén ZIP vào thư mục gốc của game (cùng cấp với `index.html`). Chọn ghi đè các file được hỏi. Tệp mới `ball_audio.js` và `README.md` phải ở đúng cấp thư mục.
+3. Giữ nguyên `assets/`. Đảm bảo font `assets/fonts/RobloxPixel.otf` đúng tên. Nếu muốn SFX, tạo `assets/audio/ball/` rồi đặt các MP3 tương ứng ở mục 4.
+4. Mở lại trang và **Ctrl + F5**. Với điện thoại, tải lại hoặc xóa cache trang nếu vẫn thấy UI cũ. Kiểm tra Update 34.5 trong Ball vs Ball và Update Logs.
+5. Chọn 1v1 Duel hoặc 4v4 Squad Brawl, mở Ball Index, chọn đúng Mutation/Copy rồi Assign. Dùng Equinox và mở đội hình trong trận để xem Emotional Meter. Thử nút SFX và thanh VOL.
+
+Bản vá không thay đổi tài khoản, Firebase, Firestore Rules hoặc assets. Giữ tất cả file khác của game.

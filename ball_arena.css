@@ -1,0 +1,369 @@
+/* Ball vs Ball — independently scoped pixel-art arena. Font files are local, optional assets. */
+@font-face {
+  font-family:"Roblox Pixel";
+  src:url("assets/fonts/RobloxPixel.ttf") format("truetype"),url("assets/fonts/RobloxPixel.otf") format("opentype"),url("assets/fonts/RobloxPixel.woff2") format("woff2");
+  font-display:swap;
+  font-weight:400;
+  ascent-override:112%;descent-override:18%;line-gap-override:0%;
+}
+#app #hubBallButton,#app #hubBallButton *,#ballArenaModal,#ballArenaModal * {
+  font-family:"Roblox Pixel","Courier New",ui-monospace,monospace;
+  -webkit-font-smoothing:none;
+  letter-spacing:0; font-synthesis:none;
+}
+#hubBallButton { color:#e7f9f3; border-color:#43857d; background:linear-gradient(145deg,#193f45,#172330); }
+#hubBallButton i { color:#8cffe2; text-shadow:0 0 12px #379d91; font-size:10px; }
+#hubBallButton small { color:#a9c7c5; }
+#ballArenaModal {
+  --ball-bg:#09101b; --ball-panel:#142134; --ball-gold:#ebc47d; --ball-cyan:#82f0dc; --ball-muted:#a6bacb; --ball-border:#43576b;
+  width:min(1520px,calc(100vw - 24px));height:min(1000px,calc(100dvh - 24px));max-width:none;max-height:none;margin:auto;padding:0;
+  background:var(--ball-bg);color:#eaf3f6;border:2px solid #485e6d;border-radius:0;box-shadow:0 0 0 3px #111b27,0 0 0 5px #2b4650,0 20px 100px #020509;
+  font-size:9.5px;line-height:1.48;overflow:hidden;box-sizing:border-box;color-scheme:dark;
+}
+#ballArenaModal[open]{display:grid;grid-template-rows:auto minmax(0,1fr);}
+#ballArenaModal::backdrop{background:rgba(3,7,13,.88);}
+body.ball-open{overflow:hidden;}
+#ballArenaModal *,#ballArenaModal *::before,#ballArenaModal *::after{box-sizing:border-box;}
+#ballArenaModal [hidden]{display:none!important;}
+#ballArenaModal h1,#ballArenaModal h2,#ballArenaModal h3,#ballArenaModal h4,#ballArenaModal p { margin:0; }
+#ballArenaModal button,#ballArenaModal input,#ballArenaModal select {
+  color:#dce9ee;background:#172638;border:1px solid #627383;border-top-color:#a0b1b6;border-bottom:3px solid #090e17;
+  padding:6px 9px;border-radius:1px;min-height:31px;font-size:9px;line-height:1.3;font-weight:700;
+  transition:background 140ms,border-color 140ms,transform 110ms;outline-offset:3px;
+}
+#ballArenaModal button{cursor:pointer;box-shadow:inset 0 1px rgba(255,255,255,.13);}
+#ballArenaModal button:hover:not(:disabled){background:#25404a;border-color:#79c6bd;color:#fff;}
+#ballArenaModal button:active:not(:disabled){transform:scale(.96);}
+#ballArenaModal button:disabled{opacity:.43;cursor:not-allowed;}
+#ballArenaModal button:focus-visible,#ballArenaModal input:focus-visible,#ballArenaModal select:focus-visible{outline:2px solid #a2ffdd;}
+#ballArenaModal .ball-primary{color:#071719;border:1px solid #b3f8e4;border-bottom:4px solid #21685e;background:linear-gradient(#a1f1d5,#47bfae);text-shadow:0 1px #b6f5e0;}
+#ballArenaModal .ball-primary:hover:not(:disabled){background:#c0ffdf;color:#071719;}
+.ball-kicker{color:#9cc7c5;font-size:8px;text-transform:uppercase;font-weight:800;letter-spacing:.05em!important;}
+.ball-header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:9px 13px;background:linear-gradient(100deg,#1a3041,#101a2b 70%);border-bottom:2px solid #527780;box-shadow:inset 0 1px rgba(255,255,255,.14);}
+.ball-brand,.ball-header-actions{display:flex;align-items:center;gap:8px;min-width:0;}
+.ball-brand>div{min-width:0;}
+.ball-brand-icon{width:35px;height:35px;flex:0 0 auto;display:grid;place-items:center;background:#0c1d27;color:var(--ball-cyan);border:2px solid #5bc8b2;box-shadow:3px 3px #070d14,inset 0 0 0 4px #183844;font-size:20px;}
+.ball-brand h1{white-space:nowrap;font-size:clamp(13px,1.6vw,21px);line-height:1.16;font-weight:900;color:#f5e8c9;text-shadow:2px 2px #081019;}
+.ball-connection-chip{font-size:8px;color:var(--ball-cyan);border:1px solid #426e6e;padding:5px 8px;background:#102b35;}
+#ballArenaModal .ball-close{font-size:17px;line-height:1;min-height:34px;width:34px;background:#392139;border-color:#a56a7b;color:#ffd7de;padding:3px;}
+.ball-main{min-height:0;overflow:auto;scrollbar-color:#506f84 #09121c;scrollbar-width:thin;background:linear-gradient(135deg,rgba(23,49,68,.26),transparent 50%),repeating-linear-gradient(0deg,transparent 0 15px,rgba(105,170,186,.035) 15px 16px),repeating-linear-gradient(90deg,transparent 0 15px,rgba(105,170,186,.035) 15px 16px),#0b1420;}
+.ball-lobby{max-width:1090px;margin:0 auto;padding:14px;display:grid;gap:12px;}
+.ball-lobby-hero{min-height:174px;display:grid;grid-template-columns:1.25fr .75fr;position:relative;overflow:hidden;isolation:isolate;border:1px solid #628087;border-left:4px solid #96dfc5;box-shadow:inset 0 1px #a3c5be1f,4px 4px #080e16;background:linear-gradient(105deg,#192f3e,#0e2130 48%,#132f36);}
+.ball-lobby-title{padding:15px 18px;z-index:1;display:grid;align-content:center;gap:8px;min-width:0;}
+.ball-lobby-title h2{font-size:clamp(15px,2.1vw,25px);line-height:1.14;color:#f2e5c7;text-shadow:3px 3px #0a131f;letter-spacing:-.02em!important;}
+.ball-lobby-title h2 em{font-style:normal;color:var(--ball-cyan);}
+.ball-lobby-title p{max-width:570px;font-size:10px;line-height:1.55;color:#bdd0df;}
+.ball-hero-rewards{display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:8px;color:#afc4d8;}
+.ball-hero-rewards img,.ball-gem-count img,.ball-result-rewards img{width:22px;height:22px;object-fit:contain;image-rendering:auto;vertical-align:middle;}
+.ball-hero-rewards b{color:#f7d797;border:1px solid #aa8750;padding:5px 8px;background:#433522;}
+.ball-hero-art{position:relative;min-height:100%;overflow:hidden;background:repeating-linear-gradient(0deg,transparent 0 19px,#50748133 19px 20px),repeating-linear-gradient(90deg,transparent 0 19px,#50748133 19px 20px),radial-gradient(ellipse at 50% 55%,#286667,#101c2e 66%);border-left:1px solid #466474;}
+.ball-hero-art::before,.ball-hero-art::after{content:"";position:absolute;inset:13% 20%;border:2px dashed #559b9e;transform:rotate(45deg);}
+.ball-hero-art::after{inset:25% 29%;border:1px solid #c9dfb8;}
+.ball-hero-art>span{position:absolute;bottom:10px;right:10px;color:#c9dfdc;font-size:7.5px;letter-spacing:.035em!important;}
+.ball-hero-orb{position:absolute;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;font-size:32px;z-index:2;background:#1b3948;border:4px solid #a2f4cf;color:#f4e5aa;box-shadow:0 0 0 4px #193f48,0 0 28px #61d9c6a6;}
+.ball-hero-orb.orb-main{top:18%;left:20%;}
+.ball-hero-orb.orb-enemy{bottom:15%;right:20%;width:72px;height:72px;font-size:22px;border-color:#f2ac78;background:#5b3440;box-shadow:0 0 0 4px #433043,0 0 25px #ff94785e;}
+.ball-pixel-cross{position:absolute;top:42%;left:48%;z-index:3;color:#fff5b5;font-size:25px;text-shadow:0 0 16px #fce89f;}
+.ball-section-head{display:flex;gap:12px;align-items:end;justify-content:space-between;margin-top:4px;}
+.ball-section-head h3{color:#f4e8ce;font-size:13px;line-height:1.2;}
+.ball-gem-count{font-size:9px;color:#e9d4a2;white-space:nowrap;}
+.ball-mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;}
+#ballArenaModal .ball-mode{display:flex;align-items:flex-start;text-align:left;min-height:94px;gap:8px;padding:9px;position:relative;background:#17263b;border:1px solid #526577;border-bottom:4px solid #08101b;box-shadow:inset 0 1px #ffffff12,2px 2px #060b13;}
+.ball-mode i{display:grid;place-items:center;min-width:32px;height:32px;box-shadow:2px 2px #0c1625;border:2px solid #6f8297;color:#d3e4ee;background:#263a4c;font-style:normal;font-size:13px;}
+.ball-mode h3{font-size:11px;line-height:1.25;color:#f6e6be;margin:5px 0!important;}
+.ball-mode small{font-size:7.5px;color:#96afbd;text-transform:uppercase;}
+.ball-mode p{font-size:8.5px;color:#b9cbd4;font-weight:400;}
+#ballArenaModal .ball-mode.is-active {border-color:#83dfc8;border-bottom-color:#268e7c;background:#1a3b41;box-shadow:inset 3px 0 #76e7cf,2px 2px #070c10;}
+.ball-mode.is-active i{border-color:#86dbce;color:#83ffdd;}
+.ball-lineup{display:flex;flex-wrap:wrap;gap:8px;min-height:115px;}
+#ballArenaModal .ball-lineup-slot{width:clamp(120px,14vw,154px);min-height:120px;padding:5px;display:grid;justify-items:center;align-content:start;gap:3px;position:relative;background:#142132;overflow:hidden;}
+.ball-lineup-slot>small{color:#98b2c4;font-size:7.5px;justify-self:start;}
+.ball-lineup-slot>img:not(.ball-slot-relic){width:100%;height:80px;object-fit:cover;object-position:center 31%;border:1px solid #526b7d;}
+.ball-lineup-slot b{font-size:9px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ball-lineup-slot>span{font-size:8px;color:#bcd2de;line-height:1.35;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.ball-lineup-slot.is-empty{border:1px dashed #688291!important;justify-content:center;align-content:center!important;color:#b3d6d7;}
+.ball-lineup-slot.is-empty i{font-size:25px;font-style:normal;color:#7cc6bb;}
+.ball-slot-relic{position:absolute;width:24px;height:24px;object-fit:contain;right:9px;top:25px;padding:2px;background:#0c1424;border:1px solid #8d9bae;}
+#ballArenaModal .ball-rarity-frame{border:2px solid var(--ball-frame-a,#718898);border-image:linear-gradient(135deg,var(--ball-frame-a,#718898),var(--ball-frame-b,#718898)) 1;box-shadow:inset 0 1px #ffffff19,2px 2px #050b13;}
+.ball-lobby-footer{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px;border:1px solid #506979;background:#142131;box-shadow:inset 0 1px #cbd8d011;}
+.ball-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.ball-speed{display:inline-flex;gap:3px;}
+#ballArenaModal .ball-speed button{min-width:37px;padding:6px 8px;}
+#ballArenaModal .ball-speed button.is-active,#ballArenaModal .ball-auto.is-active{border-color:#79dec9;background:#1c474a;color:#a4ffdf;}
+.ball-potion{color:#ffd188;font-size:8px;}
+.ball-notice{font-size:8.5px;color:#aec6d1;flex:1;min-width:130px;}
+#ballArenaModal .ball-start{font-size:11px;min-width:170px;min-height:40px;justify-self:end;}
+/* Square arena plus two independent live feeds. */
+.ball-main[data-ball-screen="combat"]{display:grid;grid-template-rows:auto minmax(0,1fr);padding:9px;gap:8px;overflow:hidden;}
+.ball-combat-toolbar{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 8px;border:1px solid #445e71;background:#142235;min-width:0;}
+.ball-combat-toolbar>div:first-child{display:grid;gap:2px;flex:1;}
+#ballRoundClock{font-size:12px;color:#f2d4a1;font-variant-numeric:tabular-nums;}
+.ball-combat-grid{display:grid;min-width:0;min-height:0;grid-template-columns:minmax(180px,1fr) minmax(0,min(46vw,calc(100dvh - 180px),760px)) minmax(180px,1fr);align-items:stretch;gap:10px;}
+.ball-team{display:grid;grid-template-rows:auto minmax(110px,1.5fr) minmax(100px,.8fr);min-width:0;min-height:0;gap:8px;}
+.ball-team>header{padding:6px 8px;background:#182b3b;border:1px solid #4a737c;border-left:3px solid #69e2cd;box-shadow:inset 0 1px #ffffff12;}
+.ball-team-enemy>header{border-color:#82586b;border-left-color:#f38d8c;background:#332637;}
+.ball-team>header h3{font-size:10px;color:#dcf8ed;}
+.ball-team-enemy>header h3{color:#ffd7ce;}
+.ball-live-roster,.ball-log-feed{overflow:auto;scrollbar-width:thin;scrollbar-color:#58788c #0d1722;min-height:0;overscroll-behavior:contain;}
+.ball-live-roster{display:flex;flex-direction:column;gap:6px;align-items:stretch;padding:2px 3px 4px 1px;}
+.ball-unit{min-width:0;padding:5px;background:#162436;flex:0 0 auto;}
+.ball-unit.is-defeated{opacity:.56;}
+.ball-unit-head{display:flex;align-items:center;gap:8px;min-width:0;}
+.ball-unit-art{width:30px;height:30px;overflow:hidden;flex-shrink:0;border:1px solid var(--ball-rarity);}
+.ball-unit-art img{width:100%;height:100%;object-fit:cover;object-position:center;}
+.ball-unit-head>div:nth-child(2){display:grid;gap:2px;min-width:0;flex:1;}
+.ball-unit-head small{color:var(--ball-rarity);font-size:7.5px;}
+.ball-unit-head b{font-size:9px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ball-unit-head small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ball-unit-state{font-size:7px;color:#88f2d1;border:1px solid #386b63;padding:2px 4px;background:#162f30;}
+.is-defeated .ball-unit-state{color:#ffc2bf;border-color:#9b5056;}
+.ball-meter>div{display:flex;align-items:baseline;justify-content:space-between;gap:5px;margin-top:4px;font-size:7.5px;color:#b7cfdd;line-height:1.35;}
+.ball-meter b{font-size:8px;font-weight:700;color:#e7f8f4;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;min-width:0;}
+.ball-meter>i{display:block;height:6px;margin-top:2px;background:#080f1a;border:1px solid #37516b;position:relative;overflow:hidden;}
+.ball-meter em{position:absolute;inset:0;background:#57da91;transform-origin:left center;transition:transform 130ms linear;}
+.ball-team-enemy .ball-meter.hp em{background:#ed7985;}
+.ball-meter.energy em{background:#57d8e9;}
+.ball-unit-shield{display:flex;justify-content:space-between;color:#96cfff;font-size:8px;margin-top:4px;font-variant-numeric:tabular-nums;}
+.ball-status-pills{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px;}.ball-status-pills:empty{margin:0;}
+#ballArenaModal .ball-status-pill{padding:3px 5px;border:1px solid #64778b;min-height:23px;font-size:7.5px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#203345;color:#e5edf4;line-height:1.2;box-shadow:none;font-weight:700;}
+#ballArenaModal [data-tone="poison"]{background:#10361f;color:#4ade80;border-color:#15803d;}
+#ballArenaModal [data-tone="bleed"]{background:#4a1f2a;color:#fca5a5;border-color:#b34b59;}
+#ballArenaModal [data-tone="burn"]{background:#482c1a;color:#fdba74;border-color:#ea8238;}
+#ballArenaModal [data-tone="black-flame"]{background:#09090b;color:#e4e4e7;border-color:#52525b;}
+#ballArenaModal [data-tone="fear"]{background:#581c87;color:#d8b4fe;border-color:#a855f7;}
+#ballArenaModal [data-tone="hindred"]{background:#374151;color:#e5e7eb;border-color:#9ca3af;}
+#ballArenaModal [data-tone="hypnosis"]{background:linear-gradient(105deg,#831843,#581c87);color:#f9a8d4;border-color:#c026d3;}
+#ballArenaModal [data-tone="freeze"]{background:#193e56;color:#acf4ff;border-color:#38bdf8;}
+#ballArenaModal [data-tone="stun"],#ballArenaModal [data-tone="debuff"]{color:#e7c4ff;background:#39264d;border-color:#a58bc4;}
+#ballArenaModal [data-tone="shield"],#ballArenaModal [data-tone="invincible"]{color:#a8d8ff;background:#1e3656;border-color:#5089ce;}
+#ballArenaModal [data-tone="buff"],#ballArenaModal [data-tone="guard"]{color:#a8f3d5;background:#193c35;border-color:#539d87;}
+.ball-status-pill.is-expired{opacity:.55;}
+.ball-log-panel{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);border:1px solid #435f76;background:#0d1724;}
+.ball-log-panel h4{padding:7px;background:#192e42;border-bottom:1px solid #435f76;font-size:8.5px;color:#d1f1e4;}
+.ball-team-enemy .ball-log-panel h4{background:#352539;color:#ffd5d1;}
+.ball-log-feed{padding:5px 6px;}
+#ballArenaModal .ball-log-feed .battle-log__line{display:block;white-space:normal;word-break:normal;padding:4px 4px;margin:0 0 3px;background:#152233;line-height:1.55;font-size:8.5px;border-left:2px solid #394d63;overflow-wrap:break-word;color:#cbd9e4;}
+#ballArenaModal .ball-log-feed .battle-log__token{display:inline;white-space:normal;overflow-wrap:break-word;word-break:normal;box-decoration-break:clone;}
+#ballArenaModal .ball-log-feed .battle-log__pill{padding:0 2px;}
+.ball-log-time{display:inline;white-space:nowrap;color:#8aabbd;font-size:7.5px;}
+#ballArenaModal .battle-log__token[data-accent="number"]{color:#f1d5a2;font-variant-numeric:tabular-nums;}
+#ballArenaModal .battle-log__token[data-accent="poison"]{color:#4ade80;background:#10361f;}
+#ballArenaModal .battle-log__token[data-accent="bleed"]{color:#f8a4ac;}
+#ballArenaModal .battle-log__token[data-accent="burn"]{color:#fdba74;}
+#ballArenaModal .battle-log__token[data-accent="black-flame"]{color:#e4e4e7;background:#09090b;}
+#ballArenaModal .battle-log__token[data-accent="fear"]{color:#d8b4fe;background:#581c87;}
+#ballArenaModal .battle-log__token[data-accent="hypnosis"]{color:#f472b6;background:#521a69;}
+#ballArenaModal .battle-log__token[data-accent="hindred"]{color:#d1d5db;background:#374151;}
+#ballArenaModal .battle-log__token[data-accent="heal"]{color:#5ef2a4;}
+#ballArenaModal .battle-log__token[data-accent="freeze"],#ballArenaModal .battle-log__token[data-accent="shield"]{color:#8de5ff;}
+#ballArenaModal .battle-log__token[data-accent="crit"],#ballArenaModal .battle-log__token[data-accent="passive"],#ballArenaModal .battle-log__token[data-accent="skill"]{color:#f6d487;}
+.ball-center{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:7px;align-self:center;}
+.ball-arena-caption,.ball-arena-footer{display:flex;gap:5px;align-items:center;justify-content:space-between;padding:6px 5px;color:#a6c8cf;font-size:7.5px;}
+.ball-arena-caption b{color:#f4dbab;font-size:9px;}
+.ball-square{position:relative;width:100%;aspect-ratio:1/1;border:3px solid #7b9fa6;box-shadow:0 0 0 2px #172f3a,0 0 0 4px #3c5b67,inset 0 0 14px #000;overflow:hidden;background:#0d1724;}
+.ball-square canvas{display:block;width:100%;height:100%;aspect-ratio:1/1;image-rendering:pixelated;}
+.ball-team-dot{display:inline-block;width:9px;height:9px;margin-right:2px;border:1px solid #b9f2d9;background:#60c5a9;}
+.ball-team-dot.foe{background:#e88785;border-color:#ffc1ba;}
+.ball-result{position:absolute;inset:0;display:grid;place-items:center;background:#070b13c9;backdrop-filter:blur(3px);padding:7%;}
+.ball-result-card{width:100%;text-align:center;padding:16px 10px;background:#1b2b3a;border:2px solid #91e7c9;box-shadow:5px 5px #050b13;display:grid;gap:12px;}
+.ball-result[data-result="enemy"] .ball-result-card{border-color:#dc7f83;background:#382433;}
+.ball-result-card h2{font-size:clamp(15px,2.4vw,26px);text-shadow:3px 3px #0a101a;color:#f9de9a;}
+.ball-result-card p{font-size:8.5px;color:#d0e0e8;overflow-wrap:anywhere;}
+.ball-result-rewards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;}
+.ball-result-rewards>span{display:grid;gap:4px;justify-content:center;justify-items:center;padding:8px 3px;border:1px solid #486b79;background:#0b1927;font-size:8px;color:#9cd8cc;overflow-wrap:anywhere;}
+.ball-result-rewards b{font-size:9px;color:#f4e8c6;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ball-result-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;}
+.ball-confirm{position:absolute;inset:0;z-index:7;background:#03070dcc;display:grid;place-items:center;}
+.ball-confirm>section{width:min(400px,90%);display:grid;gap:12px;padding:18px;background:#1a2738;border:2px solid #d1aa74;box-shadow:5px 5px #050912;}
+.ball-confirm>section>div{display:flex;gap:8px;justify-content:flex-end;}
+.ball-status-tooltip{position:fixed;z-index:20;max-width:min(340px,calc(100vw - 20px));width:max-content;max-height:min(65dvh,400px);overflow:auto;display:grid;gap:7px;background:#111c2a;border:2px solid #7a9eac;padding:12px;box-shadow:4px 4px #03080f,0 12px 30px #02070d;pointer-events:auto;}
+.ball-status-tooltip>b{font-size:11px;color:#fff1d0;}
+.ball-status-tooltip>small{font-size:8px;font-weight:800;color:inherit;}
+.ball-status-tooltip>p{font-size:9px;line-height:1.6;color:#e8eff5;}
+.ball-status-tooltip>i{font-size:8px;color:#d4e6ec;font-style:normal;border-top:1px solid #8da1bb44;padding-top:5px;}
+/* Owned-card catalogue. */
+.ball-main[data-ball-screen="index"]{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:8px;padding:11px;overflow:hidden;}
+.ball-index-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ball-index-head>div{min-width:0;}
+.ball-index-head>button{flex:0 0 auto;white-space:nowrap;}
+.ball-index-head h2{font-size:16px;color:#f2e6cb;}
+.ball-index-head p{font-size:8.5px;color:#adc3d0;}
+.ball-index-slots{display:flex;gap:6px;flex-wrap:wrap;}
+#ballArenaModal .ball-index-slot{display:grid;text-align:left;gap:3px;min-width:112px;max-width:184px;}
+.ball-index-slot b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ball-index-slot small{font-size:7.5px;color:#9ec4cb;}
+#ballArenaModal .ball-index-slot.is-active{background:#20454a;border-color:#7ee7ca;}
+.ball-index-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);min-height:0;gap:10px;}
+.ball-index-pool,.ball-index-detail{min-width:0;min-height:0;border:1px solid #475f74;background:#101d2d;padding:8px;}
+.ball-index-pool{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:8px;}
+.ball-index-filters{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:5px;}
+.ball-index-filters label,.ball-copy-row label{display:grid;gap:4px;color:#a9c6cd;font-size:8px;min-width:0;}
+#ballArenaModal input,#ballArenaModal select{min-width:0;width:100%;padding:5px 6px;border-radius:0;font-size:9px;}
+.ball-index-count{color:#adbbc9;font-size:8px;}
+.ball-card-pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));grid-auto-rows:128px;gap:7px;align-content:start;overflow:auto;padding:3px;min-height:0;}
+#ballArenaModal .ball-index-card{display:grid;grid-template-rows:minmax(0,1fr) auto auto auto;gap:3px;text-align:left;padding:4px;background:#1b2b3d;min-width:0;min-height:0;overflow:hidden;align-content:stretch;}
+#ballArenaModal .ball-index-card.is-active{background:#24464d;box-shadow:0 0 0 2px #c1f3d0;}
+.ball-index-card b{font-size:8.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0;line-height:1.4;}
+.ball-index-card>span:not(.ball-index-art),.ball-index-card>small{font-size:7.5px;color:#b9cfdb;}
+.ball-index-art{min-height:0;height:100%;position:relative;display:block;overflow:hidden;background:#0a1320;}
+.ball-index-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;}
+.ball-index-art small{position:absolute;bottom:0;right:0;background:#0b1521;border:1px solid var(--ball-rarity);color:var(--ball-rarity);font-size:7px;padding:2px 3px;}
+.ball-index-pages{display:flex;justify-content:space-between;align-items:center;font-size:8.5px;}
+.ball-index-detail{display:grid;align-content:start;gap:10px;overflow:auto;scrollbar-color:#506f84 #09121c;scrollbar-width:thin;}
+.ball-detail-hero{display:grid;grid-template-columns:minmax(90px,34%) minmax(0,1fr);gap:11px;align-items:start;}
+.ball-detail-portrait{height:126px;min-width:0;background:#101724;}
+.ball-detail-portrait img{width:100%;height:100%;object-fit:cover;object-position:center;}
+.ball-detail-hero>div:nth-child(2){display:grid;gap:6px;min-width:0;}
+.ball-detail-hero h3{font-size:13px;line-height:1.25;overflow-wrap:anywhere;}
+.ball-mutation-name{color:var(--ball-frame-a);background:linear-gradient(90deg,var(--ball-frame-a),var(--ball-frame-b));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.ball-tags{display:flex;flex-wrap:wrap;gap:4px;}
+.ball-tags span{padding:2px 4px;border:1px solid #627387;background:#23334a;font-size:7.5px;}
+.ball-detail-stats{display:flex;flex-wrap:wrap;gap:6px;}
+.ball-detail-stats span{flex:1;min-width:62px;font-size:8px;color:#b4d7d1;background:#0b1925;border:1px solid #41636e;padding:5px;}
+.ball-detail-stats b{display:block;font-size:10px;font-variant-numeric:tabular-nums;color:#f3ecd5;}
+.ball-index-box{padding:8px;background:#18283a;border:1px solid #4a6378;display:grid;gap:6px;box-shadow:inset 0 1px #ffffff12;}
+.ball-index-box h4{font-size:10px;color:#f6e4ba;}
+.ball-index-box p{font-size:9px;line-height:1.6;white-space:pre-line;color:#c8dae4;}
+.ball-energy-box{border-color:#6ac2b5;border-left:3px solid #98f0d4;background:#1a343e;}
+.ball-copy-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:6px;}
+.ball-relic-preview{padding:7px;border:1px solid #6a768b;display:flex;align-items:flex-start;gap:8px;background:#142237;font-size:8.5px;}
+.ball-relic-preview img{width:28px;height:28px;object-fit:contain;flex:0 0 auto;}
+.ball-relic-preview>div{min-width:0;}
+.ball-relic-preview p{color:#c4d6df;margin-top:4px!important;white-space:pre-line;overflow-wrap:anywhere;}
+.ball-index-actions{display:flex;gap:7px;flex-wrap:wrap;}
+.ball-empty{padding:16px;color:#aec1cc;font-size:9px;}
+
+.ball-header-audio{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 8px;align-items:center;border:1px solid #456572;background:#101c29;padding:4px 6px;min-width:0;max-width:315px;}
+#ballArenaModal [data-ball-audio-toggle]{min-width:68px;white-space:nowrap;padding:5px 6px;min-height:28px;font-size:8px;}
+#ballArenaModal [data-ball-audio-toggle].is-active{color:#9bffe1;border-color:#69bda9;background:#193c3d;}
+.ball-volume{display:grid;grid-template-columns:auto minmax(48px,92px) auto;align-items:center;gap:5px;white-space:nowrap;font-size:8px;color:#a8c7d1;}
+#ballArenaModal input[type=range]{height:22px;min-height:22px;padding:0;border:0;box-shadow:none;background:transparent;accent-color:#69d9c3;cursor:pointer;}
+.ball-volume output{min-width:4ch;text-align:right;color:#f0dfb3;font-variant-numeric:tabular-nums;}
+.ball-master-audio{grid-column:1/-1;color:#f2ba80;font-size:7.5px;}
+#app #hubBallButton>span{font-size:clamp(7px,.63vw,9px);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#app #hubBallButton small{font-size:7px;overflow:hidden;text-overflow:ellipsis;}
+.ball-mode>div{min-width:0;}
+.ball-mode h3,.ball-mode p{overflow-wrap:break-word;}
+.ball-mode small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ball-card-meta{display:flex;justify-content:space-between;gap:3px;min-width:0;white-space:nowrap;}
+.ball-card-meta small,.ball-card-variants{font-size:7.5px;overflow:hidden;text-overflow:ellipsis;}
+.ball-card-variants{color:#a3c5cf;}
+.ball-detail-heading{display:grid;gap:5px;align-content:start;min-width:0;}
+.ball-detail-level{font-size:8px;color:#b7cfda;}
+.ball-detail-stats b{overflow-wrap:anywhere;line-height:1.42;}
+.ball-equip-panel{display:grid;gap:7px;padding:9px;background:linear-gradient(145deg,#213646,#152637 65%);border:1px solid #5d868c;box-shadow:inset 0 1px #cadbd71a,2px 2px #07101b;}
+.ball-equip-heading{display:flex;align-items:center;justify-content:space-between;gap:5px;flex-wrap:wrap;}
+.ball-available{color:#a5e7ce;font-size:7.5px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ball-mutation-picker{display:grid;gap:4px;min-width:0;font-size:8px;color:#bdd4dc;}
+.ball-mutation-select{display:grid;grid-template-columns:21px minmax(0,1fr);gap:6px;align-items:center;min-width:0;}
+.ball-mutation-select>i{height:21px;background:linear-gradient(135deg,var(--ball-frame-a),var(--ball-frame-b));border:2px solid #a6bacc;box-shadow:inset 0 0 0 2px #08101a;}
+#ballArenaModal [data-ball-variant]{white-space:nowrap;text-overflow:ellipsis;appearance:auto;border-color:#76aea9;background:#112b37;}
+#ballArenaModal select{min-width:0;max-width:100%;white-space:nowrap;text-overflow:ellipsis;}
+.ball-index-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;}
+.ball-index-actions button{min-width:0;white-space:nowrap;}
+.ball-equip-notice{color:#b1f3d9;font-size:8px;line-height:1.5;}
+.ball-meter.hp>div{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;}
+.ball-hp-percent{font-size:8px;color:#b9f6d4;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.ball-team-enemy .ball-hp-percent{color:#ffb1b3;}
+.ball-unit-shield b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ball-passive-strip{display:flex;gap:4px;flex-wrap:wrap;align-items:stretch;margin-top:5px;min-width:0;}
+#ballArenaModal .ball-progress,#ballArenaModal .ball-passive-info{background:#192d39;border-color:#688e8b;color:#c0f4df;max-width:100%;white-space:nowrap;}
+#ballArenaModal .ball-passive-info{color:#f4daa4;border-color:#847449;background:#2d2c2b;}
+#ballArenaModal .ball-emotion-meter{display:grid;grid-template-rows:auto auto 5px;gap:4px;text-align:left;flex:1 1 100%;padding:6px;background:#142633;border:1px solid #69898a;box-shadow:inset 0 1px #c7e5d71c;min-width:0;white-space:normal;}
+#ballArenaModal .ball-emotion-meter.is-locked{border-color:#e1c880;box-shadow:inset 0 0 10px #bd965322;}
+.ball-emotion-top,.ball-emotion-values{display:flex;justify-content:space-between;align-items:center;gap:3px;white-space:nowrap;}
+.ball-emotion-top small{font-size:7px;color:#abcdce;}
+.ball-emotion-lock{font-size:6px;color:#f4d28a;}
+.ball-emotion-pos{color:#86f4cc;}.ball-emotion-neg{color:#ff9aab;}
+.ball-emotion-track{position:relative;height:5px;background:#ab5068;overflow:hidden;display:block;}
+.ball-emotion-track i{position:absolute;inset:0;background:#5bdbac;transform-origin:left center;transition:transform 130ms linear;}
+.ball-countdown{position:absolute;inset:0;display:grid;place-items:center;background:#09121ad6;pointer-events:none;}
+.ball-countdown>div{display:grid;gap:10px;justify-items:center;padding:18px 26px;background:#152f3c;border:2px solid #9fe8c9;box-shadow:4px 4px #060e17;color:#b9eed9;}
+.ball-countdown small{font-size:10px;line-height:1.5;}
+.ball-countdown strong{font-size:clamp(24px,6vw,44px);line-height:1.3;color:#f7ddb0;text-shadow:3px 3px #0a151f;}
+.ball-status-tooltip>p{white-space:pre-line;overflow-wrap:break-word;}
+.ball-status-tooltip>i{overflow-wrap:break-word;}
+
+@media(max-width:940px){
+  .ball-main[data-ball-screen="combat"]{display:block;overflow-y:auto;}
+  .ball-combat-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto auto;gap:12px;margin-top:12px;}
+  .ball-center{grid-column:1/-1;grid-row:1;width:min(100%,550px);justify-self:center;}
+  .ball-team{grid-row:2;min-height:360px;max-height:540px;}
+  .ball-combat-toolbar{flex-wrap:wrap;}
+  .ball-main[data-ball-screen="index"]{display:block;overflow:auto;}
+  .ball-index-slots{margin:12px 0;}
+  .ball-index-grid{grid-template-columns:minmax(0,1fr);}
+  .ball-index-pool{min-height:250px;}
+  .ball-card-pool{max-height:390px;}
+  .ball-index-detail{overflow:visible;}
+}
+@media(min-width:601px) and (max-height:550px){
+  #ballArenaModal{width:100vw;height:100dvh;margin:0;border:0;}
+  .ball-main[data-ball-screen="combat"]{display:block;overflow:auto;}
+  .ball-combat-grid{grid-template-columns:minmax(160px,1fr) minmax(0,clamp(190px,calc(100dvh - 162px),400px)) minmax(160px,1fr);grid-template-rows:auto;}
+  .ball-center{grid-row:1;grid-column:2;width:100%;align-self:start;justify-content:start;}
+  .ball-team{grid-row:1;min-height:320px;max-height:420px;}
+  .ball-team-enemy{grid-column:3;}
+  .ball-main[data-ball-screen="index"]{height:auto;overflow:auto;}
+}
+@media(max-width:600px){
+  #ballArenaModal{width:100vw;height:100dvh;max-height:100dvh;border:0;margin:0;box-shadow:none;}
+  .ball-header{grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:7px 9px;}
+  .ball-header-actions{grid-column:2;grid-row:1;}
+  .ball-header-audio{grid-row:2;grid-column:1/-1;max-width:none;grid-template-columns:auto minmax(0,1fr);justify-content:center;}
+  .ball-volume{grid-template-columns:auto minmax(40px,1fr) auto;width:100%;}
+  #ballArenaModal [data-ball-audio-toggle]{min-height:31px;}
+  .ball-brand-icon{width:32px;height:32px;font-size:14px;}
+  .ball-brand,.ball-header-actions{gap:6px;}
+  .ball-brand h1{white-space:nowrap;font-size:15px;}
+  .ball-brand .ball-kicker{font-size:7px;}
+  .ball-connection-chip{font-size:7px;padding:4px;}
+  .ball-lobby{padding:12px;gap:12px;}
+  .ball-lobby-hero{grid-template-columns:1fr;min-height:0;}
+  .ball-lobby-title{padding:14px;}
+  .ball-hero-art{height:95px;min-height:0;border-left:0;border-top:1px solid #466474;}
+  .ball-hero-orb{width:45px;height:45px;font-size:22px;left:26%!important;top:14%;}
+  .ball-hero-orb.orb-enemy{width:39px;height:39px;font-size:12px;left:auto!important;right:25%!important;top:38%;}
+  .ball-pixel-cross{font-size:22px;top:29%;}
+  .ball-mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #ballArenaModal .ball-mode{min-height:115px;padding:8px;gap:6px;display:grid;}
+  .ball-mode i{width:32px;min-width:32px;height:27px;font-size:9.5px;}
+  .ball-mode h3{font-size:9px;}
+  .ball-mode p{font-size:8px;}
+  #ballArenaModal .ball-lineup-slot{width:calc(50% - 6px);}
+  .ball-lobby-footer{display:grid;padding:10px;gap:9px;}
+  #ballArenaModal .ball-start{width:100%;justify-self:stretch;}
+  .ball-main[data-ball-screen="combat"]{padding:6px;}
+  .ball-combat-toolbar{padding:7px;gap:6px;}
+  .ball-combat-toolbar>div:first-child{flex:1 1 60%;}
+  .ball-controls{gap:5px;}
+  #ballArenaModal .ball-controls button{font-size:8px;padding:6px;min-height:33px;}
+  .ball-combat-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;margin-top:7px;}
+  .ball-center{grid-row:1;width:min(100%,460px);}
+  .ball-team{grid-row:auto;min-height:350px;max-height:500px;grid-template-rows:auto minmax(130px,1fr) minmax(140px,.8fr);}
+  .ball-unit-head b{font-size:9.5px;}
+  .ball-meter>div,.ball-meter b{font-size:8.5px;}
+  #ballArenaModal .ball-status-pill{font-size:8px;min-height:27px;}
+  .ball-index-head{align-items:start;}
+  .ball-index-head>div{min-width:0;}
+.ball-index-head>button{flex:0 0 auto;white-space:nowrap;}
+.ball-index-head h2{font-size:14px;}
+  .ball-main[data-ball-screen="index"]{padding:10px;}
+  .ball-index-filters{grid-template-columns:1fr 1fr;}
+  .ball-index-filters label:first-child{grid-column:1/-1;}
+  .ball-card-pool{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));grid-auto-rows:117px;max-height:360px;}
+  .ball-index-slot{min-width:0!important;flex:1 1 40%;max-width:none!important;}
+  .ball-detail-hero{grid-template-columns:minmax(76px,30%) minmax(0,1fr);}
+  .ball-detail-portrait{height:106px;}
+  .ball-index-box p{font-size:9px;}
+  #ballArenaModal button,#ballArenaModal select,#ballArenaModal input:not([type=range]){min-height:34px;}
+  #ballArenaModal .ball-status-pill{min-height:27px;}
+  .ball-arena-caption,.ball-arena-footer{font-size:7px;}
+  .ball-hero-orb{font-size:18px;}
+}
+@media(prefers-reduced-motion:reduce){#ballArenaModal *{transition:none!important;}}
+@media(min-width:1081px){#app .hub-command:has(#hubBallButton){grid-template-columns:auto repeat(9,minmax(0,1fr));}}
+@media(min-width:769px) and (max-width:1080px){#app .hub-command:has(#hubBallButton){grid-template-columns:repeat(9,minmax(0,1fr));}}
+@media(max-width:768px){#app .hub-command:has(#hubBallButton){grid-template-columns:repeat(3,minmax(0,1fr));}}
+#ballArenaModal .battle-log__token[data-accent="energy"]{color:#8bf5f1;background:#17404a;border:1px solid #408b96;}
+#ballArenaModal .ball-log-time{margin-right:.45em;}

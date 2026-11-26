@@ -5,7 +5,7 @@
   const states=new WeakMap(),actions=new WeakMap();
   const state=u=>{let s=states.get(u);if(!s){s={first:true,next:0};states.set(u,s);}return s;};
   const trait=u=>u?.relic?.unique?u.relic:null;
-  function prepareBattle(bs){if(bs.mode==='auto-chess'){fuseLine(bs,bs.playerTeam);fuseLine(bs,bs.enemyTeam);return;}if(bs.mode==='online-pvp'||bs.sandbox)return;host.RelicSystem.attachTeam(bs.playerTeam);fuseLine(bs,bs.playerTeam);}
+  function prepareBattle(bs){if(['auto-chess','ball-arena'].includes(bs.mode)){fuseLine(bs,bs.playerTeam);fuseLine(bs,bs.enemyTeam);return;}if(bs.mode==='online-pvp'||bs.sandbox)return;host.RelicSystem.attachTeam(bs.playerTeam);fuseLine(bs,bs.playerTeam);}
   function fuseLine(bs,line){
 
    const goku=line.find(u=>u.hp>0&&!u.defeated&&u.card?.id==='goku-ssj3'&&trait(u)?.kind==='potara_earring'),vegeta=line.find(u=>u.hp>0&&!u.defeated&&u.card?.id==='vegeta-ssj2'&&trait(u)?.kind==='potara_earring');

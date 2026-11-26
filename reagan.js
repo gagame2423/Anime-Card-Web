@@ -14,8 +14,8 @@
       try{
         // Entry means reaching the active frontline, not merely joining a queue.
         for(const lineup of [bs.playerTeam||[],bs.enemyTeam||[]]){
-          let unit=front(bs,lineup);
-          let passiveLoopGuard0=0;while((bs?.mode!=='auto-chess'||passiveLoopGuard0++<24)&&(alive(unit)&&has(unit,ID)&&!state(unit).sacrificed)){
+          let unit=bs.mode==='ball-arena'?(lineup.includes(bs.ballImpactActor)?bs.ballImpactActor:null):front(bs,lineup);
+          let passiveLoopGuard0=0;while((!['auto-chess','ball-arena'].includes(bs?.mode)||passiveLoopGuard0++<24)&&(alive(unit)&&has(unit,ID)&&!state(unit).sacrificed)){
             state(unit).sacrificed=true;
             const recipient=choose(allies(bs,unit,false));
             if(recipient){
@@ -24,7 +24,7 @@
             }
             unit.hp=0;unit.defeated=true;refresh(unit);api.death(bs,unit);
             log('[PASSIVE] Mad Scientist: entry sacrifice'+(recipient?' → '+recipient.card.name+' gains Robot Armor.':'; no living teammate.'),'passive');
-            api.indices(bs);unit=front(bs,lineup);
+            api.indices(bs);unit=bs.mode==='ball-arena'?null:front(bs,lineup);
           }
         }
       }finally{promoting=false;}
@@ -61,7 +61,7 @@
       if(!armor||api.suppressed(unit)||options.isCounter)return;
       armor.attacks++;
       if(armor.attacks%2)return;
-      const pool=[...enemies(bs,unit)];
+      const pool=api.spatial(bs,unit,null,'blast',{label:'Robot Armor Blast'},enemies(bs,unit));
       for(let count=0;count<2&&pool.length;count++){
         const target=choose(pool);pool.splice(pool.indexOf(target),1);
         hit(bs,unit,target,atk(unit)*.50,{robotArmor:true});
@@ -70,7 +70,7 @@
     function attack(bs,unit){
       if(!unit.reaganOwner||api.suppressed(unit))return null;
       let damage=0,killed=false;
-      for(const target of [...enemies(bs,unit)]){
+      for(const target of api.spatial(bs,unit,null,'blast',{label:'Robot AI Blast'},enemies(bs,unit))){
         const result=hit(bs,unit,target,atk(unit),{robotAI:true});damage+=result.damage||0;killed ||= Boolean(result.killed);
         if(!alive(unit))break;
       }

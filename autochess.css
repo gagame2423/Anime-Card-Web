@@ -767,3 +767,17 @@
 /* Shared palette only; the board, mobile fold and tooltip layers own their layout. */
 #autochessModal #acTimer,#autochessModal #acGold,#autochessModal #acStage,#autochessModal .ac-standing,#autochessModal .ac-reward-line {font-variant-numeric:tabular-nums;}
 #autochessModal .ac-invite-tools button:focus-visible,#autochessModal .ac-invite-start:focus-visible {outline:2px solid var(--game-energy,#0ac8b9);outline-offset:3px;}
+
+/* Tactical roles and Energy inspection; the SVG telegraph follows board coordinates. */
+.ac-role-badge.is-support { color:#77ebd7; border-color:#367d75; background:rgba(10,72,75,.65); }
+.ac-energy-info { display:grid; gap:4px; padding:9px 10px; border:1px solid #457b89; border-left:3px solid #53d8e7; border-radius:6px; background:linear-gradient(120deg,rgba(9,43,57,.9),rgba(16,27,43,.94)); color:#dceff1; }
+.ac-energy-info>small:first-child { color:#72e4ed; font-size:10px; letter-spacing:.08em; font-weight:800; }
+.ac-energy-info>b { font-size:13px; color:#f0e6d2; }
+.ac-energy-info>p { margin:0!important; font-size:11px; line-height:1.45; }
+.ac-energy-info.is-compact { padding:6px 8px; max-width:240px; }
+.ac-spatial-effect { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:hidden; animation:ac-spatial-fade .65s ease-out both; }
+.ac-spatial-effect>path,.ac-spatial-effect>circle { stroke:#79edff; stroke-width:.045; fill:rgba(42,208,237,.24); }
+.ac-spatial-effect.blast>circle { stroke:#ffce7e; fill:rgba(255,161,55,.27); }
+.ac-spatial-effect.strike>path { stroke:#f3edc2; fill:rgba(231,214,139,.24); }
+@keyframes ac-spatial-fade { 0%{opacity:1} 24%{opacity:.82} 100%{opacity:0} }
+@media(prefers-reduced-motion:reduce){.ac-spatial-effect{animation:none;opacity:.6;}}

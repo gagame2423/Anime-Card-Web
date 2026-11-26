@@ -23,7 +23,7 @@
   Jujutsu:{icon:'◎',bonus:{reduction:.02},proc:'domain',power:.16,text:'Every fourth attack creates a small domain: nearby enemies take damage and are Hindered.'},
   Fate:{icon:'♔',bonus:{shield:.12},proc:'oath',power:.07,text:'Fate units start shielded; every sixth attack restores a portion of their max-HP Shield.'},
   Pirate:{icon:'⚑',bonus:{vamp:.02},proc:'broadside',power:.20,text:'Every third attack fires a broadside into the next two nearest enemies.'},
-  DragonWarrior:{icon:'♨',bonus:{atk:.05},proc:'ki',power:.35,text:'At full Energy, Dragon Warriors fire a Ki blast through the three nearest targets.'},
+  DragonWarrior:{icon:'♨',bonus:{atk:.05},proc:'ki',power:.35,text:'At full Energy, Dragon Warriors fire a Ki burst through up to three enemies intersecting a forward line.'},
   PlanetDestroyer:{icon:'✷',bonus:{hp:.06},proc:'annihilate',power:.035,text:'Every sixth attack deals max-HP damage to the enemy with the most remaining HP.'},
   Ninja:{icon:'✥',bonus:{dodge:.025},proc:'ambush',power:.18,text:'Ninja first strikes deal extra damage; every fourth strike adds Bleed.'},
   Unhuman:{icon:'◇',bonus:{hp:.05,regen:.002},proc:'adapt',power:.015,text:'Every fifth attack heals self and grows max HP, up to five adaptations.'},
@@ -37,7 +37,7 @@
   Army:{icon:'⚐',bonus:{hp:.05},proc:'formation',power:.05,text:'Summoned allies gain stronger stats; every fifth attack shields adjacent allies.'},
   Swordman:{icon:'†',bonus:{atk:.045},proc:'cleave',power:.24,text:'Every third strike cleaves adjacent enemies around the primary target.'},
   Supporter:{icon:'✚',bonus:{mana:3},proc:'mend',power:.20,text:'Gain 3/6/9/12 Energy per attack. Every 7/6/5/5 attacks, heal the lowest-HP ally for 20/40/60/100% ATK; Gold/Prismatic also shield the same ally for 10/20% ATK.'},
-  Magician:{icon:'✵',bonus:{mana:4},proc:'nova',power:.28,text:'At full Energy, cast a spell nova at the target and its adjacent allies.'},
+  Magician:{icon:'✵',bonus:{mana:4},proc:'nova',power:.28,text:'At full Energy, cast Mana Nova against enemies within a radius around the caster.'},
   Reaper:{icon:'☽',bonus:{crit:.02},proc:'harvest',power:.11,text:'Reapers heal on kills; attacks gain extra damage below 30% target HP.'},
   Hunter:{icon:'⌖',bonus:{speed:.04},proc:'mark',power:.14,text:'Every fourth attack marks the target: piercing damage and Hindered.'},
   Titan:{icon:'♜',bonus:{hp:.10},proc:'stomp',power:.18,text:'Every fourth attack stomps adjacent enemies, then shields the Titan.'},
@@ -84,7 +84,7 @@
    case'domain':extra.push('Every fourth attack deals '+a+' ATK to up to 3 enemies nearest the target and Hinders them for 1 turn.');break;
    case'oath':extra.push('Start with a '+pct(.08*n)+' max HP Shield. Every sixth attack grants another '+hp+' max HP Shield.');break;
    case'broadside':case'ricochet':extra.push('Every third attack hits up to 2 other nearest enemies for '+a+' ATK each.');break;
-   case'ki':extra.push('At 100 Energy, deal '+a+' ATK to up to 3 nearest enemies.');break;
+   case'ki':extra.push('At 100 Energy, deal '+a+' ATK to up to 3 enemies intersecting the forward Ki line.');break;
    case'annihilate':extra.push('Every sixth attack hits the enemy with most current HP for '+hp+' of the largest enemy max HP, capped at 300% ATK.');break;
    case'ambush':extra.push('First attack deals '+a+' ATK bonus damage. Every fourth attack adds Bleed for 2 turns at '+pct(power*.5)+' ATK per turn.');break;
    case'adapt':extra.push('Every fifth attack heals '+hp+' max HP and adds '+hp+' max HP for this fight, up to 5 adaptations.');break;
@@ -97,7 +97,7 @@
    case'echo':extra.push('Every fourth attack deals '+a+' ATK bonus damage ignoring damage reduction.');break;
    case'cleave':extra.push('Every third attack deals '+a+' ATK to enemies adjacent to the primary target.');break;
    case'mend':extra.push('Every '+[7,6,5,5][n-1]+' attacks, heal the lowest-HP ally for '+pct([.20,.40,.60,1][n-1])+' ATK.'+(n>=3?' Shield that same ally for '+pct([0,0,.10,.20][n-1])+' ATK.':''));break;
-   case'nova':extra.push('At 100 Energy, deal '+a+' ATK to the primary target and its adjacent allies.');break;
+   case'nova':extra.push('At 100 Energy, deal '+a+' ATK to enemies inside the Mana Nova radius around the caster.');break;
    case'harvest':extra.push('Against enemies below 30% HP, deal '+a+' of the triggering damage as bonus damage.');break;
    case'mark':extra.push('Every fourth attack deals '+a+' ATK ignoring Shields and Hinders the target for 1 turn.');break;
    case'stomp':extra.push('Every fourth attack deals '+a+' ATK to adjacent enemies and grants a '+pct(.02*n)+' max HP Shield.');break;
@@ -149,7 +149,7 @@
      case'domain':if(nAttack%4===0)for(const v of nearest(target||u,foes,3)){hit(u,v,atk*power);api.status(v,'hindredTurns',1,u);}break;
      case'oath':if(nAttack%6===0)api.shield(u,u.maxHp*power,u);break;
      case'broadside':case'ricochet':if(ready)for(const v of nearest(u,foes.filter(v=>v!==target),2))hit(u,v,atk*power);break;
-     case'ki':if(u.grid.mana>=100)for(const v of nearest(u,foes,3))hit(u,v,atk*power);break;
+     case'ki':break; // Energy is resolved at the full-meter boundary.
      case'annihilate':if(nAttack%6===0)hit(u,foes.slice().sort((a,b)=>b.hp-a.hp)[0],Math.min(atk*3,(foes.reduce((m,v)=>Math.max(m,v.maxHp),0))*power));break;
      case'ambush':if(nAttack===1)hit(u,target,atk*power);if(nAttack%4===0)api.dot(target,'bleed',2,atk*power*.5,u);break;
      case'adapt':if(nAttack%5===0){api.heal(u,u.maxHp*power,u);if(s.adapt++<5)api.buff(u,'hp',power*s.adapt,'trait:adapt',true);}break;
@@ -162,7 +162,7 @@
      case'echo':if(nAttack%4===0)hit(u,target,atk*power,{ignoreReduction:true});break;
      case'cleave':if(ready&&target)for(const v of nearby(target,foes))hit(u,v,atk*power);break;
      case'mend':if(nAttack%[7,6,5,5][n-1]===0){const ally=low();api.heal(ally,atk*[.20,.40,.60,1][n-1],u);if(n>=3)api.shield(ally,atk*[0,0,.10,.20][n-1],u);}break;
-     case'nova':if(u.grid.mana>=100)for(const v of [target,...(target?nearby(target,foes):[])])hit(u,v,atk*power);break;
+     case'nova':break;
      case'mark':if(nAttack%4===0){hit(u,target,atk*power,{ignoreShield:true});api.status(target,'hindredTurns',1,u);}break;
      case'stomp':if(nAttack%4===0){for(const v of nearby(u,foes))hit(u,v,atk*power);api.shield(u,u.maxHp*.02*n,u);}break;
      case'giantfall':if(ready&&target)hit(u,target,Math.min(atk*2,target.maxHp*power*(native(target)?.category?.includes('Titan')?2:1)));break;
@@ -172,12 +172,24 @@
      case'roar':if(nAttack%5===0)for(const v of nearest(u,foes,3)){hit(u,v,atk*power);api.status(v,'stunTurns',1,u);}break;
      case'reiatsu':if(nAttack%4===0){for(const v of nearest(u,foes,2))hit(u,v,atk*power);api.shield(u,atk*power,u);}break;
     }
-   }if(u.grid.mana>=100){u.grid.mana-=100;api.popup(u,'ENERGY', 'mana');}
+   }
+  }
+  function releaseEnergy(u,target){
+   if(!alive(u)||!u.grid||u.grid.mana<100)return false;
+   const foes=enemies(u).filter(v=>v.grid),victim=target&&alive(target)?target:nearest(u,foes,1)[0];
+   if(!victim)return false;
+   u.grid.mana-=100;api.energyCast(u,victim);
+   for(const r of active(u)){
+    if(!alive(u))break;const amount=u.atk*r.power*r.tier;
+    if(r.proc==='ki')for(const v of api.area(u,victim,'pierce',{label:'Ki Burst'},foes).slice(0,3))hit(u,v,amount);
+    if(r.proc==='nova')for(const v of api.area(u,victim,'blast',{label:'Mana Nova'},foes))hit(u,v,amount);
+   }
+   return true;
   }
   function second(time){for(const u of [...battle.playerTeam,...battle.enemyTeam])if(alive(u)&&u.grid){const s=state(u),b=s.bonuses;if(b.regen)api.heal(u,u.maxHp*b.regen,u);for(const r of active(u)){if(r.proc==='tide'&&time%4===0)api.heal(u,u.maxHp*r.power*r.tier,u);if(r.proc==='purify'&&time%5===0)api.cleanse(u);if(r.proc==='secondlife'&&!s.secondLife&&u.hp<u.maxHp*.25){s.secondLife=true;api.heal(u,u.maxHp*.1*r.tier,u);}}}}
   function hurt(target,source,amount,meta={}){if(!target?.grid||meta.autochessSynergy||meta.dot)return;const b=state(target).bonuses;if(alive(source)&&b.reflect)api.hit(target,source,amount*b.reflect,{autochessSynergy:true,isCounter:true});energy(target,3);}
   function speed(u){const s=state(u);let n=s.bonuses.speed;for(const r of active(u))if(r.proc==='frenzy')n+=r.power*r.tier*(1-u.hp/u.maxHp);return Math.min(1.5,n);}
-  return{rows,start,attack,damage,hurt,second,speed,bonuses:u=>state(u).bonuses};
+  return{rows,start,attack,damage,hurt,second,speed,releaseEnergy,bonuses:u=>state(u).bonuses};
  }
  host.AutoChessSynergies=Object.freeze({DEFINITIONS,ALIASES,THRESHOLDS,TIERS,analyze,bonuses,tooltip,matches,roster,tierDetails,details,create,definition:id=>byId.get(ALIASES[id]||id)});
 })(window);

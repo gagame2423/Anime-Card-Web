@@ -9,8 +9,9 @@
 // 5) LocalStorage persists game state and recovers elapsed real time.
 // ============================================================
 
-function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active||window.AutoChessView?.active);}
-function gameInputLocked(){return Boolean(window.PenaltyView?.active)||isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed)||Boolean(window.HextechSystem?.active);}
+let ballRewardApplying=false;
+function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active||window.AutoChessView?.active||window.BallArena?.active&&!ballRewardApplying);}
+function gameInputLocked(){return Boolean(window.PenaltyView?.active||window.BallArena?.active)||isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed)||Boolean(window.HextechSystem?.active);}
 
 const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
@@ -3573,7 +3574,7 @@ function shuffleBattlePool(pool) {
   return shuffled;
 }
 
-function buildRandomBattleTeam(pool, playerTeam, targetRatio) {
+function buildRandomBattleTeam(pool, playerTeam, targetRatio, teamSize=getBattleTeamSize()) {
   const averagePlayerLevel = playerTeam.reduce(
     (sum, unit) => sum + getCardLevelInfo(unit?.card).level,
     0
@@ -3581,7 +3582,7 @@ function buildRandomBattleTeam(pool, playerTeam, targetRatio) {
   const shuffled = shuffleBattlePool(pool);
   const team = [];
 
-  for (let index = 0; index < getBattleTeamSize(); index += 1) {
+  for (let index = 0; index < teamSize; index += 1) {
     const card = shuffled[index % shuffled.length];
     const enemyLevel = getAdaptiveEnemyLevel(averagePlayerLevel, targetRatio);
     const mutations = rollEnemyMutations();
@@ -3619,8 +3620,7 @@ function getBattleTeamSignature(team) {
     .join('|');
 }
 
-function chooseBattleEnemyTeam(playerTeam) {
-  const mode = getBattleMode();
+function chooseBattleEnemyTeam(playerTeam, mode=getBattleMode(),teamSize=getBattleTeamSize()) {
   const playerIds = new Set(playerTeam.map(unit => normalizeCardId(unit?.card?.id)).filter(Boolean));
   let pool = getAvailableRollPool().filter(card => !playerIds.has(normalizeCardId(card?.id)));
   if (!pool.length) pool = ALL_CARDS.filter(card => isCardRollUnlocked(card) && !playerIds.has(normalizeCardId(card?.id)));
@@ -3631,18 +3631,18 @@ function chooseBattleEnemyTeam(playerTeam) {
   }
 
   const targetRatio = BATTLE_4V4_TARGET_RATIO_MIN + Math.random() * (BATTLE_4V4_TARGET_RATIO_MAX - BATTLE_4V4_TARGET_RATIO_MIN);
-  let team = buildRandomBattleTeam(pool, playerTeam, targetRatio);
+  let team = buildRandomBattleTeam(pool, playerTeam, targetRatio,teamSize);
 
   // Fresh 4v4 encounters should not immediately recycle the same lineup when
   // another combination is available. Keep this transient and session-only.
-  if (getBattleTeamSize() > 1 && lastBattleOpponentTeamSignature) {
+  if (teamSize > 1 && lastBattleOpponentTeamSignature) {
     let attempts = 0;
     while (
       attempts < 4 &&
-      pool.length >= getBattleTeamSize() &&
+      pool.length >= teamSize &&
       getBattleTeamSignature(team) === lastBattleOpponentTeamSignature
     ) {
-      team = buildRandomBattleTeam(pool, playerTeam, targetRatio);
+      team = buildRandomBattleTeam(pool, playerTeam, targetRatio,teamSize);
       attempts += 1;
     }
   }
@@ -3658,20 +3658,22 @@ function calculateBattleTeamPower(team) {
   return team.reduce((total, unit) => total + calculateBattleUnitPower(unit), 0);
 }
 
-function getBattleEnemySalvageBase() {
-  const enemyTeam = Array.isArray(battleState?.enemyTeam) ? battleState.enemyTeam.filter(unit => unit && !unit.isClone) : [];
+function getBattleEnemySalvageBase(context=battleState) {
+  if(Number.isFinite(context?.rewardBaseValue))return Math.max(0,context.rewardBaseValue);
+  const roster=context?.rewardEnemies||context?.enemyTeam;
+  const enemyTeam = Array.isArray(roster) ? roster.filter(unit => unit && !unit.isClone) : [];
   if (!enemyTeam.length) return 0;
   return Math.max(0, enemyTeam.reduce((total, unit) => {
     return total + getSalvageValue(unit?.card, unit?.mutations || []);
   }, 0));
 }
 
-function getBattleCardExperienceRewards(mode, random = Math.random) {
+function getBattleCardExperienceRewards(mode, random = Math.random, context=battleState) {
   const range = BATTLE_EXP_BASE[mode];
   if (!range) return { cards: [] }; // Tower grants no EXP at any stage.
   const baseRoll = range.min + (range.max - range.min) * Math.max(0, Math.min(1, Number(random()) || 0));
   // Shared card levels receive one reward per original ID, never per clone/copy.
-  const ids = [...new Set((battleState?.setup?.team || []).map(slot => normalizeCardId(slot?.cardId)).filter(Boolean))];
+  const ids = [...new Set((context?.setup?.team || []).map(slot => normalizeCardId(slot?.cardId)).filter(Boolean))];
   const cards = ids.filter(id => getCardById(id) && getOwnedCardCount(id) > 0 && getCardLevelInfo(id).level < CARD_LEVEL_MAX).map(cardId => {
     const { required, level } = getCardLevelInfo(cardId);
     // Reward budgets grow sublinearly; requirements follow the new RNG-rate curve.
@@ -3681,18 +3683,17 @@ function getBattleCardExperienceRewards(mode, random = Math.random) {
   return { cards };
 }
 
-function getBattleRewardProfile(playerPower, enemyPower) {
-  const mode = getBattleMode();
-  const durationSeconds = Math.max(0, (Date.now() - Number(battleState?.startedAt || Date.now())) / 1000);
+function getBattleRewardProfile(playerPower, enemyPower,context=battleState,mode=getBattleMode()) {
+  const durationSeconds = Number.isFinite(context?.durationSeconds)?Math.max(0,context.durationSeconds):Math.max(0, (Date.now() - Number(context?.startedAt || Date.now())) / 1000);
   const timeMultiplier = 1 + Math.min(durationSeconds * 0.02, 0.5);
-  const playerLevel = Math.max(1, Number(battleState?.initialPlayerLevel || battleState?.playerTeam?.[0]?.level || 1));
-  const enemyLevel = Math.max(1, Number(battleState?.initialEnemyLevel || battleState?.enemyTeam?.[0]?.level || 1));
+  const playerLevel = Math.max(1, Number(context?.initialPlayerLevel || context?.playerTeam?.[0]?.level || 1));
+  const enemyLevel = Math.max(1, Number(context?.initialEnemyLevel || context?.enemyTeam?.[0]?.level || 1));
   const levelDiffMultiplier = Math.max(0.5, Math.min(1.5, enemyLevel / playerLevel));
   const timeBonusPercent = Math.round((timeMultiplier - 1) * 100);
   const dropRateBonus = Number(Math.min(5, 0.5 + timeBonusPercent * 0.02).toFixed(2));
-  const cardExperience = getBattleCardExperienceRewards(mode);
-  const damage = mode === 'tower' ? window.TowerSystem.damageSummary(battleState) : null;
-  const baseValue = damage ? window.TowerSystem.battleCurrency(damage.total) : getBattleEnemySalvageBase();
+  const cardExperience = getBattleCardExperienceRewards(mode,Math.random,context);
+  const damage = mode === 'tower' ? window.TowerSystem.damageSummary(context) : null;
+  const baseValue = damage ? window.TowerSystem.battleCurrency(damage.total) : getBattleEnemySalvageBase(context);
   const rawCoins = damage ? baseValue : baseValue * timeMultiplier * levelDiffMultiplier;
   const reward = Math.max(0, Math.floor(Math.floor(rawCoins) * getCoinMultiplier(false, 'arena')));
   return {
@@ -3986,6 +3987,60 @@ function getBattleDefeatNotice() {
   return 'Defeated! No cards were lost. Your entire collection is preserved.';
 }
 
+// The canonical Normal / Duel / Tower payout path. Ball uses the same economy
+// with its own isolated runtime; it does not replace the legacy Arena state.
+function settleArenaVictory(context,runtime=window.PassiveSystem,log=appendBattleLog){
+  const baseRewardProfile = getBattleRewardProfile(context.playerPower,context.enemyPower,context,context.mode);
+  const rewardProfile = runtime?.modifyVictoryRewards?.(context, baseRewardProfile) || baseRewardProfile;
+  const rawReward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward * (1 + getWeatherBonus("coins")) * (1 + getWeatherBonus("battleCoins")))) : 0;
+  const reward = context.mode === 'tower' ? Math.min(rawReward, Math.max(0, Number.MAX_SAFE_INTEGER - (Number(state.currency) || 0))) : rawReward;
+  const cardExperienceRewards = context.mode === 'tower' ? [] : baseRewardProfile.cardExperienceRewards.map(entry => ({
+    ...entry, experience: Math.max(0, Math.floor(entry.experience * (Number(rewardProfile.passiveMultiplier) || 1)))
+  }));
+  let experience = cardExperienceRewards.reduce((sum, entry) => sum + entry.experience, 0);
+  state.currency = Math.max(0, Number(state.currency) || 0) + reward;
+  recordEarnedCurrency(reward,"combat");
+  window.AchievementSystem?.recordBattleWin();
+  const dropRateBonus = Number.isFinite(Number(rewardProfile.dropRateBonus)) ? Math.max(0, Number(rewardProfile.dropRateBonus)) : 0;
+  state.experience = Math.max(0, Number(state.experience) || 0) + experience;
+  state.battleDropRateBonus = Math.max(0, Math.min(100, Number(state.battleDropRateBonus) || 0) + dropRateBonus);
+  // Independent player stat: neither Reward Bonus nor money multipliers are read by the potion RNG.
+  state.dropChance = Math.max(0, Math.min(20, (Number(state.dropChance) || 0) + Math.max(0, Number(baseRewardProfile.dropRateBonus) || 0))); // unmodified by Reward Bonus passives
+  const potionDrop = window.InventorySystem?.rollVictoryDrop(state.dropChance,Math.random,context);
+  const previousKeys = window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id);
+  const raidKeyDropped = window.RaidSystem?.rollKey(context.mode,Math.random,context);
+  if (raidKeyDropped) log(`Marine Ford Raid Key +${window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id) - previousKeys} • 10% regular-battle drop • Drop x${window.InventorySystem.getDropMultiplier(context).toFixed(2)}.`, 'victory');
+  const towerPrize = context.mode === 'tower' ? window.TowerSystem?.recordVictory(context.towerWeather, context.towerFloor,Math.random,context) : null;
+  refreshAchievements();
+  if (potionDrop?.dropped) log(`🧪 Potion drop: ${potionDrop.name} x${potionDrop.quantity || 1} (${Math.round(potionDrop.chance * 100)}% roll).`, 'victory');
+  else if (potionDrop) log(`🧪 No potion (${Math.round(potionDrop.chance * 100)}% chance) • Pity increased for next win.`, 'status');
+  if (towerPrize?.awarded) log(`🏰 Floor ${context.towerFloor} cleared! +${towerPrize.coins} Tower Coins${towerPrize.elite ? ' • ELITE BONUS' : ''}.`, 'victory');
+  renderPotionInventory(); renderTowerShop();
+
+  // Persist the monetary reward before any card/level-up/rendering work.
+  // A malformed legacy record must never erase a legitimate victory payout.
+  saveState();
+  updateStats();
+
+  const levelUps = [];
+  for (const entry of cardExperienceRewards) {
+    const owner=(context.rewardOwners||context.playerTeam).find(unit=>unit.card?.id===entry.cardId);
+    const result = grantCardExperience(entry.cardId, entry.experience,owner);
+    state.experience=Math.max(0,(Number(state.experience)||0)+result.gained-entry.experience);
+    experience+=result.gained-entry.experience;
+    entry.experience=result.gained;
+    log(`EXP: ${getCardById(entry.cardId)?.name || entry.cardId} +${entry.experience.toLocaleString('en-US')} (base ${entry.baseExperience.toLocaleString('en-US')} at Lv.${entry.level}; progressive EXP before bonuses).`, 'victory');
+    if (result.levelUps > 0) levelUps.push(`${getCardById(entry.cardId)?.name || entry.cardId} Lv.${result.level}`);
+  }
+  saveState();
+  updateStats();
+  runtime?.onVictory?.(context);
+  renderUpgradeShop();
+  collectionNeedsRefresh = false;
+  renderCollection();
+  return {baseRewardProfile,rewardProfile,reward,experience,dropRateBonus,potionDrop,towerPrize,levelUps};
+}
+
 function finishBattle(playerWon) {
   if (isSimulationActive() || battleState?.sandbox || battleState?.mode === 'sandbox') return;
   if (!battleState || battleState.finished) return;
@@ -4013,55 +4068,7 @@ function finishBattle(playerWon) {
 
   try {
     if (playerWon) {
-      const baseRewardProfile = getBattleRewardProfile(safePlayerPower, safeEnemyPower);
-      const rewardProfile = window.PassiveSystem?.modifyVictoryRewards?.(battleState, baseRewardProfile) || baseRewardProfile;
-      const rawReward = Number.isFinite(Number(rewardProfile.reward)) ? Math.max(0, Math.floor(rewardProfile.reward * (1 + getWeatherBonus("coins")) * (1 + getWeatherBonus("battleCoins")))) : 0;
-      const reward = battleState.mode === 'tower' ? Math.min(rawReward, Math.max(0, Number.MAX_SAFE_INTEGER - (Number(state.currency) || 0))) : rawReward;
-      const cardExperienceRewards = battleState.mode === 'tower' ? [] : baseRewardProfile.cardExperienceRewards.map(entry => ({
-        ...entry, experience: Math.max(0, Math.floor(entry.experience * (Number(rewardProfile.passiveMultiplier) || 1)))
-      }));
-      let experience = cardExperienceRewards.reduce((sum, entry) => sum + entry.experience, 0);
-      state.currency = Math.max(0, Number(state.currency) || 0) + reward;
-      recordEarnedCurrency(reward,"combat");
-      window.AchievementSystem?.recordBattleWin();
-      const dropRateBonus = Number.isFinite(Number(rewardProfile.dropRateBonus)) ? Math.max(0, Number(rewardProfile.dropRateBonus)) : 0;
-      state.experience = Math.max(0, Number(state.experience) || 0) + experience;
-      state.battleDropRateBonus = Math.max(0, Math.min(100, Number(state.battleDropRateBonus) || 0) + dropRateBonus);
-      // Independent player stat: neither Reward Bonus nor money multipliers are read by the potion RNG.
-      state.dropChance = Math.max(0, Math.min(20, (Number(state.dropChance) || 0) + Math.max(0, Number(baseRewardProfile.dropRateBonus) || 0))); // unmodified by Reward Bonus passives
-      const potionDrop = window.InventorySystem?.rollVictoryDrop(state.dropChance,Math.random,battleState);
-      const previousKeys = window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id);
-      const raidKeyDropped = window.RaidSystem?.rollKey(battleState.mode,Math.random,battleState);
-      if (raidKeyDropped) appendBattleLog(`Marine Ford Raid Key +${window.InventorySystem.quantity(window.RaidSystem.KEY_ITEM.id) - previousKeys} • 10% regular-battle drop • Drop x${window.InventorySystem.getDropMultiplier(battleState).toFixed(2)}.`, 'victory');
-      const towerPrize = battleState.mode === 'tower' ? window.TowerSystem?.recordVictory(battleState.towerWeather, battleState.towerFloor,Math.random,battleState) : null;
-      refreshAchievements();
-      if (potionDrop?.dropped) appendBattleLog(`🧪 Potion drop: ${potionDrop.name} x${potionDrop.quantity || 1} (${Math.round(potionDrop.chance * 100)}% roll).`, 'victory');
-      else if (potionDrop) appendBattleLog(`🧪 No potion (${Math.round(potionDrop.chance * 100)}% chance) • Pity increased for next win.`, 'status');
-      if (towerPrize?.awarded) appendBattleLog(`🏰 Floor ${battleState.towerFloor} cleared! +${towerPrize.coins} Tower Coins${towerPrize.elite ? ' • ELITE BONUS' : ''}.`, 'victory');
-      renderPotionInventory(); renderTowerShop();
-
-      // Persist the monetary reward before any card/level-up/rendering work.
-      // A malformed legacy record must never erase a legitimate victory payout.
-      saveState();
-      updateStats();
-
-      const levelUps = [];
-      for (const entry of cardExperienceRewards) {
-        const owner=battleState.playerTeam.find(unit=>unit.card?.id===entry.cardId);
-        const result = grantCardExperience(entry.cardId, entry.experience,owner);
-        state.experience=Math.max(0,(Number(state.experience)||0)+result.gained-entry.experience);
-        experience+=result.gained-entry.experience;
-        entry.experience=result.gained;
-        appendBattleLog(`EXP: ${getCardById(entry.cardId)?.name || entry.cardId} +${entry.experience.toLocaleString('en-US')} (base ${entry.baseExperience.toLocaleString('en-US')} at Lv.${entry.level}; progressive EXP before bonuses).`, 'victory');
-        if (result.levelUps > 0) levelUps.push(`${getCardById(entry.cardId)?.name || entry.cardId} Lv.${result.level}`);
-      }
-      saveState();
-      updateStats();
-      window.PassiveSystem?.onVictory?.(battleState);
-      renderUpgradeShop();
-      collectionNeedsRefresh = false;
-      renderCollection();
-
+      const {baseRewardProfile,rewardProfile,reward,experience,dropRateBonus,potionDrop,towerPrize,levelUps}=settleArenaVictory(battleState);
       const modeLabel = rewardProfile.mode.toUpperCase();
       const levelNote = levelUps.length ? ` • Level Up: ${levelUps.join(', ')}` : '';
 
@@ -5126,21 +5133,21 @@ function renderAchievements() {
 // ============================================================
 
 // Quest progress receives only fresh, completed gameplay events.
-function recordQuestBattleCompletion(battle) {
+function recordQuestBattleCompletion(battle,log=appendBattleLog) {
   if (battle?.sandbox || battle?.mode === 'sandbox' || isSimulationActive()) return;
   const bread=window.ExpFoodSystem.rewardVictory(battle);
-  if(bread)appendBattleLog(`Bread +${bread} · EXP Food in Storage.`, 'victory');
+  if(bread)log(`Bread +${bread} · EXP Food in Storage.`, 'victory');
   if (!battle?.questContext || battle.questCompletionRecorded || ['surrender', 'aborted'].includes(battle.outcome)) return;
   battle.questCompletionRecorded = true;
   window.QuestSystem.record('battle', { ...battle.questContext, won: battle.questResultWon ?? (battle.outcome === 'victory'), room: battle.trial?.room, turns:Math.max(0,Math.floor(Number(battle.turnCount??battle.turnCounter)||0)), teamElements: battle.questContext.teamElements });
 }
-function recordQuestEnemyDefeat(battle, victim, source) {
+function recordQuestEnemyDefeat(battle, victim, source,log=appendBattleLog) {
   const materials=window.MaterialSystem.recordKill(battle,victim);
-  if(materials.length)appendBattleLog(materials.map(row=>window.InventorySystem.getItem(row.id).name+' +'+row.quantity).join(' • '),'victory');
+  if(materials.length)log(materials.map(row=>window.InventorySystem.getItem(row.id).name+' +'+row.quantity).join(' • '),'victory');
   const spookyCoins=window.SpookySystem.recordKill(battle,victim);
-  if(spookyCoins)appendBattleLog(`🎃 Enemy defeated: +${spookyCoins} Spooky Coins.`, 'victory');
+  if(spookyCoins)log(`🎃 Enemy defeated: +${spookyCoins} Spooky Coins.`, 'victory');
   const keys=window.RaidSystem.rollFateKey(battle,victim,source);
-  if(keys)appendBattleLog(`Holy Grail Raid Key +${keys} • Fate enemy drop.`, 'victory');
+  if(keys)log(`Holy Grail Raid Key +${keys} • Fate enemy drop.`, 'victory');
   if (battle?.sandbox || battle?.mode === 'sandbox' || isSimulationActive()) return;
   if (!battle?.questContext || !battle.enemyTeam.includes(victim) || !battle.playerTeam.includes(source) || victim.isClone || victim.isSummoned || victim.isTemporaryAlly) return;
   const seen = battle.questDefeatSeen ||= new WeakSet();
@@ -6227,7 +6234,7 @@ function jumpFromUpdateLogs(destination){
   const el=id=>document.getElementById(id);
   const click=id=>{const button=el(id);if(!button||button.disabled)return false;button.click();return true;};
   const show=id=>{openModal(id);const node=el(id);if(!node||node.classList.contains('hidden'))return false;node.querySelector('.modal-close')?.focus();return true;};
-  const buttons={craft:'craftingOpenButton',quests:'questOpenButton',index:'collectionButton',autochess:'hubChessButton',summon:'hubSummonButton'};
+  const buttons={craft:'craftingOpenButton',quests:'questOpenButton',index:'collectionButton',autochess:'hubChessButton',ball:'hubBallButton',summon:'hubSummonButton'};
   if(Object.hasOwn(buttons,destination))return click(buttons[destination]);
   if(destination==='achievements')return show('achievementModal');
   if(destination==='inventory')return show('inventoryModal');
@@ -6329,6 +6336,80 @@ window.AutoChessProfile.configure({get:()=>state.autochess_profile_stats,rank:()
  if(!saveGame(AUTO_CHESS_REWARD_SAVE)){state.autochess_profile_stats=previous;return false;}
  window.AutoChessProfile.refresh();return true;
 }});
+// Ball Arena uses the real owned variants, bound Relics and standard adaptive matchmaking.
+let ballMatchContext=null;
+const settledBallMatches=new WeakMap();
+function ballCollection(){
+  return ALL_CARDS.filter(c=>getOwnedCardCount(c.id)>0).flatMap(card=>getVariantEntries(card.id).filter(v=>v.count>0).map(v=>{
+    const display=getDisplayCard(card,v.mutations);
+    return {card,variantKey:v.key,mutations:v.mutations,count:v.count,level:display.level,display};
+  })).sort((a,b)=>a.card.name.localeCompare(b.card.name)||a.variantKey.localeCompare(b.variantKey));
+}
+function prepareBallMatch(mode,slots){
+  if(!window.BallArena.active||!['1v1','4v4'].includes(mode.id)||slots.length!==mode.teamSize)throw Error('The selected mode is unavailable.');
+  const detach=card=>({...card,stats:{...card.stats},category:[...(card.category||[])],passive:{...card.passive}});
+  const used=new Set(),playerTeam=slots.map(slot=>{
+    const card=getCardById(slot.cardId),variant=card&&getVariantEntries(card.id).find(v=>v.key===slot.variantKey);
+    const key=slot.variantKey+'|'+slot.copy;
+    if(!variant||!Number.isSafeInteger(slot.copy)||slot.copy<0||slot.copy>=variant.count||used.has(key))throw Error('An owned card copy is no longer available.');
+    used.add(key);
+    const display=getDisplayCard(card,variant.mutations);
+    return {card:detach(card),mutations:[...variant.mutations],variantKey:variant.key,cardInstance:{...slot},display:{...display},level:display.level,hp:display.hp,maxHp:display.hp,atk:display.atk,defeated:false};
+  });
+  window.RelicSystem.attachTeam(playerTeam);
+  const enemyTeam=chooseBattleEnemyTeam(playerTeam,mode.id,mode.teamSize).filter(Boolean).map(u=>({...u,card:detach(u.card),display:{...u.display},mutations:[...(u.mutations||[])]}));
+  if(enemyTeam.length!==mode.teamSize)throw Error('No opponent is available for this lineup.');
+  const average=team=>Math.max(1,team.reduce((n,u)=>n+(u.level||1),0)/team.length);
+  const context={mode:mode.id,setup:{team:slots.map(s=>({...s}))},playerTeam,enemyTeam,startedAt:Date.now(),
+    initialPlayerLevel:average(playerTeam),initialEnemyLevel:average(enemyTeam),playerPower:calculateBattleTeamPower(playerTeam),enemyPower:calculateBattleTeamPower(enemyTeam),
+    rewardBaseValue:enemyTeam.reduce((n,u)=>n+getSalvageValue(u.card,u.mutations||[]),0)};
+  context.questContext=window.QuestSystem.battleContext(context,getActiveWeatherDefinitions().map(w=>w.id));
+  const receipt=window.OnlineUtils.token(),defeats=[];
+  const weatherIds=new Set(getActiveWeatherDefinitions().map(w=>String(w.id).toLowerCase()));
+  ballMatchContext={context,receipt,defeats};
+  return {teamSize:mode.teamSize,playerTeam,enemyTeam,seed:Math.floor(Math.random()*4294967296),
+    mimicPools:{player:window.PassiveSystem.ownedMimicPool(),enemy:enemyTeam.map(u=>u.card.id)},
+    championChoices:{aqua:document.querySelector('input[name="aquaBattleMode"]:checked')?.value||'hp'},
+    isWeatherActive:id=>weatherIds.has(String(id).toLowerCase()),addRandomCommonUncommonWeather:addCombatWeather,
+    onDefeat:(victim,source)=>{if(!defeats.some(d=>d.victim===victim))defeats.push({victim,source});}};
+}
+function settleBallMatch(fight,mode){
+  if(settledBallMatches.has(fight))return settledBallMatches.get(fight);
+  const pending=ballMatchContext,out=fight.outcome();
+  if(!pending||!fight.done||fight!==window.BallArena.fight||pending.context.mode!==mode.id||!pending.context.playerTeam.every((u,i)=>fight.originalPlayer[i]===u))throw Error('This match is not ready for rewards.');
+  const context={...fight.battle,...pending.context,playerTeam:fight.battle.playerTeam,enemyTeam:fight.battle.enemyTeam,rewardOwners:fight.originalPlayer,rewardEnemies:fight.originalEnemy,
+    mode:mode.id,sandbox:false,finished:true,isBattling:false,outcome:out.winner==='player'?'victory':out.winner==='enemy'?'defeat':'draw',durationSeconds:fight.time};
+  const log=(message,tone)=>fight.writeLog('player',message,tone),gems=out.winner==='player'?Math.floor(Math.random()*6):0,rewards={currency:0,experience:0,gems};
+  // The isolated runtime never writes progress during physics. This completion
+  // boundary is the only authorised payout; the shared inventory receipt
+  // commits the unscaled Gem bonus once, including a zero-Gem roll.
+  if(out.winner==='player'&&!window.InventorySystem.transactOnce('ball_arena',pending.receipt,gems?[{id:'gems',quantity:gems}]:[]))throw Error('Unable to save the Gem reward.');
+  settledBallMatches.set(fight,rewards);
+  ballRewardApplying=true;
+  try{
+    if(out.winner==='player'){
+      const paid=settleArenaVictory(context,fight.engine,log);rewards.currency=paid.reward;rewards.experience=paid.experience;
+      log('Bonus Gems +'+gems+' · no drop multiplier.','victory');
+    }
+    if(out.winner==='player'||out.winner==='enemy'){
+      for(const {victim,source} of pending.defeats)recordQuestEnemyDefeat(context,victim,source,log);
+      const key=window.RaidSystem.claimShibuyaKey(context,isWeatherActive('malevolent'));
+      if(key.quantity)log('Shibuya Raid Key +'+key.quantity+'.','victory');
+      recordQuestBattleCompletion(context,log);
+    }
+    if(!saveState())throw Error('Account progress could not be saved.');
+    updateStats();renderPotionInventory();window.CloudSaveSystem?.markDirty();return rewards;
+  }finally{ballRewardApplying=false;}
+}
+window.BallArena.configure({
+  canOpen:()=>canOpenUpdateLogs()&&canPlayPenalty(),
+  collection:ballCollection,defaultTeam:id=>state.arenaTeams?.['ball:'+id]||state.arenaTeams?.[id],
+  prepare:prepareBallMatch,reward:settleBallMatch,
+  onEnter(){clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();window.CloudSaveSystem?.holdAutoChess();},
+  onExit(){ballMatchContext=null;window.CloudSaveSystem?.releaseAutoChess();resumeGameRuntime();updateStats();}
+});
+document.getElementById('hubBallButton')?.addEventListener('click',()=>window.BallArena.open());
+
 window.AutoChessView.configure({
  canOpen:()=>!window.PenaltyView?.active&&canPlayPenalty(),
  name:()=>window.CloudSaveSystem?.publicName||'You',

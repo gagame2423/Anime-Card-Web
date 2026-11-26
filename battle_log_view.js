@@ -2,7 +2,7 @@
 (function (host) {
   'use strict';
   const labels = Object.freeze({
-    passive: 'passive', 'self-passive': 'passive', champion: 'passive', relic: 'passive', skill: 'skill', 'special attack': 'skill',
+    energy:'energy',entry:'passive', passive: 'passive', 'self-passive': 'passive', champion: 'passive', relic: 'passive', skill: 'skill', 'special attack': 'skill',
     status: 'status', debuff: 'debuff', 'anti-heal': 'bleed', 'critical hit!': 'crit', 'critical hit': 'crit', crit: 'crit',
     dodge: 'dodge', heal: 'heal', revival: 'heal', revive: 'heal', shield: 'shield', support: 'heal',
     burn: 'burn', bleed: 'bleed', poison: 'poison', dot: 'dot', stun: 'debuff', freeze: 'freeze', 'black flame':'black-flame', 'black flames':'black-flame', fear:'fear', hindred: 'hindred', hindered:'hindred', hypnosis:'hypnosis', hypothesis:'hypnosis', survive: 'heal'
@@ -34,7 +34,7 @@
   function prepare() {
     if (pattern && catalog === host.ALL_CARDS) return;
     catalog = host.ALL_CARDS;
-    const names = new Set(['Golden Sword', 'Grass Sword', 'Demon Blood Sword', 'Berserker', 'Serious Mode', 'Mordecai Mode', 'Rigby Mode',
+    const names = new Set(['Piercing Pulse','Arcane Blast','Crescent Strike','Guardian Pulse','Golden Sword', 'Grass Sword', 'Demon Blood Sword', 'Berserker', 'Serious Mode', 'Mordecai Mode', 'Rigby Mode',
       'Demon Slayer', 'Demon Dweller', 'Fox Theft', 'Soul Unbound', 'Wind Blade', 'Azakana Blade', 'Murciélago', 'Resurrección', 'The One',
       'Candy Form', 'Datebayo', 'HAMONNN', 'Haki', 'Sasuke', 'Naruto', 'Mordecai', 'Rigby', 'EXCALIBUR!!!', 'BLUE', 'GREEN', 'PURPLE']);
     for (const card of catalog || []) if (card.passive?.name?.length > 2) names.add(card.passive.name);
