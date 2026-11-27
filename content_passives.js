@@ -62,12 +62,12 @@
    for(const id of IDS)if(has(u,id)){const c=state(u,id);if(c.entered)continue;c.entered=true;if(id==='vanilla-ice')c.voidTurns=3;if(id==='pochita')scope(u,id,()=>contract(bs,u));}
   }
   function matchStart(bs){for(const u of [...all(bs)])if(has(u,'pochita'))entry(bs,u);}
-  const debuffImmune=u=>lastHeroes.has(u)&&lastHeroes.get(u)===api.passiveRuntimeFor(u,FINN);
+  const debuffImmune=u=>has(u,FINN)&&lastHeroes.has(u)&&lastHeroes.get(u)===api.passiveRuntimeFor(u,FINN);
   function lastHero(bs,line){
    if(!line)return;
    let only=null;
    for(const u of line)if(alive(u)){if(only)return;only=u;}
-   if(!only||debuffImmune(only)||!api.owns(only,FINN))return;
+   if(!only||debuffImmune(only)||!has(only,FINN))return;
    lastHeroes.set(only,api.passiveRuntimeFor(only,FINN));
    api.cleanseDebuffs(bs,only);
    scope(only,FINN,()=>api.percent(only,'atk','adventure:last-hero',.50));

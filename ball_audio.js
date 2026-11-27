@@ -31,6 +31,7 @@
  });
  const FILES=Object.freeze(Object.fromEntries(Object.entries(CUES).map(([key,v])=>[key,FOLDER+v[0]])));
  const extra=Object.freeze({
+  win:['win.mp3','result',.9,300,7,1],
   summon:['summon.mp3','ui',.6,130,2,1,'ui_click'],
   rare_reveal:['rare_reveal.mp3','result',.85,350,5,1,'skill_cast'],
   relic_craft:['relic_craft.mp3','ui',.85,180,4,1,'fuse'],
@@ -58,7 +59,7 @@
   return {muted,volume,masterMuted:muted,masterVolume:volume,effective:muted?0:volume};
  }
  function mode(){return host.SailingSea?.active?'sailing':host.BallArena?.active?'ball':host.AutoChessView?.active?'chess':'main';}
- function spec(key){const ball=Object.hasOwn(CUES,key),row=ball?CUES[key]:Object.hasOwn(extra,key)?extra[key]:null;return row?{path:(ball?FOLDER:'assets/audio/')+row[0],channel:row[1],gain:row[2],gap:row[3],priority:row[4],limit:row[5],fallback:row[6]}:null;}
+ function spec(key,group=mode()){if(key==='victory'&&group!=='ball')key='win';const ball=Object.hasOwn(CUES,key),row=ball?CUES[key]:Object.hasOwn(extra,key)?extra[key]:null;return row?{path:(ball?FOLDER:'assets/audio/')+row[0],channel:row[1],gain:row[2],gap:row[3],priority:row[4],limit:row[5],fallback:row[6]}:null;}
  function release(v){
   if(!v.busy)return;
   playing.delete(v);v.busy=false;v.ticket=++serial;
@@ -104,7 +105,7 @@
    Promise.resolve(v.audio.play()).then(()=>{if(v.ticket!==ticket){if(!v.busy)try{v.audio.pause();}catch(_){}return;}if(!settings().effective||host.document?.hidden)silence(v);}).catch(failed);
   }catch(error){failed(error);return false;}return true;
  }
- function play(key,group=mode()){return playSpec(spec(key),group);}
+ function play(key,group=mode()){return playSpec(spec(key,group),group);}
  function playFile(file,group=mode(),opts={}){
   if(!/^[a-z0-9_]+$/i.test(file))return false;
   const s={path:'assets/audio/'+file+'.mp3',channel:opts.channel||'action',gain:opts.gain??1,gap:opts.gap??65,priority:opts.priority??4,limit:opts.limit??2};
@@ -116,7 +117,7 @@
  function batch(events,group=mode()){
   if(!events?.length||!settings().effective)return;
   const channels=new Map();
-  for(const event of events){const key=typeof event==='string'?event:event?.cue,s=spec(key);if(!s)continue;const old=channels.get(s.channel);if(!old||old.priority<s.priority)channels.set(s.channel,{key,priority:s.priority});}
+  for(const event of events){const key=typeof event==='string'?event:event?.cue,s=spec(key,group);if(!s)continue;const old=channels.get(s.channel);if(!old||old.priority<s.priority)channels.set(s.channel,{key,priority:s.priority});}
   for(const row of [...channels.values()].sort((a,b)=>b.priority-a.priority))play(row.key,group);
  }
  function sync(){const s=settings();if(!s.effective){stop();return;}for(const v of playing)try{v.audio.volume=s.effective*v.gain;}catch(_){}}
@@ -124,7 +125,7 @@
  function setVolume(value){host.DropAudioSystem?.setVolume(value);return settings();}
  function activate(){
   if(activated)return;activated=true;
-  host.setTimeout(()=>{if(!host.document?.hidden)for(const cue of ['ui_click','collision_light','skill_cast','victory'])prime(FILES[cue]);},40);
+  host.setTimeout(()=>{if(!host.document?.hidden){for(const cue of ['ui_click','collision_light','skill_cast'])prime(FILES[cue]);prime('assets/audio/win.mp3');}},40);
  }
  function diagnostics(){return {cached:banks.size,missing:[...banks.values()].filter(b=>b.missing).map(b=>b.path),voices:[...banks.values()].reduce((n,b)=>n+b.voices.length,0),active:playing.size,maxActive:MAX_ACTIVE};}
  // Combat messages are data only. No audio is played by a simulation or a worker.

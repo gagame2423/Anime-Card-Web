@@ -85,7 +85,7 @@
           let passiveLoopGuard0=0;while((!['auto-chess','ball-arena'].includes(bs?.mode)||passiveLoopGuard0++<24)&&(alive(unit)&&has(unit,'kiritsu')&&enemies(bs,unit).length&&random()<followChance(bs,unit,.60,chainHits>0))){
             chainHits++;const next=alive(target)?target:enemies(bs,unit)[0];
             api.countedFollowUp(bs,unit,next);counted(bs,unit,{isFollowUp:true});
-            const shot=primary(bs,unit,next,.30,{isFollowUp:true,passiveAttack:true});merge(result,shot);after(bs,unit,next,shot,{isFollowUp:true});
+            const shot=primary(bs,unit,next,.30,{isFollowUp:true,passiveAttack:true,countedNativeAttack:true});merge(result,shot);after(bs,unit,next,shot,{isFollowUp:true});
           }
         }
         return result;

@@ -100,7 +100,7 @@
         if(c.trueForm&&!options.isFollowUp&&!c.chaining){
           c.chaining=true;
           try{let count=0,chance=.24;let passiveLoopGuard0=0;while((!['auto-chess','ball-arena'].includes(bs?.mode)||passiveLoopGuard0++<24)&&(alive(u)&&has(u,'true-mahito')&&api.canFollow(u)&&enemies(bs,u).length&&random()<api.followChance(bs,u,chance,count>0))){
-            const next=alive(target)?target:enemies(bs,u)[0];api.countFollow(bs,u,next);const shot=api.primary(bs,u,next,atk(u)*.15,{isFollowUp:true,passiveAttack:true});
+            const next=alive(target)?target:enemies(bs,u)[0];api.countFollow(bs,u,next);const shot=api.primary(bs,u,next,atk(u)*.15,{isFollowUp:true,passiveAttack:true,countedNativeAttack:true});
             count++;if(shot.hit)chance=Math.min(.72,chance+.12);if(shot.skipped)break;
           }}finally{c.chaining=false;}
         }

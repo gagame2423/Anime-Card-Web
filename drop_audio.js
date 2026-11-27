@@ -16,6 +16,12 @@
   const started=audio.playFile(FILES[cardId],'drop',{channel:'special',priority:9,limit:1,gap:0,onEnd:release});
   if(!started)release();return started;
  }
+ // Roll reveals are a first-acquisition event, not a mutation/duplicate event.
+ function revealRoll(card,firstUnlock){
+  if(!card||firstUnlock!==true)return false;
+  if(FILES[card.id])return play(card.id);
+  return ['Legendary','Mythic','Secret'].includes(card.rarity)&&Boolean(host.GameAudio?.play('rare_reveal','main'));
+ }
  function setEnabled(value){enabled=value!==false;if(!enabled)stop();persist(KEY,enabled);host.GameAudio?.sync();render();}
  function setVolume(value){if(!Number.isFinite(Number(value)))return;volume=Math.max(0,Math.min(1,Number(value)));persist(VOLUME_KEY,volume);host.GameAudio?.sync();render();}
  function persist(key,value){try{host.localStorage.setItem(key,JSON.stringify(value));host.CloudSaveSystem?.markDirty();}catch(_){}}
@@ -24,5 +30,5 @@
  host.document?.getElementById('sfxToggleButton')?.addEventListener('click',()=>setEnabled(!enabled));
  host.addEventListener('storage',e=>{if(e.key===KEY||e.key===VOLUME_KEY||e.key===null){read();if(!enabled)stop();host.GameAudio?.sync();render();}});
  host.addEventListener('pagehide',stop);read();render();
- host.DropAudioSystem=Object.freeze({KEY,VOLUME_KEY,FILES,play,stop,setEnabled,setVolume,get volume(){return volume;},get enabled(){return enabled;}});
+ host.DropAudioSystem=Object.freeze({KEY,VOLUME_KEY,FILES,play,revealRoll,stop,setEnabled,setVolume,get volume(){return volume;},get enabled(){return enabled;}});
 })(window);

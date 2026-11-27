@@ -1691,7 +1691,7 @@ function rollCard(source = "manual") {
   // Lock immediately so a second synchronous event cannot enter.
   startCooldown();
   window.RollViewSystem?.beginRoll?.();
-  window.GameAudio?.play('summon','main');
+  if (source === 'manual' && !isAutoRolling) window.GameAudio?.play('summon','main');
 
   try {
     // Catch up any sub-second drift without making gameplay depend on clicks.
@@ -1701,13 +1701,14 @@ function rollCard(source = "manual") {
     const questRollEvent = { startedAt: Date.now(), weatherIds: getActiveWeatherDefinitions().map(w => w.id), cardId: result.card?.id || null, mutationIds: [] };
     state.totalRolls += 1;
 
-    let visualResult = null;
+    let visualResult = null, firstCardUnlock = false;
     if (result.card) {
       const mutations = rollMutations();
       questRollEvent.mutationIds = mutations.map(m => m.id);
       const variantKey = getVariantKey(result.card.id, mutations);
       const cardId = normalizeCardId(result.card.id);
       const ownedBeforeRoll = window.RollPerformanceSystem ? window.RollPerformanceSystem.hasCard(state, cardId) : getOwnedCardCount(cardId) > 0;
+      firstCardUnlock = !ownedBeforeRoll && !Object.hasOwn(state.cardProgress || {}, cardId);
       const variantOwnedBeforeRoll = window.RollPerformanceSystem ? window.RollPerformanceSystem.hasVariant(state, variantKey) : getVariantEntries(cardId).some(entry => entry.key === variantKey && entry.count > 0);
       const isNewCardOrMutation = !ownedBeforeRoll || (mutations.length > 0 && !variantOwnedBeforeRoll);
       const revealRolledCard = (window.RollViewSystem?.cardResult?.(result.card, result.effectiveChance, mutations, isNewCardOrMutation) ?? true);
@@ -1747,7 +1748,7 @@ function rollCard(source = "manual") {
 
     if (saveState(true)) {
       window.QuestSystem.record('roll', {...questRollEvent,id:String(state.totalRolls)});
-      if(result.card){const special=window.DropAudioSystem?.play(result.card.id);if(!special&&!window.DropAudioSystem?.FILES[result.card.id]&&['Legendary','Mythic','Secret'].includes(result.card.rarity))window.GameAudio?.play('rare_reveal','main');}
+      if(result.card)window.DropAudioSystem?.revealRoll(result.card,firstCardUnlock);
     }
     refreshAchievements(false);
     collectionNeedsRefresh = true;
@@ -4267,6 +4268,7 @@ function startBattle(useExistingSetup = true, autoStart = false) {
   }
   try { battleState.questContext = window.QuestSystem.battleContext(battleState, getActiveWeatherDefinitions().map(w => w.id)); }
   catch (error) { appendBattleLog(error.message, 'status'); }
+  window.RollPerformanceSystem.cancel(paintBattleLog);pendingBattleLogs=[];window.BattleLogView.restore(document);
   window.PassiveSystem?.beginBattle?.(battleState);
   if (isTimeTrialBattle()) window.TimeTrialSystem.prepareAfterEntry(battleState);
   document.getElementById('timeTrialSummary')?.classList.add('hidden');
@@ -4287,7 +4289,6 @@ function startBattle(useExistingSetup = true, autoStart = false) {
   els.battleVictory?.setAttribute('aria-hidden', 'true');
   els.battleArena?.classList.remove('hidden');
   window.BattleWeatherHud?.render();
-  window.BattleLogView.restore(document);
 
   appendBattleLog(`${mode} battle begins: ${playerTeam[0].display.name} leads the line.`);
   appendBattleLog(isSpookyBattle()?`${getBattleModeLabel()} • Spooky Coins only • Auto Continue disabled.`:isBossEventBattle() ? `${getBattleModeLabel()} • 12-hour rotation window • Type-specific coins and exclusive drops only.` : isRaidBattle() ? `${getBattleModeLabel()} • ${window.RaidSystem.TYPES[getRaidType()].enemies.length} preset opponent(s) • Type-specific Coins and exclusive drops only.` : isTimeTrialBattle() ? `${getBattleModeLabel()} • ${window.TimeTrialSystem.remaining(battleState) / 1000}s limit • ${window.TimeTrialSystem.isExp(mode)?'Speed Battle Potion ignored':'Speed Battle Potion supported'}.` : isTowerBattle() ? `🏰 ${towerWeather.toUpperCase()} Tower • Floor ${towerFloor}${window.TowerSystem.isElite(towerFloor) ? ' • ELITE' : ''} • 3 Minions + 1 Boss. Stats scale with floor, never player stats.` : `Enemy levels are adaptive to your current team power. ${enemyTeam.map(unit => `Lv. ${unit.level}`).join(', ')}.`);

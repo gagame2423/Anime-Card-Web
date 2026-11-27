@@ -2,12 +2,12 @@
 (function (host) {
   'use strict';
   const labels = Object.freeze({
-    energy:'energy',entry:'passive', passive: 'passive', 'self-passive': 'passive', champion: 'passive', relic: 'passive', skill: 'skill', 'special attack': 'skill',
+    energy:'energy',entry:'passive',buff:'passive',special:'skill','follow-up':'skill',counter:'skill', passive: 'passive', 'self-passive': 'passive', champion: 'passive', relic: 'passive', skill: 'skill', 'special attack': 'skill',
     status: 'status', debuff: 'debuff', 'anti-heal': 'bleed', 'critical hit!': 'crit', 'critical hit': 'crit', crit: 'crit',
     dodge: 'dodge', heal: 'heal', revival: 'heal', revive: 'heal', shield: 'shield', support: 'heal',
     burn: 'burn', bleed: 'bleed', poison: 'poison', dot: 'dot', stun: 'debuff', freeze: 'freeze', 'black flame':'black-flame', 'black flames':'black-flame', fear:'fear', hindred: 'hindred', hindered:'hindred', hypnosis:'hypnosis', hypothesis:'hypnosis', survive: 'heal'
   });
-  const tones = new Set(['player','enemy','victory','defeat','passive','critical','status','debuff','dodge','support','heal','shield','burn','bleed','poison','special','revive','counter']);
+  const tones = new Set(['buff','player','enemy','victory','defeat','passive','critical','status','debuff','dodge','support','heal','shield','burn','bleed','poison','special','revive','counter']);
   const events = [
     ['black-flame', 'black flames?'],
     ['burn', 'burn(?:s|ed|ing)?'],

@@ -13,7 +13,7 @@
     const eventBonus=(bs,unit,key)=>bs?.mode==='spooky-hunt'&&bs.enemyTeam?.includes(unit)?Number(bs.spooky?.modifiers?.[key])||0:0;
     function hinder(bs,target,source,turns){
       if(!alive(target)||!api.allowed(target,source))return false;
-      const r=runtime(target);r.hindredTurns=Math.max(r.hindredTurns||0,turns);r.hindredAppliedTurn=bs.turnCount||0;refresh(target);return true;
+      if(!status(target,'hindredTurns',turns,source))return false;const r=runtime(target);r.hindredAppliedTurn=bs.turnCount||0;refresh(target);return true;
     }
     function mode(unit){const c=state(unit,'the-clown'),previous=c.mode;c.mode=random()<.5?'haste':'hindred';if(previous)api.watch?.change(unit,previous,c.mode);}
     function entry(bs,unit){
@@ -34,7 +34,7 @@
     const attacked=new WeakMap();
     function attackTarget(bs,source,target){
       if(!bs||!target||!source)return;let seen=attacked.get(bs);if(!seen){seen=new WeakSet();attacked.set(bs,seen);}const first=!seen.has(target)&&!target.hasBeenAttacked;seen.add(target);target.hasBeenAttacked=true;
-      if(first&&api.enemyTeam(bs,source).includes(target)&&alive(source)&&has(source,'pennywise')&&alive(target)&&api.allowed(target,source)&&random()<.27)runtime(target).deadlightsHypnosis={turns:3,applied:bs.turnCount||0,source};
+      if(first&&api.enemyTeam(bs,source).includes(target)&&alive(source)&&has(source,'pennywise')&&alive(target)&&api.allowed(target,source)&&random()<.27){runtime(target).deadlightsHypnosis={turns:3,applied:bs.turnCount||0,source};log('[HYPNOSIS] The Deadlights: '+target.card.name+' is hypnotized for 3 turns.','debuff',source,bs);}
     }
     function hypnosisTarget(bs,u,fallback){const h=runtime(u).deadlightsHypnosis;return h?.turns>0&&random()<.80?pick(allies(bs,u,false))||fallback:fallback;}
     function misses(bs,u,options={}){return Boolean(bs&&u)&& !options.fearChecked&&runtime(u).deadlightsFearTurn===bs?.turnCount&&random()<.15;}
@@ -63,8 +63,14 @@
           if(runtime(target).bleed?.length)c.nextBleedBoost=true;
         }
         if(key==='jason-13th'){
-          c.readyMove=c.nextMove||'';c.nextMove='';
-          if(c.attacks%5===0)c.nextMove=random()<.5?'spear':'frog';
+          // This queue belongs to Ki ki ma ma, never to the copied skill.
+          // Every fifth counted attack arms the NEXT legal attack. The
+          // queue survives a miss or another off-turn hit.
+          if(c.attacks%5===0){
+            const move=random()<.5?'spear':'frog';
+            (c.pendingMoves ||= []).push({move,due:c.attacks+1});
+            log('[PASSIVE] Ki ki ma ma: '+unit.card.name+' reached attack #'+c.attacks+'; '+(move==='spear'?'Spear':'Frog')+' prepared for the next attack.','passive',unit,bs);
+          }
         }
         if(key==='freddy-krueger'){c.tryStun=Boolean(c.nextStun);c.nextStun=false;}
         if(key==='myers'){c.stalkAtk*=.34;c.stalkHp*=.67;resizeMyers(unit,c);}
@@ -85,14 +91,22 @@
         }
         return {hit:true,damage:0,killed:false,preventedFatality:true,spookyExecution:true,target,attacker:unit};
       }
+      return null;
+    }
+    function jasonReady(unit){if(!has(unit,'jason-13th'))return false;const c=state(unit,'jason-13th'),row=c.pendingMoves?.[0];return Boolean(row&&row.due<=c.attacks);}
+    function jasonAttack(bs,unit,target){
       if(!has(unit,'jason-13th'))return null;
-      const c=state(unit,'jason-13th'),move=c.readyMove;c.readyMove='';if(!move)return null;
+      const c=state(unit,'jason-13th'),pending=c.pendingMoves?.[0];
+      if(!pending||pending.due>c.attacks)return null;
+      const move=c.pendingMoves.shift().move;
       if(move==='frog'){
+        log('[PASSIVE] Ki ki ma ma: Frog grants all living enemies 50% damage reduction for 3 turns.','passive',unit,bs);
         for(const enemy of enemies(bs,unit)){const r=runtime(enemy);r.spookyFrogTurns=Math.max(3,r.spookyFrogTurns||0);r.spookyFrogAppliedTurn=bs.turnCount||0;refresh(enemy);}
         return {hit:false,damage:0,killed:false,spookyFrog:true,target,attacker:unit};
       }
+      log('[SPECIAL] Ki ki ma ma: Spear pierces the enemy lineup at 200% ATK, with 10% less damage per subsequent target.','special',unit,bs);
       let damage=0,killed=false,index=0;
-      for(const enemy of [...enemies(bs,unit)]){const shot=api.primary(bs,unit,enemy,atk(unit)*2*Math.pow(.9,index++));damage+=shot.damage||0;killed ||= Boolean(shot.killed);if(!alive(unit))break;}
+      for(const enemy of [...enemies(bs,unit)]){const shot=api.primary(bs,unit,enemy,atk(unit)*2*Math.pow(.9,index++),{fearChecked:true});damage+=shot.damage||0;killed ||= Boolean(shot.killed);if(!alive(unit))break;}
       return {hit:damage>0,damage,killed,spookySpear:true,target,attacker:unit};
     }
     function after(bs,unit,target,result,options={}){
@@ -132,7 +146,7 @@
     function killed(bs,unit){if(has(unit,'the-clown')&&alive(unit)){api.atkBonus(unit,.139);api.hpBonus(unit,.139);}}
     function death(bs,victim){
       const c=api.passiveRuntimeFor(victim,'jason-13th').spooky,borrowed=c?.borrowed;
-      if(borrowed){const r=runtime(borrowed.donor);if(r.spookyStolenPassives?.[borrowed.key]===victim)delete r.spookyStolenPassives[borrowed.key];api.removeCopy(victim,borrowed.copy);c.borrowed=null;refresh(borrowed.donor);}
+      if(borrowed){const r=runtime(borrowed.donor);if(r.spookyStolenPassives?.[borrowed.key]===victim)delete r.spookyStolenPassives[borrowed.key];api.removeCopy(victim,borrowed.copy);c.borrowed=null;refresh(borrowed.donor);log('[PASSIVE] Ki ki ma ma returned '+borrowed.donor.card.name+'’s borrowed passive.','passive',victim,bs);}
     }
     function defeated(bs,victim){for(const unit of all(bs))if(alive(unit)&&has(unit,'the-clown')&&api.enemyTeam(bs,unit).includes(victim)){if(api.ownTurn(bs,unit))mode(unit);else state(unit,'the-clown').pendingMode=true;}}
     function onHit(bs,source,target,damage,meta){
@@ -147,8 +161,8 @@
       if(has(actor,'the-oni')){const c=state(actor,'the-oni');if(c.entryTurns>0)c.entryTurns--;c.activeBleedBoost=false;}
       for(const unit of all(bs))if(alive(unit)&&unit.spookyMyersDoomed){const c=unit.spookyDoomState;if(c?.doom>0&&(bs.turnCount||0)>c.doomStarted&&(bs.mode!=='ball-arena'||c.doomTick!==bs.turnCount)){c.doomTick=bs.turnCount;if(--c.doom===0){unit.championPermanentDeath=true;unit.hp=0;unit.defeated=true;api.death(bs,unit);refresh(unit);}}}
     }
-    function badges(unit){const r=runtime(unit),list=[];if(r.deadlightsFearTurn!==undefined&&api.currentBattle()?.turnCount===r.deadlightsFearTurn)list.push({icon:'◉',label:'FEAR · 15% MISS',tone:'debuff',category:'status'});if(r.deadlightsHypnosis?.turns>0)list.push({icon:'◈',label:'HYPNOTIZED '+r.deadlightsHypnosis.turns+'t',tone:'debuff',category:'status'});if(has(unit,'pennywise'))list.push({icon:'◉',label:'DEADLIGHTS '+(state(unit,'pennywise').domain||0)+'t · REVIVES '+(state(unit,'pennywise').revives||0)+'/5',tone:'passive'});if(r.hindredTurns>0)list.push({icon:'⛓',label:`HINDRED ${r.hindredTurns}t`,tone:'debuff',category:'status'});if(unit.spookyMyersDoomed)list.push({icon:'☠',label:`DOOM ${unit.spookyDoomState?.doom||0}t`,tone:'debuff',category:'status'});if(has(unit,'the-clown'))list.push({icon:'♧',label:(state(unit,'the-clown').mode||'Awaiting impact').toUpperCase(),tone:'passive',category:'passive'});return list;}
-    const skills={IDS,state,attackTarget,hypnosisTarget,misses,revive,canFollow,hinder,entry,startTurn,counted,atkFactor,replacement,after,canChain:unit=>Boolean(chainKey(unit)),chain,linked,dodge,killed,death,defeated,onHit,endTurn,badges,eventBonus,
+    function badges(unit){const r=runtime(unit),list=[];if(r.deadlightsFearTurn!==undefined&&api.currentBattle()?.turnCount===r.deadlightsFearTurn)list.push({icon:'◉',label:'FEAR · 15% MISS',tone:'debuff',category:'status'});if(r.deadlightsHypnosis?.turns>0)list.push({icon:'◈',label:'HYPNOTIZED '+r.deadlightsHypnosis.turns+'t',tone:'debuff',category:'status'});if(has(unit,'pennywise'))list.push({icon:'◉',label:'DEADLIGHTS '+(state(unit,'pennywise').domain||0)+'t · REVIVES '+(state(unit,'pennywise').revives||0)+'/5',tone:'passive'});if(r.hindredTurns>0)list.push({icon:'⛓',label:`HINDRED ${r.hindredTurns}t`,tone:'debuff',category:'status'});if(unit.spookyMyersDoomed)list.push({icon:'☠',label:`DOOM ${unit.spookyDoomState?.doom||0}t`,tone:'debuff',category:'status'});if(has(unit,'jason-13th')){const c=state(unit,'jason-13th'),pending=c.pendingMoves?.[0];list.push({key:'jason-ki-ki-ma-ma',icon:'✦',label:pending?'KI KI MA MA · '+pending.move.toUpperCase()+' READY':'KI KI MA MA '+(c.attacks%5)+'/5',tone:'passive',category:'passive',detail:'Attack '+c.attacks+'; every 5 attacks prepares Spear or Frog for the next attack.'});}if(has(unit,'the-clown'))list.push({icon:'♧',label:(state(unit,'the-clown').mode||'Awaiting impact').toUpperCase(),tone:'passive',category:'passive'});return list;}
+    const skills={IDS,state,attackTarget,hypnosisTarget,misses,revive,canFollow,hinder,entry,startTurn,counted,atkFactor,replacement,jasonReady,jasonAttack,after,canChain:unit=>Boolean(chainKey(unit)),chain,linked,dodge,killed,death,defeated,onHit,endTurn,badges,eventBonus,
       hpBonus:unit=>has(unit,'myers')?state(unit,'myers').stalkHp:0,dodgeChance:unit=>has(unit,'freddy-krueger')?.33:0,reduction:(bs,unit)=>(runtime(unit).spookyFrogTurns>0?.50:0)+eventBonus(bs,unit,'reduction')};instances.set(api,skills);return skills;
   };
 host.createSpookySkills.__spooky_passivesWrapped=true;
