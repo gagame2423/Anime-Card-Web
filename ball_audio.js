@@ -1,4 +1,4 @@
-/* Optional, gesture-activated Ball vs Ball SFX. No audio dependency in the combat engine. */
+/* Shared gesture-activated, optional SFX pool for all game modes. */
 (function(host){
  'use strict';
  const FOLDER='assets/audio/ball/',KEY='anime_card_rng_ball_audio_v1',MAX_ACTIVE=8;
@@ -30,110 +30,124 @@
   draw:['draw.mp3','result',.75,300,7,1]
  });
  const FILES=Object.freeze(Object.fromEntries(Object.entries(CUES).map(([key,v])=>[key,FOLDER+v[0]])));
+ const extra=Object.freeze({
+  summon:['summon.mp3','ui',.6,130,2,1,'ui_click'],
+  rare_reveal:['rare_reveal.mp3','result',.85,350,5,1,'skill_cast'],
+  relic_craft:['relic_craft.mp3','ui',.85,180,4,1,'fuse'],
+  fuse:['fuse.mp3','ui',.85,140,4,1,'card_equip'],
+  level:['levelup.mp3','ui',.85,180,5,1,'skill_cast'],
+  dock:['sailing/dock.mp3','sea',.72,220,3,1,'ui_click'],
+  undock:['sailing/undock.mp3','sea',.72,220,3,1,'ui_click'],
+  flag_capture:['sailing/flag_capture.mp3','sea',.85,300,4,1,'skill_cast'],
+  danger_zone:['sailing/danger_zone.mp3','sea',.72,600,3,1,'status_apply'],
+  storm_zone:['sailing/storm_zone.mp3','sea',.85,600,4,1,'status_apply'],
+  island_raid:['sailing/island_raid.mp3','alert',.9,800,6,1,'match_start'],
+  golden_bounty:['sailing/golden_bounty.mp3','alert',.85,1000,6,1,'skill_cast'],
+  capture_success:['sailing/capture_success.mp3','capture',.85,300,5,1,'card_equip'],
+  capture_fail:['sailing/capture_fail.mp3','capture',.75,300,4,1,'defeat'],
+  ship_sink:['sailing/ship_sink.mp3','sea',.8,500,5,1,'knockout'],
+  sea_beast_roar:['sailing/sea_beast_roar.mp3','alert',.9,800,6,1,'match_start'],
+  sea_beast_hit:['sailing/sea_beast_hit.mp3','impact',.8,180,4,1,'collision_heavy']
+ });
  const banks=new Map(),playing=new Set(),lastPlayed=new Map();
- let muted=false,volume=.75,active=false,activated=false,serial=0,warmTimer=0;
- try{const value=JSON.parse(host.localStorage.getItem(KEY)||'null');if(value&&typeof value==='object'){muted=value.muted===true;if(Number.isFinite(value.volume))volume=Math.max(0,Math.min(1,value.volume));}}catch(_){}
+ let activated=false,active=false,serial=0;
+ const clamp=n=>Math.max(0,Math.min(1,Number(n)||0));
  const clock=()=>host.performance?.now?.()??Date.now();
  function settings(){
-  const masterMuted=host.DropAudioSystem?.enabled===false,masterVolume=Math.max(0,Math.min(1,Number(host.DropAudioSystem?.volume??1)||0));
-  return {muted,volume,masterMuted,masterVolume,effective:muted||masterMuted?0:volume*masterVolume};
+  const muted=host.DropAudioSystem?.enabled===false,volume=clamp(host.DropAudioSystem?.volume??.8);
+  return {muted,volume,masterMuted:muted,masterVolume:volume,effective:muted?0:volume};
  }
- function persist(){try{host.localStorage.setItem(KEY,JSON.stringify({muted,volume}));}catch(_){}}
- function release(voice){playing.delete(voice);voice.busy=false;voice.ticket=++serial;}
- function stopVoice(voice){release(voice);try{voice.audio.pause();voice.audio.currentTime=0;}catch(_){}}
- function stop(){for(const voice of [...playing])stopVoice(voice);}
- function missing(bank){
-  if(bank.missing)return;bank.missing=true;
-  for(const voice of bank.voices)stopVoice(voice);
+ function mode(){return host.SailingSea?.active?'sailing':host.BallArena?.active?'ball':host.AutoChessView?.active?'chess':'main';}
+ function spec(key){const ball=Object.hasOwn(CUES,key),row=ball?CUES[key]:Object.hasOwn(extra,key)?extra[key]:null;return row?{path:(ball?FOLDER:'assets/audio/')+row[0],channel:row[1],gain:row[2],gap:row[3],priority:row[4],limit:row[5],fallback:row[6]}:null;}
+ function release(v){
+  if(!v.busy)return;
+  playing.delete(v);v.busy=false;v.ticket=++serial;
+  const end=v.end;v.end=null;v.fallback=null;
+  try{end?.();}catch(_){}
  }
- function bankFor(key){
-  if(!Object.hasOwn(CUES,key))return null;
-  let bank=banks.get(key);if(!bank){bank={key,ready:false,missing:false,voices:[]};banks.set(key,bank);}return bank;
+ function silence(v){release(v);try{v.audio.pause();v.audio.currentTime=0;}catch(_){}}
+ function stop(group){for(const v of [...playing])if(!group||v.group===group)silence(v);}
+ function bank(path){let b=banks.get(path);if(!b){b={path,missing:false,ready:false,voices:[]};banks.set(path,b);}return b;}
+ function missing(b){
+  if(b.missing)return;b.missing=true;
+  for(const v of b.voices){const next=v.busy?v.fallback:null;silence(v);if(next){if(next.file)playFile(next.file,next.group,next.opts);else play(next.key,next.group);}}
  }
- function createVoice(bank){
-  if(!bank||bank.missing||!host.Audio)return null;
+ function createVoice(b){
+  if(b.missing||!host.Audio)return null;
   try{
-   const audio=new host.Audio(),voice={audio,bank,busy:false,ticket:0,priority:0,at:0};
-   bank.voices.push(voice);
-   audio.preload='auto';
-   audio.oncanplay=()=>{if(!bank.missing)bank.ready=true;};
-   audio.onloadeddata=()=>{if(!bank.missing)bank.ready=true;};
-   audio.onended=()=>release(voice);
-   audio.onerror=()=>missing(bank);
-   audio.src=FILES[bank.key];
-   return voice;
-  }catch(_){missing(bank);return null;}
+   const audio=new host.Audio(),v={audio,b,busy:false,ticket:0};b.voices.push(v);
+   audio.preload='auto';audio.oncanplay=audio.onloadeddata=()=>{b.ready=true;};
+   audio.onended=()=>release(v);audio.onerror=()=>missing(b);audio.src=b.path;return v;
+  }catch(_){missing(b);return null;}
  }
- function prime(key){const bank=bankFor(key);if(bank&&!bank.missing&&!bank.voices.length)createVoice(bank);}
- function warm(channel){
-  if(!active||!activated||!host.Audio||!settings().effective)return;
-  // Optional files are requested once per cue, in small batches away from UI and physics.
-  // Never spawn a second loading voice until the first file is known to be playable.
-  const queue=Object.keys(CUES).filter(key=>(channel==='ui'?CUES[key][1]==='ui':true)&&!banks.get(key)?.voices.length&&!banks.get(key)?.missing);
-  host.clearTimeout(warmTimer);
-  function batch(){
-   warmTimer=0;if(!active||!settings().effective||host.document?.hidden)return;
-   for(let i=0;i<4&&queue.length;i++)prime(queue.shift());
-   if(queue.length)warmTimer=host.setTimeout(batch,45);
-  }
-  if(queue.length)warmTimer=host.setTimeout(batch,0);
- }
- function activate(){activated=true;}
- function play(key,closing=false){
-  const spec=CUES[key],s=settings();if(!spec||!activated||(!active&&!closing)||!s.effective||host.document?.hidden||!host.Audio)return false;
-  const now=clock(),last=lastPlayed.get(key);if(last!==undefined&&now-last<spec[3])return false;
-  const bank=bankFor(key);if(bank.missing)return false;
-  let voice=bank.voices.find(v=>!v.busy);
-  if(!voice&&(!bank.voices.length||bank.ready&&bank.voices.length<spec[5]))voice=createVoice(bank);
-  if(!voice||bank.missing)return false;
-  // High-impact cues can replace a low-priority tick, never the end-of-match fanfare.
+ function prime(path){if(!host.Audio||!activated||!settings().effective)return;const b=bank(path);if(!b.missing&&!b.voices.length)createVoice(b);}
+ function playSpec(s,group,opts={}){
+  if(!s||!activated||!settings().effective||host.document?.hidden||!host.Audio)return false;
+  const b=bank(s.path),fallback=opts.fallback||s.fallback,now=clock();
+  if(b.missing)return fallback?play(fallback,group):false;
+  const key=group+'/'+s.path,prev=lastPlayed.get(key);
+  if(prev!==undefined&&now-prev<s.gap)return false;
+  if(s.channel==='countdown'&&[...playing].some(v=>v.channel==='rank'))return false;
+  if(['rank','countdown'].includes(s.channel))for(const v of [...playing])if(['rank','countdown'].includes(v.channel))silence(v);
+  let v=b.voices.find(v=>!v.busy);
+  if(!v&&(!b.voices.length||b.ready&&b.voices.length<s.limit))v=createVoice(b);
+  if(!v||b.missing)return false;
   if(playing.size>=MAX_ACTIVE){
-   const victim=[...playing].filter(v=>v.priority<spec[4]).sort((a,b)=>a.priority-b.priority||a.at-b.at)[0];
-   if(!victim)return false;stopVoice(victim);
+   const victim=[...playing].filter(v=>v.priority<s.priority).sort((a,b)=>a.priority-b.priority||a.at-b.at)[0];
+   if(!victim)return false;silence(victim);
   }
-  voice.busy=true;voice.priority=spec[4];voice.at=now;const ticket=++serial;voice.ticket=ticket;playing.add(voice);lastPlayed.set(key,now);
+  v.busy=true;v.group=group;v.channel=s.channel;v.gain=s.gain;v.priority=s.priority;v.at=now;v.end=opts.onEnd||null;v.fallback=opts.fileFallback?{file:opts.fileFallback,group,opts:{...opts,fileFallback:null}}:fallback?{key:fallback,group}:null;
+  const ticket=++serial;v.ticket=ticket;playing.add(v);lastPlayed.set(key,now);
+  function failed(error){if(v.ticket!==ticket)return;if(error?.name==='NotSupportedError'||v.audio.error)missing(b);else silence(v);}
   try{
-   voice.audio.volume=s.effective*spec[2];try{voice.audio.currentTime=0;}catch(_){}
-   Promise.resolve(voice.audio.play()).then(()=>{
-    // Rejections and a late autoplay resolution must not resurrect a stopped cue.
-    if(voice.ticket!==ticket){if(!voice.busy)try{voice.audio.pause();}catch(_){}return;}
-    if(!settings().effective||host.document?.hidden||!active&&!closing)stopVoice(voice);
-   }).catch(error=>{
-    if(voice.ticket!==ticket)return;
-    if(error?.name==='NotSupportedError'||voice.audio.error)missing(bank);
-    else stopVoice(voice);
-   });
-  }catch(error){if(error?.name==='NotSupportedError'||voice.audio.error)missing(bank);else stopVoice(voice);return false;}
-  return true;
+   v.audio.volume=settings().effective*s.gain;try{v.audio.currentTime=0;}catch(_){}
+   Promise.resolve(v.audio.play()).then(()=>{if(v.ticket!==ticket){if(!v.busy)try{v.audio.pause();}catch(_){}return;}if(!settings().effective||host.document?.hidden)silence(v);}).catch(failed);
+  }catch(error){failed(error);return false;}return true;
  }
- function batch(events){
-  if(!active||!events?.length||!settings().effective)return;
-  // One strongest event per channel per frame. Crit > heavy > light; shield
-  // breaks, skill, healing and other important channels can still layer.
+ function play(key,group=mode()){return playSpec(spec(key),group);}
+ function playFile(file,group=mode(),opts={}){
+  if(!/^[a-z0-9_]+$/i.test(file))return false;
+  const s={path:'assets/audio/'+file+'.mp3',channel:opts.channel||'action',gain:opts.gain??1,gap:opts.gap??65,priority:opts.priority??4,limit:opts.limit??2};
+  // Rank fallback files retain their original root path.
+  const fallback=opts.fileFallback;
+  if(fallback&&bank(s.path).missing)return playFile(fallback,group,{...opts,fileFallback:null});
+  return playSpec(s,group,{...opts,onEnd:opts.onEnd});
+ }
+ function batch(events,group=mode()){
+  if(!events?.length||!settings().effective)return;
   const channels=new Map();
-  for(const event of events){const key=typeof event==='string'?event:event?.cue,spec=CUES[key];if(!spec)continue;const previous=channels.get(spec[1]);if(!previous||CUES[previous][4]<spec[4])channels.set(spec[1],key);}
-  for(const key of [...channels.values()].sort((a,b)=>CUES[b][4]-CUES[a][4]))play(key);
+  for(const event of events){const key=typeof event==='string'?event:event?.cue,s=spec(key);if(!s)continue;const old=channels.get(s.channel);if(!old||old.priority<s.priority)channels.set(s.channel,{key,priority:s.priority});}
+  for(const row of [...channels.values()].sort((a,b)=>b.priority-a.priority))play(row.key,group);
  }
- function sync(){
-  const s=settings();if(!s.effective){stop();return;}
-  for(const voice of playing){try{voice.audio.volume=s.effective*CUES[voice.bank.key][2];}catch(_){}}
+ function sync(){const s=settings();if(!s.effective){stop();return;}for(const v of playing)try{v.audio.volume=s.effective*v.gain;}catch(_){}}
+ function setMuted(value){host.DropAudioSystem?.setEnabled(value!==true);return settings();}
+ function setVolume(value){host.DropAudioSystem?.setVolume(value);return settings();}
+ function activate(){
+  if(activated)return;activated=true;
+  host.setTimeout(()=>{if(!host.document?.hidden)for(const cue of ['ui_click','collision_light','skill_cast','victory'])prime(FILES[cue]);},40);
  }
- function setMuted(value){muted=value===true;persist();sync();if(!muted&&active)warm('all');return settings();}
- function setVolume(value){const n=Number(value);if(Number.isFinite(n)){const wasSilent=!settings().effective;volume=Math.max(0,Math.min(1,n));persist();sync();if(wasSilent&&settings().effective&&active)warm('all');}return settings();}
- function enter(){stop();active=true;activate();lastPlayed.clear();play('modal_open');warm('ui');}
- function beginMatch(){stop();lastPlayed.clear();warm('all');}
- function leave(){
-  stop();host.clearTimeout(warmTimer);warmTimer=0;active=false;play('modal_close',true);
+ function diagnostics(){return {cached:banks.size,missing:[...banks.values()].filter(b=>b.missing).map(b=>b.path),voices:[...banks.values()].reduce((n,b)=>n+b.voices.length,0),active:playing.size,maxActive:MAX_ACTIVE};}
+ // Combat messages are data only. No audio is played by a simulation or a worker.
+ function combatCue(message,tone=''){
+  const t=String(tone).toLowerCase(),m=String(message||'');
+  if(t==='heal'||/\[(?:HEAL|REVIVE)\]|\bhealed [0-9,.]+ HP/i.test(m))return 'heal';
+  if(t==='dodge'||/\[DODGE\]/i.test(m))return 'dodge';
+  if(t==='crit'||t==='critical'||/\[CRIT(?:ICAL HIT!)?\]|^[✦★]\s*(?:CRIT\s*)?[−-]/i.test(m))return 'critical_hit';
+  if(/shield.*(?:break|shatter|destroy)|\[SHIELD BREAK\]/i.test(m))return 'shield_break';
+  if(t==='shield'||/\[SHIELD\]/i.test(m))return 'shield_hit';
+  if(/\[(?:KO|KNOCKOUT|DEFEATED|DEATH)\]|\b(?:was|is) defeated\b/i.test(m))return 'knockout';
+  if(t==='debuff'||/\[(?:DEBUFF|STUN|FREEZE|BURN|BLEED|POISON|FEAR|HINDRED|HYPNOSIS)\]/i.test(m))return 'status_apply';
+  if(t==='passive'||t==='skill'||t==='mana'||t==='aoe'||/\[(?:PASSIVE|CHAMPION|SKILL|SPECIAL|ULTIMATE)\]/i.test(m))return 'skill_cast';
+  if(t==='damage'||t==='attack'||/\bdealt [0-9,.]+ damage\b/i.test(m))return 'collision_light';
+  return null;
  }
- function finish(winner){
-  stop();play(winner==='player'?'victory':winner==='enemy'?'defeat':'draw');
- }
- // Browser autoplay rules: only the user's own pointer/key gestures unlock sounds.
- for(const type of ['pointerdown','keydown'])host.document?.addEventListener(type,activate,{capture:true,passive:true});
- host.document?.addEventListener('visibilitychange',()=>{if(host.document.hidden)stop();else if(active)warm('all');});
- host.addEventListener('pagehide',()=>{stop();host.clearTimeout(warmTimer);warmTimer=0;});
- host.document?.getElementById('sfxToggleButton')?.addEventListener('click',()=>host.queueMicrotask(sync));
- for(const id of ['sfxVolumeRange','sfxVolumeNumber'])host.document?.getElementById(id)?.addEventListener('input',()=>host.queueMicrotask(sync));
- host.BallAudio=Object.freeze({KEY,FOLDER,FILES,settings,setMuted,setVolume,activate,enter,beginMatch,leave,finish,play,batch,stop,sync,
-  diagnostics:()=>({cached:banks.size,missing:[...banks.values()].filter(b=>b.missing).map(b=>b.key),voices:[...banks.values()].reduce((n,b)=>n+b.voices.length,0),active:playing.size,maxActive:MAX_ACTIVE})});
+ for(const type of ['pointerdown','keydown','click'])host.document?.addEventListener(type,e=>{if(e.isTrusted)activate();},{capture:true,passive:true});
+ host.document?.addEventListener('visibilitychange',()=>{if(host.document.hidden)stop();});
+ host.addEventListener('pagehide',()=>stop());
+ host.GameAudio=Object.freeze({FILES,settings,setMuted,setVolume,activate,play,playFile,prime,batch,stop,sync,diagnostics,combatCue,get activated(){return activated;}});
+ host.BallAudio=Object.freeze({KEY,FOLDER,FILES,settings,setMuted,setVolume,activate,
+  enter(){stop();active=true;play('modal_open','ball');},beginMatch(){stop('ball');},
+  leave(){stop('ball');active=false;play('modal_close','ball');},
+  finish(winner){stop('ball');play(winner==='player'?'victory':winner==='enemy'?'defeat':'draw','ball');},
+  play:key=>active&&play(key,'ball'),batch:e=>active&&batch(e,'ball'),stop:()=>stop('ball'),sync,diagnostics});
 })(window);

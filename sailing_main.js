@@ -5,6 +5,22 @@
  const doc=host.document,M=host.SailingMap,K=host.SailingCombat,R=host.SailingRules,B=host.SailingBots,C=host.AutoChessSystem;
  const SETTINGS_KEY='anime_card_rng_sailing_sea_settings_v1';
  let bridge={},view=null,model=null,preview=null,active=false,harbor=true,paused=false,loadError=null,settings={control:'direct'},optionalPanel=null,confirmReturn=null,craftTarget='',saveStatus='Local voyage',saveError=false,raf=0,lastFrame=null,accumulator=0,saveClock=0,hudAt=-Infinity,oceanAt=-Infinity,fight=null,fightId=null,joystick=null;
+ let soundLog=0,soundZone=null,soundFx=0,soundSeek=0;
+ const audio=()=>host.GameAudio;
+ function cue(key){audio()?.play(key,'sailing');}
+ function worldSounds(){
+  if(!active||harbor||!model)return;
+  const fresh=model.logSerial>soundLog?model.logs.filter(row=>row.id>soundLog):[];soundLog=model.logSerial;
+  audio()?.batch(fresh,'sailing');
+  const p=R.player(model),zone=!p.docked&&M.atZone(model,p);
+  if(zone&&zone.id!==soundZone)cue(zone.kind==='storm'?'storm_zone':'danger_zone');
+  soundZone=zone?.id||null;
+ }
+ function combatSounds(){
+  if(!fight)return;const rows=fight.events;
+  if(fight.restoring||soundSeek>0&&fight.visibleTime<=soundSeek+1e-7){soundFx=Math.max(soundFx,rows.at(-1)?.id||0);return;}
+  const fresh=rows.filter(e=>e.id>soundFx&&(!soundSeek||e.at>soundSeek)&&fight.visibleTime-e.at<=.6);soundFx=Math.max(soundFx,rows.at(-1)?.id||0);audio()?.batch(fresh,'sailing');
+ }
  const held=new Set(),mandatory=new Set(['draft','ambush','encounter','combat','report','recruit','finished']);
  const movement=new Map([['w','up'],['arrowup','up'],['s','down'],['arrowdown','down'],['a','left'],['arrowleft','left'],['d','right'],['arrowright','right']]);
  function readSettings(){try{const row=JSON.parse(host.localStorage.getItem(SETTINGS_KEY)||'{}');return {control:row.control==='point'?'point':'direct'};}catch(_){return {control:'direct'};}}
@@ -21,7 +37,7 @@
  function show(force=false){
   if(!view||!active)return;
   const name=currentPanel(),previous=view.panelName;
-  if(previous!==name)clearInput();
+  if(previous!==name){clearInput();if(previous&&(!name||name==='harbor'))cue('modal_close');else if(name&&name!=='harbor'&&name!=='combat'&&name!=='report'&&name!=='finished')cue('modal_open');}
   const ctx=context();view.panel(name,model,ctx,force);view.hud(model,ctx);hudAt=oceanAt=-Infinity;
  }
  function clearInput(){held.clear();joystick=null;view?.endJoystick();}
@@ -47,13 +63,13 @@
   let result;
   try{result=fn();}catch(error){model=previous;throw error;}
   if(!R.save(model)){model=previous;savingFailed();show(true);return {ok:false};}
-  markSaved();if(notify)view.toast(notify,'success');return {ok:true,result};
+  markSaved();worldSounds();if(notify)view.toast(notify,'success');return {ok:true,result};
  }
- function disposeFight(){if(fight)fight.dispose();fight=null;fightId=null;}
+ function disposeFight(){if(fight)fight.dispose();fight=null;fightId=null;soundFx=0;}
  function beginFight(){
   if(model?.phase!=='combat'||!model.combat)return;
   if(fight&&fightId===model.combat.id)return;
-  disposeFight();fightId=model.combat.id;fight=K.start(model.combat,true);
+  disposeFight();fightId=model.combat.id;soundSeek=model.combat.fightTime;fight=K.start(model.combat,true);if(!model.combat.fightTime)cue('match_start');
  }
  function restoreAfterCombatError(error){
   if(!model?.combat)return;
@@ -67,10 +83,10 @@
   const next=R.create(randomSeed(),bridge.name?.()||'You');
   if(!R.validate(next))throw Error('Unable to generate the voyage.');
   if(!R.save(next)){savingFailed();return;}
-  disposeFight();model=next;loadError=null;markSaved();harbor=false;paused=false;accumulator=0;optionalPanel=null;craftTarget='';clearInput();show(true);
+  disposeFight();model=next;soundLog=0;soundZone=null;loadError=null;markSaved();harbor=false;paused=false;accumulator=0;optionalPanel=null;craftTarget='';clearInput();show(true);
  }
  function resume(){
-  if(!model)return;harbor=false;optionalPanel=null;paused=false;accumulator=0;lastFrame=null;
+  if(!model)return;soundLog=model.logSerial;soundZone=M.atZone(model,R.player(model))?.id||null;harbor=false;optionalPanel=null;paused=false;accumulator=0;lastFrame=null;
   if(model.phase==='combat'){try{beginFight();}catch(error){restoreAfterCombatError(error);return;}}
   show(true);
  }
@@ -78,7 +94,7 @@
   if(!active)return false;
   if(model&&!checkpoint(false))return false;
   active=false;clearInput();disposeFight();host.cancelAnimationFrame(raf);raf=0;lastFrame=null;accumulator=0;
-  view.close();bridge.onExit?.();doc.getElementById('hubSailingButton')?.focus({preventScroll:true});return true;
+  audio()?.stop('sailing');cue('modal_close');view.close();bridge.onExit?.();doc.getElementById('hubSailingButton')?.focus({preventScroll:true});return true;
  }
  function setPanel(name){
   optionalPanel=name;clearInput();show(true);
@@ -89,7 +105,7 @@
  function setControl(value){
   const next=value==='point'?'point':'direct';
   if(settings.control===next)return;
-  settings.control=next;writeSettings();clearInput();
+  settings.control=next;cue('tab_switch');writeSettings();clearInput();
   if(model)model.waypoint=null;
   show(currentPanel()==='settings');view.toast(next==='direct'?'Direct control enabled.':'Click / tap to move enabled.','success');
  }
@@ -97,14 +113,14 @@
   if(!model||harbor||model.phase==='draft'||model.phase==='finished')return;
   if(saveError&&!checkpoint(false))return;
   paused=!paused;accumulator=0;lastFrame=null;clearInput();
-  if(paused)checkpoint(false);show(currentPanel()==='settings');
+  if(paused){audio()?.stop('sailing');checkpoint(false);}show(currentPanel()==='settings');
  }
  function onlySea(){
   if(!model||harbor||model.phase!=='sailing')throw Error('Finish the current encounter first.');
   return R.player(model);
  }
  function selectDeploy(ids){
-  const out=commit(()=>R.deploy(model,ids));if(out.ok)view.hud(model,context());
+  const out=commit(()=>R.deploy(model,ids));if(out.ok){cue('card_select');view.hud(model,context());}
  }
  function point(pos){
   if(!active||harbor||!model||paused||currentPanel()||model.phase!=='sailing'||settings.control!=='point')return;
@@ -171,7 +187,7 @@
     case'equip':{
      onlySea();const u=p.crew.find(c=>c.uid===data.uid);if(!u)throw Error('Crew member unavailable.');
      if((u.relic?.id||'')===data.id)break;
-     if(commit(()=>R.equip(model,p,data.uid,data.id||null)).ok)show(true);break;
+     if(commit(()=>R.equip(model,p,data.uid,data.id||null)).ok){cue('card_equip');show(true);}break;
     }
     case'upgrade':onlySea();setPanel('upgrade');break;
     case'doUpgrade':if(onlySea()&&commit(()=>R.upgrade(model,p),'Ship upgraded. New crew slots available.').ok)show(true);break;
@@ -211,7 +227,7 @@
   if(!active)return;
   const now=ms/1000,dt=lastFrame===null?0:Math.max(0,now-lastFrame);lastFrame=now;
   try{
-   if(model&&!harbor&&!paused&&!doc.hidden&&model.phase==='combat'&&fight?.restoring)fight.step(0);
+   if(model&&!harbor&&!paused&&!doc.hidden&&model.phase==='combat'&&fight?.restoring){fight.step(0);combatSounds();}
    if(activeClock()){
     accumulator+=dt;
     const budget=host.performance.now()+5;
@@ -221,13 +237,13 @@
      const sailingWithoutPanel=!currentPanel()&&model.phase==='sailing';
      R.stepWorld(model,R.STEP,{vector:sailingWithoutPanel&&settings.control==='direct'?directVector():null,autopilot:sailingWithoutPanel&&settings.control==='point'});
      accumulator=Math.max(0,accumulator-R.STEP);saveClock+=R.STEP;
-     if(phaseChanged(before))break;
+     worldSounds();if(phaseChanged(before))break;
      if(day!==model.day||lock!==model.repairLocked)checkpoint(false);
      if(host.performance.now()>budget)break;
     }
     if(model.phase==='combat'&&fight&&!paused){
-     fight.step(Math.min(.5,dt));syncFightCheckpoint();
-     if(fight.done){const before=model.phase,out=fight.outcome;if(!out?.sailingCrew)throw Error('The boarding result is incomplete.');R.settlePlayer(model,out);disposeFight();phaseChanged(before);}
+     fight.step(Math.min(.5,dt));combatSounds();syncFightCheckpoint();
+     if(fight.done){const before=model.phase,out=fight.outcome;if(!out?.sailingCrew)throw Error('The boarding result is incomplete.');R.settlePlayer(model,out);audio()?.stop('sailing');worldSounds();if(model.phase!=='finished')cue(out.winner==='player'?'victory':out.winner==='enemy'?'defeat':'draw');disposeFight();phaseChanged(before);}
     }
     if(saveClock+1e-8>=5)checkpoint();
    }else accumulator=0;
@@ -253,7 +269,7 @@
   preview ||= R.create(931905,'You');
   view ||= host.SailingUI.makeView(actions);if(!view)return false;
   active=true;harbor=true;paused=false;loadError=loaded.error;saveError=false;saveStatus=model?'Saved voyage':'Local voyage';optionalPanel=null;craftTarget='';saveClock=0;lastFrame=null;accumulator=0;hudAt=-Infinity;
-  bridge.onEnter?.();view.open();show(true);raf=host.requestAnimationFrame(frame);return true;
+  soundLog=model?.logSerial||0;soundZone=null;audio()?.stop();bridge.onEnter?.();view.open();cue('modal_open');show(true);raf=host.requestAnimationFrame(frame);return true;
  }
  function keydown(event){
   if(!active)return;

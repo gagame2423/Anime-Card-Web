@@ -20,8 +20,8 @@
  const ranking=s=>survivors(s).slice().sort((a,b)=>b.bounty-a.bounty||b.hp-a.hp||b.sinks-a.sinks||a.id.localeCompare(b.id));
  const repairLocked=s=>s.repairLocked||s.difficulty>=10;
  const crewReady=p=>K.living(p.crew).length;
- function log(s,message,tone='info'){
-  s.logs.push({id:++s.logSerial,time:s.elapsed,day:s.day,tone,message:String(message).slice(0,260)});
+ function log(s,message,tone='info',cue=null){
+  s.logs.push({id:++s.logSerial,time:s.elapsed,day:s.day,tone,...(cue?{cue}:{}),message:String(message).slice(0,260)});
   if(s.logs.length>160)s.logs.splice(0,s.logs.length-160);
   return s.logs[s.logs.length-1];
  }
@@ -50,12 +50,12 @@
  }
  function wanted(s){
   const list=survivors(s);s.wantedId=list.length?list[M.int(s,0,list.length-1)].id:null;
-  if(s.wantedId)log(s,'Golden Bounty: '+get(s,s.wantedId).name+' is wanted until dawn.','gold');
+  if(s.wantedId)log(s,'Golden Bounty: '+get(s,s.wantedId).name+' is wanted until dawn.','gold','golden_bounty');
  }
  function chooseCaptain(s,id){
   if(s.phase!=='draft'||!s.draft.includes(id))throw Error('Choose one of your three Secret captains.');
   const p=player(s),u=K.member(s,id);p.crew=[u];s.deployIds=[u.uid];s.draft=[];s.phase='sailing';
-  log(s,'Day 1 — '+K.native(id).name+' joins your voyage. Dock at Windward Cay to gather Material.','success');wanted(s);return u;
+  log(s,'Day 1 — '+K.native(id).name+' joins your voyage. Dock at Windward Cay to gather Material.','success','card_equip');wanted(s);return u;
  }
  function updateLock(s){
   if(!s.repairLocked&&s.difficulty>=10){s.repairLocked=true;log(s,'Difficulty 10 reached. Ship repairs are permanently locked for every captain.','danger');}
@@ -80,14 +80,14 @@
  function dock(s,p,i){
   if(!alive(p)||isBusy(p)||!i||p.docked||M.distance(p,i)>i.radius+M.DOCK_RANGE+1e-7)throw Error('Sail closer to an island to dock.');
   M.dockPosition(p,i);p.docked=i.id;p.dockedSince=s.elapsed;p.gatherClock=0;p.raidAt=s.elapsed+M.between(s,38,68);p.contestAt=s.elapsed+M.between(s,12,22);p.zoneId=null;p.hazardAt=null;
-  if(p.id==='player'){s.waypoint=null;log(s,'Docked at '+i.name+'. Gathering and crew recovery started.','success');}
+  if(p.id==='player'){s.waypoint=null;log(s,'Docked at '+i.name+'. Gathering and crew recovery started.','success','dock');}
  }
  function undock(s,p,quiet=false){
   if(!p.docked)return;
   const i=M.islandById(s,p.docked);
   p.docked=null;p.gatherClock=0;p.raidAt=0;p.contestAt=0;p.speed=0;p.cooldownUntil=Math.max(p.cooldownUntil,s.elapsed+3);
   for(const u of p.crew)if(u.hp<=0)u.reviveDock=0;
-  if(p.id==='player'&&!quiet)log(s,'Departed '+(i?.name||'the island')+'.','info');
+  if(p.id==='player'&&!quiet)log(s,'Departed '+(i?.name||'the island')+'.','info','undock');
  }
  function contested(s,p,i){const owner=get(s,i?.owner);return owner&&owner!==p&&alive(owner)&&owner.docked===i.id?owner:null;}
  function capture(s,p,i,won=false){
@@ -95,13 +95,13 @@
   if(i.owner===p.id)return false;
   if(!won&&contested(s,p,i))throw Error('The island is occupied. Defeat its captain to capture it.');
   const previous=get(s,i.owner);i.owner=p.id;
-  log(s,p.name+' '+(previous?'captured '+i.name+' from '+previous.name:'claimed '+i.name)+' · +0.5 Material/s while at sea.','flag');return true;
+  log(s,p.name+' '+(previous?'captured '+i.name+' from '+previous.name:'claimed '+i.name)+' · +0.5 Material/s while at sea.','flag',p.id==='player'||previous?.id==='player'?'flag_capture':null);return true;
  }
  function canUpgrade(p){const u=UPGRADES[p.level];return !!u&&enough(p.material,u.material)&&p.beasts>=u.beasts;}
  function upgrade(s,p){
   if(!alive(p)||isBusy(p)||!canUpgrade(p))throw Error('Upgrade requirements are not met.');
   const requirement=UPGRADES[p.level];p.material=Math.max(0,p.material-requirement.material);p.level++;
-  log(s,p.name+' upgraded to Ship Lv. '+p.level+' · '+cap(p)+' crew slots.','success');return p.level;
+  log(s,p.name+' upgraded to Ship Lv. '+p.level+' · '+cap(p)+' crew slots.','success',p.id==='player'?'level':null);return p.level;
  }
  function craft(s,p,kind,uid=null){
   const recipe=K.recipe(kind);
@@ -110,7 +110,7 @@
   const target=uid&&p.crew.find(u=>u.uid===uid);if(uid&&!target)throw Error('Crew member unavailable.');
   const item=K.rollRelic(s,kind);p.material=Math.max(0,p.material-recipe.cost);
   if(target){if(target.relic)p.locker.push(target.relic);K.equip(target,item);}else p.locker.push(item);
-  if(p.id==='player')log(s,'Forged Legendary Unique '+recipe.name+(target?' for '+K.native(target).name:' in your Relic locker')+'.','gold');
+  if(p.id==='player')log(s,'Forged Legendary Unique '+recipe.name+(target?' for '+K.native(target).name:' in your Relic locker')+'.','gold','relic_craft');
   return item;
  }
  function equip(s,p,uid,relicId){
@@ -171,7 +171,7 @@
   const available=new Set(K.living(p.crew).map(u=>u.uid));
   s.deployIds=s.deployIds.filter(id=>available.has(id));
   if(!s.deployIds.length)s.deployIds=[...available];
-  log(s,e.islandId?'Raid warning at '+(M.islandById(s,e.islandId)?.name||'your island')+': '+e.name+'!':(e.kind==='beast'?'Sea Beast sighted: ':e.kind==='captain'?'Hostile captain: ':'Pirate sails: ')+e.name+'.','danger');
+  log(s,e.islandId?'Raid warning at '+(M.islandById(s,e.islandId)?.name||'your island')+': '+e.name+'!':(e.kind==='beast'?'Sea Beast sighted: ':e.kind==='captain'?'Hostile captain: ':'Pirate sails: ')+e.name+'.','danger',e.islandId?'island_raid':e.kind==='beast'?'sea_beast_roar':null);
   return true;
  }
  function deploy(s,ids){
@@ -182,7 +182,7 @@
   if(!['encounter','ambush'].includes(s.phase)||!s.encounter)throw Error('No encounter is ready.');
   const p=player(s),crew=p.crew.filter(u=>s.deployIds.includes(u.uid)&&u.hp>0);
   if(!crew.length)throw Error('Deploy at least one living crew member.');
-  const e=s.encounter;s.combat={id:e.id,encounter:C.clone(e),seed:e.seed,playerCrew:C.clone(crew),enemyCrew:C.clone(e.crew),fightTime:0};
+  const e=s.encounter;s.combat={id:e.id,encounter:C.clone(e),seed:e.seed,playerCrew:C.clone(crew),enemyCrew:C.clone(e.crew),fightTime:0,staminaVersion:host.AutoChessCombat.SAILING_STAMINA.version};
   s.encounter=null;s.phase='combat';return s.combat;
  }
  function release(s,p,e){
@@ -197,8 +197,8 @@
   const marked=s.wantedId===victim.id;
   if(alive(killer)&&killer!==victim){
    const loot=marked?victim.bounty:Math.floor(victim.bounty*.35);killer.bounty+=120+loot;killer.sinks++;victim.bounty=Math.max(0,victim.bounty-loot);
-   log(s,killer.name+' sank '+victim.name+' · +'+Math.floor(120+loot)+' Bounty'+(marked?' (100% Wanted Bounty captured)':'')+'.','sink');
-  }else log(s,victim.name+' sank at sea'+(marked?' · the Golden Bounty is gone':'')+'.','sink');
+   log(s,killer.name+' sank '+victim.name+' · +'+Math.floor(120+loot)+' Bounty'+(marked?' (100% Wanted Bounty captured)':'')+'.','sink','ship_sink');
+  }else log(s,victim.name+' sank at sea'+(marked?' · the Golden Bounty is gone':'')+'.','sink','ship_sink');
   if(marked)log(s,'Golden Bounty ended for today. A new captain will be marked at dawn.','gold');
  }
  function damageShip(s,p,n,killer=null){
@@ -284,7 +284,7 @@
   if(ambushed){
    const i=M.islandById(s,p.docked);undock(s,p,true);
    if(other?.level>=2&&i?.owner===p.id){if(!other.docked&&M.distance(other,i)<=i.radius+M.DOCK_RANGE)dock(s,other,i);if(other.docked===i.id)capture(s,other,i,true);}
-   log(s,'Fled '+(i?.name||'the island')+' to sea.','danger');
+   log(s,'Fled '+(i?.name||'the island')+' to sea.','danger','undock');
   }else{
    damageShip(s,p,e.kind==='captain'?8:6,other);log(s,'Evaded '+e.name+' · '+(e.kind==='captain'?8:6)+' Ship HP lost.','danger');
   }
@@ -294,8 +294,8 @@
  function pickRecruit(s,index){
   if(s.phase!=='recruit'||!s.recruit||s.recruit.accepted||!integer(index,0,s.recruit.offers.length-1))throw Error('Choose one recruit offer.');
   const p=player(s),offer=s.recruit.offers[index];
-  if(!offer.success){log(s,K.native(offer.cardId).name+' escaped capture ('+Math.round(offer.rate*100)+'% chance).','danger');s.phase='sailing';s.recruit=null;return {success:false};}
-  s.recruit.accepted=offer.cardId;
+  if(!offer.success){log(s,K.native(offer.cardId).name+' escaped capture ('+Math.round(offer.rate*100)+'% chance).','danger','capture_fail');s.phase='sailing';s.recruit=null;return {success:false};}
+  s.recruit.accepted=offer.cardId;log(s,K.native(offer.cardId).name+' successfully captured.','success','capture_success');
   if(room(p)>0){addRecruit(s,p,offer.cardId);s.phase='sailing';s.recruit=null;return {success:true};}
   return {success:true,full:true};
  }
@@ -312,7 +312,7 @@
   const won=alive(p)&&(reason==='last-ship'||reason==='time-limit'&&winner?.id===p.id);
   s.phase='finished';s.result={won,reason,winnerId:won?p.id:reason==='sunk'&&live.length>1?null:winner?.id||null,winnerName:reason==='sunk'&&live.length>1?null:(won?p:winner)?.name||'No surviving captain',rank:alive(p)?live.findIndex(a=>a===p)+1:p.placement||20,day:s.day,time:s.elapsed,bounty:p.bounty};
   s.waypoint=null;s.encounter=null;s.combat=null;s.recruit=null;s.report=null;s.jobs=[];for(const ship of s.captains){ship.busy=null;ship.speed=0;}
-  log(s,won?'Victory — you rule the Sailing Sea.':reason==='sunk'?'Your ship sank. Voyage ended.':'Day 15 ended. '+s.result.winnerName+' wins by Bounty.',won?'gold':'danger');
+  log(s,won?'Victory — you rule the Sailing Sea.':reason==='sunk'?'Your ship sank. Voyage ended.':'Day 15 ended. '+s.result.winnerName+' wins by Bounty.',won?'gold':'danger',won?'victory':'defeat');
  }
  function checkVictory(s){
   if(s.phase==='finished'||s.phase==='draft')return s.phase==='finished';
@@ -392,7 +392,7 @@
    if(s.wantedId!==null&&!ids.has(s.wantedId))return false;
    if(s.phase==='draft'&&(!Array.isArray(s.draft)||s.draft.length!==3||new Set(s.draft).size!==3||s.draft.some(id=>K.native(id)?.rarity!=='Secret')||player(s).crew.length))return false;
    if(['ambush','encounter'].includes(s.phase)&&!validEncounter(s.encounter,s))return false;
-   if(s.phase==='combat'&&(!s.combat||!validEncounter(s.combat.encounter,s)||!Array.isArray(s.combat.playerCrew)||!s.combat.playerCrew.length||s.combat.playerCrew.length>10||!s.combat.playerCrew.every(u=>validMember(u))||!Array.isArray(s.combat.enemyCrew)||!s.combat.enemyCrew.length||!s.combat.enemyCrew.every(u=>validMember(u,true))||!finite(s.combat.fightTime,0,60.001)))return false;
+   if(s.phase==='combat'&&(!s.combat||!validEncounter(s.combat.encounter,s)||!Array.isArray(s.combat.playerCrew)||!s.combat.playerCrew.length||s.combat.playerCrew.length>10||!s.combat.playerCrew.every(u=>validMember(u))||!Array.isArray(s.combat.enemyCrew)||!s.combat.enemyCrew.length||!s.combat.enemyCrew.every(u=>validMember(u,true))||!finite(s.combat.fightTime,0,60.001)||(s.combat.staminaVersion!==undefined&&![1,2].includes(s.combat.staminaVersion))))return false;
    if(s.recruit&&(!Array.isArray(s.recruit.offers)||s.recruit.offers.length<1||s.recruit.offers.length>3||s.recruit.offers.some(o=>!K.native(o.cardId)||!finite(o.rate,0,1)||typeof o.success!=='boolean')||s.recruit.accepted!==null&&!s.recruit.offers.some(o=>o.cardId===s.recruit.accepted&&o.success)))return false;
    if(s.phase==='recruit'&&!s.recruit||s.phase==='report'&&!s.report||s.phase==='finished'&&!s.result)return false;
    for(const j of s.jobs)if(!/^job\d+$/.test(j.id)||!get(s,j.aId)||get(s,j.aId).busy!==j.id||!validEncounter(j.encounter,s)||!finite(j.finishAt,0,5500))return false;

@@ -108,7 +108,7 @@
  }
  const roundTime=n=>Number((Math.round(clamp(Number(n)||0,0,F.LIMIT)/F.STEP)*F.STEP).toFixed(2));
  function start(job,worker=true){
-  const a=roster(job.playerCrew),b=roster(job.enemyCrew),seek=roundTime(job.fightTime),options={sailing:true,sailingReplay:seek};
+  const a=roster(job.playerCrew),b=roster(job.enemyCrew),seek=roundTime(job.fightTime),options={sailing:true,sailingReplay:seek,sailingStaminaVersion:job.staminaVersion??1};
   let fight,pool=null,nativeTarget=seek;
   if(worker&&host.Worker&&host.location&&/^https?:$/.test(host.location.protocol)){
    try{pool=F.createWorkerPool();fight=F.remoteCombat(pool,a,b,job.seed,options);}catch(_){pool?.dispose();pool=null;}
@@ -161,7 +161,7 @@
    return Object.fromEntries(living(crew).map(u=>{
     const max=stats(u).hp,pressure=remote/Math.max(1,own),cost=won===true?clamp(.13+pressure*.21,.10,.56):won===false?clamp(.63+pressure*.20,.70,1.2):.60;
     const damage=max*cost*M.between(rand,.79,1.23),hp=Math.max(0,u.hp-damage);
-    return [u.uid,{health:hp/max,stamina:Math.max(0,u.stamina-M.between(rand,22,48)),cartoonProgress:u.cartoonProgress||null}];
+    return [u.uid,{health:hp/max,stamina:Math.max(0,u.stamina-M.between(rand,F.SAILING_STAMINA.offscreenMin,F.SAILING_STAMINA.offscreenMax)),cartoonProgress:u.cartoonProgress||null}];
    }));
   }
   return {winner,sailingCrew:{player:wounds(a,pa,pb,winner==='draw'?null:winner==='player'),enemy:wounds(b,pb,pa,winner==='draw'?null:winner==='enemy')},playerSurvivors:living(a).length,enemySurvivors:living(b).length};

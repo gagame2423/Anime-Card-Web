@@ -67,7 +67,7 @@
     try{
       host.localStorage.setItem(host.InventorySystem.KEY,plan.itemsAfter);host.localStorage.setItem(MAIN_KEY,plan.mainAfter);
       const journal=data.pending;data.pending=null;if(!persist()){data.pending=journal;throw Error('Commit failed');}
-      host.InventorySystem.reload();bridge.onCommit?.();return {ok:true,message:'Crafted 1 '+preview.recipe.name+'.'};
+      host.InventorySystem.reload();bridge.onCommit?.();host.GameAudio?.play('relic_craft');return {ok:true,message:'Crafted 1 '+preview.recipe.name+'.'};
     }catch(_){
       const restored=recover();if(restored)bridge.onCommit?.();else bridge.onBlocked?.();
       return {ok:false,message:restored?'Save failed. Cards, VNĐ and item quantities restored.':'Storage unavailable. Reload to recover the pending craft before continuing.'};
@@ -75,7 +75,7 @@
   }
   function equip(id){
     if(blocked||host.SandboxSystem?.active||bridge.canAct?.()!==true||(id!==null&&(!ITEMS.has(id)||host.InventorySystem.quantity(id)<1)))return false;
-    const before=data.equipped;data.equipped=id;if(!persist()){data.equipped=before;return false;}bridge.onChange?.();return true;
+    const before=data.equipped;data.equipped=id;if(!persist()){data.equipped=before;return false;}bridge.onChange?.();host.GameAudio?.play('card_equip');return true;
   }
   function current(){return data.equipped&&host.InventorySystem.quantity(data.equipped)>0?ITEMS.get(data.equipped):null;}
   function bonuses(){return current()?.bonuses||ZERO;}

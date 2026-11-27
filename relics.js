@@ -227,7 +227,7 @@
  function canAct(){return bridge.canAct?.()!==false&&!host.SandboxSystem?.active&&!host.PvPSystem?.active;}
  function craft(id,random=Math.random){const recipe=RECIPES.find(r=>r.id===id);if(!recipe||!canAct())return {ok:false,message:'Finish the current activity first.'};const r=roll(recipe.kind,random),newId='relic_'+host.OnlineUtils.token(),item=itemFor(newId,r);
   const ok=host.InventorySystem.transactItems(items=>{for(const cost of recipe.ingredients)if((items[cost.id]?.quantity||0)<cost.quantity)return false;for(const cost of recipe.ingredients)items[cost.id].quantity-=cost.quantity;items[newId]=item;return true;});
-  if(ok)bridge.onChange?.();return {ok,id:ok?newId:null,message:ok?'Crafted '+item.name+' · '+r.rarity+(r.unique?' · UNIQUE':''):'Unable to craft: missing materials or storage unavailable.'};
+  if(ok){bridge.onChange?.();host.GameAudio?.play('relic_craft');}return {ok,id:ok?newId:null,message:ok?'Crafted '+item.name+' · '+r.rarity+(r.unique?' · UNIQUE':''):'Unable to craft: missing materials or storage unavailable.'};
  }
  function list(){return host.InventorySystem.list().filter(item=>item.type==='relic'&&item.quantity===1&&validItem(item));}
  function get(id){const item=host.InventorySystem.getItem(id);return item?.type==='relic'&&validItem(item)?item:null;}
@@ -276,7 +276,7 @@
   return {ok:true,...outcome,message:outcome.success?'Fusion successful! Received '+outcome.item.name+'.':'Fusion failed. All '+outcome.consumed+' selected Relics were consumed.'};
  }
  function bindingOwned(b){return Boolean(b&&(bridge.count?bridge.count(b.cardId)>0:(bridge.variants?.(b.cardId)||[]).some(v=>v.count>0)));}
- function bind(id,binding){if(!canAct()||!get(id)||!validBinding(binding)||binding&&!bindingOwned(binding))return false;const ok=host.InventorySystem.transactItems(items=>{for(const item of Object.values(items))if(item.type==='relic'&&binding&&key(item.metadata.binding)===key(binding)){item.metadata.binding=null;item.description=describe(item.metadata.relic);}items[id].metadata.binding=binding?{cardId:binding.cardId}:null;items[id].description=describe(items[id].metadata.relic,binding);return true;});if(ok)bridge.onChange?.();return ok;}
+ function bind(id,binding){if(!canAct()||!get(id)||!validBinding(binding)||binding&&!bindingOwned(binding))return false;const ok=host.InventorySystem.transactItems(items=>{for(const item of Object.values(items))if(item.type==='relic'&&binding&&key(item.metadata.binding)===key(binding)){item.metadata.binding=null;item.description=describe(item.metadata.relic);}items[id].metadata.binding=binding?{cardId:binding.cardId}:null;items[id].description=describe(items[id].metadata.relic,binding);return true;});if(ok){bridge.onChange?.();host.GameAudio?.play('card_equip');}return ok;}
  // Gắn theo ID thẻ; chuyển dữ liệu cũ mà không xóa Relic.
  function migrateBindings(){
   const rows=list().filter(i=>i.metadata.binding).sort((a,b)=>(a.metadata.binding.copy||0)-(b.metadata.binding.copy||0)||a.id.localeCompare(b.id));

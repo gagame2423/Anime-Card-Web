@@ -179,13 +179,13 @@
    return cast(u,target,false);
   }
   function releaseStamina(u,target){
-   if(!battle.tactical?.sailing||!alive(u)||!u.grid||u.grid.stamina<20)return false;
+   if(!battle.tactical?.sailing||!alive(u)||!u.grid||u.grid.stamina<(battle.tactical.staminaRules?.skill??8))return false;
    return cast(u,target,true);
   }
   function cast(u,target,stamina){
    const foes=enemies(u).filter(v=>v.grid),victim=target&&alive(target)&&(!stamina||foes.includes(target))?target:nearest(u,foes,1)[0];
    if(!victim)return false;
-   if(stamina)u.grid.stamina=Math.max(0,u.grid.stamina-20);else u.grid.mana-=100;
+   if(stamina)u.grid.stamina=Math.max(0,u.grid.stamina-(battle.tactical.staminaRules?.skill??8));else u.grid.mana-=100;
    api.energyCast(u,victim);
    for(const r of active(u)){
     if(!alive(u))break;const amount=u.atk*r.power*r.tier;

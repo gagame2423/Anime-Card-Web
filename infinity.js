@@ -279,7 +279,7 @@
  function schedule(){stopTimer();if(active&&combat&&!combat.battle.finished){const delay=host.InventorySystem.combatTurnMs(3000);combat.battle.nextTurnAt=Date.now()+delay;timer=host.setTimeout(tick,delay);host.InfinityViewSystem.clock();}}
  function tick(){
   if(!active||host.GameStartup?.failed){suspend();return;}renderClock();if(combat?.battle.finished)return;
-  try{const result=combat.step();if(result.ended){bridge.onEnd?.(combat.battle);end('Team defeated. Highest wave and Star Orbs retained.');}renderBattle();schedule();}catch(error){end(error.message+' Run stopped safely.');}
+  try{const result=combat.step();if(result.ended){host.GameAudio?.play('defeat','main');bridge.onEnd?.(combat.battle);end('Team defeated. Highest wave and Star Orbs retained.');}renderBattle();schedule();}catch(error){end(error.message+' Run stopped safely.');}
  }
  function rewardWave(wave,battle){
   if(runWeek.id!==week().id)throw Error('Weekly rotation ended.');const receipt=runId+'_'+wave;
@@ -288,7 +288,7 @@
   if(orbs>MAX-host.InventorySystem.quantity('star_orb'))throw Error('Star Orb storage is full.');
   data.pending={weekId:runWeek.id,wave,orbs,receipt};if(!persist()){data.pending=null;throw Error('Unable to save the wave reward.');}
   if(!commitReward()){blocked=true;throw Error('Storage unavailable. Reload to recover the pending Star Orbs.');}
-  sessionOrbs+=orbs;bridge.onReward?.(wave,battle);void report();
+  sessionOrbs+=orbs;host.GameAudio?.play('victory','main');bridge.onReward?.(wave,battle);void report();
  }
  async function report(force=false){
   if(reporting){if(force)reportAgain=true;return reporting;}

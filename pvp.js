@@ -41,7 +41,7 @@
   renderSelection();
  }
  function renderClock(){if(combat)V.renderClock(seq,combat.activeSide,localSide(),deadline,phase,confirmed,remoteBusy);}
- function renderCombat(){if(!combat)return;V.renderCombat(combat,localSide(),remoteName);renderClock();}
+ function renderCombat(){if(!combat)return;V.renderCombat(combat,localSide(),remoteName);host.GameAudio?.batch(combat.drainAudio?.(),'main');renderClock();}
  async function open(){if(active||bridge.canEnter?.()!==true)return false;active=true;bridge.onEnter?.();bridge.open?.('pvpModal');text('pvpStatus','Create a room or join a friend. Both players choose privately, then lock in.');phase='setup';mode=Number(el('pvpMode')?.value)===4?4:1;refreshOwned();restoreTeam();renderControls();return true;}
  function leaveRoom(){handling=false;try{if(connection?.open)send('leave');}catch(_){}stopRoom();phase='setup';combat=null;selection=[];localCommit=null;lockState='idle';localReveal=null;remoteReveal=null;remoteCommit='';V.resetCombat();text('pvpOpponentPick','Opponent picks remain hidden until both players are Ready.');text('pvpStatus','Room closed. No rewards or progression.');renderControls();}
  function exit(){if(!active)return;leaveRoom();active=false;bridge.close?.('pvpModal');bridge.onExit?.();}
@@ -133,7 +133,7 @@
  function startTurn(){stopTimer();if(combat.battle.finished){send('turn',{seq,hash:lastHash,duration:TURN_MS});showResult();return;}deadline=Date.now()+TURN_MS;send('turn',{seq,hash:lastHash,duration:TURN_MS});timer=host.setTimeout(()=>{void advance().catch(error=>abort(error.message));},TURN_MS);renderControls();renderCombat();}
  async function advance(){const ticket=generation;if(role!=='host'||!confirmed||phase!=='combat')return;confirmed=false;stopTimer();combat.step();seq++;const stateHash=await U.hash(combat.snapshot());if(ticket!==generation)return;lastHash=stateHash;send('advance',{seq,hash:lastHash});timer=host.setTimeout(()=>abort('Opponent did not confirm the combat turn.'),20000);renderCombat();renderControls();}
  async function strike(){if(phase!=='combat'||!confirmed||combat.activeSide!==localSide())return;if(role==='host')await advance();else{remoteBusy=true;send('action',{seq});renderControls();}}
- function showResult(){if(!combat?.battle.finished)return;stopTimer();const winner=combat.battle.pvpWinner;end(winner==='draw'?'DRAW':winner===localSide()?'YOU WIN':'OPPONENT WINS');}
+ function showResult(){if(!combat?.battle.finished||phase==='ended')return;stopTimer();const winner=combat.battle.pvpWinner;host.GameAudio?.play(winner==='draw'?'draw':winner===localSide()?'victory':'defeat','main');end(winner==='draw'?'DRAW':winner===localSide()?'YOU WIN':'OPPONENT WINS');}
  function changeMode(value){if(peer||handling||localCommit)return;mode=Number(value)===4?4:1;selection=[];restoreTeam();renderControls();}
  function pick(index,id){if(!active||!['setup','picking'].includes(phase)||localCommit||!Number.isInteger(index)||index<0||index>=mode||!ownedIds.has(id)||selection.some((selected,i)=>i!==index&&selected===id))return false;selection[index]=id;bridge.saveTeam?.(selection,mode);renderControls();return true;}
  function mount(){

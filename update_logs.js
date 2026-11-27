@@ -230,6 +230,11 @@
     'Golden Bounty': 'Nineteen rival captains farm, raid, hunt beasts or chase the daily Wanted Target. Difficulty 10 permanently locks repairs. Survive as the last ship or lead the Bounty standings at the end of Day 15.'
   }, { jumps:'sailing', art:'unit:raid-secret-mihawk' });
 
+  release(35.5, 'Fair Winds & Battle Sounds', 'Sail farther between island rests and hear the action across every mode.', {
+    'Sailing Sea stamina': 'Combat actions now cost 1.6 Stamina instead of 4, and every fourth funded attack can cast its skill for 8 additional Stamina instead of 20. Recovery remains 1.5/s at sea and 6/s at islands.',
+    'Sounds across the game': 'Hear summoning, combat, crew deployment, Relic crafting, island raids, Golden Bounty alerts and battle results. One Sound Effects toggle and volume control apply across game modes.'
+  }, { jumps:'sailing arena ball', art:'unit:raid-secret-mihawk' });
+
   const jumps = {
     summon:['Summon','Return to the roll altar','unit:starter-common'],
     ball:['Ball vs Ball','Enter the physics arena','unit:sonic'],

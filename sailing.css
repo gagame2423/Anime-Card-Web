@@ -558,3 +558,9 @@ body.sailing-active {overflow:hidden;}
  #sailingSeaModal.ss-log-expanded .ss-log {height:105px;}
  #sailingSeaModal.ss-log-expanded .ss-joystick {left:auto;right:calc(var(--ss-pad-r) + 18px);bottom:calc(var(--ss-bottom) + 275px);}
 }
+
+/* Shared SFX preference in the captain's cabin. */
+#sailingSeaModal .ss-audio-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+#sailingSeaModal .ss-audio-controls label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px 12px;font-size:12px;color:#b8cbd1}
+#sailingSeaModal .ss-audio-controls output{font-variant-numeric:tabular-nums;color:#e5d3a4}
+#sailingSeaModal .ss-audio-controls input{grid-column:1/-1;width:125px;max-width:100%;accent-color:#79d6d9}

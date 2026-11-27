@@ -1,33 +1,28 @@
-/* Only this allowlist can play custom card-drop sounds. No preload during rolling. */
+/* Global sound preferences and the existing custom card reveal tracks. */
 (function(host){
  'use strict';
-  const safeVolume=value=>{const n=Number(value);return Number.isFinite(n)?Math.max(0,Math.min(1,n)):0;};
- const KEY='anime_card_rng_sfx_enabled';
- const VOLUME_KEY='anime_card_rng_sfx_volume';
- let volume=.8;
- try{const raw=host.localStorage.getItem(VOLUME_KEY),saved=JSON.parse(raw);if(raw!==null&&typeof saved==='number'&&Number.isFinite(saved)&&saved>=0&&saved<=1)volume=saved;}catch(_){}
+ const KEY='anime_card_rng_sfx_enabled',VOLUME_KEY='anime_card_rng_sfx_volume';
  const FILES=Object.freeze({'boss-event-alucard':'alucard','boss-event-lucius':'luciuszogratis','tower-champion-reaper':'aizenbeyond','tower-champion-normal':'equinox','tower-champion-shadow-200':'stwr','madara-lubu':'madaralubu','tower-champion-eclipse':'wou','akaza':'akaza','adult-gon':'adultgon'});
- let enabled=true,activated=false,active=null,pending=null,token=0;
- try{enabled=host.localStorage.getItem(KEY)!=='false';}catch(_){}
- const cache=new Map();
- function render(){const b=host.document?.getElementById('sfxToggleButton');if(b){b.textContent=enabled?'SFX ON':'SFX OFF';b.setAttribute('aria-pressed',String(enabled));}}
- function stop(resume=true){token++;pending=null;const old=active;active=null;if(old){old.pause();try{old.currentTime=0;}catch(_){}}if(resume&&old)host.BackgroundActivitySystem?.releaseSpecial?.();}
+ let enabled=true,volume=.8,pending=null,held=false;
+ function read(){try{enabled=host.localStorage.getItem(KEY)!=='false';const raw=host.localStorage.getItem(VOLUME_KEY),v=Number(raw);volume=raw!==null&&Number.isFinite(v)?Math.max(0,Math.min(1,v)):.8;}catch(_){}}
+ function render(){const b=host.document?.getElementById('sfxToggleButton');if(b){b.textContent=enabled?'SFX ON':'SFX OFF';b.setAttribute('aria-pressed',String(enabled));}host.SettingsSystem?.render?.();host.BallView?.audioSettings?.();}
+ function release(){if(held){held=false;host.BackgroundActivitySystem?.releaseSpecial?.();}}
+ function stop(){pending=null;host.GameAudio?.stop('drop');release();}
  function play(cardId){
-  if(!host.Audio||!enabled||host.SandboxSystem?.active||!FILES[cardId])return false;
-  if(!activated){pending=cardId;return false;}
-  stop(false);const current=++token;
-  host.BackgroundActivitySystem?.holdSpecial?.();
-  let audio=cache.get(cardId);
-  if(!audio){audio=new host.Audio(`assets/audio/${FILES[cardId]}.mp3`);audio.preload='none';cache.set(cardId,audio);}
-  active=audio;audio.volume=safeVolume(volume);
-  const finish=()=>{if(current!==token)return;token++;active=null;host.BackgroundActivitySystem?.releaseSpecial?.();};
-  audio.onended=finish;audio.onerror=finish;
-  try{Promise.resolve(audio.play()).catch(finish);}catch(_){finish();}
-  return true;
+  const audio=host.GameAudio;
+  if(!enabled||!volume||host.SandboxSystem?.active||!FILES[cardId]||!audio)return false;
+  if(!audio.activated){pending=cardId;return false;}
+  stop();held=true;host.BackgroundActivitySystem?.holdSpecial?.();
+  const started=audio.playFile(FILES[cardId],'drop',{channel:'special',priority:9,limit:1,gap:0,onEnd:release});
+  if(!started)release();return started;
  }
- function gesture(){activated=true;if(pending){const id=pending;pending=null;play(id);}}
+ function setEnabled(value){enabled=value!==false;if(!enabled)stop();persist(KEY,enabled);host.GameAudio?.sync();render();}
+ function setVolume(value){if(!Number.isFinite(Number(value)))return;volume=Math.max(0,Math.min(1,Number(value)));persist(VOLUME_KEY,volume);host.GameAudio?.sync();render();}
+ function persist(key,value){try{host.localStorage.setItem(key,JSON.stringify(value));host.CloudSaveSystem?.markDirty();}catch(_){}}
+ function gesture(){if(pending&&host.GameAudio){host.GameAudio.activate();const id=pending;pending=null;play(id);}}
  for(const event of ['pointerdown','keydown'])host.document?.addEventListener(event,gesture,{capture:true,passive:true});
- host.document?.getElementById('sfxToggleButton')?.addEventListener('click',()=>{enabled=!enabled;try{host.localStorage.setItem(KEY,JSON.stringify(enabled));host.CloudSaveSystem?.markDirty();}catch(_){}if(!enabled){pending=null;stop();}render();});
- host.addEventListener('pagehide',()=>{pending=null;stop(false);});render();
- host.DropAudioSystem=Object.freeze({KEY,VOLUME_KEY,FILES,play,stop,setVolume:value=>{const next=Number(value);if(!Number.isFinite(next))return;volume=Math.max(0,Math.min(1,next));if(active)active.volume=safeVolume(volume);try{host.localStorage.setItem(VOLUME_KEY,JSON.stringify(volume));host.CloudSaveSystem?.markDirty();}catch(_){}},get volume(){return volume;},get enabled(){return enabled;}});
+ host.document?.getElementById('sfxToggleButton')?.addEventListener('click',()=>setEnabled(!enabled));
+ host.addEventListener('storage',e=>{if(e.key===KEY||e.key===VOLUME_KEY||e.key===null){read();if(!enabled)stop();host.GameAudio?.sync();render();}});
+ host.addEventListener('pagehide',stop);read();render();
+ host.DropAudioSystem=Object.freeze({KEY,VOLUME_KEY,FILES,play,stop,setEnabled,setVolume,get volume(){return volume;},get enabled(){return enabled;}});
 })(window);

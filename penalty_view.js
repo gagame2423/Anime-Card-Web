@@ -7,7 +7,7 @@
  const set=(id,value)=>{if(labels.get(id)===value)return;labels.set(id,value);if(el(id))el(id).textContent=value;};
  const clamp=v=>Math.max(0,Math.min(1,Number(v)||0));
  function sound(goal){
-  if(!host.PenaltyStatsSystem.snapshot().sound||host.DropAudioSystem?.enabled===false)return;
+  if(!host.PenaltyStatsSystem.snapshot().sound||(host.DropAudioSystem?.enabled===false||host.DropAudioSystem?.volume===0))return;
   try{const Audio=host.AudioContext||host.webkitAudioContext;if(!Audio)return;audio ||= new Audio();void audio.resume().catch(()=>{});const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime;
    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(Math.max(.0001,Math.min(.12,(host.DropAudioSystem?.volume??.5)*.12)),now+.02);gain.gain.exponentialRampToValueAtTime(.0001,now+.24);
    oscillator.frequency.setValueAtTime(goal?660:180,now);oscillator.frequency.exponentialRampToValueAtTime(goal?990:90,now+.20);oscillator.connect(gain);gain.connect(audio.destination);oscillator.start();oscillator.stop(now+.25);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};

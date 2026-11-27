@@ -1691,6 +1691,7 @@ function rollCard(source = "manual") {
   // Lock immediately so a second synchronous event cannot enter.
   startCooldown();
   window.RollViewSystem?.beginRoll?.();
+  window.GameAudio?.play('summon','main');
 
   try {
     // Catch up any sub-second drift without making gameplay depend on clicks.
@@ -1746,7 +1747,7 @@ function rollCard(source = "manual") {
 
     if (saveState(true)) {
       window.QuestSystem.record('roll', {...questRollEvent,id:String(state.totalRolls)});
-      if(result.card)window.DropAudioSystem?.play(result.card.id);
+      if(result.card){const special=window.DropAudioSystem?.play(result.card.id);if(!special&&!window.DropAudioSystem?.FILES[result.card.id]&&['Legendary','Mythic','Secret'].includes(result.card.rarity))window.GameAudio?.play('rare_reveal','main');}
     }
     refreshAchievements(false);
     collectionNeedsRefresh = true;
@@ -3274,6 +3275,7 @@ function populateBattleFighterSelect() {
       }
 
       battleState.setup.activeIndex = targetIndex;
+      window.GameAudio?.play('card_equip','main');
       renderBattleSelection();
     });
 
@@ -3308,7 +3310,7 @@ function openArenaMutations() {
     canSelect:entry=>getAvailableBattleVariantCount(entry.key,activeIndex)>0,
     select:entry=>{
       if(isBattleMatchActive()||getBattleSetupTeam()[activeIndex]!==slot||getAvailableBattleVariantCount(entry.key,activeIndex)<=0)return;
-      slot.variantKey=entry.key;slot.copy=0;closeModal('arenaMutationModal');renderBattleSelection();
+      slot.variantKey=entry.key;slot.copy=0;window.GameAudio?.play('mutation_change','main');closeModal('arenaMutationModal');renderBattleSelection();
     },open:()=>openModal('arenaMutationModal')});
 }
 function renderBattleFighterVariants() {
@@ -3453,6 +3455,7 @@ function getArenaBattleState(){return window.PortalCombatView?.battle || window.
 function getArenaRuntime(){return window.PortalCombatView?.runtime || window.InfinityViewSystem?.runtime || window.PassiveSystem;}
 var pendingBattleLogs;
 function appendBattleLog(message,tone='',sourceSide){
+  window.MainGameAudio?.log(message,tone);
   if(!els.battleLog)return;
   const side=sourceSide==='enemy'||sourceSide!=='player'&&tone==='enemy'?'enemy':'player';
   pendingBattleLogs ||= [];
@@ -3721,6 +3724,7 @@ function showBattleFloatingText(unit, text, tone = 'damage', duration = 1150) {
   if (!unit || !view) return;
   const side = view.playerTeam?.includes(unit) ? 'player' : view.enemyTeam?.includes(unit) ? 'enemy' : null;
   if (!side) return;
+  window.MainGameAudio?.float(text,tone);
   const container = side === 'player' ? els.battlePlayerFloatingText : els.battleEnemyFloatingText;
   if (!container) return;
   const item = document.createElement('span');
@@ -5569,7 +5573,8 @@ if (window.PassiveSystem?.configureHost) {
   window.PassiveSystem.configureHost({
     getCardById:id=>{const card=getCardById(id);return ['tower','raid','boss-event','spooky-hunt','time-trial','material-time-trial'].includes(getBattleMode())?window.EnemyStatsSystem.card(card):card;},
     ownedPassiveIds:()=>ALL_CARDS.filter(c=>isCardOwned(c.id)).map(c=>c.id),
-    onUnitDefeated: recordQuestEnemyDefeat,
+    onUnitDefeated:(battle,victim,source,...args)=>{if(battle===getArenaBattleState()&&!isSimulationActive())window.MainGameAudio?.play('knockout');return recordQuestEnemyDefeat(battle,victim,source,...args);},
+    onCombatShieldImpact:(battle,u,v,n,broken)=>{if(battle===getArenaBattleState()&&!isSimulationActive())window.MainGameAudio?.play(broken?'shield_break':'shield_hit');},
     appendBattleLog,
     showBattleFloatingText,
     renderBattleStats,
@@ -5964,7 +5969,7 @@ window.StorageSystem.configure({canAct:canEvolveNow,canUse:()=>!isSimulationActi
 // Cosmetic ownership and Hextech unlocks stay in the canonical account save.
 window.CardSkinSystem.configure({get:()=>state,equip:(cardId,skinId)=>{
  const previous={...state.equippedSkins};if(skinId)state.equippedSkins[cardId]=skinId;else delete state.equippedSkins[cardId];
- if(saveGame(AUTO_CHESS_REWARD_SAVE))return true;state.equippedSkins=previous;return false;
+ if(saveGame(AUTO_CHESS_REWARD_SAVE)){window.GameAudio?.play('card_equip','main');return true;}state.equippedSkins=previous;return false;
 },onChange:()=>{collectionNeedsRefresh=true;renderCollection();if(previewSelection)renderPreview();if(!isBattleMatchActive())renderBattleTeamSlots();window.AutoChessView?.render();}});
 window.HextechSystem.configure({get:()=>state,refresh:()=>{const saved=localStorage.getItem(STORAGE_KEY);if(saved)state=normalizeState(JSON.parse(saved));},owner:()=>window.CloudSaveSystem.activeUser?.uid||'local',mutations:rollMutations,
  canBuy:()=>!window.PenaltyView?.active&&!window.PortalsSystem?.active&&!window.InfinitySystem?.active&&!window.SandboxSystem?.active&&!window.PvPSystem?.active&&!isBattleMatchActive()&&!isImportingSave&&!saveTransferBusy&&!window.ExpFoodSystem?.blocked&&!window.EquipmentSystem?.blocked&&!window.ShopBulkSystem?.blocked,

@@ -2323,7 +2323,7 @@
     yuno.consumeLayers(unit,blocked);
     runtime.shield -= blocked;
     remaining -= blocked;
-    if(battleState?.mode==='ball-arena'&&blocked>0)host.onCombatShieldImpact?.(battleState,source,unit,blocked,runtime.shield<=0);
+    if(blocked>0)host.onCombatShieldImpact?.(battleState,source,unit,blocked,runtime.shield<=0);
     content.shieldHit(battleState,unit,source,beforeShield);
     if (runtime.shield <= 0) {
       const kind = runtime.shieldKind;

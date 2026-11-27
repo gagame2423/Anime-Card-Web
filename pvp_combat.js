@@ -13,14 +13,15 @@
  function unit(id,side){const card=clone(cards.get(id)),hp=Math.max(1,Math.round(card.stats.hp)),atk=Math.max(0,Math.round(card.stats.atk));return{card,display:{name:card.name,image:card.image,hp,atk},level:1,exp:0,mutations:[],hp,maxHp:hp,atk,side,defeated:false};}
  function stateGraph(value){const seen=new WeakMap();let nextId=0;function visit(v){if(v===null||typeof v!=='object'){if(typeof v==='function'||typeof v==='undefined')return null;if(typeof v==='number'&&!Number.isFinite(v))throw Error('Invalid combat value.');return v;}if(seen.has(v))return{$ref:seen.get(v)};if(++nextId>50000)throw Error('Combat state exceeds safe browser limits.');seen.set(v,nextId);if(Array.isArray(v))return v.map(visit);const out={};for(const key of Object.keys(v).sort()){if(['display','view','startedAt','nextTurnAt'].includes(key))continue;if(key==='card'){out.card=v.card?{id:v.card.id,element:v.card.element}:null;continue;}out[key]=visit(v[key]);}return out;}return visit(value);}
  function create(hostIds,guestIds,seed,hostMimics=[],guestMimics=[]){
-  const rng=generator(seed),logs=[];
-  const engine=host.PassiveSystem.createIsolated({random:rng.random,getCardById:id=>cards.has(id)?clone(cards.get(id)):null,isWeatherActive:()=>false,appendBattleLog:message=>{logs.push(String(message));if(logs.length>100)logs.shift();}});
+  const rng=generator(seed),logs=[],soundEvents=[];
+  function sound(cue){if(cue){soundEvents.push(cue);if(soundEvents.length>32)soundEvents.shift();}}
+  const engine=host.PassiveSystem.createIsolated({random:rng.random,getCardById:id=>cards.has(id)?clone(cards.get(id)):null,isWeatherActive:()=>false,appendBattleLog:(message,tone)=>{logs.push(String(message));if(logs.length>100)logs.shift();sound(host.GameAudio?.combatCue(message,tone));},showBattleFloatingText:(u,message,tone)=>sound(host.GameAudio?.combatCue(message,tone)),onCombatShieldImpact:(bs,u,v,n,broken)=>sound(broken?'shield_break':'shield_hit')});
   if(!validMimics(hostIds,hostMimics)||!validMimics(guestIds,guestMimics))throw Error('Invalid PvP mimic pool.');
   const battle={mode:'online-pvp',sandbox:true,pvp:true,playerTeam:hostIds.map(id=>unit(id,'host')),enemyTeam:guestIds.map(id=>unit(id,'guest')),mimicPools:{player:hostMimics,enemy:guestMimics},turn:rng.random()<.5?'player':'enemy',playerIndex:0,enemyIndex:0,finished:false,championChoices:{aqua:'hp'}};
   engine.beginBattle(battle);const initialWinner=engine.checkBattleWinner(battle);if(initialWinner){battle.finished=true;battle.pvpWinner=initialWinner==='player'?'host':'guest';}
   function step(){if(battle.finished)return;const result=engine.resolveTurn(battle);if(result.ended){battle.finished=true;battle.pvpWinner=result.winner==='player'?'host':'guest';}if(!battle.finished&&((battle.turnCount||0)>=MAX_TURNS||battle.playerTeam.length+battle.enemyTeam.length>MAX_UNITS)){battle.finished=true;battle.pvpWinner='draw';battle.pvpReason='Browser match limit reached';}}
   function snapshot(){return U.stable({build:BUILD,rng:rng.info(),battle:stateGraph(battle)});}
-  return Object.freeze({battle,step,snapshot,logs,get activeSide(){return battle.turn==='player'?'host':'guest';}});
+  return Object.freeze({battle,step,snapshot,logs,drainAudio:()=>soundEvents.splice(0),get activeSide(){return battle.turn==='player'?'host':'guest';}});
  }
  host.PvPCombat=Object.freeze({BUILD,MAX_TURNS,MAX_UNITS,signature,validTeam,validMimics,commitment,create});
 })(window);
