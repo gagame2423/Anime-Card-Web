@@ -16,11 +16,7 @@ service cloud.firestore {
         && d.format == 'anime-card-cloud-v1' && d.revision is int && d.revision > 0
         && d.digest is string && d.digest.matches('^[a-f0-9]{64}$')
         && summary(d.summary) && d.updatedAt == request.time
-        && ((d.payload is string && d.payload.size() > 0 && d.payload.size() <= 600000 && d.manifest == null)
-          || (d.payload == null && d.manifest is map
-            && d.manifest.keys().hasOnly(['snapshotId','chunks'])
-            && d.manifest.snapshotId is string && d.manifest.snapshotId.matches('^[a-f0-9]{32}$')
-            && d.manifest.chunks is int && d.manifest.chunks > 0 && d.manifest.chunks <= 200));
+        && d.payload is string && d.payload.size() > 0 && d.payload.size() <= 90000 && d.manifest == null;
     }
     match /users/{uid} {
       allow get: if owner(uid);
@@ -28,18 +24,13 @@ service cloud.firestore {
       allow create: if owner(uid) && saveBody(request.resource.data) && request.resource.data.revision == 1;
       allow update: if owner(uid) && saveBody(request.resource.data) && request.resource.data.revision == resource.data.revision + 1;
       match /snapshots/{snapshot}/chunks/{chunk} {
-        allow get, list, delete: if owner(uid);
-        allow create: if owner(uid) && snapshot.matches('^[a-f0-9]{32}$')
-          && request.resource.data.keys().hasOnly(['index','text'])
-          && request.resource.data.index is int && request.resource.data.index >= 0 && request.resource.data.index < 200
-          && request.resource.data.text is string && request.resource.data.text.size() <= 120000;
-        allow update: if false;
+        // Keep legacy chunks readable during migration. New clients never write or delete them.
+        allow get, list: if owner(uid);
+        allow create, update, delete: if false;
       }
       match /recovery/{name} {
         allow get: if owner(uid) && name == 'previous';
-        allow create, update: if owner(uid) && name == 'previous'
-          && request.resource.data == get(/databases/$(database)/documents/users/$(uid)).data;
-        allow list, delete: if false;
+        allow create, update, list, delete: if false;
       }
     }
     match /leaderboards/{uid} {

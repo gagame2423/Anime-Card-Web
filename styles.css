@@ -4932,3 +4932,8 @@ body.battle-weather-visible #battleModal .battle-modal>.modal-header,body.battle
 .cloud-email-form input{width:100%;min-height:44px;box-sizing:border-box}
 
 .details-chip.ability-hindered{color:#ffcc8c;background:#382817}.details-chip.ability-summon{color:#d0a7ff;background:#2c1b43}
+
+/* Compact offline recovery panel inside the existing account dialog. */
+.cloud-backup-panel{margin:16px 0;padding:16px;border:1px solid #4d827d;border-radius:12px;background:linear-gradient(160deg,rgba(15,41,48,.9),rgba(9,16,27,.95));box-shadow:inset 0 1px rgba(197,245,226,.08)}
+.cloud-backup-heading{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.cloud-backup-heading h3{margin:3px 0;color:#f0e6d2}.cloud-backup-heading .eyebrow{margin:0;color:#80c9c0}.cloud-backup-badge{border:1px solid #579b90;border-radius:999px;padding:4px 8px;color:#9ee9d6;font-size:10px;font-weight:750;letter-spacing:.07em}
+#cloudBackupCode{box-sizing:border-box;width:100%;min-height:76px;max-height:180px;resize:vertical;padding:10px;border:1px solid #426573;border-radius:6px;background:#080f19;color:#c9e6ed;font:12px/1.5 ui-monospace,monospace;overflow-wrap:anywhere;transition:border-color 150ms ease}#cloudBackupCode:focus-visible{outline:2px solid #69cfc2;outline-offset:2px}.cloud-backup-panel .online-actions{margin:12px 0 8px}.cloud-backup-panel .online-muted{margin:8px 0}

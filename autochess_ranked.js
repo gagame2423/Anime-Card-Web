@@ -66,15 +66,15 @@
   if(!root?.isConnected)return;if(overlay?.isConnected){overlay.querySelector('button')?.focus();return;}
   host.AutoChessPanels?.close(root);host.AutoChessRelicView?.hide(root);
   const node=modal(root,'ac-elo-leaderboard','Auto Chess Elo Leaderboard');overlay=node;const me=current(),r=rankOf(me.elo),uid=host.CloudSaveSystem?.activeUser?.uid||'local_player';
-  node.innerHTML='<div class="ac-elo-panel"><header><div><span class="ac-eyebrow">AUTO CHESS · GLOBAL RANKED STANDINGS</span><h2>Elo Leaderboard</h2></div><div class="ac-elo-actions"><button class="ac-elo-refresh" data-ac-leaderboard-refresh>↻ Refresh</button><button class="ac-icon-button" data-ac-leaderboard-close aria-label="Close Elo leaderboard">×</button></div></header><div class="ac-elo-personal"><img src="'+r.image+'" alt=""><strong>'+r.label+'<small>'+me.elo.toLocaleString()+' Elo · '+me.wins+' first-place wins · '+me.matches+' matches</small></strong></div><p class="ac-elo-status" role="status" aria-live="polite"></p><div class="ac-elo-body"></div></div>';
-  const button=node.querySelector('[data-ac-leaderboard-close]'),refresh=node.querySelector('[data-ac-leaderboard-refresh]');
+  node.innerHTML='<div class="ac-elo-panel"><header><div><span class="ac-eyebrow">AUTO CHESS · GLOBAL RANKED STANDINGS</span><h2>Elo Leaderboard</h2></div><div class="ac-elo-actions"><button class="ac-elo-refresh" data-ac-leaderboard-refresh>↻ Refresh</button><button class="ac-elo-refresh" data-ac-leaderboard-publish>Sync My Result</button><button class="ac-icon-button" data-ac-leaderboard-close aria-label="Close Elo leaderboard">×</button></div></header><div class="ac-elo-personal"><img src="'+r.image+'" alt=""><strong>'+r.label+'<small>'+me.elo.toLocaleString()+' Elo · '+me.wins+' first-place wins · '+me.matches+' matches</small></strong></div><p class="ac-elo-status" role="status" aria-live="polite"></p><div class="ac-elo-body"></div></div>';
+  const button=node.querySelector('[data-ac-leaderboard-close]'),refresh=node.querySelector('[data-ac-leaderboard-refresh]'),publish=node.querySelector('[data-ac-leaderboard-publish]');
   button.addEventListener('click',()=>{cleanup(node);if(overlay===node)overlay=null;});node.addEventListener('click',e=>{if(e.target===node)button.click();});button.focus();
   const body=node.querySelector('.ac-elo-body'),status=node.querySelector('.ac-elo-status'),freshCache=cache();let saved=freshCache||offlineCache(),loading=false;body.innerHTML=rowsHTML(saved||[]);
   const duringMatch=()=>inMatch||!!host.AutoChessOnline?.inMatch;
   function mark(text,mode){status.textContent=text;status.dataset.sync=mode;}
   async function load(force=false){
    if(loading||!node.isConnected)return;
-   if(duringMatch()){refresh.disabled=true;mark('Offline cache + your current rating · global refresh is available in the invite lobby. No in-match cloud query.','cached');return;}
+   if(duringMatch()){refresh.disabled=true;publish.disabled=true;mark('Offline cache + your current rating · global refresh is available in the invite lobby. No in-match cloud query.','cached');return;}
    const cloud=host.CloudSaveSystem?.autoChessService;
    if(!cloud?.available||host.navigator.onLine===false){mark('Offline cache · sign in with Email/Google and connect to refresh the global leaderboard.','offline');return;}
    loading=true;refresh.disabled=true;node.setAttribute('aria-busy','true');mark('Loading global top 50 from Cloud Firestore…','loading');
@@ -89,6 +89,7 @@
    finally{loading=false;if(node.isConnected){refresh.disabled=duringMatch();node.setAttribute('aria-busy','false');}}
   }
   refresh.addEventListener('click',()=>void load(true));
+  publish.addEventListener('click',async()=>{if(duringMatch()||publish.disabled)return;publish.disabled=true;try{const ok=await host.AutoChessOnline?.syncPending(true);if(ok){mark('Result synced. Refresh for global standings.','synced');await load(true);}else mark('No pending result for this account. Your local rating is saved.','cached');}catch(error){mark(error?.message||'Cloud sync unavailable. Local rating saved.','offline');}finally{if(node.isConnected)publish.disabled=duringMatch();}});
   if(duringMatch())void load();else if(freshCache)mark('Cached global standings · your current local rating is refreshed. Use Refresh for the latest cloud results.','cached');else void load();
  }
  function disposeUI(){cleanup(promotion);cleanup(overlay);promotion=overlay=null;}

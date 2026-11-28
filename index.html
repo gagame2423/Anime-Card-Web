@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070a10" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261117-content-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261128-cloud-quota-1" />
   <link rel="stylesheet" href="./passives.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./pvp.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./infinity.css?v=20261117-content-1" />
-  <link rel="stylesheet" href="./autochess.css?v=20261126-ball-arena-1" />
+  <link rel="stylesheet" href="./autochess.css?v=20261128-cloud-quota-1" />
   <link rel="stylesheet" href="./hextech.css?v=20261121-ui-cartoon-1" />
   <link rel="stylesheet" href="./penalty.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./game-ui.css?v=20261127-sailing-1" />
@@ -407,7 +407,8 @@
           <div class="online-actions"><button id="cloudEmailLogin" type="submit" class="online-primary">Sign in with Email</button><button id="cloudEmailRegister" type="button">Register Email Account</button><button id="cloudEmailLink" type="button" hidden>Set Email &amp; Password</button><button id="cloudPasswordReset" type="button">Reset Password</button></div>
         </form>
         <label class="online-field">Leaderboard display name<input id="cloudDisplayName" maxlength="40" placeholder="Your public player name" autocomplete="nickname"></label>
-        <p class="online-muted">Play immediately with this device’s local save. Google / Email sync is optional. Link both methods here to keep one UID and one cloud save. Sign-in, sign-out and connection changes never replace local progress. Upload Local Save backs up this copy; Load Cloud Save replaces it only when you choose that action. Pause auto-roll and finish battles before loading.</p>
+        <section class="cloud-backup-panel" aria-labelledby="cloudBackupTitle"><div class="cloud-backup-heading"><div><p class="eyebrow">OFFLINE RECOVERY</p><h3 id="cloudBackupTitle">Emergency Backup Code</h3></div><span class="cloud-backup-badge">LOCAL ONLY</span></div><p class="online-muted">Copy your progress to a private file or device. No account or connection needed. Sailing Sea voyages and settings always remain on this device.</p><label class="online-field" for="cloudBackupCode">Backup code<textarea id="cloudBackupCode" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Generate a backup or paste a code here"></textarea></label><div class="online-actions"><button id="cloudCopyCode" type="button" class="online-primary">Copy Backup Code</button><button id="cloudRestoreCode" type="button">Restore from Code</button></div><p id="cloudBackupStatus" class="online-muted" role="status" aria-live="polite">Pause Auto-Roll before restoring. Your current save is preserved locally before replacement.</p></section>
+        <p class="online-muted">Auto-sync checks for changes once an hour. Manual upload is available on demand (10-second cooldown) and also updates your public main-game leaderboard. Auto Chess and Infinity scores wait for an hourly slot or an explicit sync action. Play immediately with this device’s local save. Google / Email sync is optional. Link both methods here to keep one UID and one cloud save. Sign-in, sign-out and connection changes never replace local progress. Upload Local Save backs up this copy; Load Cloud Save replaces it only when you choose that action. Pause auto-roll and finish battles before loading.</p>
       </div>
     </section>
   </div>
@@ -1089,7 +1090,8 @@
   <script id="firebaseFirestoreCdn" type="application/x-game-sdk" src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script id="peerJsCdn" type="application/x-game-sdk" src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script defer src="./online_utils.js?v=20261119-ac-peer-state-1"></script>
-  <script defer src="./firebase.js?v=20261119-ac-peer-state-1"></script>
+  <script defer src="./cloud_save_codec.js?v=20261128-cloud-quota-1"></script>
+  <script defer src="./firebase.js?v=20261128-cloud-quota-1"></script>
   <script defer src="./startup.js?v=20261117-content-1"></script>
 
   <!-- PORTALS: entry lives exclusively in Storage. Combat reuses battleArena. -->
@@ -1196,14 +1198,14 @@
   <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./settings.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./storage.js?v=20261122-relic-compat-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261128-cloud-quota-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261125-arena-readability-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261127-sailing-audio-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261128-cloud-quota-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261127-passive-audit-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261127-sailing-audio-1"></script>
-  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261128-cloud-quota-1"></script>
   <script type="application/x-game-script" data-game-script src="./portal_rules.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./portal_combat.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./portals.js?v=20261126-arena-qol-1"></script>
@@ -1213,7 +1215,7 @@
   <script type="application/x-game-script" data-game-script src="./relic_ui.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./index_filters.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_audio.js?v=20261127-sailing-audio-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_ranked.js?v=20261120-ac-adventure-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_ranked.js?v=20261128-cloud-quota-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess.js?v=20261121-ui-cartoon-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_synergies.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_telemetry.js?v=20261117-ac-polish-augments-3"></script>
@@ -1225,7 +1227,7 @@
   <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261127-passive-audit-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_report.js?v=20261117-ac-polish-augments-3"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261121-ui-cartoon-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261128-cloud-quota-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261120-ac-adventure-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_lobby.js?v=20261120-ac-adventure-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_live.js?v=20261121-ui-cartoon-1"></script>
@@ -1248,6 +1250,6 @@
   <script type="application/x-game-script" data-game-script src="./sailing_ui.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./sailing_main.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./game_audio_hooks.js?v=20261127-sailing-audio-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261127-passive-audit-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261128-cloud-quota-1"></script>
 </body>
 </html>

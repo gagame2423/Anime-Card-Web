@@ -4844,11 +4844,26 @@ function buildCloudSaveBundle() {
   if (![window.PenaltyStatsSystem.flush(),window.RiftSystem.flush(),window.PortalsSystem.flush(),window.ExpFoodSystem.flush(), window.InventorySystem.flush(), window.TowerSystem.flush(), window.AchievementSystem.flush(), window.TimeTrialSystem.flush(), window.RaidSystem.flush(), window.BossEventSystem.flush(), window.EvolutionSystem.flush(), window.EquipmentSystem.flush(), window.QuestSystem.flush(), window.QuestsSystem.flush(),window.SpookySystem.flush()].every(Boolean)) throw new Error('Your progress could not be saved. Please try again.');
   if (!window.InfinitySystem.flush() || !window.ShopBulkSystem.flush() || !saveState()) throw new Error('Your progress could not be saved. Please try again.');
   const storage = {};
-  for (const key of getGameSaveKeys()) {
+  // Explicit allowlist: no session storage, battle logs, replay caches, old
+  // mirrored save, Auto Chess match or Sailing Sea state/settings.
+  for (const key of getGameSaveKeys().filter(key=>!LEGACY_STORAGE_KEYS.includes(key))) {
     const value = localStorage.getItem(key);
     if (value !== null) storage[key] = JSON.parse(value);
   }
-  return { format: 'anime-card-rng-save', version: 1, exportedAt: new Date().toISOString(), storage, infinityMetadata: window.InfinitySystem.metadata };
+  const main=storage[STORAGE_KEY],clean={};
+  // The authoritative card records are unlocked + mutations. Inventory rows
+  // are derived from them by the same ownership sanitizer after restore.
+  // Preserve any exceptional inventory-only entry rather than discard it.
+  for(const key of Object.keys(defaultState))if(key!=='lastResultId'&&key!=='weather'&&Object.hasOwn(main,key))clean[key]=main[key];
+  clean.dropChance=main.dropChance||0;
+  clean.weather=Object.fromEntries(['gameSeconds','lastRealTimestamp','lastSchedulerSecond','active'].map(key=>[key,main.weather[key]]));
+  const exceptional=Object.fromEntries(Object.entries(main.inventory||{}).filter(([key,row])=>Number(row.count)>Number(clean.mutations?.[key]||0)));
+  if(Object.keys(exceptional).length)clean.inventory=exceptional;
+  storage[STORAGE_KEY]=clean;
+  // No exportedAt timestamp or duplicate Infinity metadata: that metadata is
+  // already in its validated progression store. Compression retains all
+  // meaningful quantities, relic rolls, pending receipts and locked encounters.
+  return { format: 'anime-card-rng-save', version: 1, storage };
 }
 function validateSaveRecord(key, value) {
   const object = item => Boolean(item && typeof item === 'object' && !Array.isArray(item));
@@ -4979,7 +4994,7 @@ function parseCloudSaveBundle(text) {
     if (file.format !== 'anime-card-rng-save' || file.version !== 1 || !object(file.storage)) throw new Error('Unsupported save format or version.');
     storage = file.storage;
     const keys = getGameSaveKeys();
-    for (const key of Object.keys(storage)) if (!keys.includes(key) && !LEGACY_SAVE_TRANSFER_KEYS.includes(key)) throw new Error(`Unsupported game store: ${key}`);
+    for (const key of Object.keys(storage)) if (!keys.includes(key) && !LEGACY_SAVE_TRANSFER_KEYS.includes(key) && !['anime_card_rng_sailing_sea_v1','anime_card_rng_sailing_sea_settings_v1'].includes(key)) throw new Error(`Unsupported game store: ${key}`);
     for (const key of [STORAGE_KEY, window.InventorySystem.KEY, window.TowerSystem.KEY, window.AchievementSystem.KEY]) if (!(key in storage)) throw new Error('The save is incomplete: a game data store is missing.');
     if(file.infinityMetadata!=null){
       if(!window.InfinitySystem.validMetadata(file.infinityMetadata))throw Error('Invalid Infinity reward metadata.');
@@ -4989,7 +5004,7 @@ function parseCloudSaveBundle(text) {
     }
   } else { throw new Error('Save bảo vệ phải chứa đầy đủ gói dữ liệu game.'); }
   const result = {};
-  for (const [key, entry] of Object.entries(storage)) if(!LEGACY_SAVE_TRANSFER_KEYS.includes(key)) result[key] = JSON.stringify(validateSaveRecord(key, entry));
+  for (const [key, entry] of Object.entries(storage)) if(!LEGACY_SAVE_TRANSFER_KEYS.includes(key)&&getGameSaveKeys().includes(key)) result[key] = JSON.stringify(validateSaveRecord(key, entry));
   // Use the existing migration/ownership sanitizer for the authoritative card save.
   result[STORAGE_KEY] = JSON.stringify(normalizeState(JSON.parse(result[STORAGE_KEY])));
   for (const legacyKey of LEGACY_STORAGE_KEYS) if (result[legacyKey]) result[legacyKey] = JSON.stringify(normalizeState(JSON.parse(result[legacyKey])));
@@ -6101,7 +6116,7 @@ async function applyCloudProgress(payload,options={}){
   if(options.manual!==true)throw Error('Cloud progress is loaded only through the optional Load Cloud Save action.');
   if(isBattleMatchActive()||isSimulationActive()||window.InfinitySystem?.active||window.PortalsSystem?.active||isImportingSave)throw Error('Finish the current activity before loading a Cloud copy.');
   if(options.canApply&&options.canApply()!==true)throw Error('Local progress changed before Cloud restore.');
-  const imported=parseCloudSaveBundle(await decryptGameSave(payload));
+  const imported=parseCloudSaveBundle(await decryptGameSave(await window.CloudSaveCodec.unpack(payload)));
   const gameKeys=getGameSaveKeys(),records=Object.fromEntries(gameKeys.map(key=>[key,Object.hasOwn(imported,key)?imported[key]:null]));
   if(options.canApply&&options.canApply()!==true)throw Error('Local progress changed before Cloud restore.');
   const keys=[...gameKeys,window.CloudSaveSystem.META_KEY],previous=Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)])),previousAutoRoll=isAutoRolling;
@@ -6127,10 +6142,13 @@ function cloudProgressSummary(){
 }
 window.CloudSaveSystem.configure({
   open:openModal,storageKeys:getGameSaveKeys,summary:cloudProgressSummary,
-  canRestore:()=>!window.PenaltyView?.active&&!isBattleMatchActive()&&!isSimulationActive()&&!window.PortalsSystem?.active&&!window.InfinitySystem?.active&&!isImportingSave,
+  canRestore:()=>!isAutoRolling&&!window.PenaltyView?.active&&!isBattleMatchActive()&&!isSimulationActive()&&!window.PortalsSystem?.active&&!window.InfinitySystem?.active&&!isImportingSave,
   canSnapshot:()=>!window.PortalsSystem.blocked&&!window.ShopBulkSystem.blocked&&!window.InfinitySystem.blocked&&!isSimulationActive()&&!isImportingSave&&!window.ExpFoodSystem.blocked&&!window.EquipmentSystem.blocked&&window.EvolutionSystem.flush(),
-  capture:async()=>{const bundle=buildCloudSaveBundle(),summary=cloudProgressSummary();return{payload:await encryptGameSave(JSON.stringify(bundle)),summary,meaningful:summary.totalRolls>0||summary.uniqueCards>0||state.currency>0||Object.values(state.upgrades||{}).some(n=>n>0)};},
-  validate:async payload=>parseCloudSaveBundle(await decryptGameSave(payload)),apply:applyCloudProgress
+  mainKey:STORAGE_KEY,
+  capture:()=>({bundle:buildCloudSaveBundle(),summary:cloudProgressSummary()}),
+  encode:async bundle=>window.CloudSaveCodec.pack(await encryptGameSave(window.OnlineUtils.stable(bundle))),
+  decode:async payload=>JSON.parse(await decryptGameSave(await window.CloudSaveCodec.unpack(payload))),
+  validate:async payload=>parseCloudSaveBundle(await decryptGameSave(await window.CloudSaveCodec.unpack(payload))),apply:applyCloudProgress
 });
 window.LeaderboardSystem.configure({open:openModal});
 window.PvPSystem.configure({
@@ -6162,7 +6180,7 @@ window.InfinitySystem.configure({
   units:slots=>slots.map(slot=>{const card=getCardById(slot.cardId),variant=getVariantEntries(card.id).find(v=>v.key===slot.variantKey);if(!variant)throw Error('Owned card variant unavailable.');const display=getDisplayCard(card,variant.mutations);return{card:JSON.parse(JSON.stringify(card)),display:{...display},mutations:[...variant.mutations],variantKey:variant.key,cardInstance:{cardId:card.id,variantKey:variant.key,copy:slot.copy||0},level:getCardLevelInfo(card.id).level,hp:display.hp,maxHp:display.hp,atk:display.atk,defeated:false};}),
   open:openModal,
   onEnter:()=>{clearAutoContinueBattleTimer();clearCooldownExpiryTimer();els.battleModal?.classList.add('hidden');},
-  onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');window.BattleWeatherHud?.render();window.CloudSaveSystem.afterActivity();resumeGameRuntime();void window.CloudSaveSystem.flush();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();},
+  onExit:()=>{els.battleModal?.classList.remove('hidden');document.body.classList.add('modal-open');window.BattleWeatherHud?.render();window.CloudSaveSystem.afterActivity();resumeGameRuntime();if(isAutoRolling&&!isCooldownActive)attemptAutoRoll();},
   isWeatherActive,addWeather:addCombatWeather,
   prepare:battle=>{battle.questContext=window.QuestSystem.battleContext(battle,getActiveWeatherDefinitions().map(w=>w.id));},
   onUnitDefeated:recordQuestEnemyDefeat,
@@ -6427,9 +6445,9 @@ document.getElementById('hubBallButton')?.addEventListener('click',()=>window.Ba
 // Standalone, local naval voyage. It never reads owned cards or pays account rewards.
 window.SailingSea.configure({
  canOpen:()=>canOpenUpdateLogs()&&canPlayPenalty(),
- name:()=>window.CloudSaveSystem?.publicName||'You',
- onEnter(){clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();window.CloudSaveSystem?.holdAutoChess();},
- onExit(){window.CloudSaveSystem?.releaseAutoChess();resumeGameRuntime();updateStats();}
+ name:()=> 'You',
+ onEnter(){clearAutoContinueBattleTimer();clearBattleTurnTimer();clearCooldownExpiryTimer();},
+ onExit(){resumeGameRuntime();updateStats();}
 });
 document.getElementById('hubSailingButton')?.addEventListener('click',()=>window.SailingSea.open());
 

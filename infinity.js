@@ -1,7 +1,7 @@
 /* Weekly Infinity lobby, continuous-run controller, food receipts and score outbox. */
 (function(host){
  'use strict';
- const REPORT_MS=60000,KEY='anime_card_rng_infinity_v1',WEEKLY_KEY='anime_card_rng_infinity_weekly_v1',MAX=Number.MAX_SAFE_INTEGER,R=host.InfinityRules,U=host.OnlineUtils;
+ const KEY='anime_card_rng_infinity_v1',WEEKLY_KEY='anime_card_rng_infinity_weekly_v1',MAX=Number.MAX_SAFE_INTEGER,R=host.InfinityRules,U=host.OnlineUtils;
  const fresh=()=>({version:1,best:{},reports:{},lastReceipt:'',pending:null,infinityMetadata:null,rewardNotice:null});
  const record=v=>Boolean(v&&typeof v==='object'&&!Array.isArray(v));
  const weekId=id=>/^\d{4}_W(0[1-9]|[1-4]\d|5[0-3])$/.test(id),count=n=>Number.isSafeInteger(n)&&n>=0;
@@ -45,7 +45,7 @@
  }
  const weeklyRecovered=recoverWeekly();
  let data;try{const saved=JSON.parse(host.localStorage.getItem(KEY)||'null');data=validSave(saved)?saved:fresh();}catch(_){data=fresh();}
- let bridge={},active=false,combat=null,timer=null,uiTimer=null,runId='',runWeek=null,runMessage='',selections=[],sessionOrbs=0,busy=false,reporting=null,lastReport=0,reportAgain=false,blocked=!weeklyRecovered,clockText='',bound=false;
+ let bridge={},active=false,combat=null,timer=null,uiTimer=null,runId='',runWeek=null,runMessage='',selections=[],sessionOrbs=0,busy=false,reporting=null,blocked=!weeklyRecovered,clockText='',bound=false;
  const nodeCache=new Map();
  const el=id=>{if(nodeCache.has(id))return nodeCache.get(id);const node=host.document.getElementById(id);if(node)nodeCache.set(id,node);return node;},make=(tag,cls='',text)=>U.make(tag,cls,text),text=(id,value)=>U.text(el(id),value);
  function persist(){try{host.localStorage.setItem(KEY,JSON.stringify(data));host.CloudSaveSystem?.markDirty();return true;}catch(_){return false;}}
@@ -275,7 +275,7 @@
  function battleInfo(){return {week:runWeek,orbs:sessionOrbs,best:data.best[runWeek?.id]||0,message:runMessage};}
  function renderBattle(){if(combat)host.InfinityViewSystem.render(battleInfo());}
  function stopTimer(){host.clearTimeout(timer);timer=null;}
- function end(message){runMessage=message||'Run ended. Star Orbs and weekly best are saved.';stopTimer();if(combat&&!combat.battle.finished){combat.battle.finished=true;combat.battle.isBattling=false;bridge.onEnd?.(combat.battle);}text('infinityStatus',message||'Run ended. Star Orbs and weekly best are saved.');renderBattle();void report(true);}
+ function end(message){runMessage=message||'Run ended. Star Orbs and weekly best are saved.';stopTimer();if(combat&&!combat.battle.finished){combat.battle.finished=true;combat.battle.isBattling=false;bridge.onEnd?.(combat.battle);}text('infinityStatus',message||'Run ended. Star Orbs and weekly best are saved.');renderBattle();}
  function schedule(){stopTimer();if(active&&combat&&!combat.battle.finished){const delay=host.InventorySystem.combatTurnMs(3000);combat.battle.nextTurnAt=Date.now()+delay;timer=host.setTimeout(tick,delay);host.InfinityViewSystem.clock();}}
  function tick(){
   if(!active||host.GameStartup?.failed){suspend();return;}renderClock();if(combat?.battle.finished)return;
@@ -288,15 +288,17 @@
   if(orbs>MAX-host.InventorySystem.quantity('star_orb'))throw Error('Star Orb storage is full.');
   data.pending={weekId:runWeek.id,wave,orbs,receipt};if(!persist()){data.pending=null;throw Error('Unable to save the wave reward.');}
   if(!commitReward()){blocked=true;throw Error('Storage unavailable. Reload to recover the pending Star Orbs.');}
-  sessionOrbs+=orbs;host.GameAudio?.play('victory','main');bridge.onReward?.(wave,battle);void report();
+  sessionOrbs+=orbs;host.GameAudio?.play('victory','main');bridge.onReward?.(wave,battle);
  }
- async function report(force=false){
-  if(reporting){if(force)reportAgain=true;return reporting;}
-  if(host.GameStartup?.failed||!force&&Date.now()-lastReport<REPORT_MS&&week().endMs-host.InfinityCloudSystem.now()>30000)return;
-  const current=week(),score=data.reports[current.id];if(!score)return;
-  if(!host.InfinityCloudSystem.available){lastReport=Date.now();text('infinityStatus','Local weekly best saved · '+score+' waves. Cloud publishing is optional.');return;}
-  lastReport=Date.now();const uid=host.CloudSaveSystem.activeUser?.uid;
-  reporting=(async()=>{try{const response=await host.InfinityCloudSystem.submit({weekId:current.id,highestWave:score,category:current.category});if(host.CloudSaveSystem.activeUser?.uid!==uid||response.localOnly)return;if(Number.isSafeInteger(response.highestWave))data.best[current.id]=Math.max(data.best[current.id]||0,response.highestWave);if(data.infinityMetadata?.lastClaimedWeek===current.id)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,data.best[current.id]||0);if((data.reports[current.id]||0)<=score)delete data.reports[current.id];persist();text('infinityStatus','Weekly best synced · Star Orbs are stored in EXP Food.');}catch(error){text('infinityStatus','Weekly score pending sync · '+error.message);}finally{reporting=null;if(reportAgain){reportAgain=false;queueMicrotask(()=>void report(true));}}})();return reporting;
+ // Only the global hourly scheduler or the explicit Retry Sync button
+ // may publish a pending score. Waves and the HUD clock never access Firestore.
+ async function report(manual=false){
+  if(reporting)return reporting;
+  if(host.GameStartup?.failed)return false;
+  const current=week(),score=data.reports[current.id];if(!score)return false;
+  if(!host.InfinityCloudSystem.available){if(manual)text('infinityStatus','Local weekly best saved · '+score+' waves. Cloud publishing is currently unavailable.');return false;}
+  const uid=host.CloudSaveSystem.activeUser?.uid;
+  reporting=(async()=>{try{const response=await host.InfinityCloudSystem.submit({weekId:current.id,highestWave:score,category:current.category},manual);if(host.CloudSaveSystem.activeUser?.uid!==uid||response.localOnly)return false;if(Number.isSafeInteger(response.highestWave))data.best[current.id]=Math.max(data.best[current.id]||0,response.highestWave);if(data.infinityMetadata?.lastClaimedWeek===current.id)data.infinityMetadata.lastWeekHighestWave=Math.max(data.infinityMetadata.lastWeekHighestWave,data.best[current.id]||0);if((data.reports[current.id]||0)<=score)delete data.reports[current.id];persist();text('infinityStatus','Weekly best synced · Star Orbs are stored in EXP Food.');return true;}catch(error){if(manual)text('infinityStatus','Weekly score pending sync · '+error.message);return false;}finally{reporting=null;}})();return reporting;
  }
  async function start(){
   if(!editable()||blocked||!validTeam()||host.GameStartup?.failed)return false;
@@ -306,7 +308,7 @@
    renderBattle();schedule();return true;
   }catch(error){if(!combat)host.InfinityViewSystem.release();text('infinityStatus',error.message);return false;}finally{busy=false;if(!combat)scheduleSetup();}
  }
- function open(){if(active||bridge.canEnter?.()!==true)return false;settleLocalWeek();if(blocked)return false;active=true;host.document.body.classList.add('infinity-open');combat=null;runWeek=null;sessionOrbs=0;bridge.onEnter?.();bridge.open?.('infinityModal');el('infinityLobby').hidden=false;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;query='';elementFilter='';categoryFilter='';sortMode='atk-desc';el('infinitySearch').value='';refreshCollection(false);renderClock();text('infinityStatus',`4v4 continuous waves · No VNĐ / direct EXP · Best this week: ${data.best[week().id]||0}. ${host.InfinityCloudSystem.status.message}`);host.clearInterval(uiTimer);uiTimer=host.setInterval(()=>{renderClock();if(Date.now()-lastReport>REPORT_MS)void report();},1000);void report();return true;}
+ function open(){if(active||bridge.canEnter?.()!==true)return false;settleLocalWeek();if(blocked)return false;active=true;host.document.body.classList.add('infinity-open');combat=null;runWeek=null;sessionOrbs=0;bridge.onEnter?.();bridge.open?.('infinityModal');el('infinityLobby').hidden=false;if(el('infinityLeaderboard'))el('infinityLeaderboard').disabled=false;query='';elementFilter='';categoryFilter='';sortMode='atk-desc';el('infinitySearch').value='';refreshCollection(false);renderClock();text('infinityStatus',`4v4 continuous waves · No VNĐ / direct EXP · Best this week: ${data.best[week().id]||0}. ${host.InfinityCloudSystem.status.message}`);host.clearInterval(uiTimer);uiTimer=host.setInterval(renderClock,1000);return true;}
  function exit(){if(!active)return;if(combat&&!combat.battle.finished)end('Run exited. Cleared-wave rewards retained.');stopTimer();cancelSetupWork();closeVariants(false);host.clearInterval(uiTimer);uiTimer=null;active=false;host.document.body.classList.remove('infinity-open');host.InfinityViewSystem.release();combat=null;el('infinityModal')?.classList.add('hidden');bridge.onExit?.();}
  function suspend(){stopTimer();cancelSetupWork();closeVariants(false);host.clearInterval(uiTimer);uiTimer=null;if(combat){combat.battle.finished=true;combat.battle.isBattling=false;}active=false;host.document.body.classList.remove('infinity-open');host.InfinityViewSystem.release();combat=null;el('infinityModal')?.classList.add('hidden');}
  function mount(){
@@ -314,7 +316,7 @@
   el('infinityOpenButton')?.addEventListener('click',open);el('infinityExit')?.addEventListener('click',exit);
   el('infinityStart')?.addEventListener('click',()=>void start());
   el('infinityRestart')?.addEventListener('click',()=>{if(!combat?.battle.finished)return;host.InfinityViewSystem.release();combat=null;runWeek=null;el('infinityModal').classList.remove('hidden');el('infinityLobby').hidden=false;el('infinityLeaderboard').disabled=false;refreshCollection(collectionWeek===week().id);});
-  el('infinityRetrySync')?.addEventListener('click',()=>{lastReport=0;void report(true);});
+  el('infinityRetrySync')?.addEventListener('click',()=>void report(true));
   el('infinityLeaderboard')?.addEventListener('click',()=>{if(combat&&!combat.battle.finished)return;const select=el('leaderboardMetric');if(select)select.value='infinity';bridge.open?.('leaderboardModal');void host.LeaderboardSystem.render(true);});
   el('infinityModal')?.addEventListener('click',setupClick);
   el('infinityClearTeam')?.addEventListener('click',()=>{if(!editable())return;selections=Array(4).fill(null);activeSlot=0;focusSlotAfterRender=true;scheduleSetup();});
@@ -337,7 +339,6 @@
   host.addEventListener('pagehide',suspend);
  }
  function presentReward(){const notice=data.rewardNotice;if(!notice||active||host.GameStartup?.failed||!el('infinityRewardModal'))return;text('infinityRewardMessage',`Weekly Reset! You received ${notice.orbs.toLocaleString('en-US')} Star Orbs for reaching Wave ${notice.highestWave.toLocaleString('en-US')} last week!`);text('infinityRewardWeek',notice.sourceWeek+' → '+notice.weekId+' · Saved to EXP Food');bridge.open?.('infinityRewardModal');}
- function dismissReward(){if(!data.rewardNotice)return;data.rewardNotice=null;if(!persist())blocked=true;else void host.CloudSaveSystem.flush(true);}
- host.addEventListener('cloud-session-ready',()=>{lastReport=0;void report(true);});
+ function dismissReward(){if(!data.rewardNotice)return;data.rewardNotice=null;if(!persist())blocked=true;}
  host.InfinitySystem=Object.freeze({KEY,WEEKLY_KEY,validSave,validWeeklySave,validMetadata,prepareSave,settleLocalWeek,presentReward,dismissReward,week,getISOWeek:R.getISOWeek,getISOWeekAndYear:R.getISOWeekAndYear,open,exit,start,suspend,report,get metadata(){return data.infinityMetadata?{...data.infinityMetadata}:null;},get active(){return active;},get blocked(){return blocked;},get battle(){return combat?.battle||null;},get lineup(){return selections.map(slot=>slot?{...slot}:null);},getBest:id=>data.best[id]||0,flush:()=>!blocked&&persist(),reset(){suspend();data=fresh();persist();},configure(options){bridge=options||{};mount();if(!persist())blocked=true;else settleLocalWeek();}});
 })(window);

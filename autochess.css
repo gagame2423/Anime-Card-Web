@@ -781,3 +781,5 @@
 .ac-spatial-effect.strike>path { stroke:#f3edc2; fill:rgba(231,214,139,.24); }
 @keyframes ac-spatial-fade { 0%{opacity:1} 24%{opacity:.82} 100%{opacity:0} }
 @media(prefers-reduced-motion:reduce){.ac-spatial-effect{animation:none;opacity:.6;}}
+
+@media(max-width:620px){#autochessModal .ac-elo-panel>header{flex-wrap:wrap;gap:7px}#autochessModal .ac-elo-actions{flex:1 1 100%;flex-wrap:wrap;gap:5px}#autochessModal .ac-elo-actions .ac-elo-refresh{flex:1 1 auto;white-space:nowrap}#autochessModal .ac-elo-actions .ac-icon-button{flex:0 0 auto}}

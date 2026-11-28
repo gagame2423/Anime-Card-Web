@@ -7,8 +7,8 @@
  function uploadStatus(id,value){if(value){uploadStatuses.set(id,value);if(uploadStatuses.size>32)uploadStatuses.delete(uploadStatuses.keys().next().value);}return uploadStatuses.get(id)||null;}
  const service=()=>backendOverride||host.CloudSaveSystem?.autoChessService||null;
  function identity(){const user=host.CloudSaveSystem?.activeUser;return{hextechUnlocks:host.HextechSystem.unlocks(),equippedSkins:Object.fromEntries(host.CardSkinSystem.DEFINITIONS.filter(d=>host.CardSkinSystem.equipped(d.cardId)===d.id).map(d=>[d.cardId,d.id])),uid:user?.uid||'local_player',name:R.name(host.CloudSaveSystem?.publicName||'You'),elo:host.AutoChessRanked?.current()?.elo||0,wins:host.AutoChessRanked?.current()?.wins||0,run:R.last()};}
- function cached(){try{const data=JSON.parse(host.sessionStorage.getItem(CACHE_KEY)||'null');if(data?.version!==1||!Number.isFinite(data.at)||Date.now()-data.at<0||Date.now()-data.at>=CACHE_TTL||!Array.isArray(data.rows)||!data.rows.length||data.rows.length>8)return null;return data.rows.map(R.decode).filter(Boolean).map(r=>r.wire);}catch(_){return null;}}
- function storePool(rows){if(!rows?.length){try{host.sessionStorage.removeItem(CACHE_KEY);}catch(_){}return;}try{host.sessionStorage.setItem(CACHE_KEY,JSON.stringify({version:1,at:Date.now(),rows}));}catch(_){} }
+ function cached(){try{const data=JSON.parse(host.sessionStorage.getItem(CACHE_KEY)||'null');if(data?.version!==1||!Number.isFinite(data.at)||Date.now()-data.at<0||Date.now()-data.at>=CACHE_TTL||!Array.isArray(data.rows)||data.rows.length>8)return null;return data.rows.map(R.decode).filter(Boolean).map(r=>r.wire);}catch(_){return null;}}
+ function storePool(rows){if(!Array.isArray(rows))return;try{host.sessionStorage.setItem(CACHE_KEY,JSON.stringify({version:1,at:Date.now(),rows}));}catch(_){} }
  const usable=run=>!!run&&Object.values(run.stages).some(stage=>stage.board.length>0);
  function distinct(rows,self){const seen=new Set([self]);return(rows||[]).map(R.decode).filter(r=>usable(r)&&!seen.has(r.uid)&&seen.add(r.uid)).map(r=>r.wire).slice(0,7);}
  function install(s,slot,member,friend=false){
@@ -64,25 +64,25 @@
   s.hybrid.writeAttempted=true;if(!payload){s.hybrid.cloudStatus='too-large';C.save(s);return;}
   R.save(payload);s.hybrid.payloadBytes=R.bytes(payload);
   try{host.localStorage.setItem(PENDING_KEY,JSON.stringify(payload));}catch(_){}
-  const started=publish(payload);s.hybrid.writeCount=started?1:0;s.hybrid.cloudStatus=started?'uploading':'local';C.save(s);
+  s.hybrid.writeCount=0;s.hybrid.cloudStatus='local';C.save(s); // Next global hourly slot, or explicit leaderboard sync.
  }
  const publishing=new Map(),running=new Set();
- function publish(payload){
-  const cloud=service(),key=payload.uid+':'+payload.matchId;if(publishing.has(key)||!cloud?.available||identity().uid!==payload.uid||host.navigator.onLine===false)return false;
+ function publish(payload,manual=false){
+  const cloud=service(),key=payload.uid+':'+payload.matchId;if(publishing.has(key)||identity().uid!==payload.uid)return false;if(!cloud?.available||host.navigator.onLine===false)return manual?Promise.reject(Error(host.CloudSaveSystem?.status||'Cloud sync unavailable. Local rating is saved.')):false;
   let attempts;try{attempts=JSON.parse(host.localStorage.getItem(ATTEMPTS_KEY)||'[]');if(!Array.isArray(attempts))attempts=[];if(attempts.includes(key))return false;}catch(_){return false;}
   uploadStatus(payload.matchId,'uploading');
-  const job=Promise.resolve().then(()=>cloud.publishRun(payload.uid,payload)).then(()=>{
+  const job=Promise.resolve().then(()=>cloud.publishRun(payload.uid,payload,manual)).then(()=>{
    uploadStatus(payload.matchId,'published');host.AutoChessRanked?.invalidateLeaderboard();
    try{const rows=JSON.parse(host.localStorage.getItem(ATTEMPTS_KEY)||'[]');host.localStorage.setItem(ATTEMPTS_KEY,JSON.stringify([...new Set([...(Array.isArray(rows)?rows:[]),key])].slice(-1024)));const pending=JSON.parse(host.localStorage.getItem(PENDING_KEY)||'null');if(pending?.uid===payload.uid&&pending.matchId===payload.matchId)host.localStorage.removeItem(PENDING_KEY);}catch(_){}
-   host.dispatchEvent?.(new host.CustomEvent('autochess-cloud-published',{detail:{uid:payload.uid,matchId:payload.matchId}}));
-  }).catch(error=>{uploadStatus(payload.matchId,String(error?.code||'').includes('permission-denied')?'denied':'offline');}).finally(()=>publishing.delete(key));publishing.set(key,job);return true;
+   host.dispatchEvent?.(new host.CustomEvent('autochess-cloud-published',{detail:{uid:payload.uid,matchId:payload.matchId}}));return true;
+  }).catch(error=>{const code=String(error?.code||'');uploadStatus(payload.matchId,code==='cloud/cooldown'?'local':code.includes('permission-denied')?'denied':'offline');if(manual)throw error;return false;}).finally(()=>publishing.delete(key));publishing.set(key,job);return job;
  }
- function syncPending(){
+ function syncPending(manual=false){
   if(running.size)return false;
   try{
    let payload=R.decode(JSON.parse(host.localStorage.getItem(PENDING_KEY)||'null'))?.wire;
-   if(!payload){const run=R.decode(R.last()),me=identity(),rank=host.AutoChessRanked?.current();if(!run||run.uid!==me.uid||!rank)return false;payload=R.encode({...run.wire,...rank,...host.AutoChessProfile?.publicMeta(),name:me.name},run.stages);}
-   return payload?publish(payload):false;
+   if(!payload&&manual){const run=R.decode(R.last()),me=identity(),rank=host.AutoChessRanked?.current();if(!run||run.uid!==me.uid||!rank)return false;payload=R.encode({...run.wire,...rank,...host.AutoChessProfile?.publicMeta(),name:me.name},run.stages);}
+   return payload?publish(payload,manual):false;
   }catch(_){return false;}
  }
  // PeerJS owns ordered buffering and BinaryPack framing. The application
@@ -96,7 +96,7 @@
   return {...base,debug:0,config:{...base.config,iceTransportPolicy:'all'}};
  }
  function createLobby(options={}){
-  syncPending();const {run,...me}=identity(),validToken=v=>typeof v==='string'&&/^[a-f0-9]{32}$/.test(v);
+  const {run,...me}=identity(),validToken=v=>typeof v==='string'&&/^[a-f0-9]{32}$/.test(v);
   me.mimicPool=host.PassiveSystem.ownedMimicPool();
   let mode=['lan','relay'].includes(options.mode)?options.mode:savedMode(),room=newCode(mode),joinCode=null,token='',owner=me.uid,members=[me],match=null;
   let active=true,generation=0,ready=false,joining=false,activated=false,lanFallback=false,relayConfigured=true,status='Preparing invite code…';
@@ -337,7 +337,5 @@
   void connect();
   return{view,join,setMode,start,close,refreshInvite(){if(active&&!match&&ownsRoom()&&!ready)void connect();}};
  }
- host.addEventListener?.('cloud-session-ready',()=>syncPending());
- host.addEventListener?.('online',()=>syncPending());
  host.AutoChessOnline=Object.freeze({CACHE_KEY,CACHE_TTL,identity,cached,distinct,seed,beginRun,endRun:id=>running.delete(id),get inMatch(){return running.size>0;},prepareRound,record,finish,replay,uploadStatus,syncPending,connectionLabel,createLobby,configure(options={}){backendOverride=options.backend||null;}});
 })(window);
