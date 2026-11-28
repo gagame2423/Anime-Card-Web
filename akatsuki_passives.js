@@ -103,7 +103,7 @@
   }
   function killed(bs,u,victim){
    if(has(u,'kakuzu')){const c=state(u,'kakuzu');c.hearts=Math.min(5,(c.hearts||0)+(api.watch?.gain(u,1)??1));c.stolen ||= [];
-    if(random()<.33){const id=pick(api.passiveIds(victim,true));if(id&&api.copy(bs,u,id))c.stolen.push(id);}
+    if(random()<.33){const id=pick(api.passiveIds(victim,true));if(id&&api.scope(u,'kakuzu',()=>api.copy(bs,u,id)))c.stolen.push(id);}
     if(random()<.66){const options=[victim.card.element,...(victim.akatsukiElements||[])].filter(e=>e!==u.card.element&&!(u.akatsukiElements||[]).includes(e)),element=pick(options);if(element)(u.akatsukiElements ||= []).push(element);}
    }
    if(has(u,'pain')&&!u.akatsukiPath){if(api.ownTurn(bs,u))advancePain(bs,u);else painState(u).pendingPaths=Math.min(6,(painState(u).pendingPaths||0)+1);}

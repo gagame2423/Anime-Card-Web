@@ -129,13 +129,13 @@
     function startTurn(bs,actor,side){
       for(const u of [...all(bs)]){
         if(alive(u)){
-          if(has(u,'choso')&&(bs.playerTeam.includes(u)?'player':'enemy')===side){const c=state(u,'choso');if(c.cleanseCooldown>0&&c.cooldownTurn!==bs.turnCount&&(bs.mode!=='ball-arena'||c.lastCooldownTick!==bs.turnCount)){c.lastCooldownTick=bs.turnCount;c.cleanseCooldown--;}}
-          if(has(u,'jogo')&&state(u,'jogo').domain){const c=state(u,'jogo');if(bs.mode!=='ball-arena'||c.lastDomainTick!==bs.turnCount){c.lastDomainTick=bs.turnCount;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.20,{shibuyaDomain:true});}}
-          if(has(u,'sukuna-shibuya')){const c=state(u,'sukuna-shibuya');if(c.domainTurns>0&&c.domainStarted!==bs.turnCount&&(bs.mode!=='ball-arena'||c.lastDomainTick!==bs.turnCount)){c.lastDomainTick=bs.turnCount;c.domainTurns=Math.max(0,c.domainTurns-1);if(!c.domainTurns)api.watch?.change(u,'domain','base');for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.09,{shibuyaDomain:true});}}
+          if(has(u,'choso')&&(bs.playerTeam.includes(u)?'player':'enemy')===side){const c=state(u,'choso');if(c.cleanseCooldown>0&&c.cooldownTurn!==bs.turnCount&&c.lastCooldownTick!==bs.turnCount){c.lastCooldownTick=bs.turnCount;c.cleanseCooldown--;}}
+          if(has(u,'jogo')&&state(u,'jogo').domain){const c=state(u,'jogo');if(c.lastDomainTick!==bs.turnCount){c.lastDomainTick=bs.turnCount;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.20,{shibuyaDomain:true});}}
+          if(has(u,'sukuna-shibuya')){const c=state(u,'sukuna-shibuya');if(c.domainTurns>0&&c.domainStarted!==bs.turnCount&&c.lastDomainTick!==bs.turnCount){c.lastDomainTick=bs.turnCount;c.domainTurns=Math.max(0,c.domainTurns-1);if(!c.domainTurns)api.watch?.change(u,'domain','base');for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*.09,{shibuyaDomain:true});}}
         }else{
           // Death effects are permanent runtime records, even if the passive was disabled later.
           const c=api.passiveRuntimeFor(u,'jogo').shibuya;
-          if(c?.meteorPending&&c.deathTurn!==bs.turnCount&&(bs.mode!=='ball-arena'||c.lastMeteorTick!==bs.turnCount)){c.lastMeteorTick=bs.turnCount;if(c.countdown>0)c.countdown=Math.max(0,c.countdown-1);if(c.countdown===0){c.meteorPending=false;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*(c.meteor||0),{shibuyaMeteor:true});}}
+          if(c?.meteorPending&&c.deathTurn!==bs.turnCount&&c.lastMeteorTick!==bs.turnCount){c.lastMeteorTick=bs.turnCount;if(c.countdown>0)c.countdown=Math.max(0,c.countdown-1);if(c.countdown===0){c.meteorPending=false;for(const enemy of [...enemies(bs,u)])api.hit(bs,u,enemy,atk(u)*(c.meteor||0),{shibuyaMeteor:true});}}
         }
       }
       api.indices(bs);

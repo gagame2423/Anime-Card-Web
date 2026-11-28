@@ -1,7 +1,7 @@
 /* Deterministic, Level-1 PvP combat. No storage, rewards, quests or host writes. */
 (function(host){
  'use strict';
- const BUILD='acr-online-20261127-passive-audit-v4',U=host.OnlineUtils,MAX_TURNS=300,MAX_UNITS=400;
+ const BUILD='acr-online-20261128-jackpot-boost-v1',U=host.OnlineUtils,MAX_TURNS=300,MAX_UNITS=400;
  const cards=new Map((host.ALL_CARDS||[]).map(card=>[card.id,card]));let signatureJob=null;
  function signature(){return signatureJob ||= U.hash(BUILD+U.stable([...cards.values()].map(card=>({id:card.id,stats:card.stats,element:card.element,category:card.category,passive:card.passive})).sort((a,b)=>a.id.localeCompare(b.id))));}
  // Array.every skips empty slots: a three-card sparse array must never count as 4v4 Ready.

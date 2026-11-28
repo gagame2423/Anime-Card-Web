@@ -90,7 +90,7 @@
     ui.action.disabled=fusion.active||((isEquipment||capsule||portal||relic)?bridge.canAct?.()===false:bridge.canUse?.()===false)||(isEquipment&&!equipped&&item.quantity<1)||(!isEquipment&&item.quantity<1);
     const single=host.document.getElementById('storageSellSingle');if(single){single.hidden=fusion.active||!host.StorageSales.canSell(item);single.disabled=bridge.canAct?.()===false;}
     const seconds=Math.ceil(item.remaining/1000);
-    text(ui.timer,item.pausedRemaining?'PAUSED · '+Math.ceil(item.pausedRemaining/1000)+'s remaining':seconds>0?'ACTIVE · '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):equipped?'EQUIPPED · bonuses active':'');
+    text(ui.timer,item.boostPaused&&seconds>0?'PAUSED · '+seconds+'s remaining':item.pausedRemaining?'PAUSED · '+Math.ceil(item.pausedRemaining/1000)+'s remaining':seconds>0?'ACTIVE · '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):equipped?'EQUIPPED · bonuses active':'');
   }
   function showCapsuleResult(result){
     const drop=result?.cards?.[0],card=drop?host.ALL_CARDS.find(card=>card.id===drop.cardId):null;if(!card)return;

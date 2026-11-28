@@ -79,7 +79,9 @@
     return result;
   }
   let data = read();
+  const boostNow=at=>host.BoostClockSystem?.now(at)??at,boostPaused=()=>host.BoostClockSystem?.paused===true;
   function settle(at=Date.now()){
+    at=boostNow(at);
     let changed=false;
     for(const [superId,baseId]of Object.entries(SUPER_BASE)){
       const until=data.buffs[superId];
@@ -97,13 +99,13 @@
   function getItem(id, at = Date.now()) {
     if (!safeId(id) || !hasOwn(data.items, id)) return null;
     const entry = data.items[id];
-    return { ...entry, ...(entry.type==='portal'&&host.PortalRules?{image:host.PortalRules.image(entry)}:{}), metadata: { ...entry.metadata }, ...POTIONS[id], quantity: entry.quantity, until: data.buffs[id] || 0, remaining: Math.max(0, (data.buffs[id] || 0) - at), pausedRemaining: data.paused[id] || 0, usable: hasOwn(POTIONS, id) };
+    return { ...entry, ...(entry.type==='portal'&&host.PortalRules?{image:host.PortalRules.image(entry)}:{}), metadata: { ...entry.metadata }, ...POTIONS[id], quantity: entry.quantity, until: boostPaused()?0:(host.BoostClockSystem?.wallDeadline(data.buffs[id]||0,at)??(data.buffs[id]||0)), remaining: Math.max(0, (data.buffs[id] || 0) - boostNow(at)), boostPaused:boostPaused(), pausedRemaining: data.paused[id] || 0, usable: hasOwn(POTIONS, id) };
   }
   function renderAmount(node,id,amount,label=null){if(!node)return;const item=getItem(id),image=host.document.createElement('img');image.className='hx-item-icon';image.src=item?.image||'';image.alt='';image.width=19;image.height=19;image.addEventListener('error',()=>image.remove(),{once:true});node.replaceChildren(...(item?.image?[image]:[]),host.document.createTextNode(' '+Number(amount||0).toLocaleString('en-US')+(label===null?' '+(item?.name||id):label?' '+label:'')));}
   function list() { return Object.keys(data.items).map(id => getItem(id)); }
   // Pure HUD snapshot: expired Super timers can be resolved without writing a save in Sandbox.
   function activeEffects(at=Date.now()) {
-    const result=[];
+    const wall=at;at=boostNow(at);const paused=boostPaused(),result=[];
     for(const [id,potion] of Object.entries(POTIONS)) {
       let until=Number(data.buffs[id])||0;
       const superId=SUPER_FOR[id],superUntil=superId?(Number(data.buffs[superId])||0):0;
@@ -112,7 +114,7 @@
       if(until<=at)continue;
       const baseId=SUPER_BASE[id];
       result.push({id,name:potion.name,icon:potion.icon,image:data.items[id]?.image||'',stat:potion.stat,bonus:potion.bonus,
-        super:Boolean(baseId),until,remaining:until-at,pausedRemaining:baseId?(data.paused[baseId]||0):0});
+        super:Boolean(baseId),paused,until:paused?0:(host.BoostClockSystem?.wallDeadline(until,wall)??until),remaining:until-at,pausedRemaining:baseId?(data.paused[baseId]||0):0});
     }
     return result;
   }
@@ -189,7 +191,7 @@
   }
   function use(id, at=Date.now()) {
     if (host.SandboxSystem?.active || !hasOwn(POTIONS,id) || quantity(id)<1) return false;
-    const before=JSON.stringify(data);settle(at);
+    const before=JSON.stringify(data);settle(at);at=boostNow(at);
     data.items[id].quantity--;
     if(SUPER_BASE[id]){
       const base=SUPER_BASE[id],remaining=Math.max(0,(data.buffs[base]||0)-at);
@@ -201,7 +203,7 @@
     if(persist())return true;data=JSON.parse(before);return false;
   }
   function multiplier(stat,at=Date.now()) {
-    if(settle(at))persist();
+    if(settle(at))persist();if(boostPaused())return 1;at=boostNow(at);
     const base=POTION_BY_STAT.get(stat),superId=SUPER_FOR[base];
     const id=superId&&data.buffs[superId]>at?superId:base;
     return id&&data.buffs[id]>at?1+POTIONS[id].bonus:1;
@@ -212,7 +214,7 @@
     data.items[base].quantity-=10;data.items[id].quantity++;
     if(persist())return true;data.items[base].quantity+=10;data.items[id].quantity--;return false;
   }
-  function combatTurnMs(defaultMs=3000,at=Date.now()){return Number(data.buffs.speed_battle_potion)>at?1000:defaultMs;}
+  function combatTurnMs(defaultMs=3000,at=Date.now()){return !boostPaused()&&Number(data.buffs.speed_battle_potion)>boostNow(at)?1000:defaultMs;}
   function tick(at=Date.now()){const expired=settle(at);if(expired)persist();return expired;}
   function dropChance(dropChancePercent = 0) {
     const playerStat = Math.max(0, Math.min(20, Number(dropChancePercent) || 0));
@@ -270,8 +272,8 @@
     for (const item of items) {
       const timer = renderStates.get(grid).timers.get(item.id); if (!timer) continue;
       const seconds = Math.ceil(item.remaining / 1000);
-      timer.textContent = item.pausedRemaining > 0 ? `PAUSED • ${Math.ceil(item.pausedRemaining/1000)}s remaining (Super active)` : seconds > 0 ? `ACTIVE • ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : item.usable ? 'Not active' : 'Ready in storage';
-      timer.classList.toggle('is-active', seconds > 0);
+      timer.textContent = item.boostPaused&&seconds>0?`PAUSED • ${seconds}s remaining`:item.pausedRemaining > 0 ? `PAUSED • ${Math.ceil(item.pausedRemaining/1000)}s remaining (Super active)` : seconds > 0 ? `ACTIVE • ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : item.usable ? 'Not active' : 'Ready in storage';
+      timer.classList.toggle('is-active', seconds > 0&&!item.boostPaused);
     }
   }
   function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); revision++; persist(); }

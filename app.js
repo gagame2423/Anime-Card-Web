@@ -3960,7 +3960,7 @@ function scheduleNextBattleTurn(remainingMs) {
   if (!battleState || battleState.finished) return;
   const turnMs = getBattleTurnMs();
   const delay = Number.isFinite(remainingMs) ? Math.max(0, Math.min(turnMs, remainingMs)) : turnMs;
-  battleState.nextTurnAt = Date.now() + delay;
+  battleState.nextTurnAt = Date.now() + delay;battleState.scheduledTurnMs=turnMs;
   if (els.battleStatus) els.battleStatus.textContent = `${battleState.turn === 'player' ? 'PLAYER' : 'ENEMY'} STRIKE IN ${Math.ceil(delay / 1000)}s`;
   if (els.battleModeLabel) els.battleModeLabel.textContent = getBattleModeLabel();
   window.ArenaTurnView?.render(battleState,window.PassiveSystem);
@@ -4846,9 +4846,10 @@ function buildCloudSaveBundle() {
   const storage = {};
   // Explicit allowlist: no session storage, battle logs, replay caches, old
   // mirrored save, Auto Chess match or Sailing Sea state/settings.
+  const boostWall=Date.now();
   for (const key of getGameSaveKeys().filter(key=>!LEGACY_STORAGE_KEYS.includes(key))) {
     const value = localStorage.getItem(key);
-    if (value !== null) storage[key] = JSON.parse(value);
+    if (value !== null) storage[key] = window.BoostClockSystem.translate(key,JSON.parse(value),true,boostWall);
   }
   const main=storage[STORAGE_KEY],clean={};
   // The authoritative card records are unlocked + mutations. Inventory rows
@@ -5961,6 +5962,18 @@ window.SettingsSystem.configure({maxBaseLuck:getMaximumBaseLuck,totalLuck:getLuc
   if(isSpookyBattle()&&isBattleMatchActive()&&next!==lastSpookyTurnMs){const remaining=Math.max(0,(battleState.nextTurnAt||Date.now()+lastSpookyTurnMs)-Date.now());scheduleNextBattleTurn(Math.min(1,remaining/lastSpookyTurnMs)*next);}
   lastSpookyTurnMs=next;updateStats();if(isSpookyBattle())renderSpookyControls();
 }});
+// Pause changes the device-local boost clock only; do not dirty the cloud save.
+window.addEventListener('boost-pause-changed',event=>{
+  const at=event.detail?.at||Date.now();
+  if(isCooldownActive&&cooldownDurationMs>0){const fraction=Math.max(0,Math.min(1,(cooldownUntil-at)/cooldownDurationMs));cooldownDurationMs=getCooldownMs();cooldownUntil=at+fraction*cooldownDurationMs;renderCooldownUI(at);clearCooldownExpiryTimer();cooldownExpiryTimer=window.setTimeout(()=>completeCooldown(),Math.max(0,cooldownUntil-Date.now())+10);}
+  if(window.PortalCombatView?.active)window.PortalCombatView.refreshTiming();
+  if(window.InfinitySystem?.active)window.InfinitySystem.refreshBoostTiming?.();
+  if(battleState?.isBattling&&!battleState.finished&&!window.PortalCombatView?.active){
+    if(isTimeTrialBattle())window.TimeTrialSystem.remaining(battleState,at);
+    else if(!isSpookyBattle()){const next=getBattleTurnMs(),old=battleState.scheduledTurnMs||next;if(next!==old){const remaining=Math.max(0,(battleState.nextTurnAt||at+old)-at);scheduleNextBattleTurn(Math.min(1,remaining/old)*next);}}
+  }
+  updateStats();renderUpgradeShop();renderAvailableCards();renderPotionInventory();window.PotionHudSystem.render();window.QuestsSystem?.render();
+});
 window.InventorySystem.configure({ getDropMultiplier: () => (window.AchievementSystem?.getDropMultiplier(state.achievementRewardReceipts) || 1) + (window.QuestsSystem?.bonus('drop') || 0) + (window.EquipmentSystem?.bonuses().drop || 0) });
 window.EquipmentSystem.configure({canAct:canEvolveNow,money:()=>state.currency,variants:getVariantEntries,prepare:prepareEquipmentCraft,onCommit:onEvolutionCommitted,onChange:()=>{updateStats();renderUpgradeShop();renderClockAndWeather(true);renderPotionInventory();},onBlocked:()=>{isAutoRolling=false;clearCooldownExpiryTimer();window.GameStartup?.report('equipment-save','Storage unavailable. Reload to recover your pending equipment craft.');}});
 window.ExpFoodSystem.configure({
@@ -6117,7 +6130,7 @@ async function applyCloudProgress(payload,options={}){
   if(isBattleMatchActive()||isSimulationActive()||window.InfinitySystem?.active||window.PortalsSystem?.active||isImportingSave)throw Error('Finish the current activity before loading a Cloud copy.');
   if(options.canApply&&options.canApply()!==true)throw Error('Local progress changed before Cloud restore.');
   const imported=parseCloudSaveBundle(await decryptGameSave(await window.CloudSaveCodec.unpack(payload)));
-  const gameKeys=getGameSaveKeys(),records=Object.fromEntries(gameKeys.map(key=>[key,Object.hasOwn(imported,key)?imported[key]:null]));
+  const gameKeys=getGameSaveKeys(),boostWall=Date.now(),records=Object.fromEntries(gameKeys.map(key=>[key,Object.hasOwn(imported,key)?JSON.stringify(window.BoostClockSystem.translate(key,JSON.parse(imported[key]),false,boostWall)):null]));
   if(options.canApply&&options.canApply()!==true)throw Error('Local progress changed before Cloud restore.');
   const keys=[...gameKeys,window.CloudSaveSystem.META_KEY],previous=Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)])),previousAutoRoll=isAutoRolling;
   isImportingSave=true;isAutoRolling=false;clearCooldownExpiryTimer();clearAutoContinueBattleTimer();clearBattleTurnTimer();

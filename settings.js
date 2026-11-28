@@ -15,6 +15,7 @@
   function render(){for(const [prefix,get] of rows){const system=get();if(!system)continue;const value=String(Math.round(system.volume*100));for(const suffix of ['Range','Number']){const node=host.document?.getElementById(prefix+'Volume'+suffix);if(node&&host.document.activeElement!==node)node.value=value;}}
     const max=maxBaseLuck(),chosen=baseLuck(max);for(const node of [refs.luckRange,refs.luckNumber])if(node){node.max=String(max);if(host.document.activeElement!==node)node.value=String(Number(chosen.toFixed(4)));}
     if(refs.luckStatus)refs.luckStatus.textContent=`Base Luck ${chosen.toFixed(2)} / ${max.toFixed(2)} • ${preferences.baseLuck===null?'MAX (follows upgrades)':'Custom'} • Total ${(Number(bridge.totalLuck?.())||chosen).toFixed(2)}x`;
+    if(refs.pauseToggle)refs.pauseToggle.checked=host.BoostClockSystem?.paused===true;if(refs.pauseState)refs.pauseState.textContent=host.BoostClockSystem?.paused?'PAUSED · timer frozen':'ACTIVE · normal countdown';
     if(refs.speedToggle)refs.speedToggle.checked=preferences.spookySpeedUp;
     if(refs.speedLabel)refs.speedLabel.textContent=preferences.spookySpeedUp?'ON • 1s / turn':'OFF • 2s / turn';
   }
@@ -23,13 +24,15 @@
       const commit=(source,final=false)=>{if(source.value.trim()===''){if(final){source.value=String(Math.round(get().volume*100));}return;}const raw=Number(source.value);if(!Number.isFinite(raw))return;const value=Math.round(Math.max(0,Math.min(100,raw)));get()?.setVolume(value/100);range.value=String(value);if(source!==number||final)number.value=String(value);};
       range.addEventListener('input',()=>commit(range));number.addEventListener('input',()=>commit(number));number.addEventListener('change',()=>commit(number,true));
     }
-    refs={luckRange:root.querySelector('#luckConfigRange'),luckNumber:root.querySelector('#luckConfigNumber'),luckStatus:root.querySelector('#luckConfigStatus'),speedToggle:host.document.getElementById('spookySpeedUpToggle'),speedLabel:host.document.getElementById('spookySpeedUpState')};
+    refs={luckRange:root.querySelector('#luckConfigRange'),luckNumber:root.querySelector('#luckConfigNumber'),luckStatus:root.querySelector('#luckConfigStatus'),speedToggle:host.document.getElementById('spookySpeedUpToggle'),speedLabel:host.document.getElementById('spookySpeedUpState'),pauseToggle:root.querySelector('#pauseBoostToggle'),pauseState:root.querySelector('#pauseBoostState')};
     refs.luckRange?.addEventListener('input',()=>{setBaseLuck(refs.luckRange.value);refs.luckRange.value=String(baseLuck());if(refs.luckNumber)refs.luckNumber.value=String(baseLuck());});
     refs.luckNumber?.addEventListener('change',()=>{setBaseLuck(refs.luckNumber.value.trim()===''?null:refs.luckNumber.value);refs.luckNumber.value=String(baseLuck());});
     root.querySelector('#luckConfigReset')?.addEventListener('click',()=>setBaseLuck(null));
     refs.speedToggle?.addEventListener('change',()=>{if(!setSpookySpeedUp(refs.speedToggle.checked))refs.speedToggle.checked=preferences.spookySpeedUp;});
+    refs.pauseToggle?.addEventListener('change',()=>{if(bridge.canAct?.()===false||!host.BoostClockSystem?.setPaused(refs.pauseToggle.checked))render();});
     render();
   }
+  host.addEventListener('boost-pause-changed',render);
   host.addEventListener('storage',event=>{if(event.key!==KEY&&event.key!==null)return;try{const next=event.key===null||event.newValue===null?fresh():JSON.parse(event.newValue);if(validSave(next)){preferences=next;bridge.onChange?.();render();}}catch(_){}});
-  host.SettingsSystem=Object.freeze({KEY,mount,render,validSave,baseLuck,setBaseLuck,setSpookySpeedUp,configure:options=>{bridge=options||{};render();},get spookySpeedUp(){return preferences.spookySpeedUp;},reset:()=>{commit(fresh());}});mount();
+  host.SettingsSystem=Object.freeze({KEY,mount,render,validSave,baseLuck,setBaseLuck,setSpookySpeedUp,configure:options=>{bridge=options||{};render();},get spookySpeedUp(){return preferences.spookySpeedUp;},reset:()=>{commit(fresh());host.BoostClockSystem?.setPaused(false);}});mount();
 })(window);

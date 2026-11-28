@@ -139,7 +139,7 @@
    sync();
   }
   function fixed(){
-   if(done||disposed)return;time+=STEP;battle.spatial.time=time;if(settle())return;
+   if(done||disposed)return;time+=STEP;battle.spatial.time=time;engine.advanceTimedEffects(battle);if(settle())return;
    const live=[...orbs.values()].filter(p=>alive(p.u));
    for(const p of live){
     if(!alive(p.u))continue;

@@ -65,7 +65,7 @@
   function killed(bs,u,victim){
    if(!alive(u)||!has(u,'eren-rumbling')||!(victim.card.category||[]).includes('Titan'))return;
    const c=state(u,'eren-rumbling');c.absorbed ||= new WeakSet();if(c.absorbed.has(victim))return;c.absorbed.add(victim);
-   api.flat(u,'atk',atk(victim)*.50);for(const id of api.passiveIds(victim,true))api.copy(bs,u,id);
+   api.flat(u,'atk',atk(victim)*.50);for(const id of api.passiveIds(victim,true))api.scope(u,'eren-rumbling',()=>api.copy(bs,u,id));
   }
   function attack(bs,u,target,options={}){
    if(u.isTitanCrystal)return {hit:false,damage:0,killed:false,skipped:true};

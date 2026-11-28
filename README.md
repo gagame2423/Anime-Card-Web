@@ -1,72 +1,51 @@
-# Update 35.5.2 — Firestore Quota & Local Backup
+# Update 35.5.3 — JACKPOT, sao chép passive & Pause Boost
 
-Bản vá dành cho Update 35.5.1. Giảm mạnh lưu lượng Firebase, giữ tiến trình chơi cục bộ và bổ sung mã sao lưu không cần đăng nhập.
+Bản vá dành cho Update 35.5.2. Toàn bộ tên kỹ năng, nhãn giao diện và thông báo trong trận vẫn dùng tiếng Anh.
 
-## 1. Nguyên nhân và cách khắc phục
+## 1. Sửa lỗi bất tử vĩnh viễn của Hakari Jackpot
 
-Các số liệu 2.2K lượt đọc, 2.2K lượt ghi và 1.8K lượt xóa mỗi giờ là số liệu thực tế do bạn cung cấp. Khi rà soát mã nguồn, mình xác định luồng lưu cũ có những nguyên nhân sau:
+**Nguyên nhân:** Bộ đếm `hakariInvincible` trước đây được lưu trong vùng dữ liệu của passive đang được thực thi. Khi Lucius (All Grimoire) hoặc một thẻ khác sao chép JACKPOT, bộ đếm có thể nằm trong vùng dữ liệu bản sao, nhưng cơ chế kết thúc lượt chỉ giảm bộ đếm của thẻ gốc. Đồng thời, việc đổi wave trong Infinity không phải là trận mới; nếu trạng thái bất tử đã bị kẹt, nó tiếp tục tồn tại qua các wave.
 
-- Chu kỳ đồng bộ chỉ 60 giây. Các callback kết thúc hoạt động, xác thực lại và `flush(true)` còn có thể kích hoạt lưu sớm. Auto-Roll liên tục đánh dấu save thay đổi.
-- Save lớn hơn 600 KB được tách thành nhiều chunk. Mỗi lượt upload có thể ghi toàn bộ chunk mới, đọc hồ sơ và bản recovery cũ, ghi hồ sơ + recovery + leaderboard, rồi đọc và xóa từng chunk lỗi thời. Đây là nguồn chính tạo ra số lượt xóa và ghi rất cao. Dữ liệu nguồn có nhiều bản sao của cùng thông tin sở hữu card nên dễ vượt ngưỡng chunk.
-- Realtime listener theo dõi hồ sơ cloud, token refresh và các luồng đồng bộ điểm Infinity/Auto Chess riêng làm phát sinh truy cập ngoài nhu cầu lưu chính. Infinity trước đây kiểm tra điểm ngay cả khi người chơi chỉ để màn hình mode mở.
+**Cách sửa:**
 
-**Bản mới:** mỗi lần autosave ghi đè đúng một document riêng tư `users/{uid}` với payload nén, không tạo chunk, không ghi recovery trên cloud, không xóa document, không listener realtime, không đọc lại sau khi ghi. Dùng một yêu cầu Firestore Commit có xác thực Firebase (tương đương ghi đè `setDoc`, không có hàng đợi ghi offline hoặc retry tự động của SDK). Revision tăng tuần tự và Firestore Rules vẫn ngăn hồ sơ cũ ghi đè hồ sơ mới của thiết bị khác. Khi xung đột, người chơi tự chọn Upload Local Save hoặc Load Cloud Save.
+- JACKPOT sử dụng mốc hết hạn chung của trận đấu và bộ đếm trên chính đơn vị sở hữu hiệu ứng. Không phụ thuộc vào ID thẻ gốc hay lượt tấn công của người sở hữu.
+- Nếu bắt đầu ở slot 1, đơn vị được bất tử đúng 7 lượt chiến đấu hoàn tất; một bản sao nhận giữa lượt có đủ 7 lượt tiếp theo. Lượt bị Stun/Freeze vẫn được tính. Bộ đếm giảm từ 7 về 0 và tiếp tục xuyên suốt các wave Infinity.
+- Auto Chess, Ball vs Ball và Sailing Sea dùng đồng hồ mô phỏng: 7 lượt × 1,35 giây = 9,45 giây ở tốc độ mô phỏng 1x. Không phụ thuộc số lần chạm bóng hoặc số đơn vị ra đòn.
+- Hết hạn hoặc mất bản sao: gỡ trạng thái bất tử, cập nhật badge/bộ đếm và ghi thông báo `JACKPOT invincibility expired` hoặc thông báo kết thúc phù hợp trong Battle Log. Đơn vị có thể nhận sát thương bình thường sau đó.
+- JACKPOT kích hoạt lúc nhận passive một lần mỗi đơn vị trong trận, không tự mở lại khi đổi wave hoặc sao chép lại. Giữ nguyên điều kiện và các giới hạn gốc: slot khác nhận +77% ATK hoặc HP; sửa lỗi cộng ATK hai lần. Hakari thường và Hakari Jackpot là hai thẻ khác nhau; không thêm cơ chế roll/domain mới ngoài mô tả gốc.
 
-Save dạng chunk đã tồn tại vẫn được đọc khi người chơi **chủ động** Load Cloud Save. Lần upload tiếp theo chuyển sang document đơn. Các chunk/recovery cũ được giữ nguyên trên server, không chạy cleanup ngầm để tránh tiêu tốn thêm quota hoặc làm mất bản sao cũ.
+## 2. Rà soát hệ thống sao chép/đánh cắp passive
 
-## 2. Autosync đúng 1 giờ và kiểm tra thay đổi
+- **All Grimoire (Lucius):** bộ đếm đòn đánh, điều kiện nhận passive mỗi 5 đòn, giới hạn 5 passive, chống trùng lặp và kích hoạt đúng hiệu ứng vào trận của bản sao. Bonus khi Julius chết dùng trạng thái riêng của All Grimoire kể cả khi bản thân nó được sao chép.
+- **Rider Card (Kamen Rider Decade) và Scam (Reigen):** sửa đường thực thi khi đổi nhận dạng passive, để passive mới gọi cả logic vào trận và có bộ đếm riêng.
+- **Amazing World (Gumball), Khnum (Oingo), Mammon Creator (Yuuki), Ascension (The First Human), Ki ki ma ma (Jason), Kakuzu, Eren Rumbling và Time Grimoire:** dùng chung cơ chế thu hồi bản sao. Dọn hiệu ứng tạm, bonus chỉ số, hiệu ứng sát thương theo thời gian, lớp khiên và đơn vị triệu hồi thuộc bản sao; không làm mất passive khác. Trả lại passive bị Jason mượn khi bản sao chứa cơ chế này mất đi.
+- Bản sao lồng nhau có phạm vi sở hữu riêng; tránh để hiệu ứng tồn tại vô hạn nếu passive cha bị thu hồi. Giữ các cổng kích hoạt một lần, bộ đếm và giới hạn đã tiêu thụ thay vì tạo lại miễn phí khi nhận lại cùng passive. Loại thẻ không thể sao chép khỏi danh sách lựa chọn.
+- **Uchiha Sasuke và Android 21:** bộ đếm hết hạn hiệu ứng chỉ số tạm được cập nhật cả ở vùng dữ liệu riêng của bản sao. **Jogo, Sukuna Shibuya, Choso:** chặn cập nhật domain, thiên thạch và cooldown nhiều lần trong một tick. **Toshiro, Weather Report, Awakened Doflamingo:** đọc bộ đếm riêng của passive được sao chép.
 
-| Thao tác | Số lượt Firestore của luồng lưu chính |
-|---|---|
-| Auto-Roll, tick thời gian, click UI, lưu local, kết thúc trận | 0 ngay tại thời điểm thao tác |
-| Mỗi chu kỳ 3.600 giây có tiến trình mới | Tối đa 1 lượt ghi, 0 lượt đọc, 0 lượt xóa |
-| Không thay đổi tiến trình | 0 lượt ghi, 0 lượt đọc, 0 lượt xóa |
-| Upload Local Save thủ công | 1 lượt đọc để xác định revision mới nhất; ghi tối đa 1 document save nếu có thay đổi |
-| Upload thủ công có điểm leaderboard chính thay đổi | Có thể thêm 1 lượt ghi document điểm công khai, trong cùng yêu cầu; không chứa dữ liệu save riêng tư |
-| Load Cloud Save thủ công | Đọc hồ sơ theo yêu cầu; save dạng chunk cũ có thể cần đọc các chunk tương ứng |
+**Kiểm thử:** chạy mô phỏng 247 thẻ × 3 kịch bản và 245 thẻ đủ điều kiện sao chép bằng All Grimoire. Kiểm tra không lỗi JavaScript, chỉ số hữu hạn và lượt tiến bình thường. Kiểm thử chuyên biệt Hakari/Lucius/Decade/Reigen trong 1v1 và Infinity (thay wave khi timer chưa hết); Gumball roll lại cùng passive; Oingo hết hạn bản sao; đồng hồ Auto Chess/Ball vs Ball và đồng bộ mô phỏng PvP. Pause Boost cũng đã được kiểm thử khi đóng/tải lại trang, với Lucky/Super Luck, Speed Battle và buff Luck/Drop của quest trên màn hình di động; kiểm tra thời lượng không trôi khi pause, bonus bị tắt và potion thường tiếp tục sau khi Super Potion hết hạn. Các kiểm thử này bao phủ cơ chế chung và những lỗi đã xác định, không phải chứng minh mọi nhánh RNG hiếm của từng thẻ.
 
-- Lần tự động đầu tiên đợi một giờ. Sau mỗi lần thử ghi, kể cả khi mạng lỗi, lần tự động tiếp theo phải đợi tối thiểu một giờ. Thời điểm thử được lưu trong localStorage và dùng chung giữa các tab; Web Locks ngăn hai tab gửi đồng thời. Nếu trình duyệt không hỗ trợ khóa, autosync không ghi để tránh race; vẫn có thể Upload thủ công.
-- Các module chỉ báo dirty. Khi đến lịch, hệ thống tạo SHA-256 từ dữ liệu tiến trình đã sắp xếp ổn định. Thời gian hiện tại, scheduler weather và card hiển thị gần nhất không làm đổi fingerprint; tiến trình thực tế như rolls, vật phẩm, nhiệm vụ, phần thưởng, cấp card và tiền vẫn được so sánh. Weather được giữ trong snapshot để phục hồi chính xác khi có lần lưu mới.
-- Upload Local Save hoạt động không cần chờ một giờ, có chặn nhấn lặp 10 giây. Sau thao tác thành công, lịch tự động tính lại từ thời điểm thử cuối. Nếu save giống bản cloud đã biết, không ghi lại; hiện `Already up to date`. Upload mới thành công hiện `Saved to Cloud!`.
-- Để không nhân đôi số lượt ghi tự động, bảng xếp hạng chính được cập nhật khi Upload Local Save thủ công. Kết quả Auto Chess và điểm Infinity được lưu cục bộ trước; chúng chia sẻ ngân sách một lượt ghi tự động mỗi giờ với save chính, luân phiên khi cùng có dữ liệu chờ. Có thể chủ động dùng `Sync My Result` trong Elo Leaderboard hoặc `Retry Sync` trong Infinity; thao tác thủ công cũng dùng chặn 10 giây. Không còn tự gửi điểm từ từng wave, mở lobby, token refresh hay sự kiện kết nối lại. Bảng xếp hạng chỉ đọc khi người chơi yêu cầu; Auto Chess chỉ truy vấn replay có giới hạn lúc bắt đầu trận, ưu tiên cache kể cả kết quả rỗng.
-- PvP, Portal Party và kết nối người chơi Auto Chess dùng PeerJS/WebRTC; heartbeat của các phòng này không phải truy vấn Firestore. Không thay đổi heartbeat hoặc luật combat của các mode.
+## 3. Pause Boost
 
-## 3. Sailing Sea hoàn toàn cục bộ, save cloud nhỏ gọn
+Mở **Game Settings → Pause Boost**.
 
-- Voyage, bản đồ, tàu, crew, bot, combat checkpoint nằm ở `anime_card_rng_sailing_sea_v1`; điều khiển nằm ở `anime_card_rng_sailing_sea_settings_v1`. Cả hai chỉ dùng localStorage. Đã bỏ phụ thuộc tài khoản/Cloud Save trong adapter vào-ra Sailing Sea, và chặn mọi truy cập dữ liệu Firestore khi Sailing Sea đang hoạt động. Chỉ khi trở lại game chính, lịch autosync thông thường mới tiếp tục.
-- Cloud save và Backup Code dùng danh sách store được cho phép, không quét toàn bộ localStorage hoặc sessionStorage. Loại mirror save legacy, combat log, cache UI, replay/run đang chơi, dữ liệu Sailing Sea, timestamp xuất file và các bản sao dư thừa. Inventory card trùng với bảng `mutations` được tái tạo bằng sanitizer của game; bản ghi riêng không trùng vẫn được giữ. Không cắt số lượng card/vật phẩm, chỉ số relic, receipt chống nhận thưởng lặp, trạng thái Tower/Portal hay các checkpoint phần thưởng đang chờ.
-- Dùng GZIP + Base64 nếu trình duyệt hỗ trợ, với phiên bản mã `acgz1:` và checksum bảo vệ save hiện có. Payload tối đa **90.000 byte** trước khi gửi (document có thêm một ít metadata, vẫn dưới 100 KB). Save lớn hơn mức này không bị cắt hoặc ghi nửa chừng; sử dụng Backup Code để giữ dữ liệu đầy đủ. Trình duyệt cần hỗ trợ GZIP để giải nén mã `acgz1:`, mã Base64 đời cũ vẫn đọc được.
-- Giữ tương thích cloud save có manifest/chunk hoặc Base64 cũ. Nếu có bản save cũ chứa Sailing Sea, phần ấy được bỏ qua khi khôi phục; voyage đang có trên thiết bị vẫn nguyên vẹn.
+- **ON:** dừng thời gian còn lại của Lucky, Rich, EXP, Speed, Speed Battle và các Super Potion, cùng buff Luck/Drop có thời hạn từ quest. Bonus tạm thời bị vô hiệu; HUD hiện **PAUSED** và giữ nguyên thời gian còn lại. Có thể đóng game rồi mở lại mà vẫn giữ trạng thái tạm dừng.
+- **OFF:** tiếp tục đúng phần thời gian còn lại và bật lại bonus. Nếu Super Potion đang tạm giữ thời lượng potion thường, trạng thái đó cũng được bảo toàn.
+- Bộ đếm cooldown Roll và tốc độ trận đang diễn ra được tính lại theo bonus thực sự hoạt động; không reset lượt hoặc thời hạn Time Trial.
+- Weather, thời gian thế giới, reset nhiệm vụ, chỉ số cố định và hiệu ứng passive trong trận vẫn tiến bình thường. Pause Boost chỉ áp dụng buff cá nhân có thời hạn.
+- Thiết lập và độ lệch đồng hồ lưu riêng trên thiết bị bằng localStorage. Không gửi thiết lập này lên Firestore; không phát sinh upload trực tiếp khi bật/tắt. Cloud Save/Backup Code vẫn chuyển đổi mốc thời hạn potion/quest sang đồng hồ chuẩn để tương thích với thiết bị khác và giữ giới hạn đồng bộ 1 giờ từ Update 35.5.2.
 
-## 4. Khi gặp lỗi và dùng Backup Code
+## 4. Cài đặt
 
-Cloud Account phân biệt:
+1. Sao lưu thư mục game và dùng **Copy Backup Code** nếu muốn lưu lại tiến trình.
+2. Giải nén ZIP vào đúng thư mục chứa `index.html`; chọn ghi đè các file trùng tên. File `boost_clock.js` là file mới, cần đi cùng bản vá.
+3. Đăng tải các file trong bản vá lên hosting nếu đang chơi phiên bản web; không cần đổi Firebase Rules, ảnh, font hoặc audio.
+4. Nhấn **Ctrl + F5** trên PC hoặc tải lại trang sau khi xóa cache trình duyệt trên điện thoại. Cả hai máy chơi PvP phải dùng cùng bản cập nhật.
+5. Kiểm tra JACKPOT bằng một trận mới và mở Game Settings để thử Pause Boost với potion đang hoạt động.
 
-- `Daily Firebase quota is full`: tiến trình đã lưu local; tạm dừng cả truy cập đọc/ghi Firestore của game đến mốc reset ngày theo giờ Pacific (thêm 5 phút để tránh thời điểm reset). Mốc này tồn tại qua tải lại trang. Với tài khoản đã bật autosync, lịch sẽ tiếp tục vào khung giờ hợp lệ sau reset. Nếu chưa chọn kết nối save của tài khoản mới, dùng Upload/Load khi quota khả dụng trở lại.
-- `Cloud save is too large`: payload vượt giới hạn nhỏ gọn; save local giữ nguyên; không chia chunk và không tự xóa dữ liệu.
-- `Network offline or unavailable`: kết nối bị gián đoạn; local vẫn chơi/lưu bình thường và thử lại ở lịch tiếp theo. Lỗi quyền hoặc revision được báo riêng; không tự ghi đè cloud khác thiết bị.
+### Các file trong bản vá
 
-**Backup khi Firebase hết quota hoặc không có kết nối Cloud:**
+- Combat: `passives.js`, `turn_phase.js`, `grimoire.js`, `shibuya.js`, `akatsuki_passives.js`, `titan_passives.js`, `tensura_passives.js`, `autochess_combat.js`, `ball_combat.js`, `pvp_combat.js`.
+- Boost và giao diện: `boost_clock.js` (mới), `inventory.js`, `quests.js`, `settings.js`, `potion_hud.js`, `storage.js`, `infinity.js`, `app.js`, `index.html`, `styles.css`.
+- `README.md` (tài liệu này).
 
-1. Mở **Cloud Account** → **Emergency Backup Code** → **Copy Backup Code**. Nếu trình duyệt không cho ghi clipboard, mã hiện trong ô văn bản và được chọn để bạn tự sao chép (Ctrl+C).
-2. Dán mã vào một file văn bản hoặc lưu trên thiết bị đáng tin cậy. Không chia sẻ công khai vì mã chứa tiến trình game. Không cần đăng nhập để thực hiện.
-3. Để phục hồi, tắt Auto-Roll, thoát trận đấu đang diễn ra, dán toàn bộ mã vào ô **Backup code** rồi bấm **Restore from Code**. Game kiểm tra định dạng, checksum, dữ liệu từng store; yêu cầu xác nhận trước khi thay thế. Bản save hiện tại được giữ thêm trong IndexedDB cục bộ trước khi ghi; nếu dữ liệu sai hoặc lưu thất bại, không thay thế tiến trình hiện tại.
-4. Sau khi khôi phục, trang tải lại để các module đọc save mới. Nếu hoàn toàn mất mạng và trang không tải lại được, dữ liệu đã nằm trong localStorage; mở lại trang khi có mạng. Không tự upload bản restore lên cloud; hãy chọn Upload Local Save khi muốn đồng bộ. Voyage và thiết lập Sailing Sea không nằm trong mã và không bị thay đổi.
-
-## 5. Kiểm tra và cài đặt
-
-Kết quả kiểm thử mô phỏng, không phát sinh truy cập tới Firebase thật:
-
-- Giả lập 9 giờ, 19.800 sự kiện dirty (2.200/giờ): **9 lượt ghi, 0 lượt đọc save, 0 lượt xóa**; không có thao tác ngay từ tick/roll. Thêm ba giờ thay đổi clock không tạo yêu cầu mạng.
-- Chromium với 247 card, 3.705 biến thể: dữ liệu main chưa rút gọn khoảng 618 KB, mã nén khoảng **30.546 byte**, toàn bộ số lượng/mutation giữ nguyên sau restore. Hồ sơ mẫu nhỏ dùng khoảng 8,6 KB.
-- Kiểm tra upload thủ công, chặn 10 giây, trạng thái Already up to date, quota reset, không truy cập khi Sailing Sea mở, backup lỗi bị từ chối, restore code và manifest cũ, bảo toàn voyage, và lưu điểm Auto Chess/Infinity theo định dạng tương thích. Không có lỗi runtime trong các kiểm thử trình duyệt này.
-
-Cài đặt:
-
-1. Sao lưu thư mục game/bản save. Giải nén ZIP vào thư mục game hiện tại, ghi đè các file trùng tên. Chép thêm `cloud_save_codec.js`. Không có assets trong ZIP.
-2. **Quan trọng:** cập nhật `firestore.rules` trong dự án Firebase. Dùng Firebase Console → Firestore Database → Rules và Publish nội dung file mới, hoặc chạy `firebase deploy --only firestore:rules` trong thư mục dự án đã chọn đúng project. Rules mới chỉ cho ghi payload đơn ≤90.000 byte, cho đọc chunk cũ nhưng cấm ghi/xóa chunk và recovery; giữ điều kiện chủ tài khoản/revision. Đồng thời chấp nhận codec replay phẳng và trường số trận Auto Chess đã có. Mình chưa triển khai rules lên Firebase thật.
-3. Hard reload (Ctrl + F5) trên tất cả thiết bị/tab còn chạy bản cũ, nhất là tab Auto-Roll để qua đêm. Đóng các tab game cũ trước khi bật lại Auto-Roll. Verify Usage sau một giờ hoặc qua đêm; các lượt đọc leaderboard theo yêu cầu của người chơi và lưu thủ công sẽ được tính riêng.
-
-Tài liệu chính thức: [Firestore usage & limits (reset theo Pacific)](https://firebase.google.com/docs/firestore/quotas), [Firestore REST API](https://firebase.google.com/docs/firestore/use-rest-api).
-
-File trong patch: `app.js`, `firebase.js`, `cloud_save_codec.js`, `index.html`, `styles.css`, `autochess_online.js`, `autochess_ranked.js`, `autochess.css`, `infinity.js`, `infinity_cloud.js`, `leaderboard.js`, `firestore.rules`, `README.md`. Các module Sailing Sea và PvP đã được kiểm tra; bản thân các module này không thực hiện ghi/đọc Firestore nên không cần thay đổi.
+Chỉ các file thay đổi được đóng gói; không có thư mục assets hoặc toàn bộ codebase.

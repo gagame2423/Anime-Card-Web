@@ -71,7 +71,7 @@
    if(has(u,YUU)){const c=state(u,YUU);if(c.attacks>0&&c.attacks%3===0&&c.energy>=50){
     if(c.copy)api.removeCopy(bs,u,c.copy);c.copy=null;
     const pool=api.cards().filter(card=>card.passive?.name&&card.id!==YUU&&!api.passiveIds(u,true).includes(card.id));
-    const card=pool[Math.floor(random()*pool.length)];if(card){c.energy-=50;c.copy=api.copy(bs,u,card.id);api.log('[PASSIVE] Mammon Creator · '+card.passive.name+'.','passive');}
+    const card=pool[Math.floor(random()*pool.length)];if(card){c.energy-=50;c.copy=api.scope(u,YUU,()=>api.copy(bs,u,card.id));api.log('[PASSIVE] Mammon Creator · '+card.passive.name+'.','passive');}
    }}
   }
   function passiveImmune(u,meta){return has(u,YUU)&&state(u,YUU).energy>1500&&Boolean(meta.passiveAttack||meta.specialAttack||meta.dot);}

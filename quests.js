@@ -257,7 +257,7 @@
       const index=Math.floor(clock/period);
       if(!data.cycles[type]||data.cycles[type].index!==index){data.cycles[type]=rollCycle(type,index);changed();}
     }
-    const active=data.effects.filter(e=>e.until>Date.now());
+    const active=data.effects.filter(e=>e.until>(host.BoostClockSystem?.now()??Date.now()));
     if(active.length!==data.effects.length){data.effects=active;changed();bridge.onChange?.();}
     if(paint&&ui&&!ui.root.classList.contains('hidden'))render();
   }
@@ -292,7 +292,8 @@
     if(updated)changed();
     if(flush())return true;data=JSON.parse(before);revision++;return false;
   }
-  function bonus(stat,at=Date.now()){return data.effects.reduce((sum,e)=>sum+(e.stat===stat&&e.until>at?e.bonus:0),0);}
+  function bonus(stat,at=Date.now()){if(host.BoostClockSystem?.paused)return 0;at=host.BoostClockSystem?.now(at)??at;return data.effects.reduce((sum,e)=>sum+(e.stat===stat&&e.until>at?e.bonus:0),0);}
+  function activeBoosts(at=Date.now()){const clock=host.BoostClockSystem?.now(at)??at,paused=host.BoostClockSystem?.paused===true;return data.effects.filter(e=>e.until>clock).map(e=>({id:'quest:'+e.id,name:e.stat==='luck'?`+${e.bonus} Luck`:`+${Math.round(e.bonus*100)}% Drops`,stat:e.stat,icon:'✦',remaining:e.until-clock,paused,quest:true}));}
   function rewardText(r){return r.money?`+${r.money*100}% current VNĐ`:r.weather?`Random ${r.weather.join(' / ')} weather • ${r.hours}h`:`+${r.stat==='luck'?r.bonus+' Luck':Math.round(r.bonus*100)+'% Drops'} • ${r.hours}h`;}
   function claim(type,id){
     if(blocked())return false;tick();
@@ -302,7 +303,7 @@
     // External currency/weather uses a durable coordinator receipt. Buff + claim share one save.
     if((r.money||r.weather)&&bridge.reward?.(receipt,r)!==true)return false;
     q.claimed=true;
-    if(r.stat)data.effects.push({id:receipt,stat:r.stat,bonus:r.bonus,until:Date.now()+r.hours*3600000});
+    if(r.stat)data.effects.push({id:receipt,stat:r.stat,bonus:r.bonus,until:(host.BoostClockSystem?.now()??Date.now())+r.hours*3600000});
     changed();if(!flush()){data=JSON.parse(before);revision++;return false;}
     bridge.onChange?.();render();return true;
   }
@@ -332,7 +333,7 @@
     if(!ui||ui.root.classList.contains('hidden'))return;
     const period=PERIODS[tab];set(ui.timer,period?`Resets in ${countdown((data.cycles[tab].index+1)*period-nowClock())}`:'Card Quests • Sequential • Accept before tracking');
     for(const node of ui.list.querySelectorAll('[data-row-timer]'))set(node,period?countdown((data.cycles[tab].index+1)*period-nowClock()):'No reset');
-    const buffs=ui.root.querySelector('[data-quest-buffs]');set(buffs,data.effects.filter(e=>e.until>Date.now()).map(e=>`${e.stat==='luck'?`+${e.bonus} Luck`:`+${Math.round(e.bonus*100)}% Drops`} • ${countdown((e.until-Date.now())/1000)}`).join(' | '));
+    const buffs=ui.root.querySelector('[data-quest-buffs]');set(buffs,activeBoosts().map(e=>`${e.name} • ${e.paused?'PAUSED · ':''}${countdown(e.remaining/1000)}`).join(' | '));
     if(renderedRevision===revision)return;renderedRevision=revision;
     const items=entries().sort((a,b)=>Number(data.pins.includes(b.id))-Number(data.pins.includes(a.id)));
     if(!items.some(i=>i.id===selected))selected=items[0]?.id||null;
@@ -368,5 +369,5 @@
   function reset(){data=fresh();revision++;tick();flush();}
   host.document?.addEventListener('visibilitychange',()=>{if(host.document.visibilityState==='hidden'&&dirty)flush();});
   host.addEventListener('pagehide',()=>{if(dirty)flush();});
-  host.QuestsSystem=Object.freeze({KEY,PERIODS,pools,validSave,configure,tick,record,recordTrialSkip,bonus,claim,mount,open,render,reset,flush,notify:()=>{revision++;},snapshot:()=>JSON.parse(JSON.stringify(data))});
+  host.QuestsSystem=Object.freeze({KEY,PERIODS,pools,validSave,configure,tick,record,recordTrialSkip,bonus,activeBoosts,claim,mount,open,render,reset,flush,notify:()=>{revision++;},snapshot:()=>JSON.parse(JSON.stringify(data))});
 })(window);

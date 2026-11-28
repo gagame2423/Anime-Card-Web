@@ -6,10 +6,10 @@
     const state = unit => runtime(unit).grimoire ||= { copies: [], initialized: false, streak: 0, followChance: .05 };
     const has = (unit, passive) => api.hasPassive(unit, passive);
     const names = ids => new Set(ids.map(key => api.card(key)?.passive?.name || key));
-    function acquire(bs, unit) {
-      const c = state(unit);
-      if (c.copies.length >= 4 || !alive(unit)) return;
-      const seen = names(['boss-event-lucius', ...c.copies.map(copy => copy.id)]), choices = new Map();
+    function acquire(bs, unit,countCurrent=false) {
+      const c = api.skillState(unit,'boss-event-lucius'),owned=api.passiveIds(unit,true);
+      if (owned.length >= 5 || !alive(unit)) return;
+      const seen = names(owned), choices = new Map();
       for (const candidate of all(bs)) {
         if (candidate === unit) continue;
         for (const key of api.passiveIds(candidate, true)) {
@@ -21,7 +21,7 @@
       if (!pool.length) return;
       const key = pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
       const copy = api.addCopy(unit, key);
-      if (copy) { api.copyEntry(bs, unit, copy); log(`[PASSIVE] All Grimoire gained ${api.card(key).passive.name}.`, 'passive'); }
+      if (copy) {if(countCurrent)copy.attackOffset--; api.copyEntry(bs, unit, copy); log(`[PASSIVE] All Grimoire gained ${api.card(key).passive.name}.`, 'passive'); }
     }
     function entry(bs, unit) {
       const key = id(unit), c = state(unit);
@@ -89,17 +89,17 @@
     function death(bs, victim) {
       if (alive(victim) || victim.card?.id !== 'julius' || victim.isClone || victim.isSummoned || api.canFutureRevive(bs,victim)) return;
       for (const unit of allies(bs, victim, false)) {
-        if (!has(unit, 'boss-event-lucius') || state(unit).juliusBonus) continue;
-        state(unit).juliusBonus = true;
-        api.hpBonus(unit, .5); api.atkBonus(unit, .5);
+        if (!has(unit, 'boss-event-lucius')) continue;
+        const c=api.skillState(unit,'boss-event-lucius');if(c.juliusBonus)continue;c.juliusBonus=true;
+        api.scope(unit,'boss-event-lucius',()=>{api.hpBonus(unit,.5);api.atkBonus(unit,.5);});
         log('[PASSIVE] All Grimoire: allied Julius died permanently; +50% HP and ATK.', 'passive');
       }
     }
     function endTurn(bs) { for(const unit of all(bs)) if(unit.card?.id==='julius'&&!alive(unit)) death(bs,unit); }
     function countedAttack(bs, unit) {
       if (!has(unit, 'boss-event-lucius') || !alive(unit)) return;
-      const c = api.skillState(unit, 'boss-event-lucius'), count = runtime(unit).ownAttackCount;
-      if (count > 0 && count % 5 === 0 && c.lastAcquisition !== count) { c.lastAcquisition = count; acquire(bs, unit); }
+      const c = api.skillState(unit, 'boss-event-lucius'), count = api.attackCount(unit,'boss-event-lucius');
+      if (count > 0 && count % 5 === 0 && c.lastAcquisition !== count) { c.lastAcquisition = count; api.scope(unit,'boss-event-lucius',()=>acquire(bs,unit,true)); }
     }
     function dodge(bs, unit) {
       if (id(unit) !== 'speed-wizard') return;

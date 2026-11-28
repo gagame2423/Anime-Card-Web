@@ -20,27 +20,27 @@
     if (!root) return;
     if (toggle && toggle.checked !== enabled) toggle.checked = enabled;
     if (!enabled) { show(false); return; }
-    const effects = host.InventorySystem?.activeEffects(at) || [];
+    const effects = [...(host.InventorySystem?.activeEffects(at)||[]),...(host.QuestsSystem?.activeBoosts(at)||[])];
     show(effects.length > 0);
     const key = effects.map(item => `${item.id}:${item.image}`).join('|');
     if (key !== signature) {
       signature = key; root.replaceChildren(); rows.clear();
       for (const effect of effects) {
-        const tile = host.document.createElement('div'); tile.className = 'potion-hud-item' + (effect.super ? ' is-super' : '');
+        const tile = host.document.createElement('div'); tile.className = 'potion-hud-item' + (effect.super ? ' is-super' : '')+(effect.quest?' is-quest-boost':'');
         tile.dataset.potionId = effect.id; tile.setAttribute('role', 'listitem');
         const icon = host.document.createElement('span'); icon.className = 'potion-hud-icon';
-        const fallback = host.document.createElement('span'); fallback.className='potion-bottle'+(effect.super?' is-super':'');fallback.dataset.potionStat=effect.stat;fallback.setAttribute('aria-hidden','true');icon.append(fallback);
+        const fallback = host.document.createElement('span'); fallback.className='potion-bottle'+(effect.super?' is-super':'');fallback.dataset.potionStat=effect.stat;fallback.setAttribute('aria-hidden','true');if(effect.quest){fallback.hidden=true;icon.textContent='✦';}else icon.append(fallback);
         if(effect.image){const image=host.document.createElement('img');image.src=effect.image;image.alt='';image.addEventListener('load',()=>{fallback.hidden=true;},{once:true});image.addEventListener('error',()=>{image.remove();fallback.hidden=false;},{once:true});icon.append(image);}
-        const label = host.document.createElement('small'); label.textContent = `${effect.super ? 'S. ' : ''}${labels[effect.stat] || effect.name}`;
-        const timer = host.document.createElement('strong');
-        tile.append(icon, label, timer); root.append(tile); rows.set(effect.id, { tile, timer });
+        const label = host.document.createElement('small'); label.textContent = effect.quest?effect.name:`${effect.super ? 'S. ' : ''}${labels[effect.stat] || effect.name}`;
+        const timer = host.document.createElement('strong'),badge=host.document.createElement('span');badge.className='boost-paused-badge';badge.textContent='PAUSED';badge.hidden=true;
+        tile.append(icon,label,timer,badge);root.append(tile);rows.set(effect.id,{tile,timer,badge});
       }
     }
     for (const effect of effects) {
       const row = rows.get(effect.id); if (!row) continue;
-      const remaining = time(effect.remaining); text(row.timer, remaining);
+      const remaining = time(effect.remaining); text(row.timer, remaining);row.badge.hidden=!effect.paused;row.tile.classList.toggle('is-boost-paused',!!effect.paused);
       const paused = effect.pausedRemaining ? `; regular potion paused with ${time(effect.pausedRemaining)} remaining` : '';
-      const label = `${effect.name}: ${remaining} remaining${paused}`;
+      const label = `${effect.name}: ${remaining} remaining${effect.paused?' · PAUSED (bonus suspended)':''}${paused}`;
       if (row.tile.getAttribute('aria-label') !== label) row.tile.setAttribute('aria-label', label);
     }
   }
@@ -54,6 +54,7 @@
     toggle = host.document?.getElementById('showActivePotionsHudToggle') || null;
     toggle?.addEventListener('change', () => setEnabled(toggle.checked)); render();
   }
+  host.addEventListener('boost-pause-changed',()=>render());
   host.addEventListener('storage', event => { if (event.key === KEY) { enabled = event.newValue !== 'false'; render(); } });
   host.PotionHudSystem = Object.freeze({ KEY, render, setEnabled, get enabled() { return enabled; } });
   if (host.document?.readyState === 'loading') host.document.addEventListener('DOMContentLoaded', mount, { once: true }); else mount();

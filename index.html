@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#070a10" />
   <title>Anime Card RNG</title>
-  <link rel="stylesheet" href="./styles.css?v=20261128-cloud-quota-1" />
+  <link rel="stylesheet" href="./styles.css?v=20261128-jackpot-boost-1" />
   <link rel="stylesheet" href="./passives.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./pvp.css?v=20261117-content-1" />
   <link rel="stylesheet" href="./infinity.css?v=20261117-content-1" />
@@ -952,7 +952,7 @@
     <div class="settings-volume-row"><label for="musicVolumeRange">Music Volume</label><input id="musicVolumeRange" type="range" min="0" max="100" step="1" value="35"><label class="sr-only" for="musicVolumeNumber">Music volume percent</label><input id="musicVolumeNumber" type="number" min="0" max="100" step="1" value="35"><span>%</span></div>
     <div class="settings-audio-toggle"><span>Sound Effects</span><button id="sfxToggleButton" class="ghost-button" type="button" aria-pressed="true">SFX ON</button></div>
     <div class="settings-volume-row"><label for="sfxVolumeRange">SFX Volume</label><input id="sfxVolumeRange" type="range" min="0" max="100" step="1" value="80"><label class="sr-only" for="sfxVolumeNumber">SFX volume percent</label><input id="sfxVolumeNumber" type="number" min="0" max="100" step="1" value="80"><span>%</span></div>
-  </div><section class="settings-luck-section" aria-labelledby="luckConfigTitle"><h3 id="luckConfigTitle">Luck Config</h3><p>Adjust permanent Base Luck only. Weather, potion, equipment and temporary quest bonuses still apply.</p><label class="sr-only" for="luckConfigRange">Base Luck</label><input id="luckConfigRange" type="range" min="1" max="1" step="0.01" value="1"><div class="luck-config-input"><label for="luckConfigNumber">Base Luck</label><input id="luckConfigNumber" type="number" min="1" max="1" step="0.01" value="1"><button id="luckConfigReset" type="button" class="ghost-button">Reset to Max</button></div><p id="luckConfigStatus" role="status"></p></section><label class="settings-switch-row" for="showActivePotionsHudToggle"><span><strong>Show Active Potions HUD</strong><small>Show active potion icons and remaining time at the bottom-right.</small></span><input id="showActivePotionsHudToggle" type="checkbox" role="switch" checked></label></section></div>
+  </div><section class="settings-luck-section" aria-labelledby="luckConfigTitle"><h3 id="luckConfigTitle">Luck Config</h3><p>Adjust permanent Base Luck only. Weather, potion, equipment and temporary quest bonuses still apply.</p><label class="sr-only" for="luckConfigRange">Base Luck</label><input id="luckConfigRange" type="range" min="1" max="1" step="0.01" value="1"><div class="luck-config-input"><label for="luckConfigNumber">Base Luck</label><input id="luckConfigNumber" type="number" min="1" max="1" step="0.01" value="1"><button id="luckConfigReset" type="button" class="ghost-button">Reset to Max</button></div><p id="luckConfigStatus" role="status"></p></section><label class="settings-switch-row boost-pause-switch" for="pauseBoostToggle"><span><strong>Pause Boost</strong><small>Freeze potion and timed quest boosts. Bonuses are suspended until resumed.</small><small id="pauseBoostState" role="status">ACTIVE · normal countdown</small></span><input id="pauseBoostToggle" type="checkbox" role="switch"></label><label class="settings-switch-row" for="showActivePotionsHudToggle"><span><strong>Show Active Potions HUD</strong><small>Show active potion icons and remaining time at the bottom-right.</small></span><input id="showActivePotionsHudToggle" type="checkbox" role="switch" checked></label></section></div>
   <div id="arenaMutationModal" class="modal-backdrop hidden"><section class="modal-panel module-modal arena-mutation-modal" role="dialog" aria-modal="true" aria-labelledby="arenaMutationTitle"><header class="modal-header"><h2 id="arenaMutationTitle">Card Mutations</h2><button type="button" class="modal-close" data-close-modal="arenaMutationModal" aria-label="Close mutations">×</button></header><p>Choose one owned variant for the active team slot. Each card has at most 2 active mutations.</p><div data-arena-mutations class="arena-mutation-list"></div><button data-arena-more type="button" class="ghost-button" hidden>Show more</button></section></div>
   <div id="evolutionModal" class="modal-backdrop hidden evolution-unit-backdrop" role="dialog" aria-modal="true" aria-labelledby="evolutionTitle">
     <section class="modal-panel evolve-unit-modal">
@@ -1136,14 +1136,14 @@
   <script type="application/x-game-script" data-game-script src="./roll_performance.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./ui_performance.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./roll_view.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./grimoire.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./yuno.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./requiem.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./reagan.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./fate.js?v=20261127-passive-audit-1"></script>
   <script type="application/x-game-script" data-game-script src="./spooky_passives.js?v=20261127-passive-audit-1"></script>
   <script type="application/x-game-script" data-game-script src="./gomen.js?v=20261126-ball-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261127-passive-audit-1"></script>
+  <script type="application/x-game-script" data-game-script src="./shibuya.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./companions.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./combat_stats.js?v=20261127-passive-audit-1"></script>
   <script type="application/x-game-script" data-game-script src="./dragon_skills.js?v=20261126-ball-polish-1"></script>
@@ -1152,12 +1152,12 @@
   <script type="application/x-game-script" data-game-script src="./ragna_passives.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./mourner.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./card_details.js?v=20261122-relic-compat-1"></script>
-  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./akatsuki_passives.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./enten.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./titan_passives.js?v=20261126-ball-polish-1"></script>
-  <script type="application/x-game-script" data-game-script src="./turn_phase.js?v=20261126-standard-turn-1"></script>
+  <script type="application/x-game-script" data-game-script src="./titan_passives.js?v=20261128-jackpot-boost-1"></script>
+  <script type="application/x-game-script" data-game-script src="./turn_phase.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./baller_passives.js?v=20261122-alien-watch-1"></script>
-  <script type="application/x-game-script" data-game-script src="./tensura_passives.js?v=20261126-ball-arena-1"></script>
+  <script type="application/x-game-script" data-game-script src="./tensura_passives.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./sins_passives.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./bleach_passives.js?v=20261122-alien-watch-1"></script>
   <script type="application/x-game-script" data-game-script src="./hextech_passives.js?v=20261126-ball-arena-1"></script>
@@ -1165,9 +1165,10 @@
   <script type="application/x-game-script" data-game-script src="./content_passives.js?v=20261127-passive-audit-1"></script>
   <script type="application/x-game-script" data-game-script src="./spatial_combat.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./passive_journal.js?v=20261127-passive-audit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261127-passive-audit-1"></script>
+  <script type="application/x-game-script" data-game-script src="./passives.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./shop_bulk.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261126-arena-qol-1"></script>
+  <script type="application/x-game-script" data-game-script src="./boost_clock.js?v=20261128-jackpot-boost-1"></script>
+  <script type="application/x-game-script" data-game-script src="./inventory.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./exp_food.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./materials.js?v=20261126-ball-arena-1"></script>
   <script type="application/x-game-script" data-game-script src="./relics.js?v=20261127-sailing-audio-1"></script>
@@ -1188,21 +1189,21 @@
   <script type="application/x-game-script" data-game-script src="./evolution.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./equipment.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./spooky.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261117-content-1"></script>
+  <script type="application/x-game-script" data-game-script src="./quests.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./crafting.js?v=20261122-relic-compat-1"></script>
   <script type="application/x-game-script" data-game-script src="./drop_audio.js?v=20261127-passive-audit-1"></script>
   <script type="application/x-game-script" data-game-script src="./sandbox.js?v=20261121-ui-cartoon-1"></script>
   <div id="battleWeatherHud" class="battle-weather-hud" role="list" aria-label="Battle weather" hidden></div>
   <script type="application/x-game-script" data-game-script src="./weather_hud.js?v=20261121-ui-cartoon-1"></script>
   <div id="activePotionsHud" class="active-potions-hud" role="list" aria-label="Active potions" aria-live="off" hidden></div>
-  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261117-content-1"></script>
-  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261122-relic-compat-1"></script>
+  <script type="application/x-game-script" data-game-script src="./potion_hud.js?v=20261128-jackpot-boost-1"></script>
+  <script type="application/x-game-script" data-game-script src="./settings.js?v=20261128-jackpot-boost-1"></script>
+  <script type="application/x-game-script" data-game-script src="./storage.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_cloud.js?v=20261128-cloud-quota-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_combat.js?v=20261125-arena-readability-1"></script>
   <script type="application/x-game-script" data-game-script src="./infinity_view.js?v=20261125-arena-readability-1"></script>
-  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261128-cloud-quota-1"></script>
-  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261127-passive-audit-1"></script>
+  <script type="application/x-game-script" data-game-script src="./infinity.js?v=20261128-jackpot-boost-1"></script>
+  <script type="application/x-game-script" data-game-script src="./pvp_combat.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp_view.js?v=20261117-content-1"></script>
   <script type="application/x-game-script" data-game-script src="./pvp.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./leaderboard.js?v=20261128-cloud-quota-1"></script>
@@ -1225,7 +1226,7 @@
   <script type="application/x-game-script" data-game-script src="./autochess_strategy.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_profile.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_bots.js?v=20261126-ball-arena-1"></script>
-  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261127-passive-audit-1"></script>
+  <script type="application/x-game-script" data-game-script src="./autochess_combat.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_report.js?v=20261117-ac-polish-augments-3"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_online.js?v=20261128-cloud-quota-1"></script>
   <script type="application/x-game-script" data-game-script src="./autochess_panels.js?v=20261120-ac-adventure-1"></script>
@@ -1239,7 +1240,7 @@
   <script type="application/x-game-script" data-game-script src="./update_logs.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./recommend_team.js?v=20261126-arena-qol-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_audio.js?v=20261127-passive-audit-1"></script>
-  <script type="application/x-game-script" data-game-script src="./ball_combat.js?v=20261126-ball-polish-1"></script>
+  <script type="application/x-game-script" data-game-script src="./ball_combat.js?v=20261128-jackpot-boost-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_index.js?v=20261126-ball-polish-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_view.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./ball_arena.js?v=20261126-ball-polish-1"></script>
@@ -1250,6 +1251,6 @@
   <script type="application/x-game-script" data-game-script src="./sailing_ui.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./sailing_main.js?v=20261127-sailing-audio-1"></script>
   <script type="application/x-game-script" data-game-script src="./game_audio_hooks.js?v=20261127-sailing-audio-1"></script>
-  <script type="application/x-game-script" data-game-script src="./app.js?v=20261128-cloud-quota-1"></script>
+  <script type="application/x-game-script" data-game-script src="./app.js?v=20261128-jackpot-boost-1"></script>
 </body>
 </html>
