@@ -42,9 +42,31 @@
  }
  function clearInput(){held.clear();joystick=null;view?.endJoystick();}
  function markSaved(){saveClock=0;saveError=false;saveStatus='Saved locally · '+new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'});}
- function savingFailed(){
+ function savingFailed(message='Unable to save the voyage. Free browser storage and press Save again. Your current run is paused in memory.'){
   paused=true;saveError=true;saveStatus='Save unavailable · paused';accumulator=0;clearInput();
-  view.toast('Unable to save the voyage. Free browser storage and press Save again. Your current run is paused in memory.','danger');
+  view?.toast(message,'danger');
+ }
+ function treasurePending(){return model?.phase==='finished'&&model.result?.treasureClaimed===false;}
+ // First save() records the terminal voyage and its fixed quote. grantOnce()
+ // writes the account stack and voyage receipt in one localStorage operation.
+ // Only then seal the voyage. A crash between writes is safe to retry.
+ function settleTreasure(){
+  if(!treasurePending())return true;
+  const r=model.result,count=r.treasureChests,inventory=host.InventorySystem;
+  if(count>0){
+   inventory.reload();
+   if(!inventory.grantOnce('sailing_sea_treasure',model.id,inventory.TREASURE_CHEST.id,count)){
+    savingFailed('Treasure Chest reward pending. Free browser storage and retry Save. Your reward is preserved.');
+    return false;
+   }
+  }
+  r.treasureClaimed=true;
+  if(!R.save(model)){
+   r.treasureClaimed=false;
+   savingFailed('Treasure Chest reward is in Storage. Retry Save to finish the voyage receipt.');
+   return false;
+  }
+  markSaved();return true;
  }
  function syncFightCheckpoint(){
   if(model?.phase==='combat'&&model.combat&&fight&&fightId===model.combat.id)model.combat.fightTime=fight.time;
@@ -53,7 +75,10 @@
   if(!model)return true;
   syncFightCheckpoint();
   if(!R.save(model)){savingFailed();if(active)show();return false;}
-  markSaved();if(notify)view.toast('Voyage saved. Resume from this checkpoint anytime.','success');return true;
+  markSaved();
+  if(!settleTreasure()){if(active)show(true);return false;}
+  if(notify){if(model.phase==='finished')show(true);view.toast(model.phase==='finished'?'Voyage result and reward saved.':'Voyage saved. Resume from this checkpoint anytime.','success');}
+  return true;
  }
  // Interactive state changes are atomic with respect to the local checkpoint.
  // A failed storage write cannot charge a recipe, change a flag or spend a recruit.
@@ -63,7 +88,9 @@
   let result;
   try{result=fn();}catch(error){model=previous;throw error;}
   if(!R.save(model)){model=previous;savingFailed();show(true);return {ok:false};}
-  markSaved();worldSounds();if(notify)view.toast(notify,'success');return {ok:true,result};
+  markSaved();worldSounds();
+  if(!settleTreasure()){show(true);return {ok:false};}
+  if(notify)view.toast(notify,'success');return {ok:true,result};
  }
  function disposeFight(){if(fight)fight.dispose();fight=null;fightId=null;soundFx=0;}
  function beginFight(){
@@ -80,6 +107,8 @@
   checkpoint();show(true);view.toast('Combat interrupted: '+String(error?.message||'Unexpected battle error').slice(0,100),'danger');
  }
  function newVoyage(){
+  // Never discard an unclaimed terminal checkpoint.
+  if(treasurePending()&&!checkpoint(false))return;
   const next=R.create(randomSeed(),bridge.name?.()||'You');
   if(!R.validate(next))throw Error('Unable to generate the voyage.');
   if(!R.save(next)){savingFailed();return;}
@@ -87,6 +116,7 @@
  }
  function resume(){
   if(!model)return;soundLog=model.logSerial;soundZone=M.atZone(model,R.player(model))?.id||null;harbor=false;optionalPanel=null;paused=false;accumulator=0;lastFrame=null;
+  if(treasurePending())checkpoint(false);
   if(model.phase==='combat'){try{beginFight();}catch(error){restoreAfterCombatError(error);return;}}
   show(true);
  }
@@ -269,7 +299,7 @@
   preview ||= R.create(931905,'You');
   view ||= host.SailingUI.makeView(actions);if(!view)return false;
   active=true;harbor=true;paused=false;loadError=loaded.error;saveError=false;saveStatus=model?'Saved voyage':'Local voyage';optionalPanel=null;craftTarget='';saveClock=0;lastFrame=null;accumulator=0;hudAt=-Infinity;
-  soundLog=model?.logSerial||0;soundZone=null;audio()?.stop();bridge.onEnter?.();view.open();cue('modal_open');show(true);raf=host.requestAnimationFrame(frame);return true;
+  soundLog=model?.logSerial||0;soundZone=null;audio()?.stop();bridge.onEnter?.();view.open();cue('modal_open');if(treasurePending())checkpoint(false);show(true);raf=host.requestAnimationFrame(frame);return true;
  }
  function keydown(event){
   if(!active)return;

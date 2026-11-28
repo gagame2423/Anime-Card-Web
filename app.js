@@ -11,7 +11,7 @@
 
 let ballRewardApplying=false;
 function isSimulationActive(){return Boolean(window.SandboxSystem?.active||window.PvPSystem?.active||window.AutoChessView?.active||window.SailingSea?.active||window.BallArena?.active&&!ballRewardApplying);}
-function gameInputLocked(){return Boolean(window.PenaltyView?.active||window.BallArena?.active)||isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed)||Boolean(window.HextechSystem?.active);}
+function gameInputLocked(){return Boolean(window.PenaltyView?.active||window.BallArena?.active)||isSimulationActive()||Boolean(window.PortalsSystem?.active)||Boolean(window.InfinitySystem?.active)||Boolean(window.ShopBulkSystem?.blocked)||Boolean(window.InfinitySystem?.blocked)||Boolean(window.GameStartup?.failed)||Boolean(window.HextechSystem?.active)||Boolean(window.TreasureChestOpening?.active);}
 
 const STORAGE_KEY = "anime_card_rng_save_v1";
 const LEGACY_STORAGE_KEYS = Object.freeze([
@@ -4849,7 +4849,10 @@ function buildCloudSaveBundle() {
   const boostWall=Date.now();
   for (const key of getGameSaveKeys().filter(key=>!LEGACY_STORAGE_KEYS.includes(key))) {
     const value = localStorage.getItem(key);
-    if (value !== null) storage[key] = window.BoostClockSystem.translate(key,JSON.parse(value),true,boostWall);
+    if (value !== null) {
+      const record=window.BoostClockSystem.translate(key,JSON.parse(value),true,boostWall);
+      storage[key]=key===window.InventorySystem.KEY?window.CloudSaveCodec.compactInventory(record):record;
+    }
   }
   const main=storage[STORAGE_KEY],clean={};
   // The authoritative card records are unlocked + mutations. Inventory rows
@@ -4923,6 +4926,7 @@ function validateSaveRecord(key, value) {
   } else if (key === window.InventorySystem.KEY) {
     if ('version' in value) ensure([1, 2, 3].includes(value.version), 'unsupported item save version.');
     ensure(object(value.items) || Array.isArray(value.items), 'items must contain item stacks.');
+    if('treasureChests' in value)ensure(Number.isSafeInteger(value.treasureChests)&&value.treasureChests>=0,'Treasure Chests must be a nonnegative integer.');
     for (const entry of Object.values(value.items)) {
       if (object(entry)) {
         ensure('quantity' in entry || 'count' in entry, 'item is missing its quantity.'); number(entry.quantity ?? entry.count, 'item quantity');
@@ -6455,7 +6459,7 @@ window.BallArena.configure({
   onExit(){ballMatchContext=null;window.CloudSaveSystem?.releaseAutoChess();resumeGameRuntime();updateStats();}
 });
 document.getElementById('hubBallButton')?.addEventListener('click',()=>window.BallArena.open());
-// Standalone, local naval voyage. It never reads owned cards or pays account rewards.
+// Standalone naval voyage. Only its completed placement reward enters account inventory.
 window.SailingSea.configure({
  canOpen:()=>canOpenUpdateLogs()&&canPlayPenalty(),
  name:()=> 'You',
@@ -6463,6 +6467,7 @@ window.SailingSea.configure({
  onExit(){resumeGameRuntime();updateStats();}
 });
 document.getElementById('hubSailingButton')?.addEventListener('click',()=>window.SailingSea.open());
+window.TreasureChestOpening.configure({canOpen:canEvolveNow,onChange:()=>{renderPotionInventory();updateStats();}});
 
 window.AutoChessView.configure({
  canOpen:()=>!window.PenaltyView?.active&&canPlayPenalty(),

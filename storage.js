@@ -15,8 +15,9 @@
   const make=(tag,className='',value)=>{const n=host.document.createElement(tag);n.className=className;if(value!==undefined)n.textContent=value;return n;};
   const format=value=>Number(value||0).toLocaleString('en-US');
   function category(item){if(item.type==='relic')return 'relic';if(item.type==='material')return 'material';return item.type==='exp_food'?'exp_food':item.type==='equipment'||item.type==='gear'?'equipment':['ticket','portal','key'].includes(item.type)?'portals':'items';}
+  const isTreasure=item=>item?.id===host.InventorySystem.TREASURE_CHEST.id;
   function visual(item){
-    const root=make('div','storage-item-art'),fallback=make('span','',item.name.split(/\s+/).map(s=>s[0]).slice(0,3).join(''));
+    const root=make('div','storage-item-art'+(isTreasure(item)?' tc-item-art':'')),fallback=make('span','',item.name.split(/\s+/).map(s=>s[0]).slice(0,3).join(''));
     const potion=host.InventorySystem.POTIONS[item.id];
     if(potion){fallback.className='potion-bottle'+(host.InventorySystem.SUPER_BASE[item.id]?' is-super':'');fallback.dataset.potionStat=potion.stat;fallback.textContent='';}
     root.append(fallback);
@@ -28,6 +29,7 @@
     const inventory=host.InventorySystem,result=[],equipment=host.EquipmentSystem.recipe(id),item=inventory.getItem(id);
     if(equipment){result.push('Crafting: '+equipment.cards.map(r=>{const card=host.ALL_CARDS.find(c=>c.id===r.cardId);const names=r.mutationIds.map(id=>host.MUTATION_BY_ID[id]?.name||id);return '1x '+(card?.name||r.cardId)+' ['+(names.length?names.join(' + ')+(r.match==='contains'?'; Double Mutation allowed':' ; exact pair'):'Normal only, no Mutations')+']';}).join(' + ')+' + '+format(equipment.cost)+' VNĐ.');}
     if(item?.type==='relic'){result.push('Crafting → Relics: '+host.RelicSystem.describe(item.metadata.relic,item.metadata.binding));const r=item.metadata.relic,from=r.unique?'legendary':r.rarity==='legendary'?'rare':r.rarity==='rare'?'common':null,rule=host.RelicSystem.FUSION_RULES[from];if(rule)result.push(`Relic Fusion: ${rule.required} same-type ${from} copies → ${r.rarity}${r.unique?' Unique':''}; ${(rule.successRate*100).toFixed(0)}% success. Failure consumes all selected copies.`);}
+    if(isTreasure(item))result.push('Sailing Sea: finish a voyage to earn placement chests. Rank 1: 12–15; 2–3: 7–9; 4–6: 4–6; 7–10: 2–3; 11–15: 1; 16–20: 0–1 (consolation after a full day or a victory). '+(host.TreasureChestOpening?.unlocked?'Open chests from Storage.':'Chest opening is coming soon.'));
     if(host.MaterialSystem.get(id))result.push(host.MaterialSystem.get(id).description);
     if(inventory.SUPER_BASE[id])result.push('Crafting: 10x '+inventory.getItem(inventory.SUPER_BASE[id]).name+' → 1x '+item.name+'; 0 VNĐ.');
     if(inventory.BATTLE_DROP_IDS.includes(id))result.push('Regular / Tower battle victories: potion pool, 10% base + pity and Drop Chance stat, capped at 30%; one of 4 standard potions.');
@@ -69,6 +71,7 @@
     const relic=host.RelicSystem.get(selected);
     ui.relic.hidden=!relic;
     ui.relic.closest('.storage-detail').classList.toggle('is-relic',!!relic);
+    ui.relic.closest('.storage-detail').classList.toggle('is-treasure',isTreasure(item));
     ui.relic.innerHTML=relic?host.RelicInspection.markup(relic,{cards:host.RelicInspection.collection(),limit:8,binding:true,empty:'No matching cards owned'}):'';
     if(!item){ui.fuse.hidden=true;const sell=host.document.getElementById('storageSellSingle');if(sell)sell.hidden=true;text(ui.title,'Select an item');text(ui.type,'');text(ui.description,'Choose an item to inspect its details and sources.');text(ui.owned,'');ui.action.hidden=true;ui.info.disabled=true;ui.result.hidden=true;return;}
     if(!relic)ui.art.append(visual(item));text(ui.title,item.name);text(ui.type,category(item)==='equipment'?'Equipment · exclusive slot':item.type);text(ui.description,item.description);ui.info.disabled=false;
@@ -83,14 +86,15 @@
     text(ui.fuse,fusion.active?`Fuse · ${fusion.count}/${fusion.required}`:'Fuse');ui.fuse.classList.toggle('is-ready',fusion.active&&fusion.ready);
     ui.fuse.disabled=bridge.canAct?.()===false||(fusion.active?!fusion.ready:!host.RelicSystem.fusionRule(item));
     ui.info.disabled=fusion.active;
+    const treasure=isTreasure(item),treasureUnlocked=treasure&&host.TreasureChestOpening?.unlocked;
     const relic=item.type==='relic',capsule=item.id===host.SpookySystem?.CAPSULE.id,portal=item.type==='portal'&&Boolean(host.PortalsSystem?.get(item.id));
     ui.result.hidden=!capsule||!capsuleResult;text(ui.result,capsule?capsuleResult:'');
-    ui.action.hidden=!item.usable&&!isEquipment&&!capsule&&!portal&&!relic;
-    text(ui.action,relic?(item.metadata.binding?'Change / Unequip Relic':'Equip Relic'):isEquipment?(equipped?'Unequip':'Equip · replaces current'):capsule?'Open Spooky Capsule':portal?'Inspect / Open Portal':'Use Potion');
-    ui.action.disabled=fusion.active||((isEquipment||capsule||portal||relic)?bridge.canAct?.()===false:bridge.canUse?.()===false)||(isEquipment&&!equipped&&item.quantity<1)||(!isEquipment&&item.quantity<1);
+    ui.action.hidden=!treasure&&!item.usable&&!isEquipment&&!capsule&&!portal&&!relic;
+    text(ui.action,treasure?(treasureUnlocked?'Inspect / Open Chest':'Unlocks in Upcoming Update'):relic?(item.metadata.binding?'Change / Unequip Relic':'Equip Relic'):isEquipment?(equipped?'Unequip':'Equip · replaces current'):capsule?'Open Spooky Capsule':portal?'Inspect / Open Portal':'Use Potion');
+    ui.action.disabled=(treasure&&!treasureUnlocked)||fusion.active||((isEquipment||capsule||portal||relic)?bridge.canAct?.()===false:bridge.canUse?.()===false)||(isEquipment&&!equipped&&item.quantity<1)||(!isEquipment&&item.quantity<1);
     const single=host.document.getElementById('storageSellSingle');if(single){single.hidden=fusion.active||!host.StorageSales.canSell(item);single.disabled=bridge.canAct?.()===false;}
     const seconds=Math.ceil(item.remaining/1000);
-    text(ui.timer,item.boostPaused&&seconds>0?'PAUSED · '+seconds+'s remaining':item.pausedRemaining?'PAUSED · '+Math.ceil(item.pausedRemaining/1000)+'s remaining':seconds>0?'ACTIVE · '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):equipped?'EQUIPPED · bonuses active':'');
+    text(ui.timer,treasure?(treasureUnlocked?'READY TO INSPECT':'LOCKED · COMING SOON'):item.boostPaused&&seconds>0?'PAUSED · '+seconds+'s remaining':item.pausedRemaining?'PAUSED · '+Math.ceil(item.pausedRemaining/1000)+'s remaining':seconds>0?'ACTIVE · '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):equipped?'EQUIPPED · bonuses active':'');
   }
   function showCapsuleResult(result){
     const drop=result?.cards?.[0],card=drop?host.ALL_CARDS.find(card=>card.id===drop.cardId):null;if(!card)return;
@@ -115,6 +119,7 @@
         const tile=make('article','storage-slot'+(selected===item.id?' is-selected':'')+(item.quantity<1?' is-unowned':''));tile.dataset.storageId=item.id;
         const button=make('button','storage-select');button.type='button';button.dataset.storageSelect=item.id;button.setAttribute('aria-pressed',String(selected===item.id));
         button.append(visual(item),make('span','storage-quantity',host.InventorySystem.formatQuantity(item.quantity)),make('strong','',item.name));
+        if(isTreasure(item))button.append(make('small','tc-storage-lock',host.TreasureChestOpening?.unlocked?'TREASURE':'LOCKED'));
         if(equipped?.id===item.id)button.append(make('small','storage-equipped-tag','EQUIPPED'));
         const info=make('button','storage-eye','◉');info.type='button';info.dataset.storageSource=item.id;info.setAttribute('aria-label','View sources for '+item.name);info.title='View item sources';
         if(fusion.active){const label=make('label','storage-multiselect storage-fusion-select'),check=make('input');check.type='checkbox';check.dataset.fusionItem=item.id;check.checked=fusion.selected(item.id);check.disabled=item.id===fusion.baseId||fusion.full&&!check.checked;check.setAttribute('aria-label','Select '+item.name+' for fusion');label.append(check,make('span','',item.id===fusion.baseId?'Base':'Fuse'));tile.append(label);info.hidden=true;}
@@ -140,13 +145,13 @@
       const mark=event.target.closest('[data-storage-mark]');if(mark){if(mark.checked&&marked.size<500)marked.add(mark.dataset.storageMark);else{marked.delete(mark.dataset.storageMark);mark.checked=false;}renderSales();return;}
       const categoryButton=event.target.closest('[data-storage-tab]');if(categoryButton){if(host.RelicFusionSystem.active)host.RelicFusionSystem.cancel();tab=categoryButton.dataset.storageTab;portalPage=0;marked.clear();signature='';for(const button of root.querySelectorAll('[data-storage-tab]')){const active=button===categoryButton;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));}render(root);return;}
       const info=event.target.closest('[data-storage-source]');if(info){inspectSource(info.dataset.storageSource);return;}
-      const button=event.target.closest('[data-storage-select]');if(button){if(host.RelicFusionSystem.active){host.RelicFusionSystem.toggle(button.dataset.storageSelect);return;}selected=button.dataset.storageSelect;for(const slot of ui.grid.querySelectorAll('[data-storage-id]')){slot.classList.toggle('is-selected',slot.dataset.storageId===selected);slot.querySelector('.storage-select')?.setAttribute('aria-pressed',String(slot.dataset.storageId===selected));}details();}
+      const button=event.target.closest('[data-storage-select]');if(button){if(host.RelicFusionSystem.active){host.RelicFusionSystem.toggle(button.dataset.storageSelect);return;}selected=button.dataset.storageSelect;for(const slot of ui.grid.querySelectorAll('[data-storage-id]')){slot.classList.toggle('is-selected',slot.dataset.storageId===selected);slot.querySelector('.storage-select')?.setAttribute('aria-pressed',String(slot.dataset.storageId===selected));}details();if(isTreasure(host.InventorySystem.getItem(selected)))host.TreasureChestOpening?.open();}
     });
     ui.search.addEventListener('input',()=>{portalPage=0;});
     for(const [id,delta]of [['storagePortalPrev',-1],['storagePortalNext',1]])host.document.getElementById(id)?.addEventListener('click',()=>{portalPage=Math.max(0,portalPage+delta);signature='';render(root);});
     ui.fuse.addEventListener('click',()=>host.RelicFusionSystem.press(selected));
     ui.info.addEventListener('click',()=>inspectSource(selected));
-    ui.action.addEventListener('click',()=>{if(host.RelicFusionSystem.active)return;if(host.RelicSystem.get(selected)){host.RelicSystem.open(selected);return;}if(host.PortalsSystem?.get(selected)){if(bridge.canAct?.()!==false)host.PortalsSystem.open(selected);return;}const equipment=host.EquipmentSystem.isEquipment(selected),capsule=selected===host.SpookySystem?.CAPSULE.id;if((equipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(capsule){host.SpookySystem.openCapsule();host.RollPerformanceSystem.schedule(paintStorage);return;}if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
+    ui.action.addEventListener('click',()=>{if(host.RelicFusionSystem.active)return;if(isTreasure(host.InventorySystem.getItem(selected))){host.TreasureChestOpening?.open();return;}if(host.RelicSystem.get(selected)){host.RelicSystem.open(selected);return;}if(host.PortalsSystem?.get(selected)){if(bridge.canAct?.()!==false)host.PortalsSystem.open(selected);return;}const equipment=host.EquipmentSystem.isEquipment(selected),capsule=selected===host.SpookySystem?.CAPSULE.id;if((equipment||capsule)?bridge.canAct?.()===false:bridge.canUse?.()===false)return;if(capsule){host.SpookySystem.openCapsule();host.RollPerformanceSystem.schedule(paintStorage);return;}if(equipment){if(host.EquipmentSystem.equip(host.EquipmentSystem.equipped===selected?null:selected)){render(root);}}else if(host.InventorySystem.use(selected)){bridge.onUse?.(selected);render(root);}});
     host.document.getElementById('storageSellSingle')?.addEventListener('click',()=>sellItems([selected]));
     host.document.getElementById('storageSellMarked')?.addEventListener('click',()=>sellItems([...marked]));
     host.document.getElementById('storageSelectPage')?.addEventListener('click',()=>{for(const item of filtered().slice(portalPage*32,portalPage*32+32))if(host.StorageSales.canSell(item)&&marked.size<500)marked.add(item.id);renderSales();});

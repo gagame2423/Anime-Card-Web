@@ -7,8 +7,19 @@
  async function transform(bytes,kind){const Constructor=kind==='pack'?host.CompressionStream:host.DecompressionStream;if(!Constructor)throw Error('This browser cannot decompress the save. Use a current browser.');const reader=new Blob([bytes]).stream().pipeThrough(new Constructor('gzip')).getReader();let size=0;const chunks=[];try{while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>MAX_RAW){await reader.cancel();throw Error('Backup exceeds the safe decoded size.');}chunks.push(value);}}finally{reader.releaseLock();}const result=new Uint8Array(size);let at=0;for(const chunk of chunks){result.set(chunk,at);at+=chunk.length;}return result;}
  async function pack(protectedCode){if(!host.CompressionStream||!host.DecompressionStream)return protectedCode;const compact=PREFIX+bytesToBase64(await transform(base64Bytes(protectedCode),'pack'));return compact.length<protectedCode.length?compact:protectedCode;}
  async function unpack(code){if(typeof code!=='string'||code.length>MAX_CODE)throw Error('Backup code exceeds the safe size.');if(!code.startsWith(PREFIX))return code;return bytesToBase64(await transform(base64Bytes(code.slice(PREFIX.length)),'unpack'));}
+ // One canonical integer for the stack; the image, name and lock state come
+ // from the local item registry. Accept older full-stack saves without doubling.
+ const INVENTORY_KEY='anime_card_rng_items_v1',TREASURE_ID='treasure_chest';
+ function compactInventory(value){
+  if(!value||typeof value!=='object'||!value.items||typeof value.items!=='object')return value;
+  const array=Array.isArray(value.items),legacy=array?value.items.find(item=>item?.id===TREASURE_ID):value.items[TREASURE_ID];
+  const raw=Object.hasOwn(value,'treasureChests')?value.treasureChests:(legacy&&typeof legacy==='object'?legacy.quantity??legacy.count:legacy);
+  const n=Number(raw),treasureChests=Number.isFinite(n)?Math.min(Number.MAX_SAFE_INTEGER,Math.max(0,Math.floor(n))):0;
+  const items=array?value.items.filter(item=>item?.id!==TREASURE_ID):Object.fromEntries(Object.entries(value.items).filter(([id])=>id!==TREASURE_ID));
+  return {...value,items,treasureChests};
+ }
  // Use only progression for comparison. The live clock still travels in a
  // snapshot, but changing weather/time alone must not produce a cloud write.
- function progression(bundle,summary,mainKey){const storage={...bundle.storage},main={...storage[mainKey]};delete main.weather;delete main.lastResultId;storage[mainKey]=main;return host.OnlineUtils.stable({storage,summary});}
- host.CloudSaveCodec=Object.freeze({pack,unpack,progression,MAX_CLOUD_BYTES,MAX_CODE});
+ function progression(bundle,summary,mainKey){const storage={...bundle.storage};if(Object.hasOwn(storage,INVENTORY_KEY))storage[INVENTORY_KEY]=compactInventory(storage[INVENTORY_KEY]);const main={...storage[mainKey]};delete main.weather;delete main.lastResultId;storage[mainKey]=main;return host.OnlineUtils.stable({storage,summary});}
+ host.CloudSaveCodec=Object.freeze({pack,unpack,compactInventory,progression,MAX_CLOUD_BYTES,MAX_CODE});
 })(window);

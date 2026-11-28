@@ -23,7 +23,12 @@
   // Preserve the original four-potion battle pool; exclusive items never enter it.
   const POTION_BY_STAT = new Map(Object.entries(POTIONS).filter(([id])=>!SUPER_BASE[id]).map(([id,potion])=>[potion.stat,id]));
   const BATTLE_DROP_IDS = Object.freeze(['lucky_potion', 'speed_potion', 'rich_potion', 'exp_potion']);
-  const definitions = new Map(Object.entries(POTIONS));
+  const TREASURE_CHEST=Object.freeze({
+    id:'treasure_chest',name:'Treasure Chest',type:'chest',tier:'legendary',icon:'✦',
+    image:'assets/items/treasurechest.png',
+    description:'Ancient pirate chest overflowing with hidden riches from the Grand Line.'
+  });
+  const definitions = new Map([...Object.entries(POTIONS),[TREASURE_CHEST.id,TREASURE_CHEST]]);
   const hasOwn = (object, id) => Object.prototype.hasOwnProperty.call(object, id);
   // Retired IDs must not reappear through generic items or older imports.
   const isRetired = id => typeof id === 'string' && id.toLowerCase() === 'vnd_potion';
@@ -34,7 +39,7 @@
       ? saved.items.filter(item => !isRetired(item?.id))
       : Object.fromEntries(Object.entries(saved.items || {}).filter(([id, item]) => !isRetired(id) && !isRetired(item?.id)));
     const buffs = Object.fromEntries(Object.entries(saved.buffs || {}).filter(([id]) => !isRetired(id)));
-    return { ...saved, items, buffs };
+    return host.CloudSaveCodec.compactInventory({ ...saved, items, buffs });
   }
   const countOf = n => Number.isFinite(Number(n)) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(Number(n)))) : 0;
   let bridge = {};
@@ -59,7 +64,7 @@
       quantity: countOf(typeof raw === 'number' || typeof raw === 'string' ? raw : entry.quantity ?? entry.count),
       metadata: entry.metadata && typeof entry.metadata === 'object' ? entry.metadata : {} };
   }
-  function blank() { return { version: 3, hextechPending:null, receipts: {}, paused: {}, items: Object.fromEntries(Object.keys(POTIONS).map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
+  function blank() { return { version: 3, hextechPending:null, receipts: {}, paused: {}, items: Object.fromEntries([...Object.keys(POTIONS),TREASURE_CHEST.id].map(id => [id, normalizeItem(id)])), buffs: {}, misses: 0 }; }
   function read() {
     let saved;
     try { saved = sanitizeSave(JSON.parse(host.localStorage?.getItem(KEY) || 'null')); } catch (_) { saved = null; }
@@ -67,6 +72,7 @@
     if (saved && typeof saved === 'object') {
       const entries = Array.isArray(saved.items) ? saved.items.map(item => [item?.id, item]) : Object.entries(saved.items || {});
       for (const [id, raw] of entries) if (safeId(id)) result.items[id] = normalizeItem(id, raw);
+      result.items[TREASURE_CHEST.id]=normalizeItem(TREASURE_CHEST.id,saved.treasureChests);
       for (const id of Object.keys(POTIONS)) {
         const until = Number(saved.buffs?.[id]) || 0;
         if (Number.isSafeInteger(until) && until > 0) result.buffs[id] = until;
@@ -94,7 +100,7 @@
     return changed;
   }
   settle();
-  function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(data)); host.CloudSaveSystem?.markDirty(); return true; } catch (e) { console.warn('Inventory save unavailable', e); return false; } }
+  function persist() { try { host.localStorage?.setItem(KEY, JSON.stringify(host.CloudSaveCodec.compactInventory(data))); host.CloudSaveSystem?.markDirty(); return true; } catch (e) { console.warn('Inventory save unavailable', e); return false; } }
   persist(); // Migrate in place; card and tower saves are never rewritten here.
   function getItem(id, at = Date.now()) {
     if (!safeId(id) || !hasOwn(data.items, id)) return null;
@@ -121,7 +127,7 @@
 
   function quantity(id) { return safeId(id) && hasOwn(data.items, id) ? data.items[id].quantity || 0 : 0; }
   function registerItem(item) {
-    if (!item || !safeId(item.id) || hasOwn(POTIONS, item.id)) return false;
+    if (!item || !safeId(item.id) || hasOwn(POTIONS, item.id) || item.id===TREASURE_CHEST.id) return false;
     definitions.set(item.id, { ...item });
     data.items[item.id] = normalizeItem(item.id, { ...data.items[item.id], ...item, quantity: quantity(item.id) });
     persist(); return true;
@@ -258,7 +264,10 @@
         const description = doc.createElement('p'); description.textContent = item.description || 'Stored for future use.';
         const timer = doc.createElement('small'); timer.className = 'inventory-buff-timer'; timers.set(item.id, timer);
         card.append(visual, type, name, description, timer);
-        if (item.usable) {
+        if(item.id===TREASURE_CHEST.id){
+          const button=doc.createElement('button');button.type='button';button.textContent='Inspect Treasure Chest';
+          button.addEventListener('click',()=>host.TreasureChestOpening?.open());card.append(button);
+        }else if (item.usable) {
           const button = doc.createElement('button'); button.type = 'button'; button.textContent = 'Use Potion'; button.disabled = item.quantity < 1;
           button.addEventListener('click', () => { if (use(item.id)) onUse(item.id); }); card.append(button);
         } else {
@@ -276,6 +285,6 @@
       timer.classList.toggle('is-active', seconds > 0&&!item.boostPaused);
     }
   }
-  function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); data = blank(); revision++; persist(); }
-  host.InventorySystem = Object.freeze({ KEY, renderAmount,buyHextech,settleHextech,pendingHextech:()=>data.hextechPending?JSON.parse(JSON.stringify(data.hextechPending)):null, transactItems, get revision(){return revision;}, flush: persist, reload: () => { data = read(); revision++; settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, transactOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
+  function reset() { definitions.clear(); for (const [id, item] of Object.entries(POTIONS)) definitions.set(id, item); definitions.set(TREASURE_CHEST.id,TREASURE_CHEST); data = blank(); revision++; persist(); }
+  host.InventorySystem = Object.freeze({ KEY, TREASURE_CHEST, renderAmount,buyHextech,settleHextech,pendingHextech:()=>data.hextechPending?JSON.parse(JSON.stringify(data.hextechPending)):null, transactItems, get revision(){return revision;}, flush: persist, reload: () => { data = read(); revision++; settle(); }, configure: options => { bridge = options || {}; }, getDropMultiplier, MAX_KNOWN_DROP_MULTIPLIER, scaleDrop, sanitizeSave, POTIONS, BATTLE_DROP_IDS, DURATION_MS, SUPER_DURATION_MS, SUPER_BASE, craft, list, activeEffects, getItem, registerItem, quantity, grant, grantOnce, transactOnce, remove, use, multiplier, combatTurnMs, tick, dropChance, rollVictoryDrop, formatQuantity, renderGrid, reset, getPity: () => data.misses });
 })(window);

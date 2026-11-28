@@ -5,6 +5,14 @@
  const M=host.SailingMap,K=host.SailingCombat,C=host.AutoChessSystem;
  const KEY='anime_card_rng_sailing_sea_v1',VERSION=1,DAY_SECONDS=360,DAY_LIMIT=15,STEP=.1;
  const CAP=Object.freeze([0,5,7,10]),UPGRADES=Object.freeze({1:{material:750,beasts:0},2:{material:2000,beasts:5}});
+ const TREASURE_REWARDS=Object.freeze([
+  Object.freeze({min:1,max:1,base:12,bonus:3,label:'12–15'}),
+  Object.freeze({min:2,max:3,base:7,bonus:2,label:'7–9'}),
+  Object.freeze({min:4,max:6,base:4,bonus:2,label:'4–6'}),
+  Object.freeze({min:7,max:10,base:2,bonus:1,label:'2–3'}),
+  Object.freeze({min:11,max:15,base:1,bonus:0,label:'1'}),
+  Object.freeze({min:16,max:20,base:0,bonus:0,label:'0–1'})
+ ]);
  const ROLE_NAMES=Object.freeze({farmer:'Island Farmer',raider:'Danger Raider',beast:'Storm Hunter',bounty:'Bounty Hunter',player:'Captain'});
  const BOT_NAMES=['Aster Tide','Black Marlin','Coral Jack','Dread Voss','Ebon Sail','Flint Harper','Gale Corsair','Hollow Finn','Iron Sable','Jade Rook','Kestrel','Luna Keel','Mako Reed','Noctis','Orion Wake','Pearl Ash','Raven Salt','Silver Gale','Vega Storm'];
  const PHASES=['draft','sailing','ambush','encounter','combat','report','recruit','finished'];
@@ -306,11 +314,33 @@
   else addRecruit(s,p,id,action);
   s.recruit=null;s.phase='sailing';
  }
+ // Stable quote, independent of RNG, Drop Boost, and other account multipliers.
+ // A checkpoint can be resumed without rolling different rewards.
+ function treasureReward(rank,elapsed,bounty,victories){
+  if(!integer(rank,1,20)||!finite(elapsed,0,DAY_SECONDS*DAY_LIMIT)||!finite(bounty)||!integer(victories,0,Number.MAX_SAFE_INTEGER))return 0;
+  const tier=TREASURE_REWARDS.find(row=>rank>=row.min&&rank<=row.max);
+  if(rank>=16)return elapsed>=DAY_SECONDS||victories>=1?1:0;
+  const milestones=Number(elapsed>=DAY_SECONDS)+Number(elapsed>=DAY_SECONDS*5)+Number(bounty>=1000);
+  return tier.base+Math.min(tier.bonus,milestones);
+ }
+ function quoteTreasure(s){
+  if(s.phase!=='finished'||!s.result)return 0;
+  const p=player(s),wins=Math.min(Number.MAX_SAFE_INTEGER,p.sinks+p.pirates+p.beasts);
+  return treasureReward(s.result.rank,s.elapsed,p.bounty,wins);
+ }
+ function prepareTreasure(s){
+  if(s.phase!=='finished'||!s.result)return;
+  if(!Object.hasOwn(s.result,'treasureChests')){
+   s.result.treasureChests=quoteTreasure(s);
+   s.result.treasureClaimed=s.result.treasureChests===0;
+  }
+ }
  function finish(s,reason){
   if(s.phase==='finished')return;
   const live=ranking(s),p=player(s),winner=live[0]||null;
   const won=alive(p)&&(reason==='last-ship'||reason==='time-limit'&&winner?.id===p.id);
   s.phase='finished';s.result={won,reason,winnerId:won?p.id:reason==='sunk'&&live.length>1?null:winner?.id||null,winnerName:reason==='sunk'&&live.length>1?null:(won?p:winner)?.name||'No surviving captain',rank:alive(p)?live.findIndex(a=>a===p)+1:p.placement||20,day:s.day,time:s.elapsed,bounty:p.bounty};
+  prepareTreasure(s);
   s.waypoint=null;s.encounter=null;s.combat=null;s.recruit=null;s.report=null;s.jobs=[];for(const ship of s.captains){ship.busy=null;ship.speed=0;}
   log(s,won?'Victory — you rule the Sailing Sea.':reason==='sunk'?'Your ship sank. Voyage ended.':'Day 15 ended. '+s.result.winnerName+' wins by Bounty.',won?'gold':'danger',won?'victory':'defeat');
  }
@@ -374,7 +404,7 @@
  }
  function validate(s){
   try{
-   if(!s||s.version!==VERSION||!integer(s.seed,1,0xffffffff)||!integer(s.rng,1,0xffffffff)||!integer(s.serial,0,Number.MAX_SAFE_INTEGER)||!integer(s.logSerial,0,Number.MAX_SAFE_INTEGER)||
+   if(!s||s.version!==VERSION||typeof s.id!=='string'||!/^sea_[a-z0-9]{1,16}_[a-z0-9]{1,24}$/.test(s.id)||!integer(s.seed,1,0xffffffff)||!integer(s.rng,1,0xffffffff)||!integer(s.serial,0,Number.MAX_SAFE_INTEGER)||!integer(s.logSerial,0,Number.MAX_SAFE_INTEGER)||
     !PHASES.includes(s.phase)||!integer(s.day,1,15)||!finite(s.elapsed,0,5400)||!finite(s.difficulty,1)||typeof s.repairLocked!=='boolean'||s.difficulty>=10&&!s.repairLocked||!Array.isArray(s.captains)||s.captains.length!==20||
     !Array.isArray(s.islands)||!s.islands.length||!Array.isArray(s.zones)||!Array.isArray(s.logs)||s.logs.length>160||!Array.isArray(s.jobs)||s.jobs.length>19||!Array.isArray(s.deployIds))return false;
    if(s.day!==Math.min(15,1+Math.floor(s.elapsed/360)))return false;
@@ -395,6 +425,17 @@
    if(s.phase==='combat'&&(!s.combat||!validEncounter(s.combat.encounter,s)||!Array.isArray(s.combat.playerCrew)||!s.combat.playerCrew.length||s.combat.playerCrew.length>10||!s.combat.playerCrew.every(u=>validMember(u))||!Array.isArray(s.combat.enemyCrew)||!s.combat.enemyCrew.length||!s.combat.enemyCrew.every(u=>validMember(u,true))||!finite(s.combat.fightTime,0,60.001)||(s.combat.staminaVersion!==undefined&&![1,2].includes(s.combat.staminaVersion))))return false;
    if(s.recruit&&(!Array.isArray(s.recruit.offers)||s.recruit.offers.length<1||s.recruit.offers.length>3||s.recruit.offers.some(o=>!K.native(o.cardId)||!finite(o.rate,0,1)||typeof o.success!=='boolean')||s.recruit.accepted!==null&&!s.recruit.offers.some(o=>o.cardId===s.recruit.accepted&&o.success)))return false;
    if(s.phase==='recruit'&&!s.recruit||s.phase==='report'&&!s.report||s.phase==='finished'&&!s.result)return false;
+   if(s.phase==='finished'){
+    const r=s.result,p=player(s),live=ranking(s),rank=alive(p)?live.indexOf(p)+1:p.placement;
+    if(!r||!['last-ship','time-limit','sunk'].includes(r.reason)||!integer(rank,1,20)||r.rank!==rank||
+      typeof r.won!=='boolean'||r.won!==(alive(p)&&rank===1)||r.day!==s.day||r.time!==s.elapsed||
+      r.bounty!==p.bounty||!p.crew.length||r.reason==='sunk'&&alive(p)||
+      r.reason==='last-ship'&&(!alive(p)||live.length!==1)||r.reason==='time-limit'&&(!alive(p)||s.elapsed!==DAY_SECONDS*DAY_LIMIT))return false;
+    // Older finished voyages have no reward fields. They are migrated by load().
+    if(Object.hasOwn(r,'treasureChests')||Object.hasOwn(r,'treasureClaimed')){
+     if(r.treasureChests!==quoteTreasure(s)||typeof r.treasureClaimed!=='boolean'||r.treasureChests===0&&!r.treasureClaimed)return false;
+    }
+   }
    for(const j of s.jobs)if(!/^job\d+$/.test(j.id)||!get(s,j.aId)||get(s,j.aId).busy!==j.id||!validEncounter(j.encounter,s)||!finite(j.finishAt,0,5500))return false;
    if(s.waypoint&&(!finite(s.waypoint.x,0,M.SIZE)||!finite(s.waypoint.y,0,M.SIZE)))return false;
    if(s.phase!=='draft'&&!player(s).crew.length)return false;
@@ -411,8 +452,8 @@
   try{host.localStorage.setItem(KEY,JSON.stringify(s));return true;}catch(_){return false;}
  }
  function load(){
-  try{const raw=host.localStorage.getItem(KEY);if(!raw)return {state:null,error:null};const s=JSON.parse(raw);return validate(s)?{state:s,error:null}:{state:null,error:'The saved voyage could not be read. Start a new voyage to replace it.'};}
+  try{const raw=host.localStorage.getItem(KEY);if(!raw)return {state:null,error:null};const s=JSON.parse(raw);if(!validate(s))return {state:null,error:'The saved voyage could not be read. Start a new voyage to replace it.'};prepareTreasure(s);return {state:s,error:null};}
   catch(_){return {state:null,error:'The saved voyage could not be loaded.'};}
  }
- host.SailingRules=Object.freeze({KEY,VERSION,DAY_SECONDS,DAY_LIMIT,STEP,CAP,UPGRADES,ROLE_NAMES,create,load,save,validate,player,get,survivors,ranking,cap,room,claimed,alive,isBusy,repairLocked,crewReady,log,chooseCaptain,wanted,advanceClock,increaseDifficulty,updateLock,dock,undock,contested,capture,canUpgrade,upgrade,craft,equip,recovery,hazard,ambush,beginEncounter,deploy,startFight,settlePlayer,settle,flee,continueReport,pickRecruit,resolveRecruit,damageShip,sink,checkVictory,finish,queueBot,settleBots,stepWorld,clock});
+ host.SailingRules=Object.freeze({KEY,VERSION,DAY_SECONDS,DAY_LIMIT,STEP,CAP,UPGRADES,TREASURE_REWARDS,ROLE_NAMES,treasureReward,create,load,save,validate,player,get,survivors,ranking,cap,room,claimed,alive,isBusy,repairLocked,crewReady,log,chooseCaptain,wanted,advanceClock,increaseDifficulty,updateLock,dock,undock,contested,capture,canUpgrade,upgrade,craft,equip,recovery,hazard,ambush,beginEncounter,deploy,startFight,settlePlayer,settle,flee,continueReport,pickRecruit,resolveRecruit,damageShip,sink,checkVictory,finish,queueBot,settleBots,stepWorld,clock});
 })(window);
